@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolvedFile;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -151,18 +152,73 @@ public class FileResolverTest {
                 ResolveSource.create("/a/b", ImmutableMap.of(), "/", "/")));
   }
 
+  @Test
+  public void getResolveTimeout_noSuccessor_returnsDefaultSelfTimeout() {
+    resolver = new FileResolverUnderTest(null);
+
+    assertThat(resolver.getResolveTimeout())
+        .isEqualTo(Duration.ofHours(AbstractFileResolver.RESOLVE_TIMEOUT_IN_HOUR));
+  }
+
+  @Test
+  public void getResolveTimeout_noSuccessor_returnsOverriddenSelfTimeout() {
+    resolver = new FileResolverUnderTest(null, Duration.ofHours(7));
+
+    assertThat(resolver.getResolveTimeout()).isEqualTo(Duration.ofHours(7));
+  }
+
+  @Test
+  public void getResolveTimeout_chain_returnsMaxTimeoutOfSuccessors() {
+    resolver = new FileResolverUnderTest(null, Duration.ofHours(1));
+    FileResolverUnderTest middleResolver = new FileResolverUnderTest(null, Duration.ofHours(7));
+    FileResolverUnderTest lastResolver = new FileResolverUnderTest(null, Duration.ofHours(3));
+    resolver.setSuccessor(middleResolver);
+    middleResolver.setSuccessor(lastResolver);
+
+    assertThat(resolver.getResolveTimeout()).isEqualTo(Duration.ofHours(7));
+    assertThat(middleResolver.getResolveTimeout()).isEqualTo(Duration.ofHours(7));
+    assertThat(lastResolver.getResolveTimeout()).isEqualTo(Duration.ofHours(3));
+  }
+
+  @Test
+  public void getResolveTimeout_chain_returnsSelfTimeoutIfItIsTheMax() {
+    resolver = new FileResolverUnderTest(null, Duration.ofHours(9));
+    resolver.setSuccessor(new FileResolverUnderTest(null, Duration.ofHours(2)));
+
+    assertThat(resolver.getResolveTimeout()).isEqualTo(Duration.ofHours(9));
+  }
+
   private class FileResolverUnderTest extends AbstractFileResolver {
 
     private Function<ResolveSource, Boolean> shouldResolve;
+    private final Optional<Duration> selfResolveTimeout;
 
     private FileResolverUnderTest(ListeningExecutorService executorService) {
       this(executorService, source -> true);
     }
 
     private FileResolverUnderTest(
+        ListeningExecutorService executorService, Duration selfResolveTimeout) {
+      this(executorService, source -> true, Optional.of(selfResolveTimeout));
+    }
+
+    private FileResolverUnderTest(
         ListeningExecutorService executorService, Function<ResolveSource, Boolean> shouldResolve) {
+      this(executorService, shouldResolve, /* selfResolveTimeout= */ Optional.empty());
+    }
+
+    private FileResolverUnderTest(
+        ListeningExecutorService executorService,
+        Function<ResolveSource, Boolean> shouldResolve,
+        Optional<Duration> selfResolveTimeout) {
       super(executorService);
       this.shouldResolve = shouldResolve;
+      this.selfResolveTimeout = selfResolveTimeout;
+    }
+
+    @Override
+    protected Duration getSelfResolveTimeout() {
+      return selfResolveTimeout.orElseGet(super::getSelfResolveTimeout);
     }
 
     @Override

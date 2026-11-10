@@ -16,10 +16,11 @@
 
 package com.google.devtools.mobileharness.shared.file.resolver;
 
+import static com.google.common.collect.Comparators.max;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
-import static java.util.concurrent.TimeUnit.HOURS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.Stopwatch;
@@ -33,6 +34,7 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -83,7 +85,7 @@ public abstract class AbstractFileResolver implements FileResolver {
       throws MobileHarnessException, InterruptedException {
     ListenableFuture<List<Optional<ResolveResult>>> future = resolveAsync(resolveSources);
     try {
-      return future.get(RESOLVE_TIMEOUT_IN_HOUR, HOURS);
+      return future.get(getResolveTimeout().toMillis(), MILLISECONDS);
     } catch (TimeoutException e) {
       // Cancels the background tasks to prevent resource leakage.
       future.cancel(/* mayInterruptIfRunning= */ true);
@@ -228,6 +230,23 @@ public abstract class AbstractFileResolver implements FileResolver {
     } else {
       return resolveResults;
     }
+  }
+
+  /**
+   * Gets the timeout for this specific resolver. Subclasses should override this to provide a
+   * custom timeout.
+   */
+  protected Duration getSelfResolveTimeout() {
+    return Duration.ofHours(RESOLVE_TIMEOUT_IN_HOUR);
+  }
+
+  /** Gets the timeout for the resolution. It takes the maximum timeout across the chain. */
+  protected final Duration getResolveTimeout() {
+    Duration selfTimeout = getSelfResolveTimeout();
+    if (successor != null) {
+      return max(selfTimeout, successor.getResolveTimeout());
+    }
+    return selfTimeout;
   }
 
   /**

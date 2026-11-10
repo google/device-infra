@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.shared.file.resolver;
 
 import static com.google.devtools.mobileharness.shared.file.resolver.cache.PersistentResolvedFileCache.usePersistentCache;
-import static java.util.concurrent.TimeUnit.HOURS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -197,7 +197,8 @@ public class CacheFileResolver extends AbstractFileResolver {
       // If already cached, use cached future's result.
       Optional<ResolveResult> optionalResolveResult;
       try {
-        optionalResolveResult = cachedResult.cachedResult().get(RESOLVE_TIMEOUT_IN_HOUR, HOURS);
+        optionalResolveResult =
+            cachedResult.cachedResult().get(getResolveTimeout().toMillis(), MILLISECONDS);
       } catch (CancellationException e) {
         logger.atInfo().log(
             "Previous resolve process for %s was cancelled. Need to re-resolve.", resolveSource);
