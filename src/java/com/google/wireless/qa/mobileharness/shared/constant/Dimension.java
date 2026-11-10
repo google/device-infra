@@ -151,6 +151,8 @@ public final class Dimension {
     NETWORK_SIMULATION_USE_NETTROL,
     /** The NOS production status of the device. */
     NOS_PRODUCTION,
+    /** Whether the device is disconnected and kept alive by device cache. */
+    OFFLINE_IN_CACHE,
     OMNI_MODE_USAGE,
     PING_GOOGLE_STABILITY,
     /** The average ping time of the device. */

@@ -69,6 +69,7 @@ public final class BuiltinFlags {
           .put("olc_server_max_started_running_session_num", "30")
           .put("set_test_harness_property", "false")
           .put("simplified_log_format", "true")
+          .put("update_offline_in_cache_dimension", "true")
           // keep-sorted end
           .buildOrThrow();
 
@@ -97,6 +98,7 @@ public final class BuiltinFlags {
           .put("resource_dir_name", "lab_server_res_files")
           .put("serv_via_cloud_rpc", "false")
           .put("set_test_harness_property", "false")
+          .put("update_offline_in_cache_dimension", "true")
           .put("use_emulator_name_in_uuid", "true")
           // keep-sorted end
           .buildOrThrow();

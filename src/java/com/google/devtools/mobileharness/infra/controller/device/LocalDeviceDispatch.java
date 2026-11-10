@@ -39,8 +39,11 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceChangeEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceDownEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceUpEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
@@ -262,6 +265,8 @@ public class LocalDeviceDispatch {
         } else {
           logger.atInfo().log("Stopping runner thread of dead device %s(%s)", id, deadReason);
         }
+      } else if (Flags.updateOfflineInCacheDimension.getNonNull()) {
+        updateOfflineInCacheDimension(runner.getDevice(), dispatchResult);
       }
 
       // Increases the device status counter.
@@ -337,6 +342,25 @@ public class LocalDeviceDispatch {
     }
 
     return isChanged;
+  }
+
+  /** Updates the {@code offline_in_cache} dimension of the device based on its dispatch result. */
+  private void updateOfflineInCacheDimension(Device device, DispatchResult dispatchResult) {
+    boolean isOfflineInCache = dispatchResult.dispatchType().equals(DispatchType.CACHE);
+    boolean isOfflineInCacheChanged =
+        isOfflineInCache
+            ? device.updateDimension(Dimension.Name.OFFLINE_IN_CACHE, Dimension.Value.TRUE)
+            : device.updateDimension(Dimension.Name.OFFLINE_IN_CACHE);
+    if (isOfflineInCacheChanged) {
+      logger.atInfo().log(
+          "Device %s offline_in_cache status changed to %s, post LocalDeviceChangeEvent",
+          device.getDeviceControlId(), isOfflineInCache);
+      globalInternalBus.post(
+          new LocalDeviceChangeEvent(
+              device.getDeviceControlId(),
+              device.getDeviceUuid(),
+              device.getClass().getSimpleName()));
+    }
   }
 
   /** Checks whether the device type is supported. */

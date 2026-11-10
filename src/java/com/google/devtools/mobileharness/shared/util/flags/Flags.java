@@ -1637,6 +1637,13 @@ public class Flags {
   public static final Flag<Boolean> transferResourcesFromController = Flag.value(true);
 
   @FlagSpec(
+      name = "update_offline_in_cache_dimension",
+      help =
+          "Whether to update the offline_in_cache dimension of a device based on its dispatch"
+              + " result. Default is false.")
+  public static final Flag<Boolean> updateOfflineInCacheDimension = Flag.value(false);
+
+  @FlagSpec(
       name = "use_alts",
       help = "Use ALTS for OLC server auth.This is supported by GCP vm. The default is false.")
   public static final Flag<Boolean> useAlts = Flag.value(false);
