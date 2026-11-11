@@ -37,10 +37,23 @@
       <ng-container matColumnDef="status">
         <th mat-header-cell *matHeaderCellDef scope="col">Status</th>
         <td mat-cell *matCellDef="let row">
-          <app-bulk-status-pill
-            [status]="row.status"
-            [readOnlyReason]="row.readOnlyReason"
-          />
+          @switch (row.status) {
+            @case (DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY) {
+              <span
+                class="bw-status-pill bw-status-skip"
+                [matTooltip]="row.readOnlyReason || 'Read-only'"
+                matTooltipPosition="above"
+              >
+                Read-only
+              </span>
+            }
+            @case (DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES) {
+              <span class="bw-status-pill bw-status-same">Already matches</span>
+            }
+            @default {
+              <span class="bw-status-pill bw-status-update">Will update</span>
+            }
+          }
         </td>
       </ng-container>
 

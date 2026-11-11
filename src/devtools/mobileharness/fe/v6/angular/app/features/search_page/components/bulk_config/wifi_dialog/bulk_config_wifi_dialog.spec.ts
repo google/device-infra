@@ -19,7 +19,6 @@ import {
   CONFIG_SERVICE,
   ConfigService,
 } from '../../../../../core/services/config/config_service';
-import {ClipboardService} from '../../../../../shared/services/clipboard_service';
 import {BulkConfigDialogData} from '../../../models';
 import {BulkConfigWifiDialog} from './bulk_config_wifi_dialog';
 
@@ -103,35 +102,9 @@ describe('BulkConfigWifiDialog', () => {
       'getWifiSuggestions',
       'batchUpdateDeviceWifiConfigs',
     ]);
-    mockConfigService.batchGetDeviceWifiConfigs.and.callFake((req) => {
-      if (!req.target) {
-        return of(mockBatchDevicesResponse);
-      }
-      const isClear = Boolean(req.target.clearWifi);
-      const targetSsid = req.target.wifi?.ssid;
-      const baseEntries =
-        component?.initialDeviceEntries().length > 0
-          ? component.initialDeviceEntries()
-          : mockBatchDevicesResponse.entries!;
-      const entries = baseEntries.map((entry) => {
-        if (
-          entry.status ===
-          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY
-        ) {
-          return entry;
-        }
-        const matches = isClear
-          ? !entry.currentWifi?.ssid
-          : entry.currentWifi?.ssid === targetSsid;
-        return {
-          ...entry,
-          status: matches
-            ? DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES
-            : DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-        };
-      });
-      return of({entries});
-    });
+    mockConfigService.batchGetDeviceWifiConfigs.and.returnValue(
+      of(mockBatchDevicesResponse),
+    );
     mockConfigService.getWifiSuggestions.and.returnValue(
       of(mockWifiSuggestionsResponse),
     );
@@ -153,6 +126,7 @@ describe('BulkConfigWifiDialog', () => {
 
     fixture = TestBed.createComponent(
       MatTestDialogOpener.withComponent(BulkConfigWifiDialog, {
+        autoFocus: false,
         data: mockDialogData,
       }),
     );
@@ -167,30 +141,30 @@ describe('BulkConfigWifiDialog', () => {
     overlayElement.innerHTML = '';
   });
 
-  it('should initialize and load Step 1 candidate suggestions and current device Wi-Fi configs', () => {
+  it('should initialize and load Step 1 candidate suggestions', () => {
     expect(mockConfigService.getWifiSuggestions).toHaveBeenCalledWith();
-    expect(mockConfigService.batchGetDeviceWifiConfigs).toHaveBeenCalledWith({
-      devices: mockDialogData.devices,
-    });
+    expect(
+      mockConfigService.batchGetDeviceWifiConfigs,
+    ).not.toHaveBeenCalled();
     expect(component.wizard.viewMode()).toBe('network');
-    expect(component.initialDeviceEntries().length).toBe(3);
+    expect(component.networkTask.hasLoaded()).toBeTrue();
     expect(component.candidateWifis().length).toBe(2);
+    expect(document.activeElement).toBe(
+      component.ssidInputField()!.nativeElement,
+    );
   });
 
   it('should call batchGetDeviceWifiConfigs with target when moving to review and display backend review items', () => {
-    expect(mockConfigService.batchGetDeviceWifiConfigs).toHaveBeenCalledTimes(
-      1,
-    );
-    expect(mockConfigService.batchGetDeviceWifiConfigs).toHaveBeenCalledWith({
-      devices: mockDialogData.devices,
-    });
+    expect(
+      mockConfigService.batchGetDeviceWifiConfigs,
+    ).not.toHaveBeenCalled();
 
     component.updateTargetWifi({ssid: 'target-office-wifi'});
     component.goToReview();
     detectChanges();
 
     expect(mockConfigService.batchGetDeviceWifiConfigs).toHaveBeenCalledTimes(
-      2,
+      1,
     );
     expect(mockConfigService.batchGetDeviceWifiConfigs).toHaveBeenCalledWith({
       devices: mockDialogData.devices,
@@ -209,15 +183,44 @@ describe('BulkConfigWifiDialog', () => {
     component.updateTargetWifi({ssid: 'target-office-wifi'});
     component.goToReview();
     expect(mockConfigService.batchGetDeviceWifiConfigs).toHaveBeenCalledTimes(
-      2,
+      1,
     );
     expect(component.wizard.reviewSummary().willUpdateCount).toBe(2);
 
+    mockConfigService.batchGetDeviceWifiConfigs.and.returnValue(
+      of({
+        entries: [
+          {
+            deviceId: 'device-1',
+            hostName: 'host-1',
+            currentWifi: {ssid: 'lab-guest-5g', psk: '', scanSsid: false},
+            status:
+              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
+          },
+          {
+            deviceId: 'device-2',
+            hostName: 'host-2',
+            currentWifi: {ssid: 'lab-guest-5g', psk: '', scanSsid: false},
+            status:
+              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
+          },
+          {
+            deviceId: 'device-3',
+            hostName: 'host-3',
+            currentWifi: {ssid: 'other-device-wifi', psk: '', scanSsid: false},
+            status:
+              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
+          },
+        ],
+      }),
+    );
+
     component.wizard.setPhase('network');
+    expect(component.wizard.phase()).toBe('network');
     component.updateTargetWifi({ssid: 'lab-guest-5g'});
     component.goToReview();
     expect(mockConfigService.batchGetDeviceWifiConfigs).toHaveBeenCalledTimes(
-      3,
+      2,
     );
     expect(mockConfigService.batchGetDeviceWifiConfigs).toHaveBeenCalledWith({
       devices: mockDialogData.devices,
@@ -229,41 +232,29 @@ describe('BulkConfigWifiDialog', () => {
     expect(component.wizard.reviewSummary().willUpdateCount).toBe(1);
   });
 
-  it('should filter Wi-Fi options based on search filter', () => {
-    component.searchFilter.set('candidate');
-    const filtered = component.filteredWifiOptions();
-    expect(filtered.some((c) => c.wifi.ssid === 'candidate-net-2')).toBeTrue();
-    expect(filtered.some((c) => c.wifi.ssid === 'lab-guest-5g')).toBeFalse();
-  });
-
-  it('should concatenate current Wi-Fi from selected devices and backend candidate suggestions', () => {
-    const options = component.wifiOptions();
-    expect(options.length).toBe(3);
+  it('should map backend candidate suggestions and filter by search', () => {
+    const options = component.filteredWifiOptions();
+    expect(options.length).toBe(2);
 
     const labGuest = options.find((o) => o.wifi.ssid === 'lab-guest-5g');
     expect(labGuest).toBeDefined();
-    expect(labGuest?.badge).toContain('2 devices selected');
     expect(labGuest?.subtitle).toContain('1,200 devices in fleet');
-
-    const otherDev = options.find((o) => o.wifi.ssid === 'other-device-wifi');
-    expect(otherDev).toBeDefined();
-    expect(otherDev?.badge).toContain('1 device selected');
 
     const cand2 = options.find((o) => o.wifi.ssid === 'candidate-net-2');
     expect(cand2).toBeDefined();
     expect(cand2?.subtitle).toContain('350 devices in fleet');
 
-    component.searchFilter.set('other');
+    component.searchFilter.set('candidate');
     const filtered = component.filteredWifiOptions();
     expect(filtered.length).toBe(1);
-    expect(filtered[0].wifi.ssid).toBe('other-device-wifi');
+    expect(filtered[0].wifi.ssid).toBe('candidate-net-2');
   });
 
-  it('should select Wi-Fi and populate target form when selectWifi is called', () => {
+  it('should select Wi-Fi and populate target form when updateTargetWifi is called', () => {
     const candidate = component
       .candidateWifis()
       .find((c) => c.wifi.ssid === 'candidate-net-2')!;
-    component.selectWifi(candidate.wifi);
+    component.updateTargetWifi(candidate.wifi);
 
     expect(component.targetWifi()).toEqual({
       ssid: 'candidate-net-2',
@@ -284,31 +275,6 @@ describe('BulkConfigWifiDialog', () => {
     expect(component.isClearWifi()).toBeFalse();
   });
 
-  it('should correctly compute isActive in filteredWifiOptions', () => {
-    const wifi = component
-      .candidateWifis()
-      .find((c) => c.wifi.ssid === 'candidate-net-2')!.wifi;
-    expect(
-      component
-        .filteredWifiOptions()
-        .find((o) => o.wifi.ssid === 'candidate-net-2')?.isActive,
-    ).toBeFalse();
-
-    component.selectWifi(wifi);
-    expect(
-      component
-        .filteredWifiOptions()
-        .find((o) => o.wifi.ssid === 'candidate-net-2')?.isActive,
-    ).toBeTrue();
-
-    component.clearTargetWifi();
-    expect(
-      component
-        .filteredWifiOptions()
-        .find((o) => o.wifi.ssid === 'candidate-net-2')?.isActive,
-    ).toBeFalse();
-  });
-
   it('should toggle password visibility', () => {
     expect(component.showPassword()).toBeFalse();
     component.togglePasswordVisibility();
@@ -317,66 +283,17 @@ describe('BulkConfigWifiDialog', () => {
     expect(component.showPassword()).toBeFalse();
   });
 
-  it('should render app-dialog in template', () => {
+  it('should render app-dialog and footer action buttons', () => {
     detectChanges();
     const appDialog = overlayElement.querySelector('app-dialog');
     expect(appDialog).toBeTruthy();
-  });
 
-  it('should render footer action buttons with common dialog-button styles', () => {
-    detectChanges();
     const cancelButton = overlayElement.querySelector(
       '.dialog-button-secondary',
     );
     const nextButton = overlayElement.querySelector('.dialog-button-primary');
-    expect(cancelButton).toBeTruthy();
-    expect(nextButton).toBeTruthy();
     expect(cancelButton?.textContent?.trim()).toBe('Cancel');
     expect(nextButton?.textContent?.trim()).toBe('Next');
-  });
-
-  it('should navigate to review phase when goToReview is called with valid SSID', () => {
-    expect(component.headline()).toBe('Configure Wi-Fi for 3 devices');
-    expect(component.supportText()).toBe('Step 1 of 2 · Choose a network');
-
-    component.updateTargetWifi({ssid: 'my-new-wifi'});
-    component.goToReview();
-    expect(component.wizard.phase()).toBe('review');
-    expect(component.headline()).toBe('Review and apply');
-    expect(component.supportText()).toBe('Step 2 of 2 · Confirm and apply');
-
-    component.wizard.setPhase('network');
-    expect(component.wizard.phase()).toBe('network');
-    expect(component.headline()).toBe('Configure Wi-Fi for 3 devices');
-    expect(component.supportText()).toBe('Step 1 of 2 · Choose a network');
-  });
-
-  it('should compute review rows with correct status', () => {
-    component.updateTargetWifi({ssid: 'target-office-wifi'});
-    component.goToReview();
-    detectChanges();
-    const rows = component.wizard.reviewEntries();
-    expect(rows.length).toBe(3);
-
-    const dev1 = rows.find((r) => r.deviceId === 'device-1')!;
-    expect(dev1.status).toBe(
-      DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-    );
-
-    const dev2 = rows.find((r) => r.deviceId === 'device-2')!;
-    expect(dev2.status).toBe(
-      DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-    );
-    expect(dev2.readOnlyReason).toContain('Managed by host shared config');
-
-    const dev3 = rows.find((r) => r.deviceId === 'device-3')!;
-    expect(dev3.status).toBe(
-      DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-    );
-
-    expect(component.wizard.reviewSummary().willUpdateRows.length).toBe(2);
-    expect(component.wizard.reviewSummary().readOnlyCount).toBe(1);
-    expect(component.wizard.reviewSummary().willUpdateCount).toBe(2);
   });
 
   it('should render review table showing Will update for writable devices and Read-only for unwritable devices', () => {
@@ -384,7 +301,6 @@ describe('BulkConfigWifiDialog', () => {
     component.goToReview();
     detectChanges();
 
-    // Verify Target Summary Banner
     const banner = overlayElement.querySelector('.bw-review-banner')!;
     expect(banner.textContent).toContain('target-office-wifi');
     expect(banner.textContent).toContain('2 devices will update');
@@ -393,22 +309,20 @@ describe('BulkConfigWifiDialog', () => {
     const tableRows = overlayElement.querySelectorAll('tbody tr');
     expect(tableRows.length).toBe(3);
 
-    // dev1 (writable, current: lab-guest-5g): Status shows 'Will update'
     expect(tableRows[0].textContent).toContain('device-1');
     expect(tableRows[0].textContent).toContain('host-1');
     expect(tableRows[0].textContent).toContain('lab-guest-5g');
     expect(tableRows[0].textContent).toContain('Will update');
 
-    // dev2 (unwritable): Status shows 'Read-only' with readOnlyReason title
     expect(tableRows[1].textContent).toContain('device-2');
     expect(tableRows[1].textContent).toContain('host-2');
     expect(tableRows[1].textContent).toContain('Read-only');
     const readOnlyPill = tableRows[1].querySelector('.bw-status-skip')!;
-    expect(readOnlyPill.getAttribute('title')).toContain(
+    const describedById = readOnlyPill.getAttribute('aria-describedby')!;
+    expect(document.getElementById(describedById)?.textContent).toContain(
       'Managed by host shared config',
     );
 
-    // dev3 (writable, current: other-device-wifi): Status shows 'Will update'
     expect(tableRows[2].textContent).toContain('device-3');
     expect(tableRows[2].textContent).toContain('host-3');
     expect(tableRows[2].textContent).toContain('other-device-wifi');
@@ -416,20 +330,26 @@ describe('BulkConfigWifiDialog', () => {
   });
 
   it('should render multiple error devices sharing non-unique deviceId (000000000000) with distinct hostNames in review table', () => {
-    component.initialDeviceEntries.set([
-      {
-        deviceId: '000000000000',
-        hostName: 'mh-lab-01.google.com',
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-        readOnlyReason: 'Unrecognizable or invalid device ID',
-      },
-      {
-        deviceId: '000000000000',
-        hostName: 'mh-lab-02.google.com',
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-        readOnlyReason: 'Unrecognizable or invalid device ID',
-      },
-    ]);
+    mockConfigService.batchGetDeviceWifiConfigs.and.returnValue(
+      of({
+        entries: [
+          {
+            deviceId: '000000000000',
+            hostName: 'mh-lab-01.google.com',
+            status:
+              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
+            readOnlyReason: 'Unrecognizable or invalid device ID',
+          },
+          {
+            deviceId: '000000000000',
+            hostName: 'mh-lab-02.google.com',
+            status:
+              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
+            readOnlyReason: 'Unrecognizable or invalid device ID',
+          },
+        ],
+      }),
+    );
     component.updateTargetWifi({ssid: 'target-office-wifi'});
     component.goToReview();
     detectChanges();
@@ -443,12 +363,17 @@ describe('BulkConfigWifiDialog', () => {
   });
 
   it('should show Not configured when device has no Wi-Fi configured', () => {
-    component.initialDeviceEntries.set([
-      {
-        deviceId: 'device-unconfigured',
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WRITABLE,
-      },
-    ]);
+    mockConfigService.batchGetDeviceWifiConfigs.and.returnValue(
+      of({
+        entries: [
+          {
+            deviceId: 'device-unconfigured',
+            status:
+              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
+          },
+        ],
+      }),
+    );
     component.updateTargetWifi({ssid: 'target-office-wifi'});
     component.goToReview();
     detectChanges();
@@ -460,69 +385,28 @@ describe('BulkConfigWifiDialog', () => {
     expect(tableRows[0].textContent).toContain('Will update');
   });
 
-  it('should show Already matches status when device Wi-Fi matches target Wi-Fi', () => {
-    component.updateTargetWifi({ssid: 'lab-guest-5g', scanSsid: false});
-    component.goToReview();
-    detectChanges();
-
-    const banner = overlayElement.querySelector('.bw-review-banner')!;
-    expect(banner.textContent).toContain('1 device already match');
-    expect(banner.textContent).toContain('1 device will update');
-    expect(banner.textContent).toContain('1 device read-only');
-
-    const tableRows = overlayElement.querySelectorAll('tbody tr');
-    expect(tableRows[0].textContent).toContain('Already matches');
-
-    const primaryButton = overlayElement.querySelector(
-      '.dialog-button-primary',
-    ) as HTMLButtonElement;
-    expect(primaryButton.textContent?.trim()).toBe('Apply to 1 device');
-
-    component.apply();
-    expect(mockConfigService.batchUpdateDeviceWifiConfigs).toHaveBeenCalledWith(
-      {
-        devices: [{deviceId: 'device-3', hostName: 'host-3'}],
-        target: {
-          wifi: {
-            ssid: 'lab-guest-5g',
-            psk: '',
-            scanSsid: false,
-          },
-        },
-      },
-    );
-  });
-
   it('should show Nothing to update banner and Close button when all devices already match target Wi-Fi', () => {
-    component.initialDeviceEntries.set([
-      {
-        deviceId: 'device-1',
-        currentWifi: {
-          ssid: 'lab-guest-5g',
-          psk: '',
-          scanSsid: false,
-        },
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WRITABLE,
-      },
-      {
-        deviceId: 'device-2',
-        currentWifi: {
-          ssid: 'lab-guest-5g',
-          psk: '',
-          scanSsid: false,
-        },
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WRITABLE,
-      },
-      {
-        deviceId: 'device-3',
-        currentWifi: {
-          ssid: 'lab-guest-5g',
-          psk: '',
-          scanSsid: false,
-        },
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WRITABLE,
-      },
-    ]);
+    mockConfigService.batchGetDeviceWifiConfigs.and.returnValue(
+      of({
+        entries: [
+          {
+            deviceId: 'device-1',
+            status:
+              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
+          },
+          {
+            deviceId: 'device-2',
+            status:
+              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
+          },
+          {
+            deviceId: 'device-3',
+            status:
+              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
+          },
+        ],
+      }),
+    );
 
     component.updateTargetWifi({ssid: 'lab-guest-5g', scanSsid: false});
     component.goToReview();
@@ -532,7 +416,6 @@ describe('BulkConfigWifiDialog', () => {
     expect(component.wizard.reviewSummary().alreadyMatchCount).toBe(3);
 
     const infoBanner = overlayElement.querySelector('.bw-review-banner-info');
-    expect(infoBanner).toBeTruthy();
     expect(infoBanner?.textContent).toContain(
       'All 3 devices already use this Wi-Fi configuration. No update is needed.',
     );
@@ -549,49 +432,7 @@ describe('BulkConfigWifiDialog', () => {
     expect(mockDialogRef.close).toHaveBeenCalled();
   });
 
-  it('should show Close button and read-only banner when all selected devices are read-only', () => {
-    component.initialDeviceEntries.set([
-      {
-        deviceId: 'device-1',
-        currentWifi: {ssid: 'lab-guest-5g', psk: '', scanSsid: false},
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-        readOnlyReason: 'Read-only',
-      },
-      {
-        deviceId: 'device-2',
-        currentWifi: {ssid: 'lab-guest-5g', psk: '', scanSsid: false},
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-        readOnlyReason: 'Read-only',
-      },
-      {
-        deviceId: 'device-3',
-        currentWifi: {ssid: 'lab-guest-5g', psk: '', scanSsid: false},
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-        readOnlyReason: 'Read-only',
-      },
-    ]);
-
-    component.updateTargetWifi({ssid: 'office-wifi'});
-    component.goToReview();
-    detectChanges();
-
-    expect(component.wizard.reviewSummary().willUpdateCount).toBe(0);
-    expect(component.wizard.reviewSummary().alreadyMatchCount).toBe(0);
-    expect(component.wizard.reviewSummary().readOnlyCount).toBe(3);
-
-    const infoBanner = overlayElement.querySelector('.bw-review-banner-info');
-    expect(infoBanner).toBeTruthy();
-    expect(infoBanner?.textContent).toContain(
-      'All 3 devices are read-only and cannot be updated.',
-    );
-
-    const primaryButton = overlayElement.querySelector(
-      '.dialog-button-primary',
-    ) as HTMLButtonElement;
-    expect(primaryButton.textContent?.trim()).toBe('Close');
-  });
-
-  it('should apply batch update to only writable devices and transition to success on no errors', () => {
+  it('should apply batch update to only WILL_UPDATE devices and transition to success on no errors', () => {
     component.updateTargetWifi({
       ssid: 'office-wifi',
       psk: 'secure123',
@@ -619,13 +460,16 @@ describe('BulkConfigWifiDialog', () => {
     );
 
     expect(component.wizard.viewMode()).toBe('success');
-    expect(component.successSupportText()).toContain('1 device read-only');
+    detectChanges();
+    expect(
+      overlayElement.querySelector('.bw-success-support')?.textContent,
+    ).toBe('1 device read-only.');
 
     component.wizard.close();
     expect(mockDialogRef.close).toHaveBeenCalledWith({updated: true});
   });
 
-  it('should apply Clear network to writable devices', () => {
+  it('should apply Clear network to WILL_UPDATE devices', () => {
     component.clearTargetWifi();
     component.goToReview();
     detectChanges();
@@ -681,24 +525,48 @@ describe('BulkConfigWifiDialog', () => {
     expect(mockDialogRef.close).toHaveBeenCalledWith({updated: true});
   });
 
-  it('should handle network step Wi-Fi suggestions load error gracefully', () => {
+  it('should render Step 1 form immediately while networkTask is loading and support inline error retry', () => {
+    const pendingSuggestions = new Subject<GetWifiSuggestionsResponse>();
     mockConfigService.getWifiSuggestions.and.returnValue(
-      throwError(() => new Error('Suggestions timeout')),
+      pendingSuggestions.asObservable(),
     );
 
     component.loadNetworkStepData();
     detectChanges();
-    expect(component.wizard.stepError()).toBe('Suggestions timeout');
-    expect(component.wizard.viewMode()).toBe('step_error');
+
+    expect(component.wizard.viewMode()).toBe('network');
+    expect(component.networkTask.isLoading()).toBeTrue();
+    const loadingEl = overlayElement.querySelector('.bw-panel-status');
+    expect(loadingEl?.textContent).toContain('Loading Wi-Fi configurations…');
+    expect(overlayElement.querySelector('#bw-ssid')).toBeTruthy();
+
+    pendingSuggestions.error(new Error('Suggestions timeout'));
+    detectChanges();
+
+    expect(component.wizard.viewMode()).toBe('network');
+    expect(component.networkTask.isLoading()).toBeFalse();
+    expect(component.networkTask.error()).toBe('Suggestions timeout');
+
+    const statusError = overlayElement.querySelector('.bw-panel-status-error');
+    expect(statusError).toBeTruthy();
+    expect(statusError?.textContent).toContain('Suggestions timeout');
+
+    mockConfigService.getWifiSuggestions.and.returnValue(
+      of(mockWifiSuggestionsResponse),
+    );
+    const retryBtn = statusError?.querySelector('button') as HTMLButtonElement;
+    retryBtn.click();
+    detectChanges();
+
+    expect(component.networkTask.error()).toBeNull();
+    expect(component.networkTask.hasLoaded()).toBeTrue();
+    expect(component.candidateWifis().length).toBe(2);
   });
 
   it('should handle review device configs load error and support retry', () => {
-    mockConfigService.batchGetDeviceWifiConfigs.and.callFake((req) => {
-      if (!req.target) {
-        return of(mockBatchDevicesResponse);
-      }
-      return throwError(() => new Error('Step 2 load timeout'));
-    });
+    mockConfigService.batchGetDeviceWifiConfigs.and.returnValue(
+      throwError(() => new Error('Step 2 load timeout')),
+    );
 
     component.updateTargetWifi({ssid: 'target-office-wifi'});
     component.goToReview();
@@ -712,10 +580,8 @@ describe('BulkConfigWifiDialog', () => {
     expect(errorContainer).toBeTruthy();
     expect(errorContainer?.textContent).toContain('Step 2 load timeout');
 
-    // Test retry
-    mockConfigService.batchGetDeviceWifiConfigs.and.callFake((req) => {
-      if (!req.target) return of(mockBatchDevicesResponse);
-      return of({
+    mockConfigService.batchGetDeviceWifiConfigs.and.returnValue(
+      of({
         entries: [
           {
             deviceId: 'device-1',
@@ -723,8 +589,8 @@ describe('BulkConfigWifiDialog', () => {
               DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
           },
         ],
-      });
-    });
+      }),
+    );
 
     const retryBtn = overlayElement.querySelector(
       '.dialog-button-primary',
@@ -735,217 +601,6 @@ describe('BulkConfigWifiDialog', () => {
 
     expect(component.wizard.stepError()).toBeNull();
     expect(component.wizard.reviewEntries().length).toBe(1);
-  });
-
-  it('should show rich Wi-Fi tooltip on hover and support toggling password', () => {
-    component.initialDeviceEntries.set([
-      {
-        deviceId: 'device-1',
-        currentWifi: {ssid: 'lab-guest-5g', psk: '', scanSsid: false},
-        status:
-          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-      },
-      {
-        deviceId: 'device-2',
-        currentWifi: {
-          ssid: 'secret-wifi',
-          psk: 'supersecret',
-          scanSsid: true,
-        },
-        status:
-          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-      },
-    ]);
-    component.updateTargetWifi({
-      ssid: 'target-office-wifi',
-      psk: 'target-password',
-      scanSsid: true,
-    });
-    component.goToReview();
-    detectChanges();
-
-    const wifiChips = overlayElement.querySelectorAll('.bw-wifi-chip');
-    expect(wifiChips.length).toBe(2);
-
-    wifiChips[0].dispatchEvent(new MouseEvent('mouseenter'));
-    detectChanges();
-
-    const tipElement = overlayElement.querySelector('.bw-tip');
-    expect(tipElement).toBeTruthy();
-    expect(tipElement?.textContent).toContain('lab-guest-5g');
-    expect(tipElement?.textContent).toContain('Open network (no password)');
-    expect(tipElement?.textContent).toContain('Broadcast SSID (normal)');
-
-    // Hover over second chip with password and hidden network
-    wifiChips[1].dispatchEvent(new MouseEvent('mouseenter'));
-    detectChanges();
-
-    const eyeBtn = overlayElement.querySelector(
-      '.bw-tip .bw-psk-eye',
-    ) as HTMLButtonElement;
-    expect(eyeBtn).toBeTruthy();
-    eyeBtn.click();
-    detectChanges();
-
-    const tips = overlayElement.querySelectorAll('.bw-tip');
-    const tipWithPsk = tips[tips.length - 1];
-    expect(tipWithPsk?.textContent).toContain('secret-wifi');
-    expect(tipWithPsk?.textContent).toContain('supersecret');
-    expect(tipWithPsk?.textContent).toContain('Hidden network');
-  });
-
-  it('should evaluate review items dynamically against the selected target', () => {
-    component.initialDeviceEntries.set([
-      {
-        deviceId: 'device-1',
-        currentWifi: {ssid: 'bff-wifi-1', psk: 'pass1', scanSsid: true},
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WRITABLE,
-      },
-      {
-        deviceId: 'device-2',
-        currentWifi: {ssid: 'bff-wifi-2'},
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WRITABLE,
-      },
-      {
-        deviceId: 'device-3',
-        status: DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-        readOnlyReason: 'Device locked by policy',
-      },
-    ]);
-
-    component.updateTargetWifi({ssid: 'bff-wifi-2'});
-    component.goToReview();
-    detectChanges();
-
-    const rows = component.wizard.reviewEntries();
-    expect(rows.length).toBe(3);
-
-    // Verify row 0: device-1 differs from target -> WILL_UPDATE
-    expect(rows[0].deviceId).toBe('device-1');
-    expect(rows[0].currentWifi).toEqual({
-      ssid: 'bff-wifi-1',
-      psk: 'pass1',
-      scanSsid: true,
-    });
-    expect(rows[0].status).toBe(
-      DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-    );
-
-    // Verify row 1: device-2 matches target -> ALREADY_MATCHES
-    expect(rows[1].deviceId).toBe('device-2');
-    expect(rows[1].currentWifi?.ssid).toBe('bff-wifi-2');
-    expect(rows[1].status).toBe(
-      DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
-    );
-
-    // Verify row 2: device-3 is read-only -> READ_ONLY
-    expect(rows[2].deviceId).toBe('device-3');
-    expect(rows[2].currentWifi).toBeUndefined();
-    expect(rows[2].status).toBe(
-      DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-    );
-    expect(rows[2].readOnlyReason).toBe('Device locked by policy');
-
-    // Verify rendered status pills in table
-    const tableRows = overlayElement.querySelectorAll('tbody tr');
-    expect(tableRows[0].textContent).toContain('Will update');
-    expect(tableRows[1].textContent).toContain('Already matches');
-    expect(tableRows[2].textContent).toContain('Read-only');
-    expect(tableRows[2].textContent).toContain('Not configured');
-
-    // Counts
-    expect(component.wizard.reviewSummary().willUpdateCount).toBe(1);
-    expect(component.wizard.reviewSummary().alreadyMatchCount).toBe(1);
-    expect(component.wizard.reviewSummary().readOnlyCount).toBe(1);
-  });
-
-  it('should copy tooltip password to clipboard synchronously using ClipboardService', () => {
-    const clipboardService = TestBed.inject(ClipboardService);
-    spyOn(clipboardService, 'copyToClipboard').and.returnValue(true);
-
-    component.initialDeviceEntries.set([
-      {
-        deviceId: 'device-1',
-        currentWifi: {ssid: 'test-ssid', psk: 'secret123', scanSsid: false},
-        status:
-          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-      },
-    ]);
-    component.updateTargetWifi({ssid: 'other-target'});
-    component.goToReview();
-    detectChanges();
-
-    const wifiChip = overlayElement.querySelector(
-      '.bw-wifi-chip',
-    ) as HTMLElement;
-    wifiChip.dispatchEvent(new MouseEvent('mouseenter'));
-    detectChanges();
-
-    const copyBtn = overlayElement.querySelector(
-      '.bw-tip .bw-copy',
-    ) as HTMLButtonElement;
-    expect(copyBtn).toBeTruthy();
-    copyBtn.click();
-    detectChanges();
-
-    expect(clipboardService.copyToClipboard).toHaveBeenCalledWith('secret123');
-    expect(copyBtn.getAttribute('aria-label')).toBe('Copied');
-  });
-
-  it('should compute unconfiguredBadge and render it for No default Wi-Fi', () => {
-    // When none of the devices are unconfigured (all have SSIDs)
-    expect(component.unconfiguredBadge()).toBeNull();
-
-    // When 1 device is unconfigured
-    component.initialDeviceEntries.set([
-      {
-        deviceId: 'device-1',
-        currentWifi: undefined,
-        status:
-          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-      },
-      {
-        deviceId: 'device-2',
-        currentWifi: {ssid: 'wifi-2', psk: '', scanSsid: false},
-        status:
-          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-      },
-      {
-        deviceId: 'device-3',
-        currentWifi: {ssid: 'wifi-3', psk: '', scanSsid: false},
-        status:
-          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-      },
-    ]);
-    expect(component.unconfiguredBadge()).toBe('Current on 1 device selected');
-
-    // When all N devices are unconfigured (e.g. after clearing default Wi-Fi)
-    component.initialDeviceEntries.set([
-      {
-        deviceId: 'device-1',
-        currentWifi: undefined,
-        status:
-          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-      },
-      {
-        deviceId: 'device-2',
-        currentWifi: undefined,
-        status:
-          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-      },
-      {
-        deviceId: 'device-3',
-        currentWifi: undefined,
-        status:
-          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-      },
-    ]);
-    expect(component.unconfiguredBadge()).toBe('Current on all 3 selected');
-
-    detectChanges();
-    const clearRow = overlayElement.querySelector('.bw-li');
-    expect(clearRow?.textContent).toContain('No default Wi-Fi');
-    expect(clearRow?.textContent).toContain('Current on all 3 selected');
   });
 
   it('should update headline and display loading state during apply', () => {
@@ -967,13 +622,8 @@ describe('BulkConfigWifiDialog', () => {
 
     detectChanges();
     const applyingContainer = overlayElement.querySelector('.bw-applying');
-    expect(applyingContainer).toBeTruthy();
     expect(applyingContainer?.textContent).toContain('Applying to 2 devices');
-    expect(applyingContainer?.textContent).toContain(
-      'This usually takes a few seconds.',
-    );
 
-    // Once mutation resolves with success
     pendingSubject.next({errors: {}});
     pendingSubject.complete();
 
@@ -983,7 +633,6 @@ describe('BulkConfigWifiDialog', () => {
 
     detectChanges();
     const successContainer = overlayElement.querySelector('.bw-success');
-    expect(successContainer).toBeTruthy();
     expect(successContainer?.textContent).toContain('2 devices updated');
   });
 
@@ -1044,7 +693,6 @@ describe('BulkConfigWifiDialog', () => {
         {wifi: {ssid: 'GoogleGuest', psk: 'abc', scanSsid: true}},
         {wifi: {ssid: 'OtherNet'}},
       ]);
-      component.initialDeviceEntries.set([]);
     });
 
     it('should mark all options inactive when isClearWifi is true', () => {
@@ -1085,7 +733,7 @@ describe('BulkConfigWifiDialog', () => {
   });
 
   describe('nothingToUpdateMessage', () => {
-    it('should format message when all devices already have no default Wi-Fi configured', () => {
+    it('should format nothingToUpdateMessage for clear mode and network mode', () => {
       component.clearTargetWifi();
       component.wizard.loadReview(
         () =>
@@ -1113,167 +761,15 @@ describe('BulkConfigWifiDialog', () => {
       expect(component.nothingToUpdateMessage()).toContain(
         'already have no default Wi-Fi configured. No update is needed.',
       );
-    });
 
-    it('should format message when all devices already use target Wi-Fi', () => {
       component.updateTargetWifi({ssid: 'TargetNet'});
-      component.wizard.loadReview(
-        () =>
-          of({
-            entries: [
-              {
-                deviceId: 'dev1',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
-              },
-              {
-                deviceId: 'dev2',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
-              },
-              {
-                deviceId: 'dev3',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
-              },
-            ],
-          }),
-        '',
-      );
       expect(component.nothingToUpdateMessage()).toContain(
         'already use this Wi-Fi configuration. No update is needed.',
-      );
-    });
-
-    it('should format message when some match and some are read-only', () => {
-      component.updateTargetWifi({ssid: 'TargetNet'});
-      component.wizard.loadReview(
-        () =>
-          of({
-            entries: [
-              {
-                deviceId: 'dev1',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
-              },
-              {
-                deviceId: 'dev2',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-              },
-              {
-                deviceId: 'dev3',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-              },
-            ],
-          }),
-        '',
-      );
-      expect(component.nothingToUpdateMessage()).toBe(
-        '1 device already match this Wi-Fi configuration and 2 devices are read-only. No devices can be updated.',
-      );
-    });
-
-    it('should format message when all devices are read-only', () => {
-      component.updateTargetWifi({ssid: 'TargetNet'});
-      component.wizard.loadReview(
-        () =>
-          of({
-            entries: [
-              {
-                deviceId: 'dev1',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-              },
-              {
-                deviceId: 'dev2',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-              },
-              {
-                deviceId: 'dev3',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-              },
-            ],
-          }),
-        '',
-      );
-      expect(component.nothingToUpdateMessage()).toBe(
-        'All 3 devices are read-only and cannot be updated.',
-      );
-    });
-  });
-
-  describe('successSupportText', () => {
-    it('should format extra notes when some devices already matched and some were read-only', () => {
-      component.wizard.loadReview(
-        () =>
-          of({
-            entries: [
-              {
-                deviceId: 'dev1',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-              },
-              {
-                deviceId: 'dev2',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
-              },
-              {
-                deviceId: 'dev3',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-              },
-            ],
-          }),
-        '',
-      );
-      expect(component.successSupportText()).toBe(
-        '1 device already matched; 1 device read-only.',
-      );
-    });
-
-    it('should format default success text when no extra notes', () => {
-      component.wizard.loadReview(
-        () =>
-          of({
-            entries: [
-              {
-                deviceId: 'dev1',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-              },
-              {
-                deviceId: 'dev2',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-              },
-            ],
-          }),
-        '',
-      );
-      expect(component.successSupportText()).toBe(
-        'Every updated device now uses this network.',
-      );
-      component.clearTargetWifi();
-      expect(component.successSupportText()).toBe(
-        'Removed default Wi-Fi from every updated device.',
       );
     });
   });
 
   describe('apply lifecycle and error handling', () => {
-    it('should do nothing when willUpdateRows is empty', () => {
-      component.wizard.loadReview(() => of({entries: []}), '');
-      component.apply();
-      expect(
-        mockConfigService.batchUpdateDeviceWifiConfigs,
-      ).not.toHaveBeenCalled();
-    });
-
     it('should handle whole-RPC apply errors on review step with inline banner and Retry Apply button', () => {
       component.updateTargetWifi({ssid: 'target-wifi'});
       component.goToReview();
@@ -1304,125 +800,17 @@ describe('BulkConfigWifiDialog', () => {
         'Server error while applying Wi-Fi update',
       );
     });
-
-    it('should map UpdateError code when message is absent in response errors', () => {
-      component.updateTargetWifi({ssid: 'target-wifi'});
-      component.goToReview();
-      detectChanges();
-
-      mockConfigService.batchUpdateDeviceWifiConfigs.and.returnValue(
-        of({
-          errors: {
-            'device-1': {code: 'PERMISSION_DENIED', message: ''},
-          },
-        }),
-      );
-      component.apply();
-      expect(component.wizard.viewMode()).toBe('errors');
-      expect(component.wizard.applyErrors()[0].reason).toBe(
-        'PERMISSION_DENIED',
-      );
-    });
-  });
-
-  describe('dialog close results', () => {
-    it('should close with undefined when applyResult is null', () => {
-      component.wizard.close();
-      expect(mockDialogRef.close).toHaveBeenCalledWith(undefined);
-    });
-
-    it('should close with undefined when all devices failed with errors', () => {
-      component.wizard.loadReview(
-        () =>
-          of({
-            entries: [
-              {
-                deviceId: 'dev1',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-              },
-              {
-                deviceId: 'dev2',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-              },
-            ],
-          }),
-        '',
-      );
-      mockConfigService.batchUpdateDeviceWifiConfigs.and.returnValue(
-        of({
-          errors: {
-            dev1: {code: 'UNKNOWN', message: 'Failed'},
-            dev2: {code: 'UNKNOWN', message: 'Failed'},
-          },
-        }),
-      );
-      component.apply();
-      component.wizard.close();
-      expect(mockDialogRef.close).toHaveBeenCalledWith(undefined);
-    });
-
-    it('should close with updated: true when partially successful', () => {
-      component.wizard.loadReview(
-        () =>
-          of({
-            entries: [
-              {
-                deviceId: 'dev1',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-              },
-              {
-                deviceId: 'dev2',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-              },
-            ],
-          }),
-        '',
-      );
-      mockConfigService.batchUpdateDeviceWifiConfigs.and.returnValue(
-        of({
-          errors: {
-            dev1: {code: 'UNKNOWN', message: 'Failed'},
-          },
-        }),
-      );
-      component.apply();
-      component.wizard.close();
-      expect(mockDialogRef.close).toHaveBeenCalledWith({updated: true});
-    });
   });
 
   describe('canGoNext and step navigation', () => {
-    it('should compute canGoNext correctly', () => {
-      component.clearTargetWifi();
-      expect(component.canGoNext()).toBeTrue();
-
-      component.updateTargetWifi({});
+    it('should compute canGoNext correctly and block goToReview when false', () => {
       component.targetWifi.set({ssid: '   ', psk: '', scanSsid: false});
       expect(component.canGoNext()).toBeFalse();
+      component.goToReview();
+      expect(component.wizard.phase()).toBe('network');
 
       component.targetWifi.set({ssid: 'valid-ssid', psk: '', scanSsid: false});
       expect(component.canGoNext()).toBeTrue();
-    });
-
-    it('should not navigate to review when canGoNext is false', () => {
-      component.targetWifi.set({ssid: '', psk: '', scanSsid: false});
-      component.goToReview();
-      expect(component.wizard.phase()).toBe('network');
-    });
-
-    it('should reset stepError when navigating back to network', () => {
-      component.wizard.loadReview(
-        () => throwError(() => new Error('Some error')),
-        'Fallback error',
-      );
-      expect(component.wizard.stepError()).toBe('Some error');
-      component.wizard.setPhase('network');
-      expect(component.wizard.phase()).toBe('network');
-      expect(component.wizard.stepError()).toBeNull();
     });
   });
 
@@ -1432,16 +820,15 @@ describe('BulkConfigWifiDialog', () => {
         throwError(() => ({})),
       );
       component.loadNetworkStepData();
-      expect(component.wizard.stepError()).toBe(
+      expect(component.networkTask.error()).toBe(
         'Failed to load Wi-Fi configurations',
       );
     });
 
     it('should use fallback error message when loadReviewData error has no message', () => {
-      mockConfigService.batchGetDeviceWifiConfigs.and.callFake((req) => {
-        if (!req.target) return of(mockBatchDevicesResponse);
-        return throwError(() => ({}));
-      });
+      mockConfigService.batchGetDeviceWifiConfigs.and.returnValue(
+        throwError(() => ({})),
+      );
       component.updateTargetWifi({ssid: 'valid-target'});
       component.goToReview();
       expect(component.wizard.stepError()).toBe(
@@ -1450,15 +837,13 @@ describe('BulkConfigWifiDialog', () => {
     });
   });
 
-  describe('reviewTargetSubtitle', () => {
-    it('should return security meta for clearWifi mode', () => {
+  describe('reviewTargetSubtitle and preset subtitle', () => {
+    it('should return security meta for clearWifi, password-protected, open, and hidden networks', () => {
       component.clearTargetWifi();
       expect(component.reviewTargetSubtitle()).toBe(
         'Removes default Wi-Fi from target devices',
       );
-    });
 
-    it('should return security meta for password-protected hidden network', () => {
       component.updateTargetWifi({
         ssid: 'SecretNet',
         psk: 'securePass',
@@ -1467,9 +852,7 @@ describe('BulkConfigWifiDialog', () => {
       expect(component.reviewTargetSubtitle()).toBe(
         'Target Wi-Fi · Password protected · Hidden SSID',
       );
-    });
 
-    it('should return security meta for open unhidden network', () => {
       component.updateTargetWifi({
         ssid: 'OpenNet',
         psk: '',
@@ -1478,9 +861,7 @@ describe('BulkConfigWifiDialog', () => {
       expect(component.reviewTargetSubtitle()).toBe(
         'Target Wi-Fi · Open network',
       );
-    });
 
-    it('should return security meta for open hidden network', () => {
       component.updateTargetWifi({
         ssid: 'OpenHidden',
         psk: '',
@@ -1490,51 +871,7 @@ describe('BulkConfigWifiDialog', () => {
         'Target Wi-Fi · Open network · Hidden SSID',
       );
     });
-  });
 
-  describe('headline and supportText', () => {
-    it('should format headline when applying, on success, and on single error', () => {
-      component.updateTargetWifi({ssid: 'target'});
-      component.goToReview();
-
-      const pendingSubject =
-        new Subject<BatchUpdateDeviceWifiConfigsResponse>();
-      mockConfigService.batchUpdateDeviceWifiConfigs.and.returnValue(
-        pendingSubject.asObservable(),
-      );
-      component.apply();
-      expect(component.headline()).toBe('Applying Wi-Fi');
-      expect(component.supportText()).toBe('');
-
-      pendingSubject.next({errors: {}});
-      pendingSubject.complete();
-      expect(component.headline()).toBe('Wi-Fi updated');
-      expect(component.supportText()).toBe('');
-
-      mockConfigService.batchUpdateDeviceWifiConfigs.and.returnValue(
-        of({
-          errors: {
-            'device-1': {code: 'UNKNOWN', message: 'fail'},
-          },
-        }),
-      );
-      component.apply();
-      expect(component.headline()).toBe('Configure Wi-Fi');
-      expect(component.supportText()).toBe('Apply completed with errors');
-    });
-
-    it('should format headline for step 1 and step 2', () => {
-      expect(component.headline()).toBe('Configure Wi-Fi for 3 devices');
-      expect(component.supportText()).toBe('Step 1 of 2 · Choose a network');
-
-      component.updateTargetWifi({ssid: 'target'});
-      component.goToReview();
-      expect(component.headline()).toBe('Review and apply');
-      expect(component.supportText()).toBe('Step 2 of 2 · Confirm and apply');
-    });
-  });
-
-  describe('getCandidateSubtitle and wifi options', () => {
     it('should format curated preset subtitle when fleetInUse count is absent', () => {
       component.candidateWifis.set([
         {
@@ -1545,33 +882,13 @@ describe('BulkConfigWifiDialog', () => {
           wifi: {ssid: 'NoInfoNet', psk: '', scanSsid: false},
         },
       ]);
-      const options = component.wifiOptions();
-      const presetOpt = options.find((o) => o.wifi.ssid === 'PresetNet');
-      expect(presetOpt?.subtitle).toBe('Preset network');
-
-      const noInfoOpt = options.find((o) => o.wifi.ssid === 'NoInfoNet');
-      expect(noInfoOpt?.subtitle).toBe('');
-    });
-  });
-
-  describe('reviewSummary switch handling', () => {
-    it('should ignore entries with unspecified status', () => {
-      component.wizard.loadReview(
-        () =>
-          of({
-            entries: [
-              {
-                deviceId: 'dev-unspec',
-                status:
-                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_UNSPECIFIED,
-              },
-            ],
-          }),
+      const options = component.filteredWifiOptions();
+      expect(options.find((o) => o.wifi.ssid === 'PresetNet')?.subtitle).toBe(
+        'Preset network',
+      );
+      expect(options.find((o) => o.wifi.ssid === 'NoInfoNet')?.subtitle).toBe(
         '',
       );
-      expect(component.wizard.reviewSummary().willUpdateCount).toBe(0);
-      expect(component.wizard.reviewSummary().alreadyMatchCount).toBe(0);
-      expect(component.wizard.reviewSummary().readOnlyCount).toBe(0);
     });
   });
 });

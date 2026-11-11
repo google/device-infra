@@ -1,0 +1,37 @@
+@use 'bulk_wizard';
+
+:host {
+  display: contents;
+}
+
+@include bulk_wizard.bulk-text-btn;
+
+.bw-panel-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  min-height: 52px;
+  box-sizing: border-box;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: bulk_wizard.$color-on-surface-variant;
+
+  &.bw-panel-status-error {
+    color: bulk_wizard.$color-error;
+    background: bulk_wizard.$color-error-surface;
+  }
+
+  .bw-panel-status-icon {
+    flex: none;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: bulk_wizard.$color-error;
+  }
+
+  .bw-panel-status-text {
+    flex: 1;
+    min-width: 0;
+  }
+}

@@ -115,7 +115,7 @@ export abstract class ConfigService {
 
   /**
    * Retrieves dimensions available for batch configuration.
-   * @param request Optional request containing search query to filter dimensions.
+   * @param request Optional request object.
    * @return An Observable emitting the configurable dimensions response.
    */
   abstract getConfigurableDimensions(

@@ -27,12 +27,12 @@ export function useBulkConfigActions() {
   const configService = inject(CONFIG_SERVICE);
 
   /**
-   * Batch device configuration applies only to the deployment's own fleet
-   * (`google_1p` in 1P and the local fleet in OSS, both represented as
-   * `store.fleet() === 'internal'`). Partner ATS views (`'ats'`) hide bulk
-   * configuration actions.
+   * Batch device configuration applies only to devices on the deployment's own
+   * fleet (`google_1p` in 1P and the local fleet in OSS, both represented as
+   * `store.fleet() === 'internal'`). Host views and Partner ATS views (`'ats'`)
+   * hide bulk configuration actions.
    */
-  const isOwnFleet = computed(
+  const isOwnFleetDevices = computed(
     () => store.entity() === 'devices' && store.fleet() === 'internal',
   );
 
@@ -42,7 +42,7 @@ export function useBulkConfigActions() {
    * and tab switches.
    */
   const shouldLoadDimensions = linkedSignal<boolean, boolean>({
-    source: () => isOwnFleet() && store.selectedItems().size > 0,
+    source: () => isOwnFleetDevices() && store.selectedItems().size > 0,
     computation: (active, previous) => active || Boolean(previous?.value),
   });
 
@@ -57,7 +57,7 @@ export function useBulkConfigActions() {
 
   /** Consolidated dimension configuration state for the active view. */
   const dimensionConfig = computed(() => {
-    if (!isOwnFleet()) {
+    if (!isOwnFleetDevices()) {
       return {
         isLoading: false,
         error: null,
@@ -73,7 +73,7 @@ export function useBulkConfigActions() {
     return {
       isLoading: dimensionsResource.isLoading(),
       error: err ? getErrorMessage(err) : null,
-      enabled: res === null ? true : res.enabled === true,
+      enabled: res === null ? true : Boolean(res.enabled),
       dimensions: res?.dimensions ?? [],
       allowCustom: Boolean(res?.allowCustomDimensions),
     };
@@ -90,12 +90,7 @@ export function useBulkConfigActions() {
     extraData?: Partial<BulkConfigDialogData>,
   ): void => {
     const dimConfig = dimensionConfig();
-    if (
-      !isOwnFleet() ||
-      !dimConfig.enabled ||
-      dimConfig.isLoading ||
-      dimConfig.error
-    ) {
+    if (!dimConfig.enabled || dimConfig.isLoading || dimConfig.error) {
       return;
     }
     const selected = Array.from(

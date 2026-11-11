@@ -30,4 +30,10 @@ export class BulkReviewHeaderBanner {
 
   /** Informational message shown when `willUpdateCount === 0`. */
   readonly nothingToUpdateMessage = input<string>('');
+
+  /** Optional whole-RPC error message when applying the batch update fails. */
+  readonly applyError = input<string | null>(null);
+
+  /** Headline title for the apply error banner. */
+  readonly applyErrorTitle = input<string>('Failed to apply update');
 }

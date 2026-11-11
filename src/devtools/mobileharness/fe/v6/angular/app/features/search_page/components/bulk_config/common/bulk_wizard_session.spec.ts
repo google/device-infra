@@ -7,7 +7,7 @@ import {
   DeviceTarget,
 } from '../../../../../core/models/device_config_models';
 import {BulkConfigDialogResult} from '../../../models';
-import {useBulkWizardSession} from './bulk_wizard_session';
+import {useBulkWizardSession, useInlineTask} from './bulk_wizard_session';
 
 describe('useBulkWizardSession', () => {
   let mockDialogRef: jasmine.SpyObj<
@@ -28,32 +28,32 @@ describe('useBulkWizardSession', () => {
     const session = TestBed.runInInjectionContext(() => useBulkWizardSession());
 
     session.loadReview(
-      of({
-        entries: [
-          {
-            deviceId: 'd1',
-            status:
-              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-          },
-          {
-            deviceId: 'd2',
-            status:
-              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
-          },
-          {
-            deviceId: undefined as unknown as string,
-            status:
-              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
-          },
-        ],
-      }),
+      () =>
+        of({
+          entries: [
+            {
+              deviceId: 'd1',
+              status:
+                DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
+            },
+            {
+              deviceId: 'd2',
+              status:
+                DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
+            },
+            {
+              deviceId: 'd3',
+              status:
+                DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
+            },
+          ],
+        }),
       'Fallback review error',
     );
 
     expect(session.phase()).toBe('review');
     expect(session.viewMode()).toBe('review');
     expect(session.stepError()).toBeNull();
-    expect(session.reviewEntries()[2].deviceId).toBe('');
     expect(session.reviewSummary().willUpdateCount).toBe(1);
     expect(session.reviewSummary().alreadyMatchCount).toBe(1);
     expect(session.reviewSummary().readOnlyCount).toBe(1);
@@ -63,38 +63,39 @@ describe('useBulkWizardSession', () => {
     const session = TestBed.runInInjectionContext(() => useBulkWizardSession());
 
     session.loadReview(
-      throwError(() => ({
-        error: {error: {message: 'Backend ESF deadline exceeded'}},
-      })),
+      () =>
+        throwError(() => ({
+          error: {error: {message: 'Backend ESF deadline exceeded'}},
+        })),
       'Failed to check device status',
     );
 
     expect(session.viewMode()).toBe('step_error');
     expect(session.stepErrorTitle()).toBe('Failed to check device status');
     expect(session.stepError()).toBe('Backend ESF deadline exceeded');
-    expect(session.statusMessage()).toBe('Backend ESF deadline exceeded');
   });
 
   it('applies updates to WILL_UPDATE devices and closes with {updated: true} on success', () => {
     const session = TestBed.runInInjectionContext(() => useBulkWizardSession());
 
     session.loadReview(
-      of({
-        entries: [
-          {
-            deviceId: 'd1',
-            hostName: 'host-1',
-            status:
-              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-          },
-          {
-            deviceId: 'd2',
-            hostName: 'host-2',
-            status:
-              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
-          },
-        ],
-      }),
+      () =>
+        of({
+          entries: [
+            {
+              deviceId: 'd1',
+              hostName: 'host-1',
+              status:
+                DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
+            },
+            {
+              deviceId: 'd2',
+              hostName: 'host-2',
+              status:
+                DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
+            },
+          ],
+        }),
       '',
     );
 
@@ -116,20 +117,21 @@ describe('useBulkWizardSession', () => {
     const session = TestBed.runInInjectionContext(() => useBulkWizardSession());
 
     session.loadReview(
-      of({
-        entries: [
-          {
-            deviceId: 'd1',
-            status:
-              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-          },
-          {
-            deviceId: 'd2',
-            status:
-              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-          },
-        ],
-      }),
+      () =>
+        of({
+          entries: [
+            {
+              deviceId: 'd1',
+              status:
+                DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
+            },
+            {
+              deviceId: 'd2',
+              status:
+                DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
+            },
+          ],
+        }),
       '',
     );
 
@@ -154,15 +156,16 @@ describe('useBulkWizardSession', () => {
     const session = TestBed.runInInjectionContext(() => useBulkWizardSession());
 
     session.loadReview(
-      of({
-        entries: [
-          {
-            deviceId: 'd1',
-            status:
-              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-          },
-        ],
-      }),
+      () =>
+        of({
+          entries: [
+            {
+              deviceId: 'd1',
+              status:
+                DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
+            },
+          ],
+        }),
       '',
     );
 
@@ -177,6 +180,9 @@ describe('useBulkWizardSession', () => {
 
     session.close();
     expect(mockDialogRef.close).toHaveBeenCalledWith(undefined);
+
+    session.setPhase('review');
+    expect(session.applyRpcError()).toBeNull();
   });
 
   it('cancels in-flight step requests via setPhase or subsequent loadReview calls', () => {
@@ -194,13 +200,12 @@ describe('useBulkWizardSession', () => {
       entries: Array<{deviceId: string; status?: DeviceConfigChangeStatus}>;
     }>();
 
-    session.loadReview(slowReq$.asObservable(), 'Slow error');
+    session.loadReview(() => slowReq$.asObservable(), 'Slow error');
     expect(session.phase()).toBe('review');
     expect(session.viewMode()).toBe('loading');
-    expect(session.statusMessage()).toBe('Checking device configurations…');
 
     // Starting a new review cancels the slow request
-    session.loadReview(fastReq$.asObservable(), 'Fast error');
+    session.loadReview(() => fastReq$.asObservable(), 'Fast error');
     fastReq$.next({
       entries: [
         {
@@ -232,7 +237,7 @@ describe('useBulkWizardSession', () => {
     const pending$ = new Subject<{
       entries: Array<{deviceId: string; status?: DeviceConfigChangeStatus}>;
     }>();
-    session.loadReview(pending$.asObservable(), 'Pending error');
+    session.loadReview(() => pending$.asObservable(), 'Pending error');
     expect(session.viewMode()).toBe('loading');
 
     session.setPhase('network');
@@ -249,43 +254,32 @@ describe('useBulkWizardSession', () => {
       >('network'),
     );
 
-    const stepReq$ = new Subject<void>();
-    session.runStepTask(
-      stepReq$,
-      () => {},
-      'Failed',
-      'network',
-      'Loading network…',
-    );
-    expect(session.viewMode()).toBe('loading');
-    expect(session.statusMessage()).toBe('Loading network…');
-
-    stepReq$.error(new Error('Failed'));
-    expect(session.viewMode()).toBe('step_error');
-    expect(session.statusMessage()).toBe('Failed');
-
-    session.setPhase('network');
     expect(session.viewMode()).toBe('network');
 
     const reviewReq$ = new Subject<{
       entries: Array<{deviceId: string; status?: DeviceConfigChangeStatus}>;
     }>();
-    session.loadReview(reviewReq$, 'Review failed');
+    session.loadReview(() => reviewReq$, 'Review failed');
     expect(session.viewMode()).toBe('loading');
 
     reviewReq$.error(new Error('Review failed'));
     expect(session.viewMode()).toBe('step_error');
+    expect(session.stepError()).toBe('Review failed');
+
+    session.setPhase('network');
+    expect(session.viewMode()).toBe('network');
 
     session.loadReview(
-      of({
-        entries: [
-          {
-            deviceId: 'd1',
-            status:
-              DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
-          },
-        ],
-      }),
+      () =>
+        of({
+          entries: [
+            {
+              deviceId: 'd1',
+              status:
+                DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE,
+            },
+          ],
+        }),
       '',
     );
     expect(session.viewMode()).toBe('review');
@@ -297,5 +291,58 @@ describe('useBulkWizardSession', () => {
     applyReq$.next({errors: {}});
     applyReq$.complete();
     expect(session.viewMode()).toBe('success');
+  });
+
+  it('tracks inline tasks via useInlineTask without blocking wizard viewMode', () => {
+    const {session, task} = TestBed.runInInjectionContext(() => ({
+      session: useBulkWizardSession<
+        {deviceId: string; status?: DeviceConfigChangeStatus},
+        'key' | 'values' | 'review'
+      >('key'),
+      task: useInlineTask('Inline fallback error'),
+    }));
+
+    const req$ = new Subject<string>();
+    let result = '';
+    task.run(
+      () => req$,
+      (res) => {
+        result = res;
+      },
+    );
+
+    expect(task.isLoading()).toBeTrue();
+    expect(task.hasLoaded()).toBeFalse();
+    expect(task.error()).toBeNull();
+    expect(session.viewMode()).toBe('key');
+
+    req$.next('loaded-data');
+    req$.complete();
+
+    expect(task.isLoading()).toBeFalse();
+    expect(task.hasLoaded()).toBeTrue();
+    expect(result).toBe('loaded-data');
+
+    let attempts = 0;
+    task.run(
+      () => {
+        attempts++;
+        return attempts === 1
+          ? throwError(() => new Error('Timeout fetching suggestions'))
+          : of('retried-data');
+      },
+      (res) => {
+        result = res;
+      },
+    );
+    expect(task.isLoading()).toBeFalse();
+    expect(task.hasLoaded()).toBeFalse();
+    expect(task.error()).toBe('Timeout fetching suggestions');
+    expect(session.viewMode()).toBe('key');
+
+    task.retry();
+    expect(task.hasLoaded()).toBeTrue();
+    expect(task.error()).toBeNull();
+    expect(result).toBe('retried-data');
   });
 });

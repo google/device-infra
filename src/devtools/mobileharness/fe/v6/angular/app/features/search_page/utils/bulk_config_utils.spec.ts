@@ -1,10 +1,15 @@
 import {
+  canonicalizeValueSet,
   extractDeviceTarget,
+  extractDimensionTokens,
   formatCurrentSelectionBadge,
   formatDeviceCount,
   formatNothingToUpdateMessage,
   formatSuccessSupportText,
+  formatWizardHeadline,
+  formatWizardSupportText,
   getDeviceTargetKey,
+  hasClosedQuotes,
 } from './bulk_config_utils';
 
 describe('bulk_config_utils', () => {
@@ -103,19 +108,19 @@ describe('bulk_config_utils', () => {
 
     it('formats badge when a subset of selected devices match', () => {
       expect(formatCurrentSelectionBadge(1, 3)).toBe(
-        'Current on 1 device selected',
+        'Configured on 1 device selected',
       );
       expect(formatCurrentSelectionBadge(2, 3)).toBe(
-        'Current on 2 devices selected',
+        'Configured on 2 devices selected',
       );
     });
 
     it('formats badge when all selected devices match', () => {
       expect(formatCurrentSelectionBadge(3, 3)).toBe(
-        'Current on all 3 selected',
+        'Configured on all 3 selected',
       );
       expect(formatCurrentSelectionBadge(1, 1)).toBe(
-        'Current on 1 device selected',
+        'Configured on 1 device selected',
       );
     });
   });
@@ -125,7 +130,6 @@ describe('bulk_config_utils', () => {
       expect(
         formatNothingToUpdateMessage(
           {alreadyMatchCount: 3, readOnlyCount: 0},
-          3,
           'already use this Wi-Fi configuration',
           'Wi-Fi configuration',
         ),
@@ -136,7 +140,6 @@ describe('bulk_config_utils', () => {
       expect(
         formatNothingToUpdateMessage(
           {alreadyMatchCount: 1, readOnlyCount: 2},
-          3,
           'already use this Wi-Fi configuration',
           'Wi-Fi configuration',
         ),
@@ -147,7 +150,6 @@ describe('bulk_config_utils', () => {
       expect(
         formatNothingToUpdateMessage(
           {alreadyMatchCount: 0, readOnlyCount: 3},
-          3,
           'already use this Wi-Fi configuration',
           'Wi-Fi configuration',
         ),
@@ -156,20 +158,71 @@ describe('bulk_config_utils', () => {
   });
 
   describe('formatSuccessSupportText', () => {
-    it('formats extra notes or falls back to default message', () => {
+    it('formats extra notes when devices were skipped and returns empty string when all updated', () => {
       expect(
-        formatSuccessSupportText(
-          {alreadyMatchCount: 1, readOnlyCount: 2},
-          'Every updated device now uses this network.',
-        ),
+        formatSuccessSupportText({alreadyMatchCount: 1, readOnlyCount: 2}),
       ).toBe('1 device already matched; 2 devices read-only.');
 
       expect(
-        formatSuccessSupportText(
-          {alreadyMatchCount: 0, readOnlyCount: 0},
-          'Every updated device now uses this network.',
-        ),
-      ).toBe('Every updated device now uses this network.');
+        formatSuccessSupportText({alreadyMatchCount: 0, readOnlyCount: 0}),
+      ).toBe('');
+    });
+  });
+
+  describe('formatWizardHeadline and formatWizardSupportText', () => {
+    it('formats headline and support text across wizard view modes', () => {
+      expect(
+        formatWizardHeadline('step', 'Wi-Fi', 'Select Wi-Fi network'),
+      ).toBe('Select Wi-Fi network');
+      expect(
+        formatWizardHeadline('applying', 'Wi-Fi', 'Review Wi-Fi changes'),
+      ).toBe('Applying Wi-Fi');
+      expect(
+        formatWizardHeadline('success', 'Wi-Fi', 'Review Wi-Fi changes'),
+      ).toBe('Wi-Fi updated');
+      expect(
+        formatWizardHeadline('errors', 'Wi-Fi', 'Review Wi-Fi changes'),
+      ).toBe('Configure Wi-Fi');
+
+      expect(formatWizardSupportText('step', 'Step 1 of 3')).toBe(
+        'Step 1 of 3',
+      );
+      expect(formatWizardSupportText('applying', 'Step 3 of 3')).toBe('');
+      expect(formatWizardSupportText('success', 'Step 3 of 3')).toBe('');
+      expect(formatWizardSupportText('errors', 'Step 3 of 3')).toBe(
+        'Apply completed with errors',
+      );
+    });
+  });
+
+  describe('extractDimensionTokens, hasClosedQuotes, and canonicalizeValueSet', () => {
+    it('extracts unquoted, single-quoted, and double-quoted dimension tokens', () => {
+      expect(extractDimensionTokens('')).toEqual([]);
+      expect(extractDimensionTokens(' , ; \n "" \'\' ')).toEqual([]);
+      expect(extractDimensionTokens('valA, valB; valC\nvalD')).toEqual([
+        'valA',
+        'valB',
+        'valC',
+        'valD',
+      ]);
+      expect(extractDimensionTokens('"a, b", \'c; d\', plain')).toEqual([
+        'a, b',
+        'c; d',
+        'plain',
+      ]);
+    });
+
+    it('detects whether single and double quotes are closed', () => {
+      expect(hasClosedQuotes('plain text')).toBeTrue();
+      expect(hasClosedQuotes('"closed, quote"')).toBeTrue();
+      expect(hasClosedQuotes("'closed; quote'")).toBeTrue();
+      expect(hasClosedQuotes('"unclosed quote')).toBeFalse();
+      expect(hasClosedQuotes("'unclosed quote")).toBeFalse();
+    });
+
+    it('canonicalizes normalized value sets with case-sensitive sorting', () => {
+      expect(canonicalizeValueSet(['b', 'a'])).toBe('a::b');
+      expect(canonicalizeValueSet(['pixel', 'Pixel'])).toBe('Pixel::pixel');
     });
   });
 });

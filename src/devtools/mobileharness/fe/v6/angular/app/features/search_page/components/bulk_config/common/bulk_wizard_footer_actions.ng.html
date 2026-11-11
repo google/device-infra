@@ -1,0 +1,102 @@
+@let w = wizard();
+@let summary = w.reviewSummary();
+
+@switch (w.viewMode()) {
+  @case ('applying') {}
+  @case ('success') {
+    <button
+      type="button"
+      class="dialog-button dialog-button-primary"
+      (click)="w.close()"
+    >
+      Done
+    </button>
+  }
+  @case ('errors') {
+    <button
+      type="button"
+      class="dialog-button dialog-button-primary"
+      (click)="w.close()"
+    >
+      Close
+    </button>
+  }
+  @case ('loading') {
+    <button
+      type="button"
+      class="dialog-button dialog-button-secondary"
+      disabled
+    >
+      Back
+    </button>
+  }
+  @case ('step_error') {
+    <button
+      type="button"
+      class="dialog-button dialog-button-secondary"
+      (click)="backFromReview.emit()"
+    >
+      Back
+    </button>
+    <button
+      type="button"
+      class="dialog-button dialog-button-primary"
+      (click)="w.retryStep()"
+    >
+      Retry
+    </button>
+  }
+  @case ('review') {
+    <button
+      type="button"
+      class="dialog-button dialog-button-secondary"
+      (click)="backFromReview.emit()"
+    >
+      Back
+    </button>
+    @if (summary.willUpdateCount > 0) {
+      <button
+        type="button"
+        class="dialog-button dialog-button-primary"
+        (click)="apply.emit()"
+      >
+        {{ w.applyRpcError() ? 'Retry Apply' : 'Apply to ' + summary.willUpdateLabel }}
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="dialog-button dialog-button-primary"
+        (click)="w.close()"
+      >
+        Close
+      </button>
+    }
+  }
+  @default {
+    @if (showStepBack()) {
+      <button
+        type="button"
+        class="dialog-button dialog-button-secondary"
+        (click)="stepBack.emit()"
+      >
+        Back
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="dialog-button dialog-button-secondary"
+        (click)="w.close()"
+      >
+        Cancel
+      </button>
+    }
+    <button
+      type="button"
+      class="dialog-button dialog-button-primary"
+      [disabled]="!canProceed()"
+      (click)="stepNext.emit()"
+    >
+      Next
+    </button>
+  }
+}

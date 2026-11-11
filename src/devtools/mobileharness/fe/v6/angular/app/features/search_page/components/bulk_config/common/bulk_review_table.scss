@@ -1,3 +1,48 @@
 @use 'bulk_wizard';
 
-@include bulk_wizard.bulk-review-table;
+:host {
+  display: contents;
+}
+
+@include bulk_wizard.bulk-table;
+
+.bw-review-table {
+  .mat-column-deviceId {
+    width: 35%;
+  }
+
+  .mat-column-currentValue {
+    width: 45%;
+    overflow: visible;
+  }
+
+  .mat-column-status {
+    width: 20%;
+  }
+}
+
+.bw-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.125rem;
+}
+
+.bw-status-update {
+  background: bulk_wizard.$color-primary-container;
+  color: bulk_wizard.$color-on-primary-container;
+}
+
+.bw-status-same {
+  color: bulk_wizard.$color-on-surface-variant;
+  font-weight: 400;
+}
+
+.bw-status-skip {
+  background: bulk_wizard.$color-error-container;
+  color: bulk_wizard.$color-on-error-container;
+}

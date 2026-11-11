@@ -335,7 +335,7 @@ describe('FleetSearchResultsComponent', () => {
   });
 
   describe('Toolbar Selections', () => {
-    it('shows Configure Wi-Fi and Configuration buttons only for devices', () => {
+    it('shows Configure Wi-Fi and Configure Dimension buttons only for devices', () => {
       mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
       mockStore.entity.set('devices');
       fixture.detectChanges();
@@ -347,7 +347,9 @@ describe('FleetSearchResultsComponent', () => {
         b.nativeElement.textContent.trim(),
       );
       expect(buttonTexts.some((t) => t.includes('Configure Wi-Fi'))).toBeTrue();
-      expect(buttonTexts.some((t) => t.includes('Configuration'))).toBeTrue();
+      expect(
+        buttonTexts.some((t) => t.includes('Configure Dimension')),
+      ).toBeTrue();
 
       mockStore.entity.set('hosts');
       fixture.detectChanges();
@@ -361,7 +363,7 @@ describe('FleetSearchResultsComponent', () => {
         hostButtonTexts.some((t) => t.includes('Configure Wi-Fi')),
       ).toBeFalse();
       expect(
-        hostButtonTexts.some((t) => t.includes('Configuration')),
+        hostButtonTexts.some((t) => t.includes('Configure Dimension')),
       ).toBeFalse();
     });
 
@@ -487,7 +489,7 @@ describe('FleetSearchResultsComponent', () => {
       expect(dimConfig.isLoading).toBeFalse();
     });
 
-    it('hides Configure Wi-Fi and Configuration buttons when GetConfigurableDimensionsResponse.enabled is false', async () => {
+    it('hides Configure Wi-Fi and Configure Dimension buttons when GetConfigurableDimensionsResponse.enabled is false', async () => {
       mockConfigService.getConfigurableDimensions.and.returnValue(
         of({
           enabled: false,
@@ -512,10 +514,12 @@ describe('FleetSearchResultsComponent', () => {
       expect(
         buttonTexts.some((t) => t.includes('Configure Wi-Fi')),
       ).toBeFalse();
-      expect(buttonTexts.some((t) => t.includes('Configuration'))).toBeFalse();
+      expect(
+        buttonTexts.some((t) => t.includes('Configure Dimension')),
+      ).toBeFalse();
     });
 
-    it('hides Configure Wi-Fi and Configuration buttons when GetConfigurableDimensionsResponse.enabled is omitted', async () => {
+    it('hides Configure Wi-Fi and Configure Dimension buttons when GetConfigurableDimensionsResponse.enabled is omitted', async () => {
       mockConfigService.getConfigurableDimensions.and.returnValue(
         of({
           dimensions: [],
@@ -539,7 +543,9 @@ describe('FleetSearchResultsComponent', () => {
       expect(
         buttonTexts.some((t) => t.includes('Configure Wi-Fi')),
       ).toBeFalse();
-      expect(buttonTexts.some((t) => t.includes('Configuration'))).toBeFalse();
+      expect(
+        buttonTexts.some((t) => t.includes('Configure Dimension')),
+      ).toBeFalse();
 
       const openSpy = spyOn(
         (component as unknown as {dialog: MatDialog}).dialog,
@@ -550,7 +556,7 @@ describe('FleetSearchResultsComponent', () => {
       expect(openSpy).not.toHaveBeenCalled();
     });
 
-    it('hides Configure Wi-Fi and Configuration buttons without fetching on Partner ATS fleet', async () => {
+    it('hides Configure Wi-Fi and Configure Dimension buttons without fetching on Partner ATS fleet', async () => {
       mockStore.fleet.set('ats');
       mockStore.entity.set('devices');
       mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
@@ -572,7 +578,9 @@ describe('FleetSearchResultsComponent', () => {
       expect(
         buttonTexts.some((t) => t.includes('Configure Wi-Fi')),
       ).toBeFalse();
-      expect(buttonTexts.some((t) => t.includes('Configuration'))).toBeFalse();
+      expect(
+        buttonTexts.some((t) => t.includes('Configure Dimension')),
+      ).toBeFalse();
 
       const openSpy = spyOn(
         (component as unknown as {dialog: MatDialog}).dialog,
@@ -602,7 +610,7 @@ describe('FleetSearchResultsComponent', () => {
         b.nativeElement.textContent.includes('Configure Wi-Fi'),
       );
       const configBtnLoading = loadingButtons.find((b) =>
-        b.nativeElement.textContent.includes('Configuration'),
+        b.nativeElement.textContent.includes('Configure Dimension'),
       );
       expect(wifiBtnLoading?.nativeElement.disabled).toBeTrue();
       expect(configBtnLoading?.nativeElement.disabled).toBeTrue();
@@ -639,7 +647,7 @@ describe('FleetSearchResultsComponent', () => {
         b.nativeElement.textContent.includes('Configure Wi-Fi'),
       );
       const configBtnLoaded = loadedButtons.find((b) =>
-        b.nativeElement.textContent.includes('Configuration'),
+        b.nativeElement.textContent.includes('Configure Dimension'),
       );
       expect(wifiBtnLoaded?.nativeElement.disabled).toBeFalse();
       expect(configBtnLoaded?.nativeElement.disabled).toBeFalse();
@@ -813,6 +821,38 @@ describe('FleetSearchResultsComponent', () => {
       );
       expect(mockStore.clearSelection).toHaveBeenCalled();
       expect(mockStore.executeSearch).toHaveBeenCalled();
+    });
+
+    it('renders Custom Supported/Required Dimension menu items without icons when allowCustom is true', async () => {
+      mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const configBtn = fixture.debugElement.query(
+        By.css('button[title="Configure device dimensions"]'),
+      );
+      expect(configBtn).toBeTruthy();
+      configBtn.nativeElement.click();
+      fixture.detectChanges();
+
+      const footerButtons = Array.from(
+        document.querySelectorAll(
+          '.configure-menu-footer button[mat-menu-item]',
+        ),
+      );
+      expect(footerButtons.length).toBe(2);
+
+      const icons = footerButtons.map((btn) => btn.querySelector('mat-icon'));
+      const labels = footerButtons.map((btn) =>
+        btn.querySelector('span')?.textContent?.trim(),
+      );
+
+      expect(icons).toEqual([null, null]);
+      expect(labels).toEqual([
+        'Custom Supported Dimension…',
+        'Custom Required Dimension…',
+      ]);
     });
   });
 

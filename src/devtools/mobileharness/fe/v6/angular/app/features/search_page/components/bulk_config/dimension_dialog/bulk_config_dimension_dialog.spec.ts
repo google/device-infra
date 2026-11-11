@@ -30,8 +30,12 @@ describe('BulkConfigDimensionDialog', () => {
   let mockDialogRef: MatDialogRef<BulkConfigDimensionDialog, unknown>;
   let appRef: ApplicationRef;
 
-  function detectChanges() {
-    fixture.detectChanges();
+  function detectChanges(
+    targetFixture: ComponentFixture<
+      MatTestDialogOpener<BulkConfigDimensionDialog>
+    > = fixture,
+  ) {
+    targetFixture.detectChanges();
     appRef.tick();
   }
 
@@ -78,7 +82,6 @@ describe('BulkConfigDimensionDialog', () => {
     candidateValues: [
       {values: ['true'], deviceCount: 5000},
       {values: ['false'], deviceCount: 2000},
-      {values: [], deviceCount: 800},
     ],
   };
 
@@ -138,19 +141,22 @@ describe('BulkConfigDimensionDialog', () => {
       providers: [{provide: CONFIG_SERVICE, useValue: mockConfigService}],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(
-      MatTestDialogOpener.withComponent(BulkConfigDimensionDialog, {
-        data: mockCuratedDialogData,
-      }),
-    );
-    component = fixture.componentInstance.dialogRef.componentInstance;
-    mockDialogRef = fixture.componentInstance.dialogRef;
-    spyOn(mockDialogRef, 'close');
     appRef = TestBed.inject(ApplicationRef);
-    detectChanges();
   });
 
   describe('Curated Dimension Flow (2-step)', () => {
+    beforeEach(() => {
+      fixture = TestBed.createComponent(
+        MatTestDialogOpener.withComponent(BulkConfigDimensionDialog, {
+          autoFocus: false,
+          data: mockCuratedDialogData,
+        }),
+      );
+      component = fixture.componentInstance.dialogRef.componentInstance;
+      mockDialogRef = fixture.componentInstance.dialogRef;
+      spyOn(mockDialogRef, 'close');
+      detectChanges();
+    });
     it('initializes on values phase and loads value suggestions without pre-filling target values', () => {
       expect(component.wizard.phase()).toBe('values');
       expect(component.isCustom).toBeFalse();
@@ -166,51 +172,48 @@ describe('BulkConfigDimensionDialog', () => {
       expect(
         mockConfigService.batchGetDeviceDimensionConfigs,
       ).not.toHaveBeenCalled();
-      expect(component.candidateValues().length).toBe(3);
+      expect(component.candidateValues().length).toBe(2);
       expect(component.targetValues()).toEqual([]);
+      expect(component.isClearDimension()).toBeFalse();
+      expect(component.canProceedFromValuesStep()).toBeFalse();
       expect(component.wizard.viewMode()).toBe('values');
+      expect(document.activeElement).toBe(
+        component.chipInputField()!.nativeElement,
+      );
     });
 
-    it('normalizes omitted repeated values and counts in value suggestions', () => {
+    it('keeps values step interactive and shows inline loading/error while getDimensionValueSuggestions is pending or fails', () => {
+      const suggestions$ = new Subject<GetDimensionValueSuggestionsResponse>();
       mockConfigService.getDimensionValueSuggestions.and.returnValue(
-        of({
-          candidateValues: [
-            {} as unknown as {values: string[]; deviceCount: number},
-            {values: ['pixel']} as unknown as {
-              values: string[];
-              deviceCount: number;
-            },
-          ],
-        }),
+        suggestions$,
       );
+
       component.loadValuesStepData();
       detectChanges();
 
-      expect(component.candidateValues()).toEqual([
-        {values: [], deviceCount: 0},
-        {values: ['pixel'], deviceCount: 0},
-      ]);
-      expect(document.body.textContent).toContain('Not set');
-    });
-
-    it('does not display current value when there is only one device selected', () => {
-      const singleDeviceFixture = TestBed.createComponent(
-        MatTestDialogOpener.withComponent(BulkConfigDimensionDialog, {
-          data: {
-            ...mockCuratedDialogData,
-            devices: [{deviceId: 'single-device-1', hostName: 'host-1'}],
-          },
-        }),
+      expect(component.wizard.viewMode()).toBe('values');
+      expect(component.valuesTask.isLoading()).toBeTrue();
+      expect(component.candidateValues()).toEqual([]);
+      expect(document.body.textContent).toContain(
+        'Loading suggested values from fleet…',
       );
-      const singleDeviceComponent =
-        singleDeviceFixture.componentInstance.dialogRef.componentInstance;
-      singleDeviceFixture.detectChanges();
+      expect(document.body.textContent).toContain('Not set');
 
-      expect(singleDeviceComponent.targetValues()).toEqual([]);
-      expect(singleDeviceComponent.wizard.viewMode()).toBe('values');
-      expect(
-        mockConfigService.batchGetDeviceDimensionConfigs,
-      ).not.toHaveBeenCalled();
+      // User can immediately select "Not set" or type values while suggestions are still loading
+      component.clearTargetDimension();
+      expect(component.canProceedFromValuesStep()).toBeTrue();
+
+      suggestions$.error(new Error('Value suggestions RPC timed out'));
+      detectChanges();
+
+      expect(component.wizard.viewMode()).toBe('values');
+      expect(component.valuesTask.isLoading()).toBeFalse();
+      expect(component.valuesTask.error()).toBe(
+        'Value suggestions RPC timed out',
+      );
+      expect(document.body.textContent).toContain(
+        'Value suggestions RPC timed out',
+      );
     });
 
     it('handles chip input interactions: enter, comma, backspace, paste, remove, clear', () => {
@@ -263,14 +266,22 @@ describe('BulkConfigDimensionDialog', () => {
       component.removeChip(0);
       expect(component.targetValues()).toEqual(['chip2valA', 'valB', 'valC']);
 
-      // Clear target
+      // Clear typed chips (stays in value input mode, disables Next)
       component.useValueSet([]);
       expect(component.targetValues()).toEqual([]);
+      expect(component.isClearDimension()).toBeFalse();
+      expect(component.canProceedFromValuesStep()).toBeFalse();
 
       // Use value set
+      component.chipInputField()!.nativeElement.blur();
       component.useValueSet(['optA', 'optB']);
       expect(component.targetValues()).toEqual(['optA', 'optB']);
+      expect(component.isClearDimension()).toBeFalse();
+      expect(component.canProceedFromValuesStep()).toBeTrue();
       expect(component.chipPlaceholder()).toBe('Add another value');
+      expect(document.activeElement).toBe(
+        component.chipInputField()!.nativeElement,
+      );
     });
 
     it('focuses chip input when clicking chips container except on remove button', () => {
@@ -314,7 +325,7 @@ describe('BulkConfigDimensionDialog', () => {
       expect(component.supportText()).toContain(
         'Step 2 of 2 · Review and apply',
       );
-      expect(component.wizard.reviewSummary().willUpdateRows.length).toBe(1); // device-3
+      expect(component.wizard.reviewSummary().willUpdateCount).toBe(1); // device-3
       expect(component.wizard.reviewSummary().alreadyMatchCount).toBe(1); // device-1
       expect(component.wizard.reviewSummary().readOnlyCount).toBe(1); // device-2
       expect(component.expandedDeviceValues().size).toBe(0);
@@ -400,11 +411,21 @@ describe('BulkConfigDimensionDialog', () => {
       });
       expect(component.wizard.viewMode()).toBe('success');
       expect(component.headline()).toBe('recovery updated');
-      expect(component.successSupportText()).toBe(
-        '1 device already matched; 1 device read-only.',
+      detectChanges();
+      expect(
+        document.body.querySelector('.bw-success-support')?.textContent,
+      ).toBe('1 device already matched; 1 device read-only.');
+      const successCard = document.body.querySelector('.bw-success-card');
+      expect(successCard?.querySelector('.bw-new-label')?.textContent).toBe(
+        'recovery',
       );
+      expect(successCard?.textContent).toContain('true');
 
-      // Verify all-updated branches of successSupportText (both non-empty and empty targetValues)
+      component.wizard.close();
+      expect(mockDialogRef.close).toHaveBeenCalledWith({updated: true});
+
+      // Verify all-updated branch omits redundant .bw-success-support and renders clear card detail
+      component.clearTargetDimension();
       component.wizard.loadReview(
         () =>
           of({
@@ -419,16 +440,20 @@ describe('BulkConfigDimensionDialog', () => {
           }),
         '',
       );
-      expect(component.successSupportText()).toBe(
-        'Every updated device now uses this recovery value.',
+      mockConfigService.batchUpdateDeviceDimensionConfigs.and.returnValue(
+        of({errors: {}}),
       );
-      component.targetValues.set([]);
-      expect(component.successSupportText()).toBe(
-        'Removed recovery from every updated device.',
+      component.apply();
+      detectChanges();
+      expect(document.body.querySelector('.bw-success-support')).toBeNull();
+      const clearSuccessCard = document.body.querySelector('.bw-success-card');
+      expect(
+        clearSuccessCard?.querySelector('.bw-new-label')?.textContent,
+      ).toBe('recovery');
+      expect(clearSuccessCard?.textContent).toContain('Not set');
+      expect(clearSuccessCard?.textContent).toContain(
+        'Removed from updated devices',
       );
-
-      component.wizard.close();
-      expect(mockDialogRef.close).toHaveBeenCalledWith({updated: true});
     });
 
     it('displays error screen when backend returns update errors', () => {
@@ -468,7 +493,7 @@ describe('BulkConfigDimensionDialog', () => {
       component.targetValues.set(['true']);
       component.goToReview();
       component.apply();
-      fixture.detectChanges();
+      detectChanges();
 
       expect(component.wizard.viewMode()).toBe('review');
       expect(component.wizard.applyRpcError()).toBe(
@@ -485,17 +510,53 @@ describe('BulkConfigDimensionDialog', () => {
       expect(primaryBtn?.textContent?.trim()).toBe('Retry Apply');
     });
 
-    it('clears target values and sets targetDimensionValues to clearValues', () => {
-      component.targetValues.set(['true']);
+    it('switches between value input mode and Not set clear-banner mode', () => {
+      component.inputValue.set(' , "" ');
+      expect(component.canProceedFromValuesStep()).toBeFalse();
+
+      component.inputValue.set('uncommitted_token');
+      expect(component.canProceedFromValuesStep()).toBeTrue();
+
+      component.useValueSet(['true']);
+      detectChanges();
+      expect(component.isClearDimension()).toBeFalse();
+      expect(component.suggestionRows()[0].isActive).toBeTrue();
       expect(component.targetDimensionValues()).toEqual({
         valueList: {values: ['true']},
       });
+      expect(document.body.querySelector('.bd-chips')).not.toBeNull();
+      expect(document.body.querySelector('.bw-clear-banner')).toBeNull();
 
-      component.useValueSet([]);
+      component.inputValue.set('uncommitted');
+      component.clearTargetDimension();
+      detectChanges();
+      expect(component.isClearDimension()).toBeTrue();
+      expect(component.suggestionRows()[0].isActive).toBeFalse();
       expect(component.targetValues()).toEqual([]);
+      expect(component.inputValue()).toBe('');
+      expect(component.canProceedFromValuesStep()).toBeTrue();
       expect(component.targetDimensionValues()).toEqual({
         clearValues: {},
       });
+      expect(document.body.querySelector('.bd-chips')).toBeNull();
+      const clearBanner = document.body.querySelector('.bw-clear-banner');
+      expect(clearBanner).not.toBeNull();
+      expect(clearBanner?.textContent).toContain('Not set');
+      expect(clearBanner?.textContent).toContain(
+        'Removes recovery from the selected devices',
+      );
+
+      const setValuesBtn = clearBanner?.querySelector(
+        '.bw-text-btn',
+      ) as HTMLButtonElement;
+      expect(setValuesBtn.textContent?.trim()).toBe('Set values instead');
+      setValuesBtn.click();
+      detectChanges();
+
+      expect(component.isClearDimension()).toBeFalse();
+      expect(component.canProceedFromValuesStep()).toBeFalse();
+      expect(document.body.querySelector('.bw-clear-banner')).toBeNull();
+      expect(document.body.querySelector('.bd-chips')).not.toBeNull();
     });
 
     it('closes with {updated: true} when some updates succeed and some fail', () => {
@@ -548,13 +609,6 @@ describe('BulkConfigDimensionDialog', () => {
       expect(mockDialogRef.close).toHaveBeenCalledWith({updated: true});
     });
 
-    it('returns to values phase on wizard.setPhase("values")', () => {
-      component.goToReview();
-      expect(component.wizard.phase()).toBe('review');
-      component.wizard.setPhase('values');
-      expect(component.wizard.phase()).toBe('values');
-    });
-
     it('displays nothing-to-update message when changedCount is 0', () => {
       mockConfigService.batchGetDeviceDimensionConfigs.and.returnValue(
         of({
@@ -589,7 +643,7 @@ describe('BulkConfigDimensionDialog', () => {
         'already have this recovery value',
       );
 
-      component.targetValues.set([]);
+      component.clearTargetDimension();
       expect(component.nothingToUpdateMessage()).toContain(
         'already have recovery unset',
       );
@@ -610,15 +664,16 @@ describe('BulkConfigDimensionDialog', () => {
       dimensionList: DimensionList.DIMENSION_LIST_REQUIRED,
     };
 
-    beforeEach(async () => {
+    beforeEach(() => {
       customFixture = TestBed.createComponent(
         MatTestDialogOpener.withComponent(BulkConfigDimensionDialog, {
+          autoFocus: false,
           data: mockCustomDialogData,
         }),
       );
       customComponent =
         customFixture.componentInstance.dialogRef.componentInstance;
-      customFixture.detectChanges();
+      detectChanges(customFixture);
     });
 
     it('initializes on key phase and fetches candidate dimension keys', () => {
@@ -636,6 +691,9 @@ describe('BulkConfigDimensionDialog', () => {
         }),
       );
       expect(customComponent.candidateKeys().length).toBe(3);
+      expect(document.activeElement).toBe(
+        customComponent.customKeyInputField()!.nativeElement,
+      );
     });
 
     it('validates custom key input against regex and system dimension blocklist', () => {
@@ -643,6 +701,7 @@ describe('BulkConfigDimensionDialog', () => {
       customComponent.onCustomKeyInput('');
       expect(customComponent.customKeyError()).toBe('');
       expect(customComponent.canProceedFromKeyStep()).toBeFalse();
+      expect(customComponent.isNewKey()).toBeFalse();
 
       // System key
       customComponent.onCustomKeyInput('model');
@@ -650,6 +709,7 @@ describe('BulkConfigDimensionDialog', () => {
         'automatically detected by OmniLab',
       );
       expect(customComponent.canProceedFromKeyStep()).toBeFalse();
+      expect(customComponent.isNewKey()).toBeFalse();
 
       // Invalid character
       customComponent.onCustomKeyInput('invalid key with space');
@@ -657,6 +717,7 @@ describe('BulkConfigDimensionDialog', () => {
         'lowercase letters, numbers, underscores',
       );
       expect(customComponent.canProceedFromKeyStep()).toBeFalse();
+      expect(customComponent.isNewKey()).toBeFalse();
 
       // Valid new key
       customComponent.onCustomKeyInput('my_new_custom_dim');
@@ -700,35 +761,103 @@ describe('BulkConfigDimensionDialog', () => {
     });
 
     it('allows selecting an existing candidate key via pickKey', () => {
+      customComponent.customKeyInputField()!.nativeElement.blur();
       customComponent.pickKey('pool');
       expect(customComponent.customKey()).toBe('pool');
       expect(customComponent.filteredCandidateKeys().length).toBe(1);
+      expect(customComponent.filteredCandidateKeys()[0].isActive).toBeTrue();
+      expect(customComponent.canProceedFromKeyStep()).toBeTrue();
+      expect(document.activeElement).toBe(
+        customComponent.customKeyInputField()!.nativeElement,
+      );
+    });
+
+    it('keeps key step interactive while batchGetConfigurableDimensionKeys is loading or fails, and suppresses isNewKey until loaded', () => {
+      const keys$ = new Subject<BatchGetConfigurableDimensionKeysResponse>();
+      mockConfigService.batchGetConfigurableDimensionKeys.and.returnValue(
+        keys$,
+      );
+
+      customComponent.loadConfigurableDimensionKeys();
+      customComponent.onCustomKeyInput('brand_new_key');
+      detectChanges(customFixture);
+
+      expect(customComponent.wizard.viewMode()).toBe('key');
+      expect(customComponent.keysTask.isLoading()).toBeTrue();
+      expect(customComponent.isNewKey()).toBeFalse();
+      expect(customComponent.canProceedFromKeyStep()).toBeTrue();
+      expect(document.body.textContent).toContain(
+        'Loading existing dimensions from fleet…',
+      );
+
+      keys$.error(new Error('Fleet scan deadline exceeded'));
+      detectChanges(customFixture);
+
+      expect(customComponent.wizard.viewMode()).toBe('key');
+      expect(customComponent.keysTask.error()).toBe(
+        'Fleet scan deadline exceeded',
+      );
+      expect(customComponent.isNewKey()).toBeFalse();
       expect(customComponent.canProceedFromKeyStep()).toBeTrue();
     });
 
-    it('normalizes omitted selectedDeviceCount and fleetDeviceCount in loadConfigurableDimensionKeys', () => {
-      mockConfigService.batchGetConfigurableDimensionKeys.and.returnValue(
-        of({
-          candidateKeys: [
-            {dimensionName: 'custom_key'} as unknown as {
-              dimensionName: string;
-              selectedDeviceCount: number;
-              fleetDeviceCount: number;
-            },
-          ],
-          systemDimensionNames: [],
+    it('reuses loaded value suggestions when navigating back to key step and forward with the same key', () => {
+      mockConfigService.getDimensionValueSuggestions.calls.reset();
+
+      customComponent.onCustomKeyInput('pool');
+      customComponent.goFromKeyToValues();
+      expect(
+        mockConfigService.getDimensionValueSuggestions,
+      ).toHaveBeenCalledTimes(1);
+
+      customComponent.useValueSet(['pool_v1']);
+      customComponent.goBackToKey();
+      expect(customComponent.wizard.phase()).toBe('key');
+
+      // Advancing again with the same key reuses cached suggestions and preserves targetValues
+      customComponent.goFromKeyToValues();
+      expect(customComponent.wizard.phase()).toBe('values');
+      expect(customComponent.targetValues()).toEqual(['pool_v1']);
+      expect(
+        mockConfigService.getDimensionValueSuggestions,
+      ).toHaveBeenCalledTimes(1);
+
+      // Changing the key resets targetValues and fetches suggestions for the new key
+      customComponent.goBackToKey();
+      customComponent.onCustomKeyInput('skip_suw_app');
+      customComponent.goFromKeyToValues();
+      expect(customComponent.targetValues()).toEqual([]);
+      expect(
+        mockConfigService.getDimensionValueSuggestions,
+      ).toHaveBeenCalledTimes(2);
+    });
+
+    it('formats Supported Dimension headline and displayName when dimensionList is DIMENSION_LIST_SUPPORTED', () => {
+      const supportedFixture = TestBed.createComponent(
+        MatTestDialogOpener.withComponent(BulkConfigDimensionDialog, {
+          autoFocus: false,
+          data: {
+            devices: mockCustomDialogData.devices,
+            dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+          },
         }),
       );
-      customComponent.loadConfigurableDimensionKeys();
-      detectChanges();
+      const supportedComponent =
+        supportedFixture.componentInstance.dialogRef.componentInstance;
+      detectChanges(supportedFixture);
 
-      expect(customComponent.candidateKeys()).toEqual([
-        {
-          dimensionName: 'custom_key',
-          selectedDeviceCount: 0,
-          fleetDeviceCount: 0,
-        },
-      ]);
+      expect(supportedComponent.isRequired).toBeFalse();
+      expect(supportedComponent.headline()).toBe(
+        'Configure Supported Dimension',
+      );
+      supportedComponent.onCustomKeyInput('custom_sup_key');
+      supportedComponent.goFromKeyToValues();
+      expect(supportedComponent.displayName()).toBe(
+        'Supported Dimension: custom_sup_key',
+      );
+      expect(supportedComponent.headline()).toBe(
+        'Configure Supported Dimension: custom_sup_key',
+      );
     });
   });
 });

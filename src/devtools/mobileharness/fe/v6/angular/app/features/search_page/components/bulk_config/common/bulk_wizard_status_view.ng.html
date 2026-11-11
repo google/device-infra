@@ -1,8 +1,13 @@
-@switch (mode()) {
+@let w = wizard();
+@let error = w.stepError();
+@let errorTitle = w.stepErrorTitle();
+@let willUpdateLabel = w.reviewSummary().willUpdateLabel;
+
+@switch (w.viewMode()) {
   @case ('loading') {
     <div class="bw-loading-container">
       <mat-spinner diameter="32"></mat-spinner>
-      <span>{{ message() }}</span>
+      <span>Checking device configurations…</span>
     </div>
   }
   @case ('step_error') {
@@ -10,9 +15,9 @@
       <div class="bw-error-badge">
         <mat-icon class="material-symbols-outlined">error</mat-icon>
       </div>
-      <div class="bw-error-headline">{{ errorTitle() || message() }}</div>
-      @if (errorTitle() && message() && message() !== errorTitle()) {
-        <div class="bw-error-support">{{ message() }}</div>
+      <div class="bw-error-headline">{{ errorTitle || error }}</div>
+      @if (errorTitle && error && error !== errorTitle) {
+        <div class="bw-error-support">{{ error }}</div>
       }
     </div>
   }
@@ -28,7 +33,7 @@
       <div class="bw-table-container">
         <table
           mat-table
-          [dataSource]="applyErrors()"
+          [dataSource]="w.applyErrors()"
           class="bw-table bw-error-table"
           aria-label="Failed devices"
         >
@@ -71,21 +76,36 @@
         <mat-spinner diameter="48"></mat-spinner>
       </div>
       <div class="bw-success-headline">
-        Applying to {{ willUpdateLabel() }}
+        Applying to {{ willUpdateLabel }}
       </div>
       <div class="bw-success-support">This usually takes a few seconds.</div>
     </div>
   }
   @case ('success') {
+    @let supportText = successSupportText();
     <div class="bw-success">
       <div class="bw-success-badge">
         <mat-icon class="material-symbols-outlined">check</mat-icon>
       </div>
       <div class="bw-success-headline">
-        {{ willUpdateLabel() }} updated
+        {{ willUpdateLabel }} updated
       </div>
-      <div class="bw-success-support">{{ successSupportText() }}</div>
-      <ng-content />
+      @if (supportText) {
+        <div class="bw-success-support">{{ supportText }}</div>
+      }
+      <div class="bw-success-card">
+        <div class="bw-success-card-body">
+          <div class="bw-new-label">{{ successCardLabel() }}</div>
+          <ng-content />
+        </div>
+        <div class="bw-success-card-footer">
+          <mat-icon class="material-symbols-outlined">schedule</mat-icon>
+          <span>
+            Changes may take a moment to sync across search results and
+            suggestions.
+          </span>
+        </div>
+      </div>
     </div>
   }
 }

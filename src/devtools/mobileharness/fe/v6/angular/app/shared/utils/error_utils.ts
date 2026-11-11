@@ -15,41 +15,38 @@
  * "Http failure response for URL: 404 Not Found") if neither structured field
  * is available (e.g. when the server returns no body).
  */
-export function getErrorMessage(err: unknown): string {
-  if (err != null && typeof err === 'object') {
-    const rawErr = err as Record<string, unknown>;
-    // Angular 20's rxResource/resource wraps non-Error objects (such as
-    // HttpErrorResponse) in an Error instance with the original error in `.cause`.
-    const httpErr =
-      rawErr['error'] == null &&
-      rawErr['cause'] != null &&
-      typeof rawErr['cause'] === 'object'
-        ? (rawErr['cause'] as Record<string, unknown>)
-        : rawErr;
-
-    // Try the structured backend message first.
-    const body = httpErr['error'];
-    if (body != null && typeof body === 'object') {
-      const bodyObj = body as Record<string, unknown>;
-
-      // Internal (ESF): err.error = {"error": {"message": "..."}}
-      const inner = bodyObj['error'];
-      if (inner != null && typeof inner === 'object') {
-        const msg = (inner as Record<string, unknown>)['message'];
-        if (typeof msg === 'string' && msg) return msg;
-      }
-
-      // OSS (Envoy): err.error = {"message": "..."}
-      const directMsg = bodyObj['message'];
-      if (typeof directMsg === 'string' && directMsg) return directMsg;
-    }
-
-    // Fallback: Angular's auto-generated message.
-    const fallback = httpErr['message'];
-    if (typeof fallback === 'string' && fallback) return fallback;
+export function getErrorMessage(
+  err: unknown,
+  fallbackMessage = 'An unknown error occurred.',
+): string {
+  if (err == null) {
+    return fallbackMessage;
   }
 
-  return 'An unknown error occurred.';
+  const rawErr = err as {
+    error?: {error?: {message?: unknown}; message?: unknown} | null;
+    cause?: unknown;
+    message?: unknown;
+  };
+  // Angular 20's rxResource/resource wraps non-Error objects (such as
+  // HttpErrorResponse) in an Error instance with the original error in `.cause`.
+  const httpErr =
+    rawErr.error == null &&
+    rawErr.cause != null &&
+    typeof rawErr.cause === 'object'
+      ? (rawErr.cause as typeof rawErr)
+      : rawErr;
+
+  const candidates = [
+    httpErr.error?.error?.message,
+    httpErr.error?.message,
+    httpErr.message,
+  ];
+  for (const msg of candidates) {
+    if (typeof msg === 'string' && msg) return msg;
+  }
+
+  return fallbackMessage;
 }
 
 /**

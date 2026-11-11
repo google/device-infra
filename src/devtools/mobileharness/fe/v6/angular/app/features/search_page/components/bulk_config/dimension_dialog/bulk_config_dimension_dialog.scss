@@ -1,6 +1,7 @@
 @use '../common/bulk_wizard';
 
 @include bulk_wizard.bulk-wizard-base;
+@include bulk_wizard.bulk-count-chips;
 
 // --- Dimension-Specific Step 1 & Step 2 Styles ---
 .bd-band-actions {
@@ -12,14 +13,14 @@
 }
 
 .bw-tf.error {
-  border-bottom-color: #b3261e;
+  border-bottom-color: bulk_wizard.$color-error;
 
   &:focus-within {
-    border-bottom: 2px solid #b3261e;
+    border-bottom: 2px solid bulk_wizard.$color-error;
   }
 
   .bw-tf-label {
-    color: #b3261e;
+    color: bulk_wizard.$color-error;
   }
 }
 
@@ -29,7 +30,7 @@
   gap: 6px;
   font-size: 0.75rem;
   line-height: 1rem;
-  color: #b3261e;
+  color: bulk_wizard.$color-error;
 
   .error-icon {
     font-size: 16px;
@@ -41,7 +42,7 @@
 .bd-key-hint-msg {
   font-size: 0.75rem;
   line-height: 1rem;
-  color: #49454f;
+  color: bulk_wizard.$color-on-surface-variant;
 
   code {
     font-family: 'Roboto Mono', monospace;
@@ -64,20 +65,20 @@
   gap: 8px;
   min-height: 56px;
   padding: 8px 12px;
-  background: #dde3ea;
+  background: bulk_wizard.$color-surface-variant;
   border-radius: 4px 4px 0 0;
-  border-bottom: 1px solid #49454f;
+  border-bottom: 1px solid bulk_wizard.$color-on-surface-variant;
   cursor: text;
   transition:
     border-bottom-color 0.15s ease,
     border-bottom-width 0.15s ease;
 
   &:hover {
-    border-bottom-color: #1f1f1f;
+    border-bottom-color: bulk_wizard.$color-on-surface;
   }
 
   &:focus-within {
-    border-bottom: 2px solid #0b57d0;
+    border-bottom: 2px solid bulk_wizard.$color-primary;
     padding-bottom: 7px;
   }
 }
@@ -92,8 +93,8 @@
   box-sizing: border-box;
   padding: 4px 6px 4px 12px;
   border-radius: 8px;
-  background: #d3e3fd;
-  color: #041e49;
+  background: bulk_wizard.$color-primary-container;
+  color: bulk_wizard.$color-on-primary-container;
   font-size: 0.875rem;
   line-height: 1.25rem;
   font-weight: 500;
@@ -112,7 +113,7 @@
   cursor: pointer;
   padding: 2px;
   border-radius: 50%;
-  color: #041e49;
+  color: bulk_wizard.$color-on-primary-container;
   opacity: 0.75;
   transition:
     opacity 0.12s ease,
@@ -140,25 +141,16 @@
   outline: none;
   font-family: inherit;
   font-size: 0.875rem;
-  color: #1f1f1f;
+  color: bulk_wizard.$color-on-surface;
 
   &::placeholder {
-    color: #49454f;
+    color: bulk_wizard.$color-on-surface-variant;
     opacity: 0.7;
   }
 }
 
-.bw-li.bd-agg-row {
-  cursor: default;
-
-  .bw-text-btn {
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-}
-
 .bw-li-lead.new-key-lead {
-  color: #0b57d0;
+  color: bulk_wizard.$color-primary;
 }
 
 .bd-agg-vals {
@@ -177,7 +169,7 @@
   padding: 2px 8px;
   border-radius: 8px;
   background: #e1e3e1;
-  color: #1f1f1f;
+  color: bulk_wizard.$color-on-surface;
   max-width: 100%;
   overflow-wrap: anywhere;
 }
@@ -195,8 +187,8 @@
 }
 
 .bd-pill-more {
-  background: #d3e3fd;
-  color: #041e49;
+  background: bulk_wizard.$color-primary-container;
+  color: bulk_wizard.$color-on-primary-container;
 
   &:hover {
     background: #c2d7fc;
@@ -205,16 +197,11 @@
 
 .bd-pill-action {
   background: #eceef4;
-  color: #0b57d0;
+  color: bulk_wizard.$color-primary;
 
   &:hover {
-    background: #dde3ea;
+    background: bulk_wizard.$color-surface-variant;
   }
-}
-
-.bd-muted {
-  color: #74777f;
-  font-style: italic;
 }
 
 // --- Dimension Review Value Cell Styles ---
@@ -222,7 +209,7 @@
   flex-wrap: nowrap;
   align-items: center;
 
-  &:not(.is-expanded) .bd-pill:not(.bd-pill-more):not(.bd-pill-action) {
+  &:not(.is-expanded) .bd-pill:not(.bd-pill-more) {
     max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -238,4 +225,14 @@
     flex-wrap: wrap;
     padding: 6px 0;
   }
+}
+
+.bd-success-card-vals .bd-pill {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.125rem;
+  padding: 4px 12px;
+  background: bulk_wizard.$color-surface;
+  color: bulk_wizard.$color-on-primary-container;
+  box-shadow: 0 1px 2px rgba(0, 29, 53, 0.08);
 }

@@ -1,0 +1,50 @@
+@use 'bulk_wizard';
+
+:host {
+  display: contents;
+}
+
+@include bulk_wizard.bulk-text-btn;
+
+.bw-clear-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 12px 14px;
+  background: #f0f4f9;
+  border: 1px solid bulk_wizard.$color-outline-variant;
+  border-radius: 8px;
+  box-sizing: border-box;
+
+  .bw-clear-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .bw-clear-icon {
+    color: bulk_wizard.$color-on-surface-variant;
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+
+  .bw-clear-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .bw-clear-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: bulk_wizard.$color-on-surface;
+  }
+
+  .bw-clear-sub {
+    font-size: 0.75rem;
+    color: bulk_wizard.$color-on-surface-variant;
+  }
+}

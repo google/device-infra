@@ -1,0 +1,16 @@
+<div class="bw-clear-banner">
+  <div class="bw-clear-left">
+    <mat-icon class="bw-clear-icon material-symbols-outlined">{{ icon() }}</mat-icon>
+    <div class="bw-clear-text">
+      <span class="bw-clear-title">{{ title() }}</span>
+      <span class="bw-clear-sub">{{ subtitle() }}</span>
+    </div>
+  </div>
+  <button
+    type="button"
+    class="bw-text-btn"
+    (click)="action.emit()"
+  >
+    {{ actionLabel() }}
+  </button>
+</div>

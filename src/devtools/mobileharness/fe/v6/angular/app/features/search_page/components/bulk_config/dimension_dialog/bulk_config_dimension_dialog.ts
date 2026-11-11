@@ -1,4 +1,4 @@
-import {DecimalPipe, NgTemplateOutlet} from '@angular/common';
+import {NgTemplateOutlet} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -27,20 +27,26 @@ import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service
 import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {BulkConfigDialogData} from '../../../models';
 import {
+  canonicalizeValueSet,
+  extractDimensionTokens,
   formatCurrentSelectionBadge,
   formatDeviceCount,
   formatNothingToUpdateMessage,
-  formatSuccessSupportText,
+  formatWizardHeadline,
+  formatWizardSupportText,
   getDeviceTargetKey,
+  hasClosedQuotes,
 } from '../../../utils';
+import {BulkClearBanner} from '../common/bulk_clear_banner';
+import {BulkPanelStatus} from '../common/bulk_panel_status';
 import {BulkReviewHeaderBanner} from '../common/bulk_review_header_banner';
 import {BulkReviewTable} from '../common/bulk_review_table';
-import {useBulkWizardSession} from '../common/bulk_wizard_session';
+import {BulkWizardFooterActions} from '../common/bulk_wizard_footer_actions';
+import {
+  useBulkWizardSession,
+  useInlineTask,
+} from '../common/bulk_wizard_session';
 import {BulkWizardStatusView} from '../common/bulk_wizard_status_view';
-
-const DIMENSION_TOKEN_REGEX =
-  /"([^"]*)"?|'([^']*)'?|([^,;\r\n"'\s][^,;\r\n"']*)/g;
-const CLOSED_QUOTES_REGEX = /^(?:[^"']+|"[^"]*"|'[^']*')*$/;
 
 /**
  * Bulk Dimension Configuration Dialog (2-step or 3-step wizard) for OmniLab Console FE v6.
@@ -48,12 +54,12 @@ const CLOSED_QUOTES_REGEX = /^(?:[^"']+|"[^"]*"|'[^']*')*$/;
  * Aligns with cl/1001276314 and the official prototype in bulk_dimension.js:
  *
  * Curated dimension flow (2-step wizard):
- *   Step 1: Choose values (Chip input + backend candidate suggestions + clear values).
+ *   Step 1: Choose values (Chip input + pinned "Not set" clear option + backend candidate suggestions).
  *   Step 2: Review and apply (Authoritative change status from backend against target values).
  *
  * Custom dimension flow (3-step wizard):
  *   Step 1: Choose dimension key (Textfield + regex validation + system dimension blocklist + existing keys).
- *   Step 2: Choose values (Chip input + backend candidate suggestions + clear values).
+ *   Step 2: Choose values (Chip input + pinned "Not set" clear option + backend candidate suggestions).
  *   Step 3: Review and apply.
  */
 @Component({
@@ -63,10 +69,12 @@ const CLOSED_QUOTES_REGEX = /^(?:[^"']+|"[^"]*"|'[^']*')*$/;
   styleUrl: './bulk_config_dimension_dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BulkClearBanner,
+    BulkPanelStatus,
     BulkReviewHeaderBanner,
     BulkReviewTable,
+    BulkWizardFooterActions,
     BulkWizardStatusView,
-    DecimalPipe,
     Dialog,
     FormsModule,
     MatIconModule,
@@ -97,11 +105,8 @@ export class BulkConfigDimensionDialog {
     this.dialogData.dimensionList ??
     DimensionList.DIMENSION_LIST_SUPPORTED;
 
-  /** Total number of selected devices. */
-  readonly totalCount = this.dialogData.devices.length;
-
   /** Pluralized device count text. */
-  readonly deviceLabel = formatDeviceCount(this.totalCount);
+  readonly deviceLabel = formatDeviceCount(this.dialogData.devices.length);
 
   /** Whether this dimension is in the required scope. */
   readonly isRequired =
@@ -110,6 +115,9 @@ export class BulkConfigDimensionDialog {
   // --- Step 1 (Key Step) State ---
   readonly customKey = signal<string>('');
   readonly candidateKeys = signal<CandidateDimensionKey[]>([]);
+  readonly keysTask = useInlineTask(
+    'Failed to load configurable dimension keys',
+  );
   readonly systemDimensionNames = signal<Set<string>>(new Set());
 
   /** Validation error for custom key, computed reactively from input and system blocklist. */
@@ -131,23 +139,19 @@ export class BulkConfigDimensionDialog {
   );
 
   /** Display label derived from curated dimension metadata or custom dimension key/scope. */
-  readonly displayName = computed<string>(() => {
-    if (!this.isCustom) {
-      return (
-        this.dialogData.dimension?.displayName ||
-        this.dialogData.dimension?.dimensionName ||
-        'dimension'
-      );
-    }
-    const key = this.dimensionKey();
-    if (!key) return 'dimension';
-    return this.isRequired ? `Required Dimension: ${key}` : key;
-  });
+  readonly displayName = computed<string>(
+    () =>
+      this.dialogData.dimension?.displayName ??
+      `${this.isRequired ? 'Required' : 'Supported'} Dimension: ${this.dimensionKey()}`,
+  );
 
   // --- Values Step State ---
+  /** Whether the target operation is to clear/remove the dimension. */
+  readonly isClearDimension = signal<boolean>(false);
   readonly targetValues = signal<string[]>([]);
   readonly inputValue = signal<string>('');
   readonly candidateValues = signal<CandidateDimensionValue[]>([]);
+  readonly valuesTask = useInlineTask('Failed to load dimension values');
 
   // --- Review & Apply State ---
   readonly expandedDeviceValues = linkedSignal<
@@ -168,32 +172,28 @@ export class BulkConfigDimensionDialog {
       return {
         ...entry,
         isExpanded,
-        visibleValues:
-          isExpanded || hiddenCount === 0 ? values : values.slice(0, 2),
+        visibleValues: isExpanded ? values : values.slice(0, 2),
         hiddenCount,
-        hiddenTooltip:
-          isExpanded || hiddenCount === 0 ? '' : values.slice(2).join(', '),
+        hiddenTooltip: isExpanded ? '' : values.slice(2).join(', '),
       };
     });
   });
 
-  /** Constructs the reactive TargetDimensionValues message according to targetValues. */
-  readonly targetDimensionValues = computed<TargetDimensionValues>(() => {
-    const values = this.targetValues();
-    return values.length === 0 ? {clearValues: {}} : {valueList: {values}};
-  });
+  /** Constructs the reactive TargetDimensionValues message according to current UI state. */
+  readonly targetDimensionValues = computed<TargetDimensionValues>(() =>
+    this.isClearDimension()
+      ? {clearValues: {}}
+      : {valueList: {values: this.targetValues()}},
+  );
 
   /** Dialog headline title according to current journey, phase, and terminal apply state. */
   readonly headline = computed<string>(() => {
     const name = this.displayName();
-    return this.wizard.resolveHeadline(
-      name,
+    const stepHeadline =
       this.wizard.phase() === 'key'
-        ? this.isRequired
-          ? 'Configure Required Dimension'
-          : 'Configure Supported Dimension'
-        : `Configure ${name}`,
-    );
+        ? `Configure ${this.isRequired ? 'Required' : 'Supported'} Dimension`
+        : `Configure ${name}`;
+    return formatWizardHeadline(this.wizard.viewMode(), name, stepHeadline);
   });
 
   /** Dialog supporting subtitle text. */
@@ -201,29 +201,20 @@ export class BulkConfigDimensionDialog {
     const n = this.deviceLabel;
     const custom = this.isCustom;
     const total = custom ? 3 : 2;
+    let stepSupportText: string;
     switch (this.wizard.phase()) {
       case 'key':
-        return this.wizard.resolveSupportText(
-          `Step 1 of 3 · Choose dimension key for ${n}`,
-        );
+        stepSupportText = `Step 1 of 3 · Choose dimension key for ${n}`;
+        break;
       case 'values':
-        return this.wizard.resolveSupportText(
-          `Step ${custom ? 2 : 1} of ${total} · Choose a value for ${n}`,
-        );
-      case 'review':
+        stepSupportText = `Step ${custom ? 2 : 1} of ${total} · Choose a value for ${n}`;
+        break;
       default:
-        return this.wizard.resolveSupportText(
-          `Step ${custom ? 3 : 2} of ${total} · Review and apply`,
-        );
+        stepSupportText = `Step ${custom ? 3 : 2} of ${total} · Review and apply`;
+        break;
     }
+    return formatWizardSupportText(this.wizard.viewMode(), stepSupportText);
   });
-
-  /** Whether the active step has a previous step to navigate back to. */
-  readonly canGoBack = computed<boolean>(
-    () =>
-      this.wizard.phase() === 'review' ||
-      (this.isCustom && this.wizard.phase() === 'values'),
-  );
 
   /** Placeholder for chip input box. */
   readonly chipPlaceholder = computed<string>(() => {
@@ -233,30 +224,41 @@ export class BulkConfigDimensionDialog {
     return 'Add another value';
   });
 
+  /** O(1) lookup set of existing dimension names in the fleet. */
+  private readonly existingKeyNames = computed(
+    () => new Set(this.candidateKeys().map((c) => c.dimensionName)),
+  );
+
   /** Filtered candidate keys in Step 1 matching the user search input, with pre-computed selection badges. */
   readonly filteredCandidateKeys = computed(() => {
     const q = this.customKey();
+    const totalCount = this.dialogData.devices.length;
     const candidates = this.candidateKeys();
     const matched = q
-      ? candidates.filter((c) => c.dimensionName.toLowerCase().includes(q))
+      ? candidates.filter((c) => c.dimensionName.includes(q))
       : candidates;
     return matched.slice(0, 50).map((c) => ({
       ...c,
-      badge: formatCurrentSelectionBadge(
-        c.selectedDeviceCount,
-        this.totalCount,
-        'Configured on',
-      ),
+      fleetSupportText: `${formatDeviceCount(c.fleetDeviceCount ?? 0)} in fleet`,
+      badge: formatCurrentSelectionBadge(c.selectedDeviceCount, totalCount),
+      isActive: c.dimensionName === q,
     }));
   });
 
-  /** Whether the user typed a valid new key that is not yet in the fleet. */
-  readonly isNewKey = computed<boolean>(() => {
-    const q = this.customKey();
-    if (!q || Boolean(this.customKeyError())) return false;
-    return !this.candidateKeys().some(
-      (c) => c.dimensionName.toLowerCase() === q,
-    );
+  /** Candidate value suggestions enriched with canonical keys, fleet count text, and active selection state. */
+  readonly suggestionRows = computed(() => {
+    const targetCanon = this.isClearDimension()
+      ? null
+      : canonicalizeValueSet(this.targetValues());
+    return this.candidateValues().map((sug) => {
+      const canonKey = canonicalizeValueSet(sug.values);
+      return {
+        ...sug,
+        fleetSupportText: `${formatDeviceCount(sug.deviceCount ?? 0)} in fleet`,
+        canonKey,
+        isActive: canonKey === targetCanon,
+      };
+    });
   });
 
   /** Whether the user can proceed from Key Step to Values Step. */
@@ -264,9 +266,20 @@ export class BulkConfigDimensionDialog {
     () => Boolean(this.customKey()) && !this.customKeyError(),
   );
 
-  /** Whether the user can advance from the current input step to the next step. */
-  readonly canGoNext = computed<boolean>(
-    () => this.wizard.phase() !== 'key' || this.canProceedFromKeyStep(),
+  /** Whether the user typed a valid new key that is not yet in the fleet. */
+  readonly isNewKey = computed<boolean>(
+    () =>
+      this.canProceedFromKeyStep() &&
+      this.keysTask.hasLoaded() &&
+      !this.existingKeyNames().has(this.customKey()),
+  );
+
+  /** Whether the user can proceed from Values Step to Review Step. */
+  readonly canProceedFromValuesStep = computed<boolean>(
+    () =>
+      this.isClearDimension() ||
+      this.targetValues().length > 0 ||
+      extractDimensionTokens(this.inputValue()).length > 0,
   );
 
   /** Informational message shown when willUpdateCount is 0 in the review step. */
@@ -274,35 +287,19 @@ export class BulkConfigDimensionDialog {
     const dn = this.displayName();
     return formatNothingToUpdateMessage(
       this.wizard.reviewSummary(),
-      this.totalCount,
-      this.targetValues().length === 0
+      this.isClearDimension()
         ? `already have ${dn} unset`
         : `already have this ${dn} value`,
       `${dn} value`,
     );
   });
 
-  /** Explanatory support text shown on the success screen. */
-  readonly successSupportText = computed<string>(() => {
-    const dn = this.displayName();
-    return formatSuccessSupportText(
-      this.wizard.reviewSummary(),
-      this.targetValues().length === 0
-        ? `Removed ${dn} from every updated device.`
-        : `Every updated device now uses this ${dn} value.`,
-    );
-  });
-
   constructor() {
     effect(() => {
-      const mode = this.wizard.viewMode();
-      if (mode === 'key') {
-        this.customKeyInputField()?.nativeElement.focus();
-      } else if (mode === 'values') {
-        this.chipInputField()?.nativeElement.focus();
-      }
+      (
+        this.customKeyInputField() ?? this.chipInputField()
+      )?.nativeElement.focus();
     });
-
     if (this.isCustom) {
       this.loadConfigurableDimensionKeys();
     } else {
@@ -314,38 +311,22 @@ export class BulkConfigDimensionDialog {
 
   /** Loads configurable dimension keys and system dimension blocklist from backend. */
   loadConfigurableDimensionKeys() {
-    this.wizard.runStepTask(
+    this.keysTask.run(
       () =>
         this.configService.batchGetConfigurableDimensionKeys({
           devices: this.dialogData.devices,
           dimensionList: this.dimensionList,
         }),
       (res) => {
-        this.candidateKeys.set(
-          (res.candidateKeys ?? []).map((k) => ({
-            ...k,
-            selectedDeviceCount: k.selectedDeviceCount ?? 0,
-            fleetDeviceCount: k.fleetDeviceCount ?? 0,
-          })),
-        );
-        this.systemDimensionNames.set(
-          new Set(res.systemDimensionNames?.map((s) => s.toLowerCase())),
-        );
+        this.candidateKeys.set(res.candidateKeys ?? []);
+        this.systemDimensionNames.set(new Set(res.systemDimensionNames));
       },
-      'Failed to load configurable dimension keys',
-      'key',
-      'Loading configurable dimensions…',
     );
   }
 
   /** Normalizes custom dimension key as user types. Validation updates reactively. */
   onCustomKeyInput(val: string) {
-    this.customKey.set(
-      (val || '')
-        .trim()
-        .toLowerCase()
-        .replace(/^dim::/, ''),
-    );
+    this.customKey.set((val || '').trim().toLowerCase());
   }
 
   /** Selects a key from the existing candidate keys list. */
@@ -358,8 +339,13 @@ export class BulkConfigDimensionDialog {
   goFromKeyToValues() {
     if (!this.canProceedFromKeyStep()) return;
 
-    this.dimensionKey.set(this.customKey());
-    this.loadValuesStepData();
+    const nextKey = this.customKey();
+    this.wizard.setPhase('values');
+    if (this.dimensionKey() !== nextKey) {
+      this.dimensionKey.set(nextKey);
+      this.useValueSet([]);
+      this.loadValuesStepData();
+    }
   }
 
   /** Returns back from Values Step to Key Step. */
@@ -368,71 +354,33 @@ export class BulkConfigDimensionDialog {
     this.wizard.setPhase('key');
   }
 
-  /** Navigates back one step in the wizard. */
-  goBack() {
-    if (this.wizard.phase() === 'review') {
-      this.wizard.setPhase('values');
-    } else {
-      this.goBackToKey();
-    }
-  }
-
-  /** Advances forward one step from the current input phase. */
-  goNext() {
-    if (this.wizard.phase() === 'key') {
-      this.goFromKeyToValues();
-    } else {
-      this.goToReview();
-    }
-  }
-
   // ================= STEP: VALUES SELECTION =================
 
   /** Loads candidate value-set suggestions for the values step. */
   loadValuesStepData() {
-    this.wizard.runStepTask(
+    this.candidateValues.set([]);
+    this.valuesTask.run(
       () =>
         this.configService.getDimensionValueSuggestions({
           dimensionName: this.dimensionKey(),
           dimensionList: this.dimensionList,
         }),
       (suggestions) => {
-        const rows = (suggestions.candidateValues ?? []).map((s) => ({
-          ...s,
-          values: s.values ?? [],
-          deviceCount: s.deviceCount ?? 0,
-        }));
-        rows.sort((a, b) => (b.deviceCount ?? 0) - (a.deviceCount ?? 0));
-        this.candidateValues.set(rows);
+        this.candidateValues.set(suggestions.candidateValues ?? []);
       },
-      'Failed to load dimension values',
-      'values',
-      'Loading dimension values…',
     );
   }
 
   /** Commits any uncommitted text in the input box into targetValues. */
   commitInput() {
-    const raw = this.inputValue().trim();
+    const tokens = extractDimensionTokens(this.inputValue());
     this.inputValue.set('');
-    if (!raw) return;
+    if (tokens.length === 0) return;
 
-    const existingLower = new Set(
-      this.targetValues().map((v) => v.toLowerCase()),
+    this.isClearDimension.set(false);
+    this.targetValues.update((current) =>
+      Array.from(new Set([...current, ...tokens])),
     );
-    const toAdd: string[] = [];
-    for (const [, dq, sq, unquoted] of raw.matchAll(DIMENSION_TOKEN_REGEX)) {
-      const token = (dq ?? sq ?? unquoted).trim();
-      const lower = token.toLowerCase();
-      if (token && !existingLower.has(lower)) {
-        existingLower.add(lower);
-        toAdd.push(token);
-      }
-    }
-
-    if (toAdd.length > 0) {
-      this.targetValues.update((current) => [...current, ...toAdd]);
-    }
   }
 
   /** Handles keydown events in the chip input field. */
@@ -443,32 +391,28 @@ export class BulkConfigDimensionDialog {
       return;
     }
 
+    const input = event.target as HTMLInputElement | null;
     if (event.key === ',' || event.key === ';') {
-      const input = event.target as HTMLInputElement | null;
       const value = input?.value ?? this.inputValue();
       const cursor = input?.selectionStart ?? value.length;
-      const textBefore = value.slice(0, cursor);
-      if (CLOSED_QUOTES_REGEX.test(textBefore)) {
+      if (hasClosedQuotes(value.slice(0, cursor))) {
         event.preventDefault();
         this.commitInput();
       }
       return;
     }
 
-    if (event.key === 'Backspace') {
-      const input = event.target as HTMLInputElement;
-      if (
-        input.selectionStart === 0 &&
-        input.selectionEnd === 0 &&
-        !input.value
-      ) {
-        const last = this.targetValues().at(-1);
-        if (last !== undefined) {
-          event.preventDefault();
-          this.targetValues.update((current) => current.slice(0, -1));
-          this.inputValue.set(last);
-        }
-      }
+    const last = this.targetValues().at(-1);
+    if (
+      event.key === 'Backspace' &&
+      last !== undefined &&
+      input?.selectionStart === 0 &&
+      input.selectionEnd === 0 &&
+      !input.value
+    ) {
+      event.preventDefault();
+      this.targetValues.update((current) => current.slice(0, -1));
+      this.inputValue.set(last);
     }
   }
 
@@ -487,9 +431,18 @@ export class BulkConfigDimensionDialog {
     );
   }
 
-  /** Copies a distinct value set suggestion (or empty array to clear) into the target values. */
-  useValueSet(values: string[]) {
+  /** Copies a distinct value set suggestion into the target values (and exits clear mode). */
+  useValueSet(values: readonly string[]) {
+    this.isClearDimension.set(false);
     this.targetValues.set([...values]);
+    this.inputValue.set('');
+    this.chipInputField()?.nativeElement.focus();
+  }
+
+  /** Sets target to clear/remove the dimension from selected devices. */
+  clearTargetDimension() {
+    this.isClearDimension.set(true);
+    this.targetValues.set([]);
     this.inputValue.set('');
   }
 
@@ -500,6 +453,7 @@ export class BulkConfigDimensionDialog {
    */
   goToReview() {
     this.commitInput();
+    if (!this.canProceedFromValuesStep()) return;
     this.wizard.loadReview(
       () =>
         this.configService.batchGetDeviceDimensionConfigs({
@@ -509,7 +463,6 @@ export class BulkConfigDimensionDialog {
           target: this.targetDimensionValues(),
         }),
       'Failed to check device dimension status',
-      'Checking device dimension configurations…',
     );
   }
 

@@ -1,3 +1,190 @@
 @use 'bulk_wizard';
 
-@include bulk_wizard.bulk-wizard-status-view;
+:host {
+  display: contents;
+}
+
+@include bulk_wizard.bulk-table;
+@include bulk_wizard.bulk-banner-base;
+
+.bw-loading-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: bulk_wizard.$color-on-surface-variant;
+  font-size: 0.875rem;
+}
+
+.bw-error-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  color: bulk_wizard.$color-error;
+  font-size: 0.875rem;
+}
+
+.bw-error-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fce8e6;
+  color: bulk_wizard.$color-error;
+
+  mat-icon {
+    font-size: 26px;
+    width: 26px;
+    height: 26px;
+  }
+}
+
+.bw-error-headline {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5rem;
+  color: bulk_wizard.$color-on-surface;
+}
+
+.bw-error-support {
+  margin-top: 6px;
+  max-width: 440px;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: bulk_wizard.$color-on-surface-variant;
+}
+
+.bw-review-banner.bw-review-banner-error {
+  color: bulk_wizard.$color-error;
+  background: bulk_wizard.$color-error-surface;
+  border: 1px solid bulk_wizard.$color-error-container;
+  justify-content: flex-start;
+
+  mat-icon {
+    color: bulk_wizard.$color-error;
+  }
+}
+
+.bw-error-table {
+  .mat-column-deviceId {
+    width: 34%;
+  }
+
+  .mat-column-reason {
+    width: 66%;
+  }
+}
+
+.bw-error-cell {
+  color: bulk_wizard.$color-error;
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bw-success,
+.bw-applying {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px 24px;
+}
+
+.bw-applying-badge {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bw-success-badge {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: bulk_wizard.$color-primary-container;
+  color: bulk_wizard.$color-on-primary-container;
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.bw-success-headline {
+  font-size: 1.375rem;
+  line-height: 1.75rem;
+  font-weight: 400;
+  color: bulk_wizard.$color-on-surface;
+}
+
+.bw-success-support {
+  margin-top: 6px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: bulk_wizard.$color-on-surface-variant;
+}
+
+.bw-success-card {
+  width: 100%;
+  min-width: 200px;
+  max-width: 340px;
+  margin-top: 24px;
+  text-align: left;
+  background: bulk_wizard.$color-secondary-container;
+  color: bulk_wizard.$color-on-secondary-container;
+  border-radius: 16px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.bw-success-card-body {
+  padding: 20px;
+}
+
+.bw-success-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-top: 1px solid rgba(0, 29, 53, 0.12);
+  background: rgba(0, 29, 53, 0.05);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: bulk_wizard.$color-on-secondary-container;
+  opacity: 0.85;
+
+  mat-icon {
+    flex: none;
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.bw-new-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  color: bulk_wizard.$color-on-secondary-container;
+  margin-bottom: 12px;
+}

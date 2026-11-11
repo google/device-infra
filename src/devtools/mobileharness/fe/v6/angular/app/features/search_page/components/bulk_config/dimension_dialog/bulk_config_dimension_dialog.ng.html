@@ -1,6 +1,6 @@
 @let mode = wizard.viewMode();
 @let target = targetValues();
-@let summary = wizard.reviewSummary();
+@let isClear = isClearDimension();
 @let dn = displayName();
 
 <app-dialog
@@ -15,6 +15,7 @@
     @switch (mode) {
       @case ('key') {
         <!-- Key Selection Step (Custom Dimension Step 1) -->
+        @let keyError = customKeyError();
         <div class="bw-step1">
           <!-- Top band: Dimension key input -->
           <div class="bw-apply-band">
@@ -25,7 +26,7 @@
               </span>
             </div>
             <div class="bw-apply-fields">
-              <div class="bw-tf bd-key-tf" [class.error]="customKeyError()">
+              <div class="bw-tf bd-key-tf" [class.error]="keyError">
                 <input
                   #customKeyInput
                   type="text"
@@ -41,10 +42,10 @@
                 <label class="bw-tf-label" for="bd-custom-key-input">Dimension key</label>
               </div>
             </div>
-            @if (customKeyError()) {
+            @if (keyError) {
               <div class="bd-key-error-msg">
                 <mat-icon class="error-icon material-symbols-outlined">error</mat-icon>
-                <span>{{ customKeyError() }}</span>
+                <span>{{ keyError }}</span>
               </div>
             }
             <div class="bd-key-hint-msg">
@@ -58,9 +59,15 @@
               Existing {{ isRequired ? 'required' : 'supported' }} dimensions in fleet
             </div>
             <div class="bw-panel-list" role="list">
-              @if (isNewKey()) {
+              @let candidateKeys = filteredCandidateKeys();
+              @let showNewKey = isNewKey();
+              <app-bulk-panel-status
+                [task]="keysTask"
+                loadingText="Loading existing dimensions from fleet…"
+              />
+              @if (showNewKey) {
                 <div
-                  class="bw-li bw-li-active bd-agg-row"
+                  class="bw-li bw-li-active"
                   role="listitem"
                 >
                   <mat-icon class="bw-li-lead new-key-lead material-symbols-outlined">add_circle</mat-icon>
@@ -80,16 +87,16 @@
                 </div>
               }
 
-              @for (k of filteredCandidateKeys(); track k.dimensionName) {
+              @for (k of candidateKeys; track k.dimensionName) {
                 <div
-                  class="bw-li bd-agg-row"
+                  class="bw-li"
                   role="listitem"
-                  [class.bw-li-active]="customKey() === k.dimensionName.toLowerCase()"
+                  [class.bw-li-active]="k.isActive"
                 >
                   <mat-icon class="bw-li-lead material-symbols-outlined">label</mat-icon>
                   <div class="bw-li-body">
                     <span class="bw-li-headline">{{ k.dimensionName }}</span>
-                    <span class="bw-li-support">{{ k.fleetDeviceCount | number }} devices in fleet</span>
+                    <span class="bw-li-support">{{ k.fleetSupportText }}</span>
                   </div>
                   @if (k.badge) {
                     <span class="bw-count-chip bw-count-chip-update">
@@ -104,10 +111,10 @@
                     Use this
                   </button>
                 </div>
-              } @empty {
-                @if (!isNewKey()) {
-                  <div class="bw-list-empty">No matching dimension key found.</div>
-                }
+              }
+
+              @if (keysTask.hasLoaded() && !showNewKey && candidateKeys.length === 0) {
+                <div class="bw-list-empty">No matching dimension key found.</div>
               }
             </div>
           </div>
@@ -122,68 +129,99 @@
             <div class="bw-apply-head">
               <h4 class="bw-apply-title">Value to apply</h4>
               <span class="bw-apply-sub">Applied to all {{ deviceLabel }}</span>
-              <button
-                type="button"
-                class="bw-text-btn bd-band-actions"
-                (click)="useValueSet([])"
-                [title]="'Clear the value, which removes ' + dn + ' from the devices'"
-              >
-                Clear values
-              </button>
+              @if (!isClear && target.length > 0) {
+                <button
+                  type="button"
+                  class="bw-text-btn bd-band-actions"
+                  (click)="useValueSet([])"
+                >
+                  Clear
+                </button>
+              }
             </div>
 
-            <div class="bw-apply-fields">
-              <div
-                class="bd-chips"
-                role="group"
-                aria-label="Target dimension values"
-                (click)="chipInput.focus()"
-              >
-                @for (v of target; track v; let i = $index) {
-                  <span class="bd-chip">
-                    <span>{{ v }}</span>
-                    <button
-                      type="button"
-                      class="bd-chip-remove"
-                      (click)="$event.stopPropagation(); removeChip(i)"
-                      [title]="'Remove ' + v"
-                      [attr.aria-label]="'Remove ' + v"
-                    >
-                      <mat-icon class="material-symbols-outlined">close</mat-icon>
-                    </button>
-                  </span>
-                }
-                <input
-                  #chipInput
-                  type="text"
-                  class="bd-chip-input"
-                  [placeholder]="chipPlaceholder()"
-                  [(ngModel)]="inputValue"
-                  (keydown)="onInputKeydown($event)"
-                  (paste)="onInputPaste($event)"
-                  (blur)="commitInput()"
-                  autocomplete="off"
-                />
+            @if (isClear) {
+              <app-bulk-clear-banner
+                icon="block"
+                title="Not set"
+                [subtitle]="'Removes ' + dn + ' from the selected devices'"
+                actionLabel="Set values instead"
+                (action)="useValueSet([])"
+              />
+            } @else {
+              <div class="bw-apply-fields">
+                <div
+                  class="bd-chips"
+                  (click)="chipInput.focus()"
+                >
+                  @for (v of target; track v; let i = $index) {
+                    <span class="bd-chip">
+                      <span>{{ v }}</span>
+                      <button
+                        type="button"
+                        class="bd-chip-remove"
+                        (click)="$event.stopPropagation(); removeChip(i)"
+                        [title]="'Remove ' + v"
+                        [attr.aria-label]="'Remove ' + v"
+                      >
+                        <mat-icon class="material-symbols-outlined">close</mat-icon>
+                      </button>
+                    </span>
+                  }
+                  <input
+                    #chipInput
+                    type="text"
+                    class="bd-chip-input"
+                    [placeholder]="chipPlaceholder()"
+                    [(ngModel)]="inputValue"
+                    (keydown)="onInputKeydown($event)"
+                    (paste)="onInputPaste($event)"
+                    (blur)="commitInput()"
+                    autocomplete="off"
+                  />
+                </div>
               </div>
-            </div>
+            }
           </div>
 
           <!-- Suggested values panel -->
           <div class="bw-panel">
             <div class="bw-panel-head">Suggested values</div>
             <div class="bw-panel-list" role="list">
-              @for (sug of candidateValues(); track (sug.values.join('::') || '__unset__')) {
-                <div class="bw-li bd-agg-row" role="listitem">
-                  <mat-icon class="bw-li-lead material-symbols-outlined">{{ sug.values.length === 0 ? 'block' : 'label' }}</mat-icon>
+              <div
+                class="bw-li"
+                role="listitem"
+                [class.bw-li-active]="isClear"
+              >
+                <mat-icon class="bw-li-lead material-symbols-outlined">block</mat-icon>
+                <div class="bw-li-body">
+                  <span class="bw-li-headline">Not set</span>
+                  <span class="bw-li-support">Removes {{ dn }} from the selected devices</span>
+                </div>
+                <button
+                  type="button"
+                  class="bw-text-btn"
+                  (click)="clearTargetDimension()"
+                >
+                  Use this
+                </button>
+              </div>
+              <app-bulk-panel-status
+                [task]="valuesTask"
+                loadingText="Loading suggested values from fleet…"
+              />
+              @for (sug of suggestionRows(); track sug.canonKey) {
+                <div
+                  class="bw-li"
+                  role="listitem"
+                  [class.bw-li-active]="sug.isActive"
+                >
+                  <mat-icon class="bw-li-lead material-symbols-outlined">label</mat-icon>
                   <div class="bw-li-body">
-                    @if (sug.values.length === 0) {
-                      <span class="bw-li-headline bd-muted">Not set</span>
-                    } @else {
-                      <ng-container
-                        *ngTemplateOutlet="pillList; context: {$implicit: sug.values}"
-                      />
-                    }
-                    <span class="bw-li-support">{{ sug.deviceCount | number }} devices in fleet</span>
+                    <ng-container
+                      *ngTemplateOutlet="pillList; context: {$implicit: sug.values}"
+                    />
+                    <span class="bw-li-support">{{ sug.fleetSupportText }}</span>
                   </div>
                   <button
                     type="button"
@@ -193,8 +231,6 @@
                     Use this
                   </button>
                 </div>
-              } @empty {
-                <div class="bw-list-empty">No values found.</div>
               }
             </div>
           </div>
@@ -204,22 +240,15 @@
       @case ('review') {
         <!-- Review Step (Step 2 for Curated, Step 3 for Custom) -->
         <div class="bw-step2">
-          @if (wizard.applyRpcError(); as applyErr) {
-            <div class="bw-apply-error-banner" role="alert">
-              <mat-icon class="material-symbols-outlined">error</mat-icon>
-              <div class="bw-apply-error-text">
-                <div class="bw-apply-error-title">Failed to apply {{ dn }} update</div>
-                <div class="bw-apply-error-detail">{{ applyErr }}</div>
-              </div>
-            </div>
-          }
           <app-bulk-review-header-banner
-            [icon]="target.length === 0 ? 'block' : 'label'"
+            [icon]="isClear ? 'block' : 'label'"
             [subtitle]="'Target ' + dn"
-            [summary]="summary"
+            [summary]="wizard.reviewSummary()"
             [nothingToUpdateMessage]="nothingToUpdateMessage()"
+            [applyError]="wizard.applyRpcError()"
+            [applyErrorTitle]="'Failed to apply ' + dn + ' update'"
           >
-            @if (target.length === 0) {
+            @if (isClear) {
               <span class="bw-cell-unset">Clear dimension (remove {{ dn }})</span>
             } @else {
               <ng-container
@@ -253,7 +282,6 @@
                       [matTooltip]="row.hiddenTooltip"
                       matTooltipPosition="above"
                       (click)="toggleExpandDeviceValues(row)"
-                      [attr.aria-label]="row.isExpanded ? null : '+' + row.hiddenCount + ' more values for ' + row.deviceId"
                     >
                       {{ row.isExpanded ? 'Show less' : '+' + row.hiddenCount + ' more' }}
                     </button>
@@ -267,23 +295,24 @@
 
       @default {
         <app-bulk-wizard-status-view
-          [mode]="mode"
-          [errorTitle]="wizard.stepErrorTitle()"
-          [message]="wizard.statusMessage()"
-          [willUpdateCount]="summary.willUpdateCount"
-          [applyErrors]="wizard.applyErrors()"
-          [successSupportText]="successSupportText()"
+          [wizard]="wizard"
+          [successCardLabel]="dn"
         >
-          <div class="bw-new-card bw-success-card">
-            <div class="bw-new-label">{{ target.length === 0 ? 'Removed' : 'New value' }}</div>
-            @if (target.length === 0) {
-              <span class="bd-muted">Not set</span>
-            } @else {
+          @if (isClear) {
+            <div class="bw-success-card-lead">
+              <mat-icon class="material-symbols-outlined">block</mat-icon>
+              <span class="bw-success-card-title">Not set</span>
+            </div>
+            <div class="bw-success-card-detail">
+              Removed from updated devices
+            </div>
+          } @else {
+            <div class="bd-success-card-vals">
               <ng-container
                 *ngTemplateOutlet="pillList; context: {$implicit: target}"
               />
-            }
-          </div>
+            </div>
+          }
         </app-bulk-wizard-status-view>
       }
     }
@@ -299,67 +328,14 @@
 
   <!-- Footer Actions -->
   <ng-template #actionsTemplate>
-    @let hasBack = canGoBack();
-    @switch (mode) {
-      @case ('success') {
-        <button type="button" class="dialog-button dialog-button-primary" (click)="wizard.close()">Done</button>
-      }
-      @case ('errors') {
-        <button type="button" class="dialog-button dialog-button-primary" (click)="wizard.close()">Close</button>
-      }
-      @case ('loading') {
-        @if (hasBack) {
-          <button type="button" class="dialog-button dialog-button-secondary" disabled>Back</button>
-        }
-      }
-      @case ('step_error') {
-        @if (hasBack) {
-          <button type="button" class="dialog-button dialog-button-secondary" (click)="goBack()">Back</button>
-        } @else {
-          <button type="button" class="dialog-button dialog-button-secondary" (click)="wizard.close()">Close</button>
-        }
-        <button type="button" class="dialog-button dialog-button-primary" (click)="wizard.retryStep()">Retry</button>
-      }
-      @case ('key') {
-        <button type="button" class="dialog-button dialog-button-secondary" (click)="wizard.close()">Cancel</button>
-        <button
-          type="button"
-          class="dialog-button dialog-button-primary"
-          [disabled]="!canGoNext()"
-          (click)="goNext()"
-        >
-          Next
-        </button>
-      }
-      @case ('values') {
-        @if (hasBack) {
-          <button type="button" class="dialog-button dialog-button-secondary" (click)="goBack()">Back</button>
-        } @else {
-          <button type="button" class="dialog-button dialog-button-secondary" (click)="wizard.close()">Cancel</button>
-        }
-        <button
-          type="button"
-          class="dialog-button dialog-button-primary"
-          [disabled]="!canGoNext()"
-          (click)="goNext()"
-        >
-          Next
-        </button>
-      }
-      @case ('review') {
-        <button type="button" class="dialog-button dialog-button-secondary" (click)="goBack()">Back</button>
-        @if (summary.willUpdateCount === 0) {
-          <button type="button" class="dialog-button dialog-button-primary" (click)="wizard.close()">Close</button>
-        } @else {
-          <button
-            type="button"
-            class="dialog-button dialog-button-primary"
-            (click)="apply()"
-          >
-            {{ wizard.applyRpcError() ? 'Retry Apply' : 'Apply to ' + summary.willUpdateLabel }}
-          </button>
-        }
-      }
-    }
+    <app-bulk-wizard-footer-actions
+      [wizard]="wizard"
+      [canProceed]="mode === 'key' ? canProceedFromKeyStep() : canProceedFromValuesStep()"
+      [showStepBack]="isCustom && mode === 'values'"
+      (stepBack)="goBackToKey()"
+      (stepNext)="mode === 'key' ? goFromKeyToValues() : goToReview()"
+      (backFromReview)="wizard.setPhase('values')"
+      (apply)="apply()"
+    />
   </ng-template>
 </app-dialog>

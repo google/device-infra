@@ -60,4 +60,10 @@ describe('getErrorMessage', () => {
     };
     expect(getErrorMessage(wrapped)).toBe('Service down');
   });
+
+  it('ignores non-object Error.cause and falls back to outer message', () => {
+    expect(getErrorMessage({cause: 'non-object', message: 'Outer error'})).toBe(
+      'Outer error',
+    );
+  });
 });

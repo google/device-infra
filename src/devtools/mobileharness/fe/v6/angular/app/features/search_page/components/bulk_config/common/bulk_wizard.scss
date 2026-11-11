@@ -1,5 +1,24 @@
-@use '../../../../../shared/styles/action_bar';
 @use '../../../../../shared/styles/common';
+
+// Shared Material 3 design tokens for bulk configuration wizards.
+$color-primary: var(--md-sys-color-primary, #0b57d0);
+$color-primary-container: var(--md-sys-color-primary-container, #d3e3fd);
+$color-on-primary-container: var(--md-sys-color-on-primary-container, #041e49);
+$color-secondary-container: var(--md-sys-color-secondary-container, #c2e7ff);
+$color-on-secondary-container: var(
+  --md-sys-color-on-secondary-container,
+  #001d35
+);
+$color-surface: var(--md-sys-color-surface, #fff);
+$color-surface-subtle: var(--md-sys-color-surface-container-lowest, #f8fafd);
+$color-surface-variant: var(--md-sys-color-surface-container-highest, #dde3ea);
+$color-on-surface: var(--md-sys-color-on-surface, #1f1f1f);
+$color-on-surface-variant: var(--md-sys-color-on-surface-variant, #49454f);
+$color-outline-variant: var(--md-sys-color-outline-variant, #cac4d0);
+$color-error: var(--md-sys-color-error, #b3261e);
+$color-error-container: var(--md-sys-color-error-container, #f9dedc);
+$color-on-error-container: var(--md-sys-color-on-error-container, #410e0b);
+$color-error-surface: #fdf2f2;
 
 // Shared status count chips used in Step 1 candidate lists and Step 2 review banners.
 @mixin bulk-count-chips {
@@ -14,18 +33,18 @@
   }
 
   .bw-count-chip-update {
-    background: #d3e3fd;
-    color: #041e49;
+    background: $color-primary-container;
+    color: $color-on-primary-container;
   }
 
   .bw-count-chip-same {
     background: #eceef4;
-    color: #49454f;
+    color: $color-on-surface-variant;
   }
 
   .bw-count-chip-skip {
-    background: #f9dedc;
-    color: #410e0b;
+    background: $color-error-container;
+    color: $color-on-error-container;
   }
 }
 
@@ -44,9 +63,9 @@
     min-height: 0;
     overflow: auto;
     @include common.shared-scrollbar-style();
-    border: 1px solid #cac4d0;
+    border: 1px solid $color-outline-variant;
     border-radius: 12px;
-    background: #fff;
+    background: $color-surface;
   }
 
   .bw-table-container .bw-table {
@@ -55,7 +74,7 @@
     border: 0;
     table-layout: fixed;
     white-space: nowrap;
-    background: #fff;
+    background: $color-surface;
 
     th,
     td {
@@ -65,7 +84,7 @@
       padding-inline: 20px;
       overflow: hidden;
       text-overflow: ellipsis;
-      border-block-end: 1px solid #cac4d0;
+      border-block-end: 1px solid $color-outline-variant;
 
       &:last-child {
         text-align: end;
@@ -73,7 +92,7 @@
     }
 
     thead tr {
-      background-color: #f8fafd;
+      background-color: $color-surface-subtle;
       height: 44px;
     }
 
@@ -87,8 +106,8 @@
       font-weight: 500;
       line-height: 1rem;
       letter-spacing: 0.1px;
-      background-color: #f8fafd;
-      color: #49454f;
+      background-color: $color-surface-subtle;
+      color: $color-on-surface-variant;
     }
 
     tbody tr {
@@ -108,8 +127,8 @@
       font-size: 0.875rem;
       font-weight: 400;
       line-height: 1.25rem;
-      color: #1f1f1f;
-      background: #fff;
+      color: $color-on-surface;
+      background: $color-surface;
       vertical-align: middle;
     }
   }
@@ -118,7 +137,7 @@
     font-family: inherit;
     font-variant-numeric: tabular-nums;
     font-size: 0.875rem;
-    color: #1f1f1f;
+    color: $color-on-surface;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -135,324 +154,48 @@
   .bw-device-host {
     font-size: 0.75rem;
     line-height: 1rem;
-    color: #49454f;
+    color: $color-on-surface-variant;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 }
 
-// Scoped styles for BulkStatusPill (`app-bulk-status-pill`).
-@mixin bulk-status-pill {
-  :host {
-    display: contents;
-  }
-
-  .bw-status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    line-height: 1.125rem;
-  }
-
-  .bw-status-update {
-    background: #d3e3fd;
-    color: #041e49;
-  }
-
-  .bw-status-same {
-    color: #49454f;
-    font-weight: 400;
-  }
-
-  .bw-status-skip {
-    background: #f9dedc;
-    color: #410e0b;
-  }
-}
-
-// Scoped styles for BulkReviewHeaderBanner (`app-bulk-review-header-banner`).
-@mixin bulk-review-header-banner {
-  :host {
-    display: contents;
-  }
-
-  @include bulk-count-chips;
-
+// Shared banner layout used in review headers and error summaries.
+@mixin bulk-banner-base {
   .bw-review-banner {
     flex: none;
     display: flex;
     align-items: center;
-    justify-content: space-between;
     flex-wrap: wrap;
     gap: 12px 20px;
     padding: 12px 16px;
     border-radius: 12px;
-    background: #f8fafd;
-    border: 1px solid #cac4d0;
     font-size: 0.875rem;
     line-height: 1.25rem;
-    color: #1f1f1f;
-
-    &.bw-review-banner-info {
-      background: var(--md-sys-color-secondary-container, #c2e7ff);
-      color: var(--md-sys-color-on-secondary-container, #001d35);
-      border-color: transparent;
-      justify-content: flex-start;
-      gap: 10px;
-
-      mat-icon {
-        font-family: 'Material Symbols Outlined', sans-serif;
-        font-variation-settings: 'FILL' 0;
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-        color: var(--md-sys-color-on-secondary-container, #001d35);
-      }
-    }
   }
+}
 
-  .bw-review-target {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-  }
-
-  .bw-review-target-icon {
-    flex: none;
-    width: 36px;
+// Shared inline text action button used in Step 1 banners, list rows, and inline status alerts.
+@mixin bulk-text-btn {
+  .bw-text-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
     height: 36px;
-    border-radius: 10px;
-    background: #d3e3fd;
-    color: #041e49;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-  }
-
-  .bw-review-target-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .bw-review-target-headline {
-    font-size: 0.9375rem;
+    padding: 0 12px;
+    border: none;
+    background: transparent;
+    color: $color-primary;
+    font-family: inherit;
+    font-size: 0.875rem;
     font-weight: 500;
-    line-height: 1.25rem;
-    color: #1f1f1f;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
+    border-radius: 18px;
+    cursor: pointer;
+    transition: background-color 0.15s;
 
-  .bw-review-target-sub {
-    font-size: 0.75rem;
-    font-weight: 400;
-    line-height: 1rem;
-    color: #49454f;
-  }
-
-  .bw-review-counts {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-}
-
-// Scoped styles for BulkReviewTable (`app-bulk-review-table`).
-@mixin bulk-review-table {
-  :host {
-    display: contents;
-  }
-
-  @include bulk-table;
-
-  .bw-review-table {
-    .mat-column-deviceId {
-      width: 35%;
+    &:hover {
+      background-color: rgba(11, 87, 208, 0.08);
     }
-
-    .mat-column-currentValue {
-      width: 45%;
-      overflow: visible;
-    }
-
-    .mat-column-status {
-      width: 20%;
-    }
-  }
-}
-
-// Scoped styles for BulkWizardStatusView (`app-bulk-wizard-status-view`).
-@mixin bulk-wizard-status-view {
-  :host {
-    display: contents;
-  }
-
-  @include bulk-table;
-
-  .bw-loading-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    color: #49454f;
-    font-size: 0.875rem;
-  }
-
-  .bw-error-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 24px;
-    color: #b3261e;
-    font-size: 0.875rem;
-  }
-
-  .bw-error-badge {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #fce8e6;
-    color: #b3261e;
-
-    mat-icon {
-      font-size: 26px;
-      width: 26px;
-      height: 26px;
-    }
-  }
-
-  .bw-error-headline {
-    font-size: 1rem;
-    font-weight: 500;
-    line-height: 1.5rem;
-    color: #1f1f1f;
-  }
-
-  .bw-error-support {
-    margin-top: 6px;
-    max-width: 440px;
-    font-size: 0.8125rem;
-    line-height: 1.25rem;
-    color: #49454f;
-  }
-
-  .bw-review-banner {
-    flex: none;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px 20px;
-    padding: 12px 16px;
-    border-radius: 12px;
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-
-    &.bw-review-banner-error {
-      color: #b3261e;
-      background: #fdf2f2;
-      border: 1px solid #f9dedc;
-      justify-content: flex-start;
-
-      mat-icon {
-        color: #b3261e;
-      }
-    }
-  }
-
-  .bw-error-table {
-    .mat-column-deviceId {
-      width: 34%;
-    }
-
-    .mat-column-reason {
-      width: 66%;
-    }
-  }
-
-  .bw-error-cell {
-    color: #b3261e;
-    font-size: 0.8125rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .bw-success,
-  .bw-applying {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 8px 24px 24px;
-  }
-
-  .bw-applying-badge {
-    width: 72px;
-    height: 72px;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .bw-success-badge {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #d3e3fd;
-    color: #041e49;
-
-    mat-icon {
-      font-size: 40px;
-      width: 40px;
-      height: 40px;
-    }
-  }
-
-  .bw-success-headline {
-    font-size: 1.375rem;
-    line-height: 1.75rem;
-    font-weight: 400;
-    color: #1f1f1f;
-  }
-
-  .bw-success-support {
-    margin-top: 6px;
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-    color: #49454f;
   }
 }
 
@@ -463,7 +206,7 @@
     box-sizing: border-box;
   }
 
-  @include bulk-count-chips;
+  @include bulk-text-btn;
 
   // --- Body ---
   .bw-body {
@@ -505,13 +248,13 @@
     font-size: 1rem;
     font-weight: 500;
     line-height: 1.5rem;
-    color: #1f1f1f;
+    color: $color-on-surface;
   }
 
   .bw-apply-sub {
     font-size: 0.8125rem;
     line-height: 1.25rem;
-    color: #49454f;
+    color: $color-on-surface-variant;
   }
 
   .bw-apply-fields {
@@ -526,17 +269,17 @@
     flex: 1;
     min-width: 0;
     height: 56px;
-    background: #dde3ea;
+    background: $color-surface-variant;
     border-radius: 4px 4px 0 0;
-    border-bottom: 1px solid #49454f;
+    border-bottom: 1px solid $color-on-surface-variant;
     box-sizing: border-box;
 
     &:hover {
-      border-bottom-color: #1f1f1f;
+      border-bottom-color: $color-on-surface;
     }
 
     &:focus-within {
-      border-bottom: 2px solid #0b57d0;
+      border-bottom: 2px solid $color-primary;
     }
   }
 
@@ -553,11 +296,7 @@
     font-family: inherit;
     font-size: 1rem;
     line-height: 1.5rem;
-    color: #1f1f1f;
-  }
-
-  .bw-tf-trailing .bw-tf-input {
-    padding-right: 44px;
+    color: $color-on-surface;
   }
 
   .bw-tf-label {
@@ -567,7 +306,7 @@
     transform: translateY(-50%);
     font-size: 1rem;
     line-height: 1.5rem;
-    color: #49454f;
+    color: $color-on-surface-variant;
     pointer-events: none;
     transition:
       top 0.15s,
@@ -580,38 +319,11 @@
     top: 14px;
     font-size: 0.75rem;
     line-height: 1rem;
-    color: #0b57d0;
+    color: $color-primary;
   }
 
   .bw-tf-input:not(:focus):not(:placeholder-shown) ~ .bw-tf-label {
-    color: #49454f;
-  }
-
-  .bw-tf-icon {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 40px;
-    height: 40px;
-    border: none;
-    background: transparent;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 20px;
-    cursor: pointer;
-    color: #49454f;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.04);
-    }
-
-    mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
+    color: $color-on-surface-variant;
   }
 
   // Panel
@@ -620,8 +332,8 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    background: #fff;
-    border: 1px solid #cac4d0;
+    background: $color-surface;
+    border: 1px solid $color-outline-variant;
     border-radius: 16px;
     overflow: hidden;
   }
@@ -629,43 +341,11 @@
   .bw-panel-head {
     flex: none;
     padding: 12px 16px;
-    border-bottom: 1px solid #cac4d0;
+    border-bottom: 1px solid $color-outline-variant;
     font-size: 0.875rem;
     font-weight: 500;
     line-height: 1.25rem;
-    color: #49454f;
-  }
-
-  .bw-panel-search {
-    flex: none;
-    position: relative;
-    padding: 8px 12px;
-    border-bottom: 1px solid #cac4d0;
-
-    mat-icon {
-      position: absolute;
-      left: 24px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #49454f;
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-
-    input {
-      width: 100%;
-      box-sizing: border-box;
-      height: 40px;
-      padding: 0 12px 0 40px;
-      font-family: inherit;
-      font-size: 0.875rem;
-      color: #1f1f1f;
-      background: #dde3ea;
-      border: none;
-      border-radius: 20px;
-      outline: none;
-    }
+    color: $color-on-surface-variant;
   }
 
   .bw-panel-list {
@@ -680,7 +360,7 @@
     padding: 24px 16px;
     text-align: center;
     font-size: 0.875rem;
-    color: #49454f;
+    color: $color-on-surface-variant;
   }
 
   // List items
@@ -705,7 +385,7 @@
       background: rgba(11, 87, 208, 0.12);
 
       .bw-li-lead {
-        color: #0b57d0;
+        color: $color-primary;
       }
     }
   }
@@ -715,7 +395,7 @@
     font-size: 22px;
     width: 22px;
     height: 22px;
-    color: #49454f;
+    color: $color-on-surface-variant;
   }
 
   .bw-li-body {
@@ -730,7 +410,7 @@
     font-size: 0.875rem;
     font-weight: 500;
     line-height: 1.25rem;
-    color: #1f1f1f;
+    color: $color-on-surface;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -739,28 +419,10 @@
   .bw-li-support {
     font-size: 0.75rem;
     line-height: 1rem;
-    color: #49454f;
+    color: $color-on-surface-variant;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .bw-text-btn {
-    height: 36px;
-    padding: 0 12px;
-    border: none;
-    background: transparent;
-    color: #0b57d0;
-    font-family: inherit;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border-radius: 18px;
-    cursor: pointer;
-    transition: background-color 0.15s;
-
-    &:hover {
-      background-color: rgba(11, 87, 208, 0.08);
-    }
   }
 
   // --- Step 2 Layout ---
@@ -772,75 +434,32 @@
     gap: 16px;
   }
 
-  .bw-apply-error-banner {
-    flex: none;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px 16px;
-    border-radius: 12px;
-    background: #fdf2f2;
-    border: 1px solid #f9dedc;
-    color: #b3261e;
-
-    mat-icon {
-      flex: none;
-      color: #b3261e;
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      margin-top: 1px;
-    }
-  }
-
-  .bw-apply-error-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .bw-apply-error-title {
-    font-size: 0.875rem;
-    font-weight: 500;
-    line-height: 1.25rem;
-    color: #b3261e;
-  }
-
-  .bw-apply-error-detail {
-    font-size: 0.8125rem;
-    line-height: 1.125rem;
-    color: #8c1d18;
-  }
-
   .bw-cell-unset {
     font-size: 0.875rem;
     font-weight: 400;
     font-style: normal;
-    color: #49454f;
+    color: $color-on-surface-variant;
   }
 
-  // --- Projected Success Summary Card ---
-  .bw-success-card {
-    width: 100%;
-    min-width: 200px;
-    max-width: 300px;
-    margin-top: 24px;
-    text-align: left;
+  // --- Shared Success Card Projected Body ---
+  .bw-success-card-lead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon {
+      color: $color-primary;
+    }
   }
 
-  .bw-new-card {
-    padding: 20px;
-    background: var(--md-sys-color-secondary-container, #c2e7ff);
-    color: var(--md-sys-color-on-secondary-container, #001d35);
-    border-radius: 16px;
-  }
-
-  .bw-new-label {
-    font-size: 0.8rem;
+  .bw-success-card-title {
     font-weight: 500;
-    line-height: 1.25rem;
-    color: var(--md-sys-color-on-secondary-container, #001d35);
-    margin-bottom: 12px;
+    font-size: 1.1rem;
+  }
+
+  .bw-success-card-detail {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    opacity: 0.8;
   }
 }

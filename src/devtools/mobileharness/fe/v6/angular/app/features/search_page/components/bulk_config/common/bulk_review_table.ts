@@ -7,16 +7,17 @@ import {
   TemplateRef,
 } from '@angular/core';
 import {MatTableModule} from '@angular/material/table';
+import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {DeviceConfigChangeStatus} from '../../../../../core/models/device_config_models';
-import {BulkStatusPill} from './bulk_status_pill';
 
 /**
  * Shared Step 2/3 device review table for bulk configuration wizards.
  *
  * Encapsulates the Device ID column (`deviceId` + `hostName`), Status column
- * (`<app-bulk-status-pill>`), and sticky `mat-table` container, while projecting
- * the domain-specific current value cell via `#currentValueCell`.
+ * (`Will update`, `Already matches`, `Read-only`), and sticky `mat-table`
+ * container, while projecting the domain-specific current value cell via
+ * `#currentValueCell`.
  */
 @Component({
   selector: 'app-bulk-review-table',
@@ -24,7 +25,7 @@ import {BulkStatusPill} from './bulk_status_pill';
   templateUrl: './bulk_review_table.ng.html',
   styleUrl: './bulk_review_table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BulkStatusPill, MatTableModule, NgTemplateOutlet],
+  imports: [MatTableModule, MatTooltipModule, NgTemplateOutlet],
 })
 export class BulkReviewTable<
   TEntry extends {
@@ -34,6 +35,7 @@ export class BulkReviewTable<
     readOnlyReason?: string;
   },
 > {
+  readonly DeviceConfigChangeStatus = DeviceConfigChangeStatus;
   readonly columns = ['deviceId', 'currentValue', 'status'] as const;
 
   /** Device rows to render in the review table. */

@@ -1,5 +1,15 @@
 @let s = summary();
 
+@if (applyError(); as applyErr) {
+  <div class="bw-apply-error-banner" role="alert">
+    <mat-icon class="material-symbols-outlined">error</mat-icon>
+    <div class="bw-apply-error-text">
+      <div class="bw-apply-error-title">{{ applyErrorTitle() }}</div>
+      <div class="bw-apply-error-detail">{{ applyErr }}</div>
+    </div>
+  </div>
+}
+
 <div class="bw-review-banner">
   <div class="bw-review-target">
     <div class="bw-review-target-icon">

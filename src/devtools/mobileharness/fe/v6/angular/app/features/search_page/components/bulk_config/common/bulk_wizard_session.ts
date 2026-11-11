@@ -1,4 +1,4 @@
-import {computed, DestroyRef, inject, signal} from '@angular/core';
+import {computed, DestroyRef, inject, Signal, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MatDialogRef} from '@angular/material/dialog';
 import {Observable, Subscription} from 'rxjs';
@@ -17,9 +17,96 @@ import {
 } from '../../../models';
 import {formatDeviceCount} from '../../../utils';
 
-function extractErrorMessage(err: unknown, fallback: string): string {
-  const msg = getErrorMessage(err);
-  return msg !== 'An unknown error occurred.' ? msg : fallback;
+/** Cancellable, retryable async task tracker returned by `useInlineTask`. */
+export interface BulkInlineTask {
+  readonly isLoading: Signal<boolean>;
+  readonly hasLoaded: Signal<boolean>;
+  readonly error: Signal<string | null>;
+  run: <TResponse>(
+    createRequest: () => Observable<TResponse>,
+    onSuccess: (res: TResponse) => void,
+    fallbackErrorMessage?: string,
+  ) => void;
+  retry: () => void;
+  cancel: () => void;
+}
+
+/** Discriminated union representing the mutually exclusive states of the batch apply mutation. */
+type BulkApplyState =
+  | {readonly status: 'idle'}
+  | {readonly status: 'applying'}
+  | {readonly status: 'rpc_error'; readonly message: string}
+  | {readonly status: 'success'}
+  | {readonly status: 'errors'; readonly errors: readonly BulkApplyError[]};
+
+/** Reactive wizard session returned by `useBulkWizardSession`. */
+export type BulkWizardSession<
+  TEntry extends {
+    deviceId: string;
+    hostName?: string;
+    status?: DeviceConfigChangeStatus;
+  } = DeviceTarget,
+  TPhase extends string = string,
+> = ReturnType<typeof useBulkWizardSession<TEntry, TPhase>>;
+
+/**
+ * Creates a cancellable, retryable async task tracker tied to the current
+ * component's `DestroyRef`.
+ */
+export function useInlineTask(defaultFallbackError = ''): BulkInlineTask {
+  const destroyRef = inject(DestroyRef);
+  let sub: Subscription | null = null;
+  let retryFn: (() => void) | null = null;
+  const isLoading = signal<boolean>(false);
+  const hasLoaded = signal<boolean>(false);
+  const error = signal<string | null>(null);
+
+  const cancel = (): void => {
+    sub?.unsubscribe();
+    error.set(null);
+  };
+
+  const run = <TResponse>(
+    createRequest: () => Observable<TResponse>,
+    onSuccess: (res: TResponse) => void,
+    fallbackErrorMessage = defaultFallbackError,
+  ): void => {
+    retryFn = () => {
+      run(createRequest, onSuccess, fallbackErrorMessage);
+    };
+    cancel();
+    hasLoaded.set(false);
+    isLoading.set(true);
+    sub = createRequest()
+      .pipe(
+        takeUntilDestroyed(destroyRef),
+        finalize(() => {
+          isLoading.set(false);
+        }),
+      )
+      .subscribe({
+        next: (res) => {
+          onSuccess(res);
+          hasLoaded.set(true);
+        },
+        error: (err: unknown) => {
+          error.set(getErrorMessage(err, fallbackErrorMessage));
+        },
+      });
+  };
+
+  const retry = (): void => {
+    retryFn?.();
+  };
+
+  return {
+    isLoading: isLoading.asReadonly(),
+    hasLoaded: hasLoaded.asReadonly(),
+    error: error.asReadonly(),
+    run,
+    retry,
+    cancel,
+  };
 }
 
 /**
@@ -42,56 +129,43 @@ export function useBulkWizardSession<
     inject<MatDialogRef<unknown, BulkConfigDialogResult | undefined>>(
       MatDialogRef,
     );
-  let stepSub: Subscription | null = null;
-  let retryStepFn: (() => void) | null = null;
+
+  const stepTask = useInlineTask();
 
   /** Current active wizard phase. */
   const phase = signal<TPhase>(initialPhase);
 
-  /** Whether the active step's async data request is currently in-flight. */
-  const isStepLoading = signal<boolean>(false);
-
-  /** Loading message for the active step's in-flight request. */
-  const stepLoadingMessage = signal<string>('');
-
-  /** Error message if the active step's async data request failed. */
-  const stepError = signal<string | null>(null);
-
-  /** Context headline for the active step's failed request (e.g. "Failed to load Wi-Fi configurations"). */
+  /** Fallback headline title for a failed step RPC. */
   const stepErrorTitle = signal<string | null>(null);
-
-  /** Active status message for `'loading'` or `'step_error'` views. */
-  const statusMessage = computed<string>(
-    () => stepError() ?? stepLoadingMessage(),
-  );
 
   /** Device entries with change status and read-only reasons evaluated by the backend for Review. */
   const reviewEntries = signal<TEntry[]>([]);
 
-  /** Whether the batch update mutation is in-flight. */
-  const isApplying = signal<boolean>(false);
+  /** Unified state machine for the batch apply mutation. */
+  const applyState = signal<BulkApplyState>({status: 'idle'});
 
-  /** Terminal outcome of applying the batch update. */
-  const applyResult = signal<'success' | 'errors' | null>(null);
-
-  /** Per-device failures returned by the backend. */
-  const applyErrors = signal<BulkApplyError[]>([]);
+  /** Per-device failures returned by the backend when `applyState().status === 'errors'`. */
+  const applyErrors = computed<readonly BulkApplyError[]>(() => {
+    const s = applyState();
+    return s.status === 'errors' ? s.errors : [];
+  });
 
   /** Whole-RPC error message when the batch update request itself fails (keeps user on review step to retry). */
-  const applyRpcError = signal<string | null>(null);
+  const applyRpcError = computed<string | null>(() => {
+    const s = applyState();
+    return s.status === 'rpc_error' ? s.message : null;
+  });
 
-  /** Single-pass review summary consolidating counts and willUpdateRows. */
-  const reviewSummary = computed<
-    BulkConfigReviewSummary & {willUpdateRows: TEntry[]}
-  >(() => {
+  /** Single-pass review summary consolidating device status counts and labels. */
+  const reviewSummary = computed<BulkConfigReviewSummary>(() => {
+    let willUpdateCount = 0;
     let alreadyMatchCount = 0;
     let readOnlyCount = 0;
-    const willUpdateRows: TEntry[] = [];
 
     for (const entry of reviewEntries()) {
       switch (entry.status) {
         case DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE:
-          willUpdateRows.push(entry);
+          willUpdateCount++;
           break;
         case DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES:
           alreadyMatchCount++;
@@ -104,9 +178,7 @@ export function useBulkWizardSession<
       }
     }
 
-    const willUpdateCount = willUpdateRows.length;
     return {
-      willUpdateRows,
       willUpdateCount,
       willUpdateLabel: formatDeviceCount(willUpdateCount),
       alreadyMatchCount,
@@ -123,107 +195,41 @@ export function useBulkWizardSession<
   const viewMode = computed<
     TPhase | 'loading' | 'step_error' | 'applying' | 'success' | 'errors'
   >(() => {
-    if (isApplying()) return 'applying';
-    if (applyResult() === 'success') return 'success';
-    if (applyResult() === 'errors') return 'errors';
-    if (isStepLoading()) return 'loading';
-    if (stepError()) return 'step_error';
+    const applyStatus = applyState().status;
+    if (
+      applyStatus === 'applying' ||
+      applyStatus === 'success' ||
+      applyStatus === 'errors'
+    ) {
+      return applyStatus;
+    }
+    if (stepTask.isLoading()) return 'loading';
+    if (stepTask.error()) return 'step_error';
     return phase();
   });
 
-  /** Resolves the dialog headline across terminal apply states and active step phases. */
-  const resolveHeadline = (
-    targetName: string,
-    stepHeadline: string,
-  ): string => {
-    if (isApplying()) return `Applying ${targetName}`;
-    if (applyResult() === 'success') return `${targetName} updated`;
-    if (applyResult() === 'errors') return `Configure ${targetName}`;
-    return stepHeadline;
-  };
-
-  /** Resolves the dialog support subtitle across terminal apply states and active step phases. */
-  const resolveSupportText = (stepSupportText: string): string => {
-    if (isApplying() || applyResult() === 'success') return '';
-    if (applyResult() === 'errors') return 'Apply completed with errors';
-    return stepSupportText;
-  };
-
-  /** Transitions the wizard to a phase, cancelling any in-flight step request and clearing step loading/error state. */
+  /** Transitions the wizard to a phase, cancelling any in-flight step request and resetting apply/step error state. */
   const setPhase = (nextPhase: TPhase): void => {
-    stepSub?.unsubscribe();
-    stepSub = null;
-    isStepLoading.set(false);
-    stepError.set(null);
-    stepErrorTitle.set(null);
-    applyRpcError.set(null);
+    stepTask.cancel();
+    applyState.set({status: 'idle'});
     phase.set(nextPhase);
-  };
-
-  /** Executes an async data request for the active (or specified) step, cancelling any prior in-flight request. */
-  const runStepTask = <TResponse>(
-    requestSource: Observable<TResponse> | (() => Observable<TResponse>),
-    onSuccess: (res: TResponse) => void,
-    fallbackErrorMessage: string,
-    targetPhase?: TPhase,
-    loadingMessage = '',
-  ): void => {
-    const resolvedPhase = targetPhase ?? phase();
-    retryStepFn = () => {
-      runStepTask(
-        requestSource,
-        onSuccess,
-        fallbackErrorMessage,
-        resolvedPhase,
-        loadingMessage,
-      );
-    };
-    setPhase(resolvedPhase);
-    stepLoadingMessage.set(loadingMessage);
-    isStepLoading.set(true);
-    const request$ =
-      typeof requestSource === 'function' ? requestSource() : requestSource;
-    stepSub = request$
-      .pipe(
-        takeUntilDestroyed(destroyRef),
-        finalize(() => {
-          isStepLoading.set(false);
-        }),
-      )
-      .subscribe({
-        next: onSuccess,
-        error: (err: unknown) => {
-          stepErrorTitle.set(fallbackErrorMessage || null);
-          stepError.set(extractErrorMessage(err, fallbackErrorMessage));
-        },
-      });
   };
 
   /** Transitions to `'review'` and executes the backend dry-run / review check. */
   const loadReview = (
-    requestSource:
-      | Observable<{entries?: TEntry[]}>
-      | (() => Observable<{entries?: TEntry[]}>),
+    createRequest: () => Observable<{entries?: TEntry[]}>,
     fallbackErrorMessage: string,
-    loadingMessage = 'Checking device configurations…',
   ): void => {
     reviewEntries.set([]);
-    runStepTask(
-      requestSource,
+    setPhase('review' as TPhase);
+    stepErrorTitle.set(fallbackErrorMessage || null);
+    stepTask.run(
+      createRequest,
       (res) => {
-        reviewEntries.set(
-          (res.entries ?? []).map((e) => ({...e, deviceId: e.deviceId ?? ''})),
-        );
+        reviewEntries.set(res.entries ?? []);
       },
       fallbackErrorMessage,
-      'review' as TPhase,
-      loadingMessage,
     );
-  };
-
-  /** Retries the most recent step request. */
-  const retryStep = (): void => {
-    retryStepFn?.();
   };
 
   /** Executes the batch update mutation for all WILL_UPDATE devices, locking dialog close while in-flight. */
@@ -233,26 +239,29 @@ export function useBulkWizardSession<
     ) => Observable<{errors?: Record<string, UpdateError>}>,
     fallbackErrorMessage: string,
   ): void => {
-    if (isApplying()) return;
-    const updateTargets: DeviceTarget[] = reviewSummary().willUpdateRows.map(
-      (r) => ({
-        deviceId: r.deviceId,
-        ...(r.hostName ? {hostName: r.hostName} : {}),
-      }),
-    );
+    if (applyState().status === 'applying') return;
+    const updateTargets: DeviceTarget[] = [];
+    for (const r of reviewEntries()) {
+      if (
+        r.status ===
+        DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE
+      ) {
+        updateTargets.push(
+          r.hostName
+            ? {deviceId: r.deviceId, hostName: r.hostName}
+            : {deviceId: r.deviceId},
+        );
+      }
+    }
     if (updateTargets.length === 0) return;
 
-    isApplying.set(true);
-    applyResult.set(null);
-    applyErrors.set([]);
-    applyRpcError.set(null);
+    applyState.set({status: 'applying'});
     dialogRef.disableClose = true;
 
     createRequest(updateTargets)
       .pipe(
         takeUntilDestroyed(destroyRef),
         finalize(() => {
-          isApplying.set(false);
           dialogRef.disableClose = false;
         }),
       )
@@ -264,44 +273,43 @@ export function useBulkWizardSession<
               reason: err.message || err.code,
             }),
           );
-          if (errors.length > 0) {
-            applyErrors.set(errors);
-            applyResult.set('errors');
-          } else {
-            applyResult.set('success');
-          }
+          applyState.set(
+            errors.length > 0
+              ? {status: 'errors', errors}
+              : {status: 'success'},
+          );
         },
         error: (err: unknown) => {
-          applyRpcError.set(extractErrorMessage(err, fallbackErrorMessage));
+          applyState.set({
+            status: 'rpc_error',
+            message: getErrorMessage(err, fallbackErrorMessage),
+          });
         },
       });
   };
 
   /** Closes the dialog and reports whether at least one device was updated. */
   const close = (): void => {
+    const s = applyState();
     const hasUpdated =
-      applyResult() === 'success' ||
-      (applyResult() === 'errors' &&
-        reviewSummary().willUpdateCount > applyErrors().length);
+      s.status === 'success' ||
+      (s.status === 'errors' &&
+        reviewSummary().willUpdateCount > s.errors.length);
     dialogRef.close(hasUpdated ? {updated: true} : undefined);
   };
 
   return {
     phase: phase.asReadonly(),
-    stepError: stepError.asReadonly(),
+    stepError: stepTask.error,
     stepErrorTitle: stepErrorTitle.asReadonly(),
-    statusMessage,
     reviewEntries: reviewEntries.asReadonly(),
-    applyErrors: applyErrors.asReadonly(),
-    applyRpcError: applyRpcError.asReadonly(),
+    applyErrors,
+    applyRpcError,
     reviewSummary,
     viewMode,
-    resolveHeadline,
-    resolveSupportText,
     setPhase,
-    runStepTask,
     loadReview,
-    retryStep,
+    retryStep: stepTask.retry,
     apply,
     close,
   };

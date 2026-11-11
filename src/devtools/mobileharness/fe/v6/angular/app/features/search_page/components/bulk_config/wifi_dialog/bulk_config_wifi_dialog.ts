@@ -2,13 +2,15 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
+  ElementRef,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MAT_DIALOG_DATA} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
-import {forkJoin} from 'rxjs';
 
 import {
   CandidateWifi,
@@ -20,14 +22,20 @@ import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service
 import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {BulkConfigDialogData} from '../../../models';
 import {
-  formatCurrentSelectionBadge,
   formatDeviceCount,
   formatNothingToUpdateMessage,
-  formatSuccessSupportText,
+  formatWizardHeadline,
+  formatWizardSupportText,
 } from '../../../utils';
+import {BulkClearBanner} from '../common/bulk_clear_banner';
+import {BulkPanelStatus} from '../common/bulk_panel_status';
 import {BulkReviewHeaderBanner} from '../common/bulk_review_header_banner';
 import {BulkReviewTable} from '../common/bulk_review_table';
-import {useBulkWizardSession} from '../common/bulk_wizard_session';
+import {BulkWizardFooterActions} from '../common/bulk_wizard_footer_actions';
+import {
+  useBulkWizardSession,
+  useInlineTask,
+} from '../common/bulk_wizard_session';
 import {BulkWizardStatusView} from '../common/bulk_wizard_status_view';
 import {WifiDetailChip} from './wifi_detail_chip';
 
@@ -48,8 +56,11 @@ import {WifiDetailChip} from './wifi_detail_chip';
   styleUrl: './bulk_config_wifi_dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BulkClearBanner,
+    BulkPanelStatus,
     BulkReviewHeaderBanner,
     BulkReviewTable,
+    BulkWizardFooterActions,
     BulkWizardStatusView,
     Dialog,
     FormsModule,
@@ -64,12 +75,11 @@ export class BulkConfigWifiDialog {
     DeviceWifiConfigEntry,
     'network' | 'review'
   >('network');
-
-  /** Total number of selected devices. */
-  readonly totalCount = this.dialogData.devices.length;
+  readonly ssidInputField =
+    viewChild<ElementRef<HTMLInputElement>>('ssidInput');
 
   /** Pluralized device label (e.g. '1 device' or '3 devices'). */
-  readonly deviceLabel = formatDeviceCount(this.totalCount);
+  readonly deviceLabel = formatDeviceCount(this.dialogData.devices.length);
 
   /** Whether the target operation is to clear/remove the default Wi-Fi. */
   readonly isClearWifi = signal<boolean>(false);
@@ -90,19 +100,20 @@ export class BulkConfigWifiDialog {
   /** Candidate Wi-Fi networks returned directly by backend GetWifiSuggestions. */
   readonly candidateWifis = signal<CandidateWifi[]>([]);
 
-  /** Initial current configs of selected devices fetched in the network phase. */
-  readonly initialDeviceEntries = signal<DeviceWifiConfigEntry[]>([]);
+  /** Inline async task tracking Step 1 candidate Wi-Fi suggestions. */
+  readonly networkTask = useInlineTask('Failed to load Wi-Fi configurations');
 
   /** Constructs the reactive TargetDeviceWifi proto message according to current UI state. */
   readonly targetDeviceWifi = computed<TargetDeviceWifi>(() => {
     if (this.isClearWifi()) return {clearWifi: {}};
-    const {ssid, psk = '', scanSsid = false} = this.targetWifi();
-    return {wifi: {ssid: ssid.trim(), psk, scanSsid: Boolean(scanSsid)}};
+    const {ssid, psk, scanSsid} = this.targetWifi();
+    return {wifi: {ssid: ssid.trim(), psk, scanSsid}};
   });
 
   /** Dialog headline derived from the active wizard state. */
   readonly headline = computed<string>(() =>
-    this.wizard.resolveHeadline(
+    formatWizardHeadline(
+      this.wizard.viewMode(),
       'Wi-Fi',
       this.wizard.phase() === 'review'
         ? 'Review and apply'
@@ -112,7 +123,8 @@ export class BulkConfigWifiDialog {
 
   /** Dialog supporting subtitle text. */
   readonly supportText = computed<string>(() =>
-    this.wizard.resolveSupportText(
+    formatWizardSupportText(
+      this.wizard.viewMode(),
       this.wizard.phase() === 'network'
         ? 'Step 1 of 2 · Choose a network'
         : 'Step 2 of 2 · Confirm and apply',
@@ -124,102 +136,57 @@ export class BulkConfigWifiDialog {
     () => this.isClearWifi() || this.targetWifi().ssid.trim().length > 0,
   );
 
-  /** Badge text for 'No default Wi-Fi' option when one or more selected devices have no Wi-Fi. */
-  readonly unconfiguredBadge = computed<string | null>(() => {
-    const unconfiguredCount = this.initialDeviceEntries().filter(
-      (e) => !e.currentWifi?.ssid,
-    ).length;
-    return formatCurrentSelectionBadge(unconfiguredCount, this.totalCount);
-  });
-
   /** Whether the 'No default Wi-Fi' row matches the current search filter. */
   readonly matchesClearOption = computed<boolean>(() => {
     const q = this.searchFilter().trim().toLowerCase();
     return !q || 'no default wi-fi clear none'.includes(q);
   });
 
-  /** Concatenated current Wi-Fi networks on selected devices with backend candidate suggestions. */
-  readonly wifiOptions = computed(() => {
-    const totalSelected = this.totalCount;
-    const optionsBySsid = new Map<
-      string,
-      {wifi: DeviceWifi; count: number; subtitle?: string}
-    >();
-
-    // 1. Current Wi-Fi networks on selected devices
-    for (const {currentWifi} of this.initialDeviceEntries()) {
-      if (!currentWifi?.ssid) continue;
-      const existing = optionsBySsid.get(currentWifi.ssid);
-      if (existing) {
-        existing.count++;
-      } else {
-        optionsBySsid.set(currentWifi.ssid, {wifi: currentWifi, count: 1});
-      }
-    }
-
-    // 2. Backend candidate suggestions (enrich existing or append new)
-    for (const candidate of this.candidateWifis()) {
-      const {ssid} = candidate.wifi;
-      const subtitle =
-        candidate.fleetInUse?.deviceCount != null
-          ? `${candidate.fleetInUse.deviceCount.toLocaleString()} devices in fleet`
-          : candidate.curatedPreset
-            ? 'Preset network'
-            : '';
-      const existing = optionsBySsid.get(ssid);
-      if (existing) {
-        existing.subtitle ??= subtitle;
-      } else {
-        optionsBySsid.set(ssid, {wifi: candidate.wifi, count: 0, subtitle});
-      }
-    }
-
-    return Array.from(optionsBySsid.values(), ({wifi, count, subtitle}) => ({
-      wifi,
-      subtitle,
-      badge: formatCurrentSelectionBadge(count, totalSelected) ?? undefined,
-    }));
-  });
-
-  /** Filtered Wi-Fi options based on search input, with pre-computed active selection state. */
+  /** Filtered Wi-Fi options based on search input, with formatted subtitle and active selection state. */
   readonly filteredWifiOptions = computed(() => {
     const q = this.searchFilter().trim().toLowerCase();
     const isClear = this.isClearWifi();
     const target = this.targetWifi();
     const targetSsid = target.ssid.trim();
-    const targetPsk = target.psk || '';
-    const targetScan = Boolean(target.scanSsid);
 
-    const list = this.wifiOptions();
+    const list = this.candidateWifis();
     const matched = q
-      ? list.filter((opt) => opt.wifi.ssid.toLowerCase().includes(q))
+      ? list.filter((c) => c.wifi.ssid.toLowerCase().includes(q))
       : list;
-    return matched.map((opt) => ({
-      ...opt,
+    return matched.map((c) => ({
+      wifi: c.wifi,
+      subtitle:
+        c.fleetInUse?.deviceCount != null
+          ? `${formatDeviceCount(c.fleetInUse.deviceCount)} in fleet`
+          : c.curatedPreset
+            ? 'Preset network'
+            : '',
       isActive:
         !isClear &&
-        opt.wifi.ssid === targetSsid &&
-        (opt.wifi.psk || '') === targetPsk &&
-        Boolean(opt.wifi.scanSsid) === targetScan,
+        c.wifi.ssid === targetSsid &&
+        (c.wifi.psk || '') === target.psk &&
+        Boolean(c.wifi.scanSsid) === target.scanSsid,
     }));
   });
+
+  /** Security label for the target Wi-Fi configuration. */
+  readonly securityLabel = computed<string>(() =>
+    this.targetWifi().psk ? 'Password protected' : 'Open network',
+  );
 
   /** Subtitle for the target Wi-Fi summary card shown in the review banner. */
   readonly reviewTargetSubtitle = computed<string>(() => {
     if (this.isClearWifi()) {
       return 'Removes default Wi-Fi from target devices';
     }
-    const target = this.targetWifi();
-    const sec = target.psk ? 'Password protected' : 'Open network';
-    const hidden = target.scanSsid ? ' · Hidden SSID' : '';
-    return `Target Wi-Fi · ${sec}${hidden}`;
+    const hidden = this.targetWifi().scanSsid ? ' · Hidden SSID' : '';
+    return `Target Wi-Fi · ${this.securityLabel()}${hidden}`;
   });
 
   /** Informational message shown when willUpdateCount is 0 in the review step. */
   readonly nothingToUpdateMessage = computed<string>(() =>
     formatNothingToUpdateMessage(
       this.wizard.reviewSummary(),
-      this.totalCount,
       this.isClearWifi()
         ? 'already have no default Wi-Fi configured'
         : 'already use this Wi-Fi configuration',
@@ -227,52 +194,33 @@ export class BulkConfigWifiDialog {
     ),
   );
 
-  /** Explanatory support text shown on the success screen. */
-  readonly successSupportText = computed<string>(() =>
-    formatSuccessSupportText(
-      this.wizard.reviewSummary(),
-      this.isClearWifi()
-        ? 'Removed default Wi-Fi from every updated device.'
-        : 'Every updated device now uses this network.',
-    ),
-  );
-
   constructor() {
+    effect(() => {
+      this.ssidInputField()?.nativeElement.focus();
+    });
     this.loadNetworkStepData();
   }
 
-  /** Loads candidate Wi-Fi suggestions and currently configured networks of selected devices. */
+  /** Loads candidate Wi-Fi suggestions from backend. */
   loadNetworkStepData() {
-    this.wizard.runStepTask(
-      () =>
-        forkJoin({
-          suggestions: this.configService.getWifiSuggestions(),
-          currentConfigs: this.configService.batchGetDeviceWifiConfigs({
-            devices: this.dialogData.devices,
-          }),
-        }),
-      ({suggestions, currentConfigs}) => {
+    this.networkTask.run(
+      () => this.configService.getWifiSuggestions(),
+      (suggestions) => {
         this.candidateWifis.set(suggestions.candidateWifis ?? []);
-        this.initialDeviceEntries.set(currentConfigs.entries ?? []);
       },
-      'Failed to load Wi-Fi configurations',
-      'network',
-      'Loading Wi-Fi configurations…',
     );
   }
 
   /** Updates one or more fields of the target Wi-Fi configuration (and exits clear mode). */
   updateTargetWifi(patch: Partial<DeviceWifi>) {
     this.isClearWifi.set(false);
-    this.targetWifi.update((curr) => ({...curr, ...patch}));
-  }
-
-  /** Selects a Wi-Fi network from the list and populates the target form. */
-  selectWifi(wifi: DeviceWifi) {
-    this.updateTargetWifi({
-      ssid: wifi.ssid,
-      psk: wifi.psk || '',
-      scanSsid: Boolean(wifi.scanSsid),
+    this.targetWifi.update((curr) => {
+      const next = {...curr, ...patch};
+      return {
+        ssid: next.ssid || '',
+        psk: next.psk || '',
+        scanSsid: Boolean(next.scanSsid),
+      };
     });
   }
 
@@ -294,9 +242,7 @@ export class BulkConfigWifiDialog {
   /** Moves from network phase to review phase after validating input and fetching backend review status. */
   goToReview() {
     if (!this.canGoNext()) return;
-    if (!this.isClearWifi()) {
-      this.targetWifi.update((curr) => ({...curr, ssid: curr.ssid.trim()}));
-    }
+    this.targetWifi.update((curr) => ({...curr, ssid: curr.ssid.trim()}));
     this.wizard.loadReview(
       () =>
         this.configService.batchGetDeviceWifiConfigs({

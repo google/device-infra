@@ -30,16 +30,9 @@ export function extractDeviceTarget(
 export function getDeviceTargetKey(
   item: DeviceTarget | Pick<Row, 'id' | 'cells'>,
 ): string {
-  const target: DeviceTarget =
-    'id' in item || 'cells' in item
-      ? extractDeviceTarget(item as Pick<Row, 'id' | 'cells'>)
-      : {
-          ...(item as DeviceTarget),
-          deviceId: (item as DeviceTarget).deviceId ?? '',
-        };
-  return target.hostName
-    ? `${target.deviceId}@@${target.hostName}`
-    : target.deviceId;
+  const {deviceId = '', hostName} =
+    'deviceId' in item ? item : extractDeviceTarget(item);
+  return hostName ? `${deviceId}@@${hostName}` : deviceId;
 }
 
 /** Formats a device count with locale-aware grouping and pluralization (e.g. '1 device', '1,200 devices'). */
@@ -47,41 +40,65 @@ export function formatDeviceCount(count: number): string {
   return `${count.toLocaleString()} ${count === 1 ? 'device' : 'devices'}`;
 }
 
-/** Formats badge text indicating how many selected devices currently use a configuration. */
+/** Formats badge text indicating how many selected devices have a dimension configured. */
 export function formatCurrentSelectionBadge(
   count: number | undefined,
   totalSelected: number,
-  prefix: 'Current on' | 'Configured on' = 'Current on',
 ): string | null {
   if (!count || count <= 0) return null;
   if (count === totalSelected && totalSelected > 1) {
-    return `${prefix} all ${totalSelected} selected`;
+    return `Configured on all ${totalSelected} selected`;
   }
-  return `${prefix} ${formatDeviceCount(count)} selected`;
+  return `Configured on ${formatDeviceCount(count)} selected`;
+}
+
+/** Resolves the dialog headline across terminal apply states and active step phases. */
+export function formatWizardHeadline(
+  viewMode: string,
+  targetName: string,
+  stepHeadline: string,
+): string {
+  if (viewMode === 'applying') return `Applying ${targetName}`;
+  if (viewMode === 'success') return `${targetName} updated`;
+  if (viewMode === 'errors') return `Configure ${targetName}`;
+  return stepHeadline;
+}
+
+/** Resolves the dialog support subtitle across terminal apply states and active step phases. */
+export function formatWizardSupportText(
+  viewMode: string,
+  stepSupportText: string,
+): string {
+  if (viewMode === 'applying' || viewMode === 'success') return '';
+  if (viewMode === 'errors') return 'Apply completed with errors';
+  return stepSupportText;
 }
 
 /** Formats the informational banner text when `willUpdateCount === 0` in the review step. */
 export function formatNothingToUpdateMessage(
   summary: {alreadyMatchCount: number; readOnlyCount: number},
-  totalCount: number,
   allMatchPhrase: string,
   targetLabel: string,
 ): string {
   const {alreadyMatchCount: same, readOnlyCount: skipped} = summary;
-  if (same === totalCount) {
-    return `All ${formatDeviceCount(totalCount)} ${allMatchPhrase}. No update is needed.`;
+  if (same > 0 && skipped === 0) {
+    return `All ${formatDeviceCount(same)} ${allMatchPhrase}. No update is needed.`;
   }
   if (same > 0 && skipped > 0) {
     return `${formatDeviceCount(same)} already match this ${targetLabel} and ${formatDeviceCount(skipped)} are read-only. No devices can be updated.`;
   }
-  return `All ${formatDeviceCount(totalCount)} are read-only and cannot be updated.`;
+  return `All ${formatDeviceCount(skipped)} are read-only and cannot be updated.`;
 }
 
-/** Formats the supporting subtitle text displayed on the post-apply success screen. */
-export function formatSuccessSupportText(
-  summary: {alreadyMatchCount: number; readOnlyCount: number},
-  allUpdatedMessage: string,
-): string {
+/**
+ * Formats the supporting subtitle text displayed on the post-apply success screen
+ * when some selected devices were skipped (already matched or read-only).
+ * Returns an empty string when all selected devices were updated.
+ */
+export function formatSuccessSupportText(summary: {
+  alreadyMatchCount: number;
+  readOnlyCount: number;
+}): string {
   const {alreadyMatchCount: same, readOnlyCount: skipped} = summary;
   const extraNotes: string[] = [];
   if (same > 0) {
@@ -90,8 +107,31 @@ export function formatSuccessSupportText(
   if (skipped > 0) {
     extraNotes.push(`${formatDeviceCount(skipped)} read-only`);
   }
-  if (extraNotes.length > 0) {
-    return `${extraNotes.join('; ')}.`;
-  }
-  return allUpdatedMessage;
+  return extraNotes.length > 0 ? `${extraNotes.join('; ')}.` : '';
+}
+
+const DIMENSION_TOKEN_REGEX =
+  /"([^"]*)"?|'([^']*)'?|([^,;\r\n"'\s][^,;\r\n"']*)/g;
+const CLOSED_QUOTES_REGEX = /^(?:[^"']+|"[^"]*"|'[^']*')*$/;
+
+/** Extracts trimmed, non-empty dimension value tokens from user input or pasted text. */
+export function extractDimensionTokens(raw: string): string[] {
+  if (!raw) return [];
+  return Array.from(
+    raw.matchAll(DIMENSION_TOKEN_REGEX),
+    ([, dq, sq, unquoted]) => (dq ?? sq ?? unquoted).trim(),
+  ).filter(Boolean);
+}
+
+/** Returns true if all single and double quotes in `text` are balanced/closed. */
+export function hasClosedQuotes(text: string): boolean {
+  return CLOSED_QUOTES_REGEX.test(text);
+}
+
+/**
+ * Produces a canonical order-insensitive key for a normalized set of dimension
+ * values (sorted case-sensitively and joined with `'::'`).
+ */
+export function canonicalizeValueSet(values: readonly string[]): string {
+  return [...values].sort().join('::');
 }
