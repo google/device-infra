@@ -584,6 +584,10 @@ public class AndroidSystemStateUtil {
   /**
    * Restarts the Zygote process.
    *
+   * <p>Also resets {@code sys.boot_completed} on a best-effort basis so that {@link
+   * #waitUntilReady(String)} waits for the restarted framework to finish booting without skipping
+   * {@code start} if setting the property fails.
+   *
    * <p>Should only be called when device is managed by Mobile Harness.
    */
   public void softReboot(String serial) throws MobileHarnessException, InterruptedException {
@@ -600,6 +604,9 @@ public class AndroidSystemStateUtil {
           exception == null ? output : exception.getMessage(),
           exception);
     }
+
+    adbUtil.setProperty(
+        serial, "sys.boot_completed", "0", /* ignoreError= */ true, SHORT_COMMAND_TIMEOUT);
 
     try {
       output = adb.runShell(serial, ADB_SHELL_START);
