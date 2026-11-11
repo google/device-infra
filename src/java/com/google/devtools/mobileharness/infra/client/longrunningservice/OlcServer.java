@@ -91,6 +91,7 @@ public class OlcServer {
 
     // Logs system info (including arguments and versions).
     systemInfoPrinter.printSystemInfo(DEBUG, Mode.FULL);
+    systemInfoPrinter.registerAsProcessInstance();
 
     // Adds shutdown hook.
     ShutdownHookManager.getInstance()

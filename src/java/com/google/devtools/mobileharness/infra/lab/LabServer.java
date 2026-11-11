@@ -195,6 +195,7 @@ public class LabServer {
   /** Initializes and runs lab server, and blocks until shutdown. */
   public void run() throws MobileHarnessException, InterruptedException {
     systemInfoPrinter.printSystemInfo(DEBUG, Mode.FULL);
+    systemInfoPrinter.registerAsProcessInstance();
     try {
 
       // Sets public general file directory to BaseDevice.

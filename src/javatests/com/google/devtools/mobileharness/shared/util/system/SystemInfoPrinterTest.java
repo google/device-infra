@@ -382,6 +382,13 @@ public final class SystemInfoPrinterTest {
         .isEqualTo("jdbc:postgresql://<redacted>@h/db?password=<redacted>");
   }
 
+  @Test
+  public void getProcessInstance() {
+    systemInfoPrinter.registerAsProcessInstance();
+
+    assertThat(SystemInfoPrinter.getProcessInstance()).hasValue(systemInfoPrinter);
+  }
+
   /** Returns the field name / key part of each line, e.g., " Hostname" or " PATH". */
   private static ImmutableList<String> getLineKeys(List<String> lines) {
     return lines.stream()

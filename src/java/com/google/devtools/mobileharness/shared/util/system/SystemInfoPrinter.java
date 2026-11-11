@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -194,6 +195,18 @@ public final class SystemInfoPrinter {
    */
   private static final Pattern SCHEMELESS_URL_USER_INFO_PATTERN = Pattern.compile("^[^/?#@\\s]+@");
 
+  /** The instance registered by the main class of the current process, if any. */
+  private static final AtomicReference<SystemInfoPrinter> processInstance = new AtomicReference<>();
+
+  /**
+   * Returns the instance registered by {@link #registerAsProcessInstance()}, if any.
+   *
+   * <p>For classes which are not created by Guice (e.g., builtin plugins).
+   */
+  public static Optional<SystemInfoPrinter> getProcessInstance() {
+    return Optional.ofNullable(processInstance.get());
+  }
+
   private final NetworkUtil networkUtil;
   private final SystemUtil systemUtil;
   private final ImmutableList<String> mainArgs;
@@ -219,6 +232,16 @@ public final class SystemInfoPrinter {
     this.mainArgs = mainArgs;
     this.systemEnvironment = systemEnvironment;
     this.systemProperties = systemProperties;
+  }
+
+  /**
+   * Registers this instance as the instance of the current process, so that classes which are not
+   * created by Guice can get it by {@link #getProcessInstance()}.
+   *
+   * <p>Should be called by the main class of a process (e.g., OLC server, lab server, ATS console).
+   */
+  public void registerAsProcessInstance() {
+    processInstance.set(this);
   }
 
   /**

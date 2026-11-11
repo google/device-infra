@@ -288,6 +288,7 @@ public class AtsConsole {
     logger.atInfo().with(IMPORTANCE, DEBUG).log("ATS console ID: %s", clientId);
     logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags.flags());
     systemInfoPrinter.printSystemInfo(DEBUG, Mode.FULL);
+    systemInfoPrinter.registerAsProcessInstance();
 
     // Prints version information.
     consoleUtil.printlnStdout(versionMessageUtil.getVersionMessage());
