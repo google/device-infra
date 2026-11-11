@@ -108,7 +108,7 @@ public final class AtsConsoleSessionPluginTest {
 
   @Before
   public void setUp() throws Exception {
-    AtsConsoleSessionPlugin.NEXT_RUN_COMMAND_ID.set(1);
+    AtsConsoleSessionPlugin.nextRunCommandId.set(1);
     when(runCommandHandler.getSessionRequestInfo())
         .thenReturn(SessionRequestInfo.getDefaultInstance());
     when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.empty());

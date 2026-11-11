@@ -37,7 +37,7 @@ import java.util.stream.IntStream;
  */
 public class NoOpDeviceDetector implements Detector {
 
-  private static final Random RANDOM = new Random();
+  private static final Random random = new Random();
 
   /** Set in {@link #precondition()}. */
   private volatile ImmutableList<DetectionResult> detectionResults;
@@ -51,12 +51,12 @@ public class NoOpDeviceDetector implements Detector {
   @SuppressWarnings("MixedMutabilityReturnType")
   @Override
   public List<DetectionResult> detectDevices() throws MobileHarnessException, InterruptedException {
-    if (!Flags.noOpDeviceRandomOffline.getNonNull() || RANDOM.nextInt(100) >= 1) {
+    if (!Flags.noOpDeviceRandomOffline.getNonNull() || random.nextInt(100) >= 1) {
       return detectionResults;
     }
 
     // With a 1% change, makes one device be offline.
-    int deviceIndexToTakeOffline = RANDOM.nextInt(detectionResults.size());
+    int deviceIndexToTakeOffline = random.nextInt(detectionResults.size());
     List<DetectionResult> newDetectionResults = new ArrayList<>(detectionResults.size() - 1);
     for (int i = 0; i < detectionResults.size(); i++) {
       if (i != deviceIndexToTakeOffline) {

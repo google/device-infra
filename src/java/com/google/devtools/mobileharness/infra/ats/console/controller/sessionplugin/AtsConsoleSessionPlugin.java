@@ -111,7 +111,7 @@ public class AtsConsoleSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @VisibleForTesting static final AtomicInteger NEXT_RUN_COMMAND_ID = new AtomicInteger(1);
+  @VisibleForTesting static final AtomicInteger nextRunCommandId = new AtomicInteger(1);
 
   private final Object runningTestsLock = new Object();
 
@@ -184,7 +184,7 @@ public class AtsConsoleSessionPlugin {
     if (config.getCommandCase() == CommandCase.RUN_COMMAND) {
       RunCommand runCommand = config.getRunCommand();
 
-      String commandId = Integer.toString(NEXT_RUN_COMMAND_ID.getAndIncrement());
+      String commandId = Integer.toString(nextRunCommandId.getAndIncrement());
 
       synchronized (runningTestsLock) {
         setRunCommandState(

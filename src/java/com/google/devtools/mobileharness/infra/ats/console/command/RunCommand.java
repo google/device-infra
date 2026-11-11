@@ -105,7 +105,7 @@ public final class RunCommand implements Callable<Integer> {
   // To promise it will never expire because of the start timeout for these jobs.
   private static final Duration CMDFILE_JOBS_START_TIMEOUT = Duration.ofDays(36500L);
 
-  private static final AtomicInteger RUNNING_COMMAND_COUNT = new AtomicInteger(0);
+  private static final AtomicInteger runningCommandCount = new AtomicInteger(0);
 
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
@@ -162,7 +162,7 @@ public final class RunCommand implements Callable<Integer> {
 
   /** Returns the number of currently running RunCommand instances. */
   public static int getRunningRunCommandCount() {
-    return RUNNING_COMMAND_COUNT.get();
+    return runningCommandCount.get();
   }
 
   @VisibleForTesting
@@ -408,7 +408,7 @@ public final class RunCommand implements Callable<Integer> {
         atsSessionStub.runSession(
             RUN_COMMAND_SESSION_NAME,
             AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build());
-    RUNNING_COMMAND_COUNT.incrementAndGet();
+    runningCommandCount.incrementAndGet();
     addCallback(
         atsRunSessionFuture,
         new RunCommandFutureCallback(consoleUtil, serverLogPrinter),
@@ -467,8 +467,8 @@ public final class RunCommand implements Callable<Integer> {
     }
 
     private void disableServerLogPrinterIfNecessary() {
-      int runningCommandCount = RUNNING_COMMAND_COUNT.decrementAndGet();
-      if (!Flags.enableAtsConsoleOlcServerLog.getNonNull() && runningCommandCount == 0) {
+      int currentRunningCommandCount = runningCommandCount.decrementAndGet();
+      if (!Flags.enableAtsConsoleOlcServerLog.getNonNull() && currentRunningCommandCount == 0) {
         try {
           serverLogPrinter.enable(false);
         } catch (MobileHarnessException | InterruptedException e) {

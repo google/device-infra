@@ -32,7 +32,7 @@ import java.util.function.Supplier;
 /** Module for binding common libraries for Driver/Decorator. */
 public class CommonLibraryModule extends AbstractModule {
 
-  private static final Supplier<ListeningExecutorService> THREAD_POOL =
+  private static final Supplier<ListeningExecutorService> threadPool =
       Suppliers.memoize(CommonLibraryModule::createThreadPool);
 
   @Provides
@@ -47,17 +47,17 @@ public class CommonLibraryModule extends AbstractModule {
 
   @Provides
   Executor provideExecutor() {
-    return THREAD_POOL.get();
+    return threadPool.get();
   }
 
   @Provides
   ExecutorService provideExecutorService() {
-    return THREAD_POOL.get();
+    return threadPool.get();
   }
 
   @Provides
   ListeningExecutorService provideListeningExecutorService() {
-    return THREAD_POOL.get();
+    return threadPool.get();
   }
 
   @Provides
