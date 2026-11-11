@@ -641,10 +641,141 @@ public class DeviceConditionUtilTest {
   }
 
   @Test
-  public void calculateHealthCategory_nonAndroidNonIos_returnsUnspecified() {
-    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("WindowsDevice"));
+  public void calculateHealthCategory_emptyTypes_returnsUnspecified() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of());
     assertThat(DeviceConditionUtil.calculateHealthCategory(device))
         .isEqualTo(HealthCategory.HEALTH_CATEGORY_UNSPECIFIED);
+  }
+
+  @Test
+  public void calculateHealthCategory_emptyTypesFailed_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.FAILED, ImmutableList.of());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_emptyTypesMissing_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.MISSING, ImmutableList.of());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_emptyTypesInit_returnsTransition() {
+    DeviceDao device = createDevice(DeviceStatus.INIT, ImmutableList.of());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_TRANSITION);
+  }
+
+  @Test
+  public void calculateHealthCategory_nonAndroidNonIosIdle_returnsInService() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("WindowsDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_nonAndroidNonIosBusy_returnsInService() {
+    DeviceDao device = createDevice(DeviceStatus.BUSY, ImmutableList.of("LinuxDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_nonAndroidNonIosInit_returnsTransition() {
+    DeviceDao device = createDevice(DeviceStatus.INIT, ImmutableList.of("LinuxDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_TRANSITION);
+  }
+
+  @Test
+  public void calculateHealthCategory_nonAndroidNonIosLameduck_returnsTransition() {
+    DeviceDao device = createDevice(DeviceStatus.LAMEDUCK, ImmutableList.of("CrosDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_TRANSITION);
+  }
+
+  @Test
+  public void calculateHealthCategory_crosIdle_returnsInService() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("CrosDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_linuxIdle_returnsInService() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("LinuxDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidLocalEmulatorIdle_returnsInService() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.IDLE,
+            ImmutableList.of("AndroidDevice", "AndroidLocalEmulator", "AndroidOnlineDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_normalTestbedIdle_returnsInService() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.IDLE,
+            ImmutableList.of("TestbedDevice", "MoblyDevice", "NormalTestbedDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_abnormalTestbedIdle_returnsNeedManualRepair() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.IDLE,
+            ImmutableList.of("TestbedDevice", "MoblyDevice", "AbnormalTestbedDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_abnormalTestbedBusy_returnsInAutoRecovery() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.BUSY,
+            ImmutableList.of("TestbedDevice", "MoblyDevice", "AbnormalTestbedDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_AUTO_RECOVERY);
+  }
+
+  @Test
+  public void calculateHealthCategory_standaloneFailedDeviceIdle_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("FailedDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_standaloneFailedDeviceBusy_returnsInAutoRecovery() {
+    DeviceDao device = createDevice(DeviceStatus.BUSY, ImmutableList.of("FailedDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_AUTO_RECOVERY);
+  }
+
+  @Test
+  public void calculateHealthCategory_fuchsiaOfflineIdle_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("FuchsiaOfflineDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_fuchsiaRecoveringBusy_returnsInAutoRecovery() {
+    DeviceDao device = createDevice(DeviceStatus.BUSY, ImmutableList.of("FuchsiaRecoveringDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_AUTO_RECOVERY);
   }
 
   @Test
@@ -703,10 +834,10 @@ public class DeviceConditionUtilTest {
   }
 
   @Test
-  public void calculateHealthCategory_androidOnlineDeviceOnly_returnsUnspecified() {
+  public void calculateHealthCategory_androidOnlineDeviceOnly_returnsInService() {
     DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("AndroidOnlineDevice"));
     assertThat(DeviceConditionUtil.calculateHealthCategory(device))
-        .isEqualTo(HealthCategory.HEALTH_CATEGORY_UNSPECIFIED);
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
   }
 
   @Test

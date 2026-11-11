@@ -32,9 +32,8 @@ import java.util.List;
  * tests, together with its title, such as {@code In Service (Idle)}.
  *
  * <p>The category is the upstream {@link DeviceInfo#getHealthCategory()} when the data source sets
- * it (1P Master does for Android and iOS real devices), and is otherwise derived from the device's
- * status and types alone, so it applies uniformly to every device family (Android, iOS,
- * emulator/virtual, testbed, misc) and every deployment.
+ * it, and is otherwise derived from the device's status and types alone, so it applies uniformly to
+ * every device family (Android, iOS, emulator/virtual, testbed, misc) and every deployment.
  */
 public final class DeviceHealth {
 
@@ -149,7 +148,7 @@ public final class DeviceHealth {
 
   /**
    * Prefers the upstream {@link HealthCategory} from {@link DeviceInfo}. If absent or unspecified
-   * (for example other device families or ATS LabInfo), falls back to {@link #computeCategory}.
+   * (for example ATS LabInfo), falls back to {@link #computeCategory}.
    */
   private static HealthCategory resolveHealthCategory(
       DeviceInfo deviceInfo, String status, boolean hasTypes, boolean hasAbnormalTypes) {

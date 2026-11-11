@@ -331,7 +331,7 @@ public final class DeviceConditionUtil {
         .map(Common.StrPair::getValue);
   }
 
-  /** Calculates the health category of a device based on Phase 1 rules. */
+  /** Calculates the health category of a device from its status and device types. */
   public static HealthCategory calculateHealthCategory(DeviceDao deviceDao) {
     DeviceStatus status = deviceDao.getMergedMnmDeviceStatusIfAny();
 
@@ -340,38 +340,27 @@ public final class DeviceConditionUtil {
       return HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR;
     }
 
-    List<String> types = deviceDao.profile().getFeature().getTypeList();
-    // TODO: Only support Android devices in the short term. Need to expand to
-    // non-Android devices.
-    boolean isSupported =
-        types.stream()
-            .anyMatch(
-                t -> t.contains("Android") || t.contains("Ios") || t.equals("DisconnectedDevice"));
-    if (!isSupported) {
-      return HealthCategory.HEALTH_CATEGORY_UNSPECIFIED;
-    }
-
-    // 1. In Service
-    if ((status == DeviceStatus.IDLE || status == DeviceStatus.BUSY)
-        && (types.contains(ANDROID_REAL_DEVICE_TYPE)
-            || types.contains(IOS_REAL_DEVICE_TYPE)
-            || types.contains(IOS_REAL_DEVICE_ON_LINUX_TYPE))) {
-      return HealthCategory.HEALTH_CATEGORY_IN_SERVICE;
-    }
-
-    // 2. In Transition
-    // Status-based: INIT, PREPPING, LAMEDUCK, DIRTY, DYING
+    // Status-based transition: INIT, PREPPING, LAMEDUCK, DIRTY, DYING
     if (TRANSIT_STATUSES.contains(status)) {
       return HealthCategory.HEALTH_CATEGORY_IN_TRANSITION;
     }
 
-    // 3. In Auto Recovery
-    if (status == DeviceStatus.BUSY && types.stream().anyMatch(UNHEALTHY_DEVICE_TYPES::contains)) {
+    List<String> types = deviceDao.profile().getFeature().getTypeList();
+    if (types.isEmpty()) {
+      return HealthCategory.HEALTH_CATEGORY_UNSPECIFIED;
+    }
+
+    boolean hasUnhealthyType = types.stream().anyMatch(UNHEALTHY_DEVICE_TYPES::contains);
+
+    if ((status == DeviceStatus.IDLE || status == DeviceStatus.BUSY) && !hasUnhealthyType) {
+      return HealthCategory.HEALTH_CATEGORY_IN_SERVICE;
+    }
+
+    if (status == DeviceStatus.BUSY && hasUnhealthyType) {
       return HealthCategory.HEALTH_CATEGORY_IN_AUTO_RECOVERY;
     }
 
-    // 4. Need Manual Repair
-    if (types.stream().anyMatch(UNHEALTHY_DEVICE_TYPES::contains)) {
+    if (hasUnhealthyType) {
       return HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR;
     }
 
