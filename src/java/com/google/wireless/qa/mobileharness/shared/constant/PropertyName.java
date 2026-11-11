@@ -128,7 +128,10 @@ public interface PropertyName {
     _PARAM_STATS,
 
     /** ResultStore link of test. */
-    RESULT_STORE_LINK_OF_TEST;
+    RESULT_STORE_LINK_OF_TEST,
+
+    /** ResultStore GCP project ID of test. */
+    RESULT_STORE_PROJECT_ID;
 
     /** Gateway service property name constants in the job level. */
     public enum Gateway implements PropertyName {
