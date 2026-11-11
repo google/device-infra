@@ -884,8 +884,8 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         // We don't want to trigger an update with partial device state changes.
         return false;
       } else {
-        if (e instanceof MobileHarnessException) {
-          postDeviceErrorEvent((Exception) e);
+        if (e instanceof MobileHarnessException mobileHarnessException) {
+          postDeviceErrorEvent(mobileHarnessException);
         }
         throw e;
       }

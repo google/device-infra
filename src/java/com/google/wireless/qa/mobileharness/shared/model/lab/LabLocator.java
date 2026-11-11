@@ -125,8 +125,7 @@ public class LabLocator {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj instanceof LabLocator) {
-      LabLocator other = (LabLocator) obj;
+    if (obj instanceof LabLocator other) {
       return ip.equals(other.ip)
           && Objects.equals(hostName, other.hostName)
           && ports.equals(other.ports);

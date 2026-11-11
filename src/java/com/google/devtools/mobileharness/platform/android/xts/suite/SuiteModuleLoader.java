@@ -260,9 +260,10 @@ public class SuiteModuleLoader {
           duplicateModule.put(suiteParam.getFamily(), suiteParam);
         }
 
-        if (suiteParamEntry.getValue() instanceof FoldableExpandingHandler) {
+        if (suiteParamEntry.getValue()
+            instanceof FoldableExpandingHandler foldableExpandingHandler) {
           List<IModuleParameterHandler> foldableHandlers =
-              ((FoldableExpandingHandler) suiteParamEntry.getValue()).expandHandler(foldableStates);
+              foldableExpandingHandler.expandHandler(foldableStates);
           params.addAll(foldableHandlers);
         } else {
           params.add(suiteParamEntry.getValue());
