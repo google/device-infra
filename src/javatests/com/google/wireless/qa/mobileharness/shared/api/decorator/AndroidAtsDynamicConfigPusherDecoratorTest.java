@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfigResolver;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
@@ -112,7 +113,7 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
         new AndroidAtsDynamicConfigPusherSetupOnlyDecorator(
             decorated,
             testInfo,
-            localFileUtil,
+            new DynamicConfigResolver(localFileUtil),
             androidFileUtil,
             androidSystemSettingUtil,
             apkInstaller,

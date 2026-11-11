@@ -16,8 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.base.Splitter.MapSplitter;
@@ -28,12 +26,9 @@ import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
-import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfig;
-import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfigHandler;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfigResolver;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
-import com.google.gson.JsonSyntaxException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.util.PhaseSkippableDecoratorUtil;
@@ -44,23 +39,9 @@ import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidA
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidAtsDynamicConfigPusherDecoratorSpec.TestTarget;
 import com.google.wireless.qa.mobileharness.shared.proto.state.decorator.AndroidAtsDynamicConfigPusherDecoratorState;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import javax.annotation.Nullable;
 import javax.inject.Inject;
-import org.xmlpull.v1.XmlPullParserException;
 
 /**
  * Setup-only decorator of {@link AndroidAtsDynamicConfigPusherDecorator}. See {@link
@@ -75,7 +56,7 @@ public class AndroidAtsDynamicConfigPusherSetupOnlyDecorator extends SetupOnlyDe
   private static final String MANAGED_FILE_CONTENT_PROVIDER_APK_RES_PATH =
       "/com/google/devtools/mobileharness/platform/android/app/binary/contentprovider/ManagedFileContentProvider.apk";
 
-  private final LocalFileUtil localFileUtil;
+  private final DynamicConfigResolver dynamicConfigResolver;
   private final AndroidFileUtil androidFileUtil;
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
   private final ApkInstaller apkInstaller;
@@ -86,13 +67,13 @@ public class AndroidAtsDynamicConfigPusherSetupOnlyDecorator extends SetupOnlyDe
   AndroidAtsDynamicConfigPusherSetupOnlyDecorator(
       Driver decorated,
       TestInfo testInfo,
-      LocalFileUtil localFileUtil,
+      DynamicConfigResolver dynamicConfigResolver,
       AndroidFileUtil androidFileUtil,
       AndroidSystemSettingUtil androidSystemSettingUtil,
       ApkInstaller apkInstaller,
       ResUtil resUtil) {
     super(decorated, testInfo);
-    this.localFileUtil = localFileUtil;
+    this.dynamicConfigResolver = dynamicConfigResolver;
     this.androidFileUtil = androidFileUtil;
     this.androidSystemSettingUtil = androidSystemSettingUtil;
     this.apkInstaller = apkInstaller;
@@ -125,9 +106,7 @@ public class AndroidAtsDynamicConfigPusherSetupOnlyDecorator extends SetupOnlyDe
       spec = spec.toBuilder().setVersion(suiteVersion).build();
     }
 
-    File localConfigFile = getLocalConfigFile(spec, suiteName);
-    String apfeConfig = fetchApfeConfig(spec, xtsSuiteInfoMap);
-    File hostFile = mergeConfigFiles(spec, localConfigFile, apfeConfig);
+    File hostFile = dynamicConfigResolver.resolveFile(spec, suiteName);
     AndroidAtsDynamicConfigPusherDecoratorState.Builder stateBuilder =
         AndroidAtsDynamicConfigPusherDecoratorState.newBuilder();
     if (spec.getTarget().equals(TestTarget.DEVICE)) {
@@ -149,132 +128,11 @@ public class AndroidAtsDynamicConfigPusherSetupOnlyDecorator extends SetupOnlyDe
             MANAGED_FILE_CONTENT_PROVIDER_APK_RES_PATH);
     String contentProvider =
         apkInstaller.installApkIfNotExist(
-            getDevice(), ApkInstallArgs.builder().setApkPath(apkPath).build(), getTest().log());
+            getDevice(), ApkInstallArgs.builder().addApkPaths(apkPath).build(), getTest().log());
 
     stateBuilder.setContentProvider(contentProvider);
     PhaseSkippableDecoratorUtil.setState(testInfo, deviceId, stateBuilder.build());
 
     return SetupResult.continueDecorated();
-  }
-
-  /**
-   * Gets the local config file.
-   *
-   * <p>If {@code extractFromResource} is true, it attempts to extract the dynamic config file from
-   * the suite's tradefed JAR.
-   *
-   * <p>If {@code extractFromResource} is false, it searches for the dynamic config file directly in
-   * the XTS test directory.
-   */
-  private File getLocalConfigFile(
-      AndroidAtsDynamicConfigPusherDecoratorSpec spec, @Nullable String suiteName)
-      throws MobileHarnessException {
-    String lookupName =
-        spec.getExtractFromResource()
-            ? (spec.getDynamicResourceName().isEmpty()
-                ? spec.getConfigFilename()
-                : spec.getDynamicResourceName())
-            : (spec.getDynamicConfigName().isEmpty()
-                ? spec.getConfigFilename()
-                : spec.getDynamicConfigName());
-    String fileName = String.format("%s.dynamic", lookupName);
-
-    if (spec.getExtractFromResource()) {
-      if (suiteName != null && !spec.getXtsTestDir().isEmpty()) {
-        Path xtsRootDir = Path.of(spec.getXtsTestDir()).getParent().getParent();
-        File toolsDir = XtsDirUtil.getXtsToolsDir(xtsRootDir, suiteName).toFile();
-        File tradefedJar = new File(toolsDir, Ascii.toLowerCase(suiteName) + "-tradefed.jar");
-        if (tradefedJar.exists()) {
-          try (ZipFile zipFile = new ZipFile(tradefedJar)) {
-            ZipEntry entry = zipFile.getEntry(fileName);
-            if (entry != null) {
-              try (InputStream inputStream = zipFile.getInputStream(entry)) {
-                File localConfigFile = File.createTempFile(lookupName, ".dynamic");
-                Files.copy(
-                    inputStream, localConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                return localConfigFile;
-              }
-            }
-          } catch (IOException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to read from %s", tradefedJar.getAbsolutePath());
-          }
-        }
-      }
-
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_LOCAL_CONFIG_NOT_FOUND,
-          String.format("Fail to find '%s' in tradefed jar", fileName));
-    }
-
-    List<File> files = localFileUtil.listFiles(spec.getXtsTestDir(), /* recursively= */ true);
-    return files.stream()
-        .filter(file -> file.getName().equals(fileName))
-        .findFirst()
-        .orElseThrow(() ->
-            new MobileHarnessException(
-                AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_LOCAL_CONFIG_NOT_FOUND,
-                String.format("Config file %s not found.", fileName)));
-  }
-
-  @Nullable
-  private String fetchApfeConfig(
-      AndroidAtsDynamicConfigPusherDecoratorSpec spec, Map<String, String> xtsSuiteInfoMap)
-      throws MobileHarnessException {
-    if (!spec.getHasServerSideConfig()) {
-      return null;
-    }
-    String suiteName = xtsSuiteInfoMap.get("suite_name");
-    if (suiteName == null) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_INVALID_PARAMETER,
-          "suite_name is missing from xtsSuiteInfo");
-    }
-
-    try {
-      // TODO: Support to read URL from UrlReplacement.xml. More context in
-      // com.android.compatibility.common.util.UrlReplacement.java
-      String requestUrl =
-          spec.getConfigUrl()
-              .replace("{suite-name}", suiteName.toUpperCase(Locale.ROOT))
-              .replace("{module}", spec.getConfigFilename())
-              .replace("{version}", spec.getVersion())
-              .replace("{api-key}", spec.getApiKey());
-      URL request = new URI(requestUrl).toURL();
-      return new String(request.openStream().readAllBytes(), UTF_8);
-    } catch (IOException | URISyntaxException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARTNER_SERVER_ERROR,
-          "Failed to access android partner remote server over internet.",
-          e);
-    }
-  }
-
-  private File mergeConfigFiles(
-      AndroidAtsDynamicConfigPusherDecoratorSpec spec,
-      File localConfigFile,
-      String apfeConfigInJson)
-      throws MobileHarnessException, InterruptedException {
-    File hostFile = null;
-    try {
-      hostFile =
-          DynamicConfigHandler.getMergedDynamicConfigFile(
-              localConfigFile, apfeConfigInJson, spec.getConfigFilename(), new HashMap<>());
-      return hostFile;
-    } catch (IOException | XmlPullParserException | JsonSyntaxException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_MERGE_DYNAMIC_CONFIG_ERROR,
-          "Failed to merged dynamic config file.",
-          e);
-    } finally {
-      if (spec.getExtractFromResource()) {
-        try {
-          localFileUtil.removeFileOrDir(localConfigFile.toPath());
-        } catch (MobileHarnessException e) {
-          logger.atWarning().withCause(e).log(
-              "Failed to remove extracted config file %s", localConfigFile.getName());
-        }
-      }
-    }
   }
 }
