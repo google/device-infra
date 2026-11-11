@@ -1126,11 +1126,10 @@ public class SystemUtil {
     try {
       loginUser = executor.exec(Command.of("logname")).stdoutWithoutTrailingLineTerminator();
     } catch (CommandException e) {
-      if (e instanceof CommandFailureException) {
-        if (((CommandFailureException) e).result().stdout().contains("no login name")
-            && runAsRoot()) {
-          return "root";
-        }
+      if (e instanceof CommandFailureException commandFailureException
+          && commandFailureException.result().stdout().contains("no login name")
+          && runAsRoot()) {
+        return "root";
       }
       throw new MobileHarnessException(
           BasicErrorId.SYSTEM_GET_LOGNAME_ERROR, "Failed to get logname.", e);
