@@ -40,7 +40,7 @@ public final class MonitoringConfigTest {
   }
 
   @Test
-  public void categorizeProcess() {
+  public void categorizeProcess_returnsExpectedCategories() {
     assertThat(monitoringConfig.categorizeProcess("com.app.target"))
         .isEqualTo(ProcessCategory.FAILURE);
     assertThat(monitoringConfig.categorizeProcess("com.app.system"))
@@ -49,5 +49,35 @@ public final class MonitoringConfigTest {
         .isEqualTo(ProcessCategory.IGNORED);
     assertThat(monitoringConfig.categorizeProcess("com.app.other"))
         .isEqualTo(ProcessCategory.OTHER);
+  }
+
+  @Test
+  public void dialogPackagesToIgnore_deduplicatesUnionAndExcludesErrorPackages() {
+    MonitoringConfig config =
+        new MonitoringConfig(
+            /* reportAsFailurePackages= */ ImmutableList.of(
+                "com.app.target",
+                "com.app.target",
+                "com.app.shared_failure_ignore",
+                "com.app.failure_and_error"),
+            /* errorOnCrashPackages= */ ImmutableList.of(
+                "com.app.error_only", "com.app.error_and_ignored", "com.app.failure_and_error"),
+            /* packagesToIgnore= */ ImmutableList.of(
+                "com.app.ignored",
+                "com.app.ignored",
+                "com.app.shared_failure_ignore",
+                "com.app.error_and_ignored"));
+
+    ImmutableList<String> dialogPackagesToIgnore = config.dialogPackagesToIgnore();
+
+    // `com.app.error_and_ignored` categorizes as ERROR and must NOT have its crash dialog ignored,
+    // whereas `com.app.failure_and_error` categorizes as FAILURE (app under test) and is ignored.
+    assertThat(dialogPackagesToIgnore)
+        .containsExactly(
+            "com.app.ignored",
+            "com.app.shared_failure_ignore",
+            "com.app.target",
+            "com.app.failure_and_error")
+        .inOrder();
   }
 }

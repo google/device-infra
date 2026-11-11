@@ -19,16 +19,14 @@ package com.google.devtools.mobileharness.platform.android.logcat;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType.NATIVE;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
-import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatParser.LogcatLine;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.regex.Matcher;
@@ -53,18 +51,22 @@ import java.util.regex.Pattern;
 public class NativeCrashDetector implements LineProcessor {
 
   private static final String NATIVE_CRASH_LOG_TAG = "DEBUG";
+  private static final String TOMBSTONE_BANNER_PREFIX = "*** *** ***";
+  private static final String SIGNAL_LINE_PREFIX = "signal ";
+  private static final String BACKTRACE_LINE = "backtrace:";
+  // Sits above the ~10-line tombstone preamble before the `pid:` header (since exceeding the
+  // threshold before the header matches also scans IGNORED processes), while still triggering a
+  // fallback dialog scan if the tombstone `pid:` header format changes on newer Android builds.
+  private static final int FALLBACK_SCAN_LINE_THRESHOLD = 15;
 
   private static final Pattern NATIVE_CRASH_MATCH_PATTERN =
       Pattern.compile("pid: (\\d+), (?:ppid: \\d+, )?tid: \\d+, name: .+  >>> (.+) <<<");
 
-  // The 'DEBUG' tag used for native crashes has a log pid which is different from the crashed
-  // process' pid. This multimap is used to store the lines from the 'DEBUG' tag by pid so that we
-  // can match the crash event with the pid and the process name.
-  private final LinkedListMultimap<Integer, String> debugTagLinesToPid =
-      LinkedListMultimap.create();
-
-  // Mapping the crashed process to the pid of the 'DEBUG' tag line where the crash was logged.
-  private final LinkedHashMap<CrashedProcess, Integer> detectedCrashEvents = new LinkedHashMap<>();
+  // Native crashes log under debuggerd / crash_dump's reporting PID rather than the crashed app's
+  // PID. Store buffers chronologically while tracking the active buffer per reporting PID so
+  // multiple tombstones from a shared or recycled reporting PID stay separated.
+  private final List<PidCrashBuffer> crashBuffers = new ArrayList<>();
+  private final Map<Integer, PidCrashBuffer> activeBuffersByReportingPid = new HashMap<>();
 
   private final TestInfo testInfo;
   private final Device device;
@@ -87,46 +89,59 @@ public class NativeCrashDetector implements LineProcessor {
 
   @Override
   public void process(LogcatLine line) {
-    if (!line.tag().equals(NATIVE_CRASH_LOG_TAG)) {
+    if (!line.tag().equals(NATIVE_CRASH_LOG_TAG) || line.level() != LogcatParser.Level.FATAL) {
       return;
     }
-    debugTagLinesToPid.put(line.pid(), line.message());
-    var crashedProcess = processDebugLines(debugTagLinesToPid.get(line.pid()));
-    if (crashedProcess.isEmpty()) {
-      return;
+    String message = line.message();
+    PidCrashBuffer buffer = activeBuffersByReportingPid.get(line.pid());
+    if (buffer == null || shouldStartNewTombstoneBuffer(buffer, message)) {
+      buffer = new PidCrashBuffer();
+      crashBuffers.add(buffer);
+      activeBuffersByReportingPid.put(line.pid(), buffer);
     }
-    detectedCrashEvents.put(crashedProcess.get(), line.pid());
-    executorService.execute(() ->
-        crashDialogDetector.scan(testInfo, device, monitoringConfig.reportAsFailurePackages()));
+    if (appendLine(buffer, message)) {
+      executorService.execute(() ->
+          crashDialogDetector.scan(testInfo, device, monitoringConfig.dialogPackagesToIgnore()));
+    }
   }
 
-  private Optional<CrashedProcess> processDebugLines(List<String> lines) {
-    if (lines.stream().noneMatch(NATIVE_CRASH_MATCH_PATTERN.asMatchPredicate())) {
-      return Optional.empty();
+  /**
+   * Appends {@code message} to {@code buffer} and returns {@code true} if a crash dialog scan
+   * should be scheduled (either upon matching a non-ignored crash header or reaching a headerless
+   * fallback trigger).
+   */
+  private boolean appendLine(PidCrashBuffer buffer, String message) {
+    buffer.addLine(message);
+    if (!buffer.hasMatchedHeader()) {
+      Matcher matcher = NATIVE_CRASH_MATCH_PATTERN.matcher(message);
+      if (matcher.matches()) {
+        return buffer.recordCrashedProcess(
+            matcher.group(2), matcher.group(1), NATIVE, monitoringConfig);
+      }
     }
-    Optional<String> matched =
-        lines.stream().filter(NATIVE_CRASH_MATCH_PATTERN.asMatchPredicate()).findFirst();
-    if (matched.isEmpty()) {
-      return Optional.empty();
+    return isPostHeaderFallbackTrigger(message, buffer.lineCount())
+        && buffer.triggerFallbackDialogScan();
+  }
+
+  private static boolean isPostHeaderFallbackTrigger(String message, int bufferedLineCount) {
+    String trimmed = message.trim();
+    return trimmed.startsWith(SIGNAL_LINE_PREFIX)
+        || trimmed.equals(BACKTRACE_LINE)
+        || bufferedLineCount > FALLBACK_SCAN_LINE_THRESHOLD;
+  }
+
+  private static boolean shouldStartNewTombstoneBuffer(PidCrashBuffer buffer, String message) {
+    if (message.startsWith(TOMBSTONE_BANNER_PREFIX)) {
+      return true;
     }
-    Matcher matcher = NATIVE_CRASH_MATCH_PATTERN.matcher(matched.get());
-    if (!matcher.matches()) {
-      return Optional.empty();
-    }
-    var pid = Integer.parseInt(matcher.group(1));
-    var processName = matcher.group(2);
-    var category = monitoringConfig.categorizeProcess(processName);
-    return Optional.of(new CrashedProcess(processName, pid, category, NATIVE));
+    return buffer.hasMatchedHeader() && NATIVE_CRASH_MATCH_PATTERN.matcher(message).matches();
   }
 
   @Override
   public ImmutableList<LogcatEvent> getEvents() {
-    return detectedCrashEvents.entrySet().stream()
-        .map(crashEvent ->
-            new CrashEvent(
-                crashEvent.getKey(),
-                Joiner.on(System.lineSeparator())
-                    .join(debugTagLinesToPid.get(crashEvent.getValue()))))
+    return crashBuffers.stream()
+        .map(PidCrashBuffer::toCrashEvent)
+        .flatMap(Optional::stream)
         .collect(toImmutableList());
   }
 }

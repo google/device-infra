@@ -16,25 +16,23 @@
 
 package com.google.devtools.mobileharness.platform.android.logcat;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatParser.LogcatLine;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.ExecutorService;
 import java.util.regex.Pattern;
 
 /**
- * A {@link LineProcessor} that detects crash events from the Android Runtime.
+ * A {@link LineProcessor} that detects ANR events reported by {@code ActivityManager}.
  *
  * <p>This processor looks for lines with the tag "ActivityManager" and processes them to detect
  * ANRs. Sample ANRs:
@@ -59,10 +57,11 @@ public class AnrDetector implements LineProcessor {
 
   // Reusable list to store ANR lines sequences. ANRs generally have 3 lines.
   private final List<String> anrLines = new ArrayList<>();
+  private String pendingProcessName = "";
+  private int pendingPid = 0;
 
-  // Mapping the crashed process to the log lines of the ANR event.
-  private final LinkedHashMap<CrashedProcess, List<String>> detectedAnrEvents =
-      new LinkedHashMap<>();
+  // Chronological list of detected ANR events, preserving repeated ANRs on the same PID.
+  private final List<CrashEvent> detectedAnrEvents = new ArrayList<>();
   private final TestInfo testInfo;
   private final Device device;
   private final MonitoringConfig monitoringConfig;
@@ -87,50 +86,44 @@ public class AnrDetector implements LineProcessor {
     if (!line.tag().equals(ACTIVITY_MANAGER_TAG)) {
       return;
     }
-    if (ANR_DETECTION_PATTERN.matcher(line.message()).matches()) {
-      anrLines.clear(); // New ANR, clear the old lines.
-      anrLines.add(line.message());
+    String message = line.message();
+    var anrDetectedMatcher = ANR_DETECTION_PATTERN.matcher(message);
+    if (anrDetectedMatcher.matches()) {
+      anrLines.clear(); // New ANR, clear any incomplete sequence.
+      pendingProcessName = anrDetectedMatcher.group(1);
+      anrLines.add(message);
       return;
     }
-    if (ANR_PID_PATTERN.matcher(line.message()).matches()
-        || line.message().startsWith(ANR_REASON_PREFIX)) {
-      anrLines.add(line.message());
-    }
-
-    if (anrLines.size() == 3) {
-      /* ANR log message complete. */
-      var crashedProcess = processAnrLines(anrLines);
-      if (crashedProcess.isEmpty()) {
-        anrLines.clear(); // Processing didn't determine ANR, clear the stored lines.
-        return;
+    if (anrLines.size() == 1) {
+      var anrPidMatcher = ANR_PID_PATTERN.matcher(message);
+      if (anrPidMatcher.matches()) {
+        OptionalInt pid = PidCrashBuffer.tryParsePid(anrPidMatcher.group(1));
+        if (pid.isEmpty()) {
+          anrLines.clear();
+          return;
+        }
+        pendingPid = pid.getAsInt();
+        anrLines.add(message);
       }
-      detectedAnrEvents.put(crashedProcess.get(), ImmutableList.copyOf(anrLines));
-      executorService.execute(() ->
-          crashDialogDetector.scan(testInfo, device, monitoringConfig.reportAsFailurePackages()));
+      return;
+    }
+    if (anrLines.size() == 2 && message.startsWith(ANR_REASON_PREFIX)) {
+      anrLines.add(message);
+      ProcessCategory category = monitoringConfig.categorizeProcess(pendingProcessName);
+      CrashedProcess process =
+          new CrashedProcess(pendingProcessName, pendingPid, category, CrashType.ANR);
+      detectedAnrEvents.add(
+          new CrashEvent(process, Joiner.on(System.lineSeparator()).join(anrLines)));
+      if (category != ProcessCategory.IGNORED) {
+        executorService.execute(() ->
+            crashDialogDetector.scan(testInfo, device, monitoringConfig.dialogPackagesToIgnore()));
+      }
       anrLines.clear();
     }
   }
 
-  private Optional<CrashedProcess> processAnrLines(List<String> anrLines) {
-    var anrDetectedMatcher = ANR_DETECTION_PATTERN.matcher(anrLines.get(0));
-    var anrPidMatcher = ANR_PID_PATTERN.matcher(anrLines.get(1));
-    if (!(anrDetectedMatcher.matches()
-        && anrPidMatcher.matches()
-        && anrLines.get(2).startsWith(ANR_REASON_PREFIX))) {
-      return Optional.empty();
-    }
-    var processName = anrDetectedMatcher.group(1);
-    var pid = Integer.parseInt(anrPidMatcher.group(1));
-    var category = monitoringConfig.categorizeProcess(processName);
-    return Optional.of(new CrashedProcess(processName, pid, category, CrashType.ANR));
-  }
-
   @Override
   public ImmutableList<LogcatEvent> getEvents() {
-    return detectedAnrEvents.entrySet().stream()
-        .map(event ->
-            new CrashEvent(
-                event.getKey(), Joiner.on(System.lineSeparator()).join(event.getValue())))
-        .collect(toImmutableList());
+    return ImmutableList.copyOf(detectedAnrEvents);
   }
 }

@@ -18,13 +18,14 @@ package com.google.devtools.mobileharness.platform.android.logcat;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
-import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -52,8 +53,8 @@ public final class AndroidRuntimeCrashDetectorTest {
   private static final MonitoringConfig MONITORING_CONFIG =
       new MonitoringConfig(
           ImmutableList.of("com.example.app", "com.another.app"),
-          ImmutableList.of(),
-          ImmutableList.of());
+          ImmutableList.of("com.error.service"),
+          ImmutableList.of("com.ignored.app"));
 
   @Mock TestInfo testInfo;
   @Mock Device device;
@@ -68,41 +69,77 @@ public final class AndroidRuntimeCrashDetectorTest {
   }
 
   @Test
-  public void process_androidRuntimeCrash_detectsCrashEvent() throws Exception {
+  public void process_androidRuntimeCrash_detectsCrashEventAndScansOnce() throws Exception {
     Path crashLogPath =
         Path.of(RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + CRASH_LOG_FILE));
     List<String> lines = Files.readAllLines(crashLogPath);
 
-    for (String line : lines) {
-      crashDetector.process(LogcatParser.parse(line).get());
-    }
+    processLines(lines);
 
     ImmutableList<LogcatEvent> events = crashDetector.getEvents();
     assertThat(events).hasSize(1);
     CrashEvent crashEvent = (CrashEvent) events.get(0);
-    assertThat(crashEvent.process().name()).isEqualTo("com.example.app");
-    assertThat(crashEvent.process().pid()).isEqualTo(12345);
-    assertThat(crashEvent.process().category()).isEqualTo(ProcessCategory.FAILURE);
-    assertThat(crashEvent.process().type()).isEqualTo(CrashType.ANDROID_RUNTIME);
+    assertThat(crashEvent.process())
+        .isEqualTo(
+            new CrashedProcess(
+                "com.example.app", 12345, ProcessCategory.FAILURE, CrashType.ANDROID_RUNTIME));
     assertThat(crashEvent.crashLogs()).contains("FATAL EXCEPTION: main");
-    verify(crashDialogDetector, atLeastOnce())
-        .scan(testInfo, device, MONITORING_CONFIG.reportAsFailurePackages());
+    assertThat(crashEvent.crashLogs()).contains("... 11 more");
+    verify(crashDialogDetector).scan(testInfo, device, MONITORING_CONFIG.dialogPackagesToIgnore());
   }
 
   @Test
-  public void process_multipleAndroidRuntimeCrashes_detectsAllCrashEvents() throws Exception {
+  public void process_multipleAndroidRuntimeCrashes_detectsAllCrashEventsAndScansOncePerCrash()
+      throws Exception {
     Path crashLogPath =
         Path.of(RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + MULTIPLE_CRASH_LOG_FILE));
     List<String> lines = Files.readAllLines(crashLogPath);
 
-    for (String line : lines) {
-      crashDetector.process(LogcatParser.parse(line).get());
-    }
+    processLines(lines);
 
     ImmutableList<LogcatEvent> events = crashDetector.getEvents();
     assertThat(events).hasSize(2);
     assertThat(events.stream().map(e -> ((CrashEvent) e).process().name()))
-        .containsExactly("com.example.app", "com.another.app");
+        .containsExactly("com.example.app", "com.another.app")
+        .inOrder();
+    verify(crashDialogDetector, times(2))
+        .scan(testInfo, device, MONITORING_CONFIG.dialogPackagesToIgnore());
+  }
+
+  @Test
+  public void process_sequentialCrashesOnSamePid_emitsBothAndScansOnlyNonIgnored() {
+    processLines(
+        ImmutableList.of(
+            "10-13 16:27:10.099  5000  5000 D AndroidRuntime: Shutting down VM",
+            "10-13 16:27:10.100  5000  5000 E AndroidRuntime: FATAL EXCEPTION: Thread-1",
+            "10-13 16:27:10.101  5000  5000 E AndroidRuntime: Process: com.ignored.app, PID: 5000",
+            "10-13 16:27:10.102  5000  5000 E AndroidRuntime: java.lang.RuntimeException: First",
+            "10-13 16:28:10.200  5000  5000 E AndroidRuntime: FATAL EXCEPTION: Thread-2",
+            "10-13 16:28:10.201  5000  5000 E AndroidRuntime: Process: com.error.service, PID:"
+                + " 5000",
+            "10-13 16:28:10.202  5000  5000 E AndroidRuntime: java.lang.RuntimeException: Second"));
+
+    ImmutableList<LogcatEvent> events = crashDetector.getEvents();
+    assertThat(events).hasSize(2);
+    CrashEvent first = (CrashEvent) events.get(0);
+    CrashEvent second = (CrashEvent) events.get(1);
+
+    assertThat(first.process())
+        .isEqualTo(
+            new CrashedProcess(
+                "com.ignored.app", 5000, ProcessCategory.IGNORED, CrashType.ANDROID_RUNTIME));
+    assertThat(first.crashLogs()).contains("Shutting down VM");
+    assertThat(first.crashLogs()).contains("java.lang.RuntimeException: First");
+    assertThat(first.crashLogs()).doesNotContain("java.lang.RuntimeException: Second");
+
+    assertThat(second.process())
+        .isEqualTo(
+            new CrashedProcess(
+                "com.error.service", 5000, ProcessCategory.ERROR, CrashType.ANDROID_RUNTIME));
+    assertThat(second.crashLogs()).contains("java.lang.RuntimeException: Second");
+    assertThat(second.crashLogs()).doesNotContain("java.lang.RuntimeException: First");
+
+    verify(crashDialogDetector).scan(testInfo, device, MONITORING_CONFIG.dialogPackagesToIgnore());
   }
 
   @Test
@@ -114,5 +151,11 @@ public final class AndroidRuntimeCrashDetectorTest {
 
     assertThat(crashDetector.getEvents()).isEmpty();
     verifyNoInteractions(crashDialogDetector);
+  }
+
+  private void processLines(List<String> lines) {
+    for (String line : lines) {
+      LogcatParser.parse(line).ifPresent(crashDetector::process);
+    }
   }
 }
