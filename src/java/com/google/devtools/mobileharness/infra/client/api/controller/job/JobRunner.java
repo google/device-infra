@@ -1014,8 +1014,8 @@ public class JobRunner implements Runnable {
         // Check if ready without blocking.
         prepareJobFilesFuture.get(0, SECONDS);
       } catch (ExecutionException e) {
-        if (e.getCause() instanceof MobileHarnessException) {
-          throw (MobileHarnessException) e.getCause();
+        if (e.getCause() instanceof MobileHarnessException mhe) {
+          throw mhe;
         } else {
           throw createExceptionWithoutStackTrace(
               InfraErrorId.CLIENT_JR_JOB_PREPARE_JOB_FILES_ERROR,

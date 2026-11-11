@@ -258,8 +258,8 @@ public class PluginCreator implements AutoCloseable {
       if (classLoader != null) {
         clearEventBusSubscriberCache(classLoader);
         try {
-          if (classLoader instanceof Closeable) {
-            ((Closeable) classLoader).close();
+          if (classLoader instanceof Closeable closeable) {
+            closeable.close();
           }
           classLoader = null;
         } catch (IOException e) {

@@ -262,8 +262,8 @@ public class SubscriberExceptionLoggingHandler
   }
 
   private static TestInfo getTestInfoFromTestEvent(Object testEvent) {
-    return testEvent instanceof TestEvent
-        ? ((TestEvent) testEvent).getTest()
+    return testEvent instanceof TestEvent te
+        ? te.getTest()
         : ((com.google.devtools.mobileharness.api.testrunner.event.test.TestEvent) testEvent)
             .getTest();
   }

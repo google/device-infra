@@ -133,11 +133,9 @@ public class GrpcExceptionUtil {
   public static Optional<RpcErrorPayload> getPayload(Throwable throwable) {
     Throwable cause = checkNotNull(throwable, "throwable cannot be null");
     while (cause != null) {
-      if (cause instanceof StatusRuntimeException) {
-        StatusRuntimeException e = (StatusRuntimeException) cause;
+      if (cause instanceof StatusRuntimeException e) {
         return getPayload(e.getStatus(), e.getTrailers(), e);
-      } else if (cause instanceof StatusException) {
-        StatusException e = (StatusException) cause;
+      } else if (cause instanceof StatusException e) {
         return getPayload(e.getStatus(), e.getTrailers(), e);
       }
       cause = cause.getCause();

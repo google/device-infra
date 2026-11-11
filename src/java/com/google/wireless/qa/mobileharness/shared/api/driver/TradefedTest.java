@@ -237,10 +237,9 @@ public class TradefedTest extends BaseDriver
       workDir = createWorkDir();
       tradefedRunStrategy.setUpWorkDir(spec, workDir, testInfo);
       logger.atInfo().log("Tradefed temp working root directory is %s", workDir);
-      if (tradefedRunStrategy instanceof XtsRunStrategy) {
+      if (tradefedRunStrategy instanceof XtsRunStrategy xtsRunStrategy) {
         try {
-          ((XtsRunStrategy) tradefedRunStrategy)
-              .saveFilteredExpandedModuleNames(testInfo, workDir, getDevice());
+          xtsRunStrategy.saveFilteredExpandedModuleNames(testInfo, workDir, getDevice());
         } catch (MobileHarnessException e) {
           logger.atWarning().withCause(e).log(
               "Failed when saving filtered expanded module names. Non-fatal; continuing test.");

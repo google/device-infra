@@ -116,8 +116,7 @@ class GCSResolver extends SimpleResolver {
 
   @Override
   public boolean equals(@Nullable Object other) {
-    if (other instanceof GCSResolver) {
-      GCSResolver that = (GCSResolver) other;
+    if (other instanceof GCSResolver that) {
       return Objects.equals(this.localFileUtil, that.localFileUtil)
           && Objects.equals(this.serviceAccountKey, that.serviceAccountKey)
           && Objects.equals(this.rootDir, that.rootDir);

@@ -1202,13 +1202,13 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
           .call();
     } catch (Throwable t) {
       Throwable cause = t.getCause();
-      if (t instanceof RetryException) {
+      if (t instanceof RetryException retryException) {
         if (cause instanceof TemperatureTooHighException) {
           throw new MobileHarnessException(
               AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_DEVICE_TEMPERATURE_TOO_HIGH,
               String.format(
                   "Device temperature is not acceptable after %d readings",
-                  ((RetryException) t).getTries()),
+                  retryException.getTries()),
               cause);
         }
         t = cause;

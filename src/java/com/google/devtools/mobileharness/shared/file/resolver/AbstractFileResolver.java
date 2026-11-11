@@ -101,8 +101,8 @@ public abstract class AbstractFileResolver implements FileResolver {
       throw new MobileHarnessException(
           BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Resolution was cancelled", e);
     } catch (ExecutionException e) {
-      if (e.getCause() instanceof MobileHarnessException) {
-        throw (MobileHarnessException) e.getCause();
+      if (e.getCause() instanceof MobileHarnessException mhe) {
+        throw mhe;
       } else {
         throw new MobileHarnessException(
             BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Failed to resolve file", e);

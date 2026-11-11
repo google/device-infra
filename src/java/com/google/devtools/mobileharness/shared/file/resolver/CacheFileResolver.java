@@ -181,14 +181,14 @@ public class CacheFileResolver extends AbstractFileResolver {
         throw new MobileHarnessException(
             BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Downloading is interrupted", e);
       } catch (ExecutionException e) {
-        if (e.getCause() instanceof MobileHarnessException) {
-          throw (MobileHarnessException) e.getCause();
-        } else if (e.getCause() instanceof InterruptedException) {
-          throw (InterruptedException) e.getCause();
-        } else if (e.getCause() instanceof Error) {
-          throw (Error) e.getCause();
-        } else if (e.getCause() instanceof RuntimeException) {
-          throw (RuntimeException) e.getCause();
+        if (e.getCause() instanceof MobileHarnessException mhe) {
+          throw mhe;
+        } else if (e.getCause() instanceof InterruptedException interruptedException) {
+          throw interruptedException;
+        } else if (e.getCause() instanceof Error error) {
+          throw error;
+        } else if (e.getCause() instanceof RuntimeException runtimeException) {
+          throw runtimeException;
         }
         throw new AssertionError("Should not happen.", e);
       }

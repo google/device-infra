@@ -112,7 +112,7 @@ public class MessageSubscriberBackend {
 
       // Filters methods whose parameter type is not parameterized.
       Type parameterType = parameter.getParameterizedType();
-      if (!(parameterType instanceof ParameterizedType)) {
+      if (!(parameterType instanceof ParameterizedType parameterizedType)) {
         invalidMessageSubscribers.add(
             InvalidMessageSubscriber.of(
                 clazz, method, "Message subscriber parameter type should be parameterized"));
@@ -120,7 +120,7 @@ public class MessageSubscriberBackend {
       }
 
       // Filters methods whose parameter generic type is a type variable or a wildcard type.
-      Type typeArgument = ((ParameterizedType) parameterType).getActualTypeArguments()[0];
+      Type typeArgument = parameterizedType.getActualTypeArguments()[0];
       if (typeArgument instanceof TypeVariable || typeArgument instanceof WildcardType) {
         invalidMessageSubscribers.add(
             InvalidMessageSubscriber.of(

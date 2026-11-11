@@ -69,10 +69,9 @@ public class UnknownErrorId implements ErrorId {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ErrorId)) {
+    if (!(o instanceof ErrorId that)) {
       return false;
     }
-    ErrorId that = (ErrorId) o;
     return code == that.code()
         && Objects.equals(name, that.name())
         && type == that.type()

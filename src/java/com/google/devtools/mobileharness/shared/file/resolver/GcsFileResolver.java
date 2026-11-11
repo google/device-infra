@@ -153,8 +153,8 @@ public class GcsFileResolver extends AbstractFileResolver {
     try {
       return gcsUtilCache.get(gcsKey);
     } catch (ExecutionException e) {
-      if (e.getCause() instanceof MobileHarnessException) {
-        throw (MobileHarnessException) e.getCause();
+      if (e.getCause() instanceof MobileHarnessException mhe) {
+        throw mhe;
       } else {
         throw new AssertionError("Should not happen.", e);
       }
