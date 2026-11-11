@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerForm
 import com.google.devtools.mobileharness.shared.util.signal.Signals;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
+import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter.Mode;
 import com.google.devtools.mobileharness.shared.util.system.SystemPropertiesUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -88,11 +89,8 @@ public class OlcServer {
     // Initializes log recorder.
     LogRecorder.getInstance().initialize(logManager.getLogRecorderBackend());
 
-    // Logs arguments and system info.
-    if (args.length > 0) {
-      logger.atInfo().log("Args: %s", args);
-    }
-    systemInfoPrinter.printSystemInfo(DEBUG);
+    // Logs system info (including arguments and versions).
+    systemInfoPrinter.printSystemInfo(DEBUG, Mode.FULL);
 
     // Adds shutdown hook.
     ShutdownHookManager.getInstance()
