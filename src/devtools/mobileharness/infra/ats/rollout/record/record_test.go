@@ -423,16 +423,18 @@ func TestGroupInvalid(t *testing.T) {
 
 func TestRolloutRoundTrip(t *testing.T) {
 	src := store.Record{
-		"revision":   map[string]any{"build": "r@sha256:aaa", "signer": "kept"},
-		"waves":      []any{int64(1), int64(3), int64(6)},
-		"created_at": t0,
-		"extra":      "kept",
+		"revision":      map[string]any{"build": "r@sha256:aaa", "signer": "kept"},
+		"waves":         []any{int64(1), int64(3), int64(6)},
+		"max_in_flight": int64(2),
+		"max_failed":    int64(1),
+		"created_at":    t0,
+		"extra":         "kept",
 	}
 	ro, err := ParseRollout(src)
 	if err != nil {
 		t.Fatalf("ParseRollout(%v) failed: %v", src, err)
 	}
-	want := Rollout{Revision: Revision{Build: "r@sha256:aaa"}, Waves: []int64{1, 3, 6}, CreatedAt: t0}
+	want := Rollout{Revision: Revision{Build: "r@sha256:aaa"}, Waves: []int64{1, 3, 6}, MaxInFlight: 2, MaxFailed: 1, CreatedAt: t0}
 	if diff := cmp.Diff(want, ro, compareDocs); diff != "" {
 		t.Errorf("ParseRollout(%v) diff (-want +got):\n%s", src, diff)
 	}
@@ -446,20 +448,42 @@ func TestRolloutRoundTrip(t *testing.T) {
 	ro.FinishedAt = t0.Add(time.Hour)
 	got := ro.Record()
 	wantRecord := store.Record{
-		"revision":     map[string]any{"build": "r@sha256:aaa", "signer": "kept"},
-		"waves":        []any{int64(1), int64(3), int64(6)},
-		"created_at":   t0,
-		"stop_request": "SUPERSEDED",
-		"wave_index":   int64(2),
-		"outcome":      "SUPERSEDED",
-		"summary":      map[string]any{"h1": "DONE", "h2": "NOT_STARTED"},
-		"finished_at":  t0.Add(time.Hour),
-		"extra":        "kept",
+		"revision":      map[string]any{"build": "r@sha256:aaa", "signer": "kept"},
+		"waves":         []any{int64(1), int64(3), int64(6)},
+		"max_in_flight": int64(2),
+		"max_failed":    int64(1),
+		"created_at":    t0,
+		"stop_request":  "SUPERSEDED",
+		"wave_index":    int64(2),
+		"outcome":       "SUPERSEDED",
+		"summary":       map[string]any{"h1": "DONE", "h2": "NOT_STARTED"},
+		"finished_at":   t0.Add(time.Hour),
+		"extra":         "kept",
 	}
 	if diff := cmp.Diff(wantRecord, got); diff != "" {
 		t.Errorf("Rollout.Record() after concluding diff (-want +got):\n%s", diff)
 	}
 
+	back, err := ParseRollout(got)
+	if err != nil {
+		t.Fatalf("ParseRollout(Rollout.Record()) failed: %v", err)
+	}
+	if diff := cmp.Diff(ro, back, compareDocs); diff != "" {
+		t.Errorf("ParseRollout(Rollout.Record()) diff (-want +got):\n%s", diff)
+	}
+}
+
+// TestRolloutZeroLimitsAreAbsent checks that a rollout without limits (no
+// max_in_flight bound, max_failed 0) writes neither field, since a stored
+// max_in_flight of 0 is invalid, and reads back as the zero value.
+func TestRolloutZeroLimitsAreAbsent(t *testing.T) {
+	ro := Rollout{Revision: rev1, Waves: []int64{1}, CreatedAt: t0}
+	got := ro.Record()
+	for _, key := range []string{"max_in_flight", "max_failed"} {
+		if v, ok := got[key]; ok {
+			t.Errorf("Rollout.Record() with zero limits has %s = %v, want the field absent", key, v)
+		}
+	}
 	back, err := ParseRollout(got)
 	if err != nil {
 		t.Fatalf("ParseRollout(Rollout.Record()) failed: %v", err)
@@ -521,6 +545,9 @@ func TestRolloutInvalid(t *testing.T) {
 		"empty_waves":                 with("waves", []any{}),
 		"waves_not_increasing":        with("waves", []any{int64(3), int64(3)}),
 		"waves_string":                with("waves", []any{"1"}),
+		"max_in_flight_zero":          with("max_in_flight", int64(0)),
+		"max_in_flight_string":        with("max_in_flight", "3"),
+		"max_failed_negative":         with("max_failed", int64(-1)),
 		"negative_wave_index":         with("wave_index", int64(-1)),
 		"wave_index_too_large":        with("wave_index", int64(2)),
 		"bad_stop_request":            with("stop_request", "PAUSED"),
@@ -627,27 +654,81 @@ func TestSlotInvalid(t *testing.T) {
 	}
 }
 
-func TestSlotFinalAndFailed(t *testing.T) {
+func TestSlotPredicates(t *testing.T) {
+	now := t0.Add(time.Hour)
+	fresh := now.Add(-LeaseTimeout + time.Second)
+	old := now.Add(-LeaseTimeout)
+	active := Member{Status: MemberActive, HeartbeatAt: now}
+	down := Member{Status: MemberDown, HeartbeatAt: now}
+	silentDown := Member{Status: MemberDown, HeartbeatAt: now.Add(-HeartbeatTimeout)}
 	tests := []struct {
-		name                  string
-		slot                  Slot
-		wantFinal, wantFailed bool
+		name                                  string
+		slot                                  Slot
+		member                                Member
+		wantFinal, wantAgentFinished          bool
+		wantInFlight, wantExpired, wantFailed bool
 	}{
-		{name: "open", slot: Slot{State: SlotOpen}},
-		{name: "running", slot: Slot{State: SlotClaimed, Result: TaskRunning}},
-		{name: "done", slot: Slot{State: SlotClaimed, Result: TaskDone}, wantFinal: true},
-		{name: "done_then_down", slot: Slot{State: SlotClaimed, Result: TaskDone, DownAfterDoneAt: t0}, wantFinal: true, wantFailed: true},
-		{name: "failed", slot: Slot{State: SlotClaimed, Result: TaskFailed}, wantFinal: true, wantFailed: true},
-		{name: "skipped", slot: Slot{State: SlotClaimed, Result: TaskSkipped}, wantFinal: true},
-		{name: "lost", slot: Slot{State: SlotClaimed, Result: TaskLost}, wantFinal: true},
+		{name: "open", slot: Slot{State: SlotOpen}, member: active},
+		{name: "running", slot: Slot{State: SlotClaimed, Result: TaskRunning, RenewedAt: fresh}, member: active, wantInFlight: true},
+		{name: "running_expired", slot: Slot{State: SlotClaimed, Result: TaskRunning, RenewedAt: old}, member: active, wantInFlight: true, wantExpired: true},
+		{name: "done", slot: Slot{State: SlotClaimed, Result: TaskDone}, member: active, wantFinal: true, wantAgentFinished: true},
+		{name: "done_recorded_down", slot: Slot{State: SlotClaimed, Result: TaskDone, DownAfterDoneAt: t0}, member: active, wantFinal: true, wantAgentFinished: true, wantFailed: true},
+		{name: "done_member_down_now", slot: Slot{State: SlotClaimed, Result: TaskDone}, member: down, wantFinal: true, wantAgentFinished: true, wantFailed: true},
+		{name: "done_member_down_but_silent", slot: Slot{State: SlotClaimed, Result: TaskDone}, member: silentDown, wantFinal: true, wantAgentFinished: true},
+		{name: "failed", slot: Slot{State: SlotClaimed, Result: TaskFailed}, member: active, wantFinal: true, wantAgentFinished: true, wantFailed: true},
+		{name: "skipped_member_down", slot: Slot{State: SlotClaimed, Result: TaskSkipped}, member: down, wantFinal: true, wantAgentFinished: true},
+		{name: "lost_old_lease", slot: Slot{State: SlotClaimed, Result: TaskLost, RenewedAt: old}, member: active, wantFinal: true},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := tc.slot.Final(); got != tc.wantFinal {
 				t.Errorf("Slot(%+v).Final() = %v, want %v", tc.slot, got, tc.wantFinal)
 			}
-			if got := tc.slot.Failed(); got != tc.wantFailed {
-				t.Errorf("Slot(%+v).Failed() = %v, want %v", tc.slot, got, tc.wantFailed)
+			if got := tc.slot.AgentFinished(); got != tc.wantAgentFinished {
+				t.Errorf("Slot(%+v).AgentFinished() = %v, want %v", tc.slot, got, tc.wantAgentFinished)
+			}
+			if got := tc.slot.InFlight(); got != tc.wantInFlight {
+				t.Errorf("Slot(%+v).InFlight() = %v, want %v", tc.slot, got, tc.wantInFlight)
+			}
+			if got := tc.slot.Expired(now); got != tc.wantExpired {
+				t.Errorf("Slot(%+v).Expired(now) = %v, want %v", tc.slot, got, tc.wantExpired)
+			}
+			if got := tc.slot.Failed(tc.member, now); got != tc.wantFailed {
+				t.Errorf("Slot(%+v).Failed(%+v, now) = %v, want %v", tc.slot, tc.member, got, tc.wantFailed)
+			}
+		})
+	}
+}
+
+func TestMemberPredicates(t *testing.T) {
+	now := t0.Add(time.Hour)
+	fresh := now.Add(-HeartbeatTimeout + time.Second)
+	old := now.Add(-HeartbeatTimeout)
+	tests := []struct {
+		name                            string
+		member                          Member
+		wantOnline, wantStale, wantDown bool
+	}{
+		{name: "active_fresh", member: Member{Status: MemberActive, HeartbeatAt: fresh}, wantOnline: true},
+		{name: "active_at_timeout", member: Member{Status: MemberActive, HeartbeatAt: old}, wantStale: true},
+		{name: "active_no_heartbeat", member: Member{Status: MemberActive}, wantStale: true},
+		{name: "down_fresh", member: Member{Status: MemberDown, HeartbeatAt: fresh}, wantOnline: true, wantDown: true},
+		{name: "down_old", member: Member{Status: MemberDown, HeartbeatAt: old}, wantStale: true},
+		{name: "opted_out_fresh", member: Member{Status: MemberOptedOut, HeartbeatAt: fresh}},
+		{name: "opted_out_old", member: Member{Status: MemberOptedOut, HeartbeatAt: old}},
+		{name: "offline_label_fresh_heartbeat", member: Member{Status: MemberOffline, HeartbeatAt: fresh}},
+		{name: "offline_old", member: Member{Status: MemberOffline, HeartbeatAt: old}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.member.Online(now); got != tc.wantOnline {
+				t.Errorf("Member(%+v).Online(now) = %v, want %v", tc.member, got, tc.wantOnline)
+			}
+			if got := tc.member.Stale(now); got != tc.wantStale {
+				t.Errorf("Member(%+v).Stale(now) = %v, want %v", tc.member, got, tc.wantStale)
+			}
+			if got := tc.member.Down(now); got != tc.wantDown {
+				t.Errorf("Member(%+v).Down(now) = %v, want %v", tc.member, got, tc.wantDown)
 			}
 		})
 	}
@@ -766,6 +847,8 @@ func TestRecordIsValidForTheStore(t *testing.T) {
 		"Rollout": Rollout{
 			Revision:    rev1,
 			Waves:       []int64{1, 3},
+			MaxInFlight: 2,
+			MaxFailed:   1,
 			CreatedAt:   t0,
 			StopRequest: StopCancelled,
 			WaveIndex:   1,

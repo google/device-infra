@@ -4,6 +4,18 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
+)
+
+// Protocol constants. The agent polls at a fixed interval, writing its
+// heartbeat and renewing its task lease on every poll; both timeouts are three
+// polls, so one or two missed polls do not make a live agent look offline or
+// cost it its slot. The job compares stored timestamps with its own clock, so
+// a value is stale when now - t >= timeout.
+const (
+	PollInterval     = 5 * time.Minute
+	HeartbeatTimeout = 3 * PollInterval
+	LeaseTimeout     = 3 * PollInterval
 )
 
 // Revision is what a group should run, or what a host runs: a build plus the
@@ -156,8 +168,8 @@ const (
 	MemberOffline  MemberStatus = "OFFLINE"
 )
 
-// Eligible reports whether the member may take part in a rollout: enrolled
-// and online.
+// Eligible reports whether the member is opted in (ACTIVE or DOWN). Whether it
+// is also online depends on its heartbeat; see Member.Online.
 func (s MemberStatus) Eligible() bool {
 	return s == MemberActive || s == MemberDown
 }

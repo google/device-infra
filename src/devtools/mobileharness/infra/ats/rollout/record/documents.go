@@ -50,7 +50,8 @@ func (d Domain) Record() store.Record {
 }
 
 // Wave is one entry of a policy's waves: a number of agents, or a
-// percentage of the group's eligible members.
+// percentage of the group's online eligible members when the rollout is
+// created.
 type Wave struct {
 	Value   int64
 	Percent bool
@@ -98,7 +99,8 @@ type Policy struct {
 
 // parsePolicy reads a policy from the reader of its map.
 func parsePolicy(f *fields) Policy {
-	p := Policy{MaxInFlight: f.integer("max_in_flight"), MaxFailed: f.integer("max_failed")}
+	var p Policy
+	p.MaxInFlight, p.MaxFailed = parseLimits(f)
 	for i, w := range f.list("waves") {
 		wave, err := parseWave(w)
 		if err != nil {
@@ -107,18 +109,26 @@ func parsePolicy(f *fields) Policy {
 		}
 		p.Waves = append(p.Waves, wave)
 	}
+	if f.ok() && len(p.Waves) == 0 {
+		f.fail("waves", "missing or empty")
+	}
+	return p
+}
+
+// parseLimits reads max_in_flight and max_failed, which a policy holds and a
+// rollout copies when it is created.
+func parseLimits(f *fields) (maxInFlight, maxFailed int64) {
+	maxInFlight, maxFailed = f.integer("max_in_flight"), f.integer("max_failed")
 	switch {
 	case !f.ok():
-	case len(p.Waves) == 0:
-		f.fail("waves", "missing or empty")
-	case f.has("max_in_flight") && p.MaxInFlight < 1:
+	case f.has("max_in_flight") && maxInFlight < 1:
 		// 0 would let no task run, and reading it as "no bound" would turn a
 		// limit an operator wrote into no limit at all.
 		f.fail("max_in_flight", "must be at least 1 when set; omit it for no bound")
-	case p.MaxFailed < 0:
+	case maxFailed < 0:
 		f.fail("max_failed", "must not be negative")
 	}
-	return p
+	return maxInFlight, maxFailed
 }
 
 func (p Policy) value() map[string]any {
@@ -249,10 +259,15 @@ func (g Group) Record() store.Record {
 // Rollout is rollouts/{seq}: the manager's target and the orchestrator's
 // progress.
 type Rollout struct {
-	// Written by the manager when it creates the rollout.
-	Revision  Revision
-	Waves     []int64
-	CreatedAt time.Time
+	// Written by the manager when it creates the rollout. Waves,
+	// MaxInFlight, and MaxFailed are the group's policy frozen at that
+	// moment, with the waves resolved to counts; the orchestrator never reads
+	// the group's policy. MaxInFlight 0 means no bound.
+	Revision    Revision
+	Waves       []int64
+	MaxInFlight int64
+	MaxFailed   int64
+	CreatedAt   time.Time
 	// Written by the manager to stop the rollout.
 	StopRequest StopRequest
 	// Written by the orchestrator. WaveIndex is always a valid index of Waves.
@@ -282,6 +297,7 @@ func ParseRollout(r store.Record) (Rollout, error) {
 		Finished:    f.boolean("finished"),
 		src:         src,
 	}
+	ro.MaxInFlight, ro.MaxFailed = parseLimits(f)
 	for i, w := range f.list("waves") {
 		n, ok := w.(int64)
 		if !ok || n < 1 || (i > 0 && n <= ro.Waves[i-1]) {
@@ -322,6 +338,8 @@ func (ro Rollout) Record() store.Record {
 		waves = append(waves, w)
 	}
 	set(r, "waves", waves)
+	set(r, "max_in_flight", ro.MaxInFlight)
+	set(r, "max_failed", ro.MaxFailed)
 	set(r, "created_at", ro.CreatedAt)
 	set(r, "stop_request", string(ro.StopRequest))
 	set(r, "wave_index", ro.WaveIndex)
@@ -439,15 +457,40 @@ func (s Slot) Record() store.Record {
 	return r
 }
 
-// Final reports whether the task has a result that will not change.
+// Final reports whether the task has a result that will not change. It
+// includes LOST; see AgentFinished for the count that drives waves.
 func (s Slot) Final() bool {
 	return s.Result != "" && s.Result != TaskRunning
 }
 
+// AgentFinished reports whether the agent reported a result (DONE, FAILED,
+// or SKIPPED). LOST is not agent-finished: a dead agent must not advance a
+// wave or use up one of its places.
+func (s Slot) AgentFinished() bool {
+	return s.Result == TaskDone || s.Result == TaskFailed || s.Result == TaskSkipped
+}
+
+// InFlight reports whether the task is RUNNING, expired or not. An expired
+// task counts as in flight until the orchestrator's LOST mark has landed, so
+// a mark that loses its race with a renewal is never followed by a conclude
+// or a replacement slot in the same run.
+func (s Slot) InFlight() bool {
+	return s.Result == TaskRunning
+}
+
+// Expired reports whether the task is RUNNING and its lease has run out at
+// now: the orchestrator marks it LOST.
+func (s Slot) Expired(now time.Time) bool {
+	return s.InFlight() && !now.Before(s.RenewedAt.Add(LeaseTimeout))
+}
+
 // Failed reports whether the task counts toward max_failed: it ended FAILED,
-// or it ended DONE and the host went DOWN afterwards.
-func (s Slot) Failed() bool {
-	return s.Result == TaskFailed || (s.Result == TaskDone && !s.DownAfterDoneAt.IsZero())
+// or it ended DONE and its host went DOWN afterwards. m is the claiming
+// agent's member row. The member's current state counts even before the
+// orchestrator has recorded DownAfterDoneAt, so the answer does not depend on
+// whether that bookkeeping write has landed.
+func (s Slot) Failed(m Member, now time.Time) bool {
+	return s.Result == TaskFailed || (s.Result == TaskDone && (!s.DownAfterDoneAt.IsZero() || m.Down(now)))
 }
 
 // Member is members/{agent_id}: an agent's heartbeat.
@@ -457,6 +500,27 @@ type Member struct {
 	RunningRevision Revision
 
 	src store.Record
+}
+
+// Online reports whether the member is eligible and its heartbeat is fresh at
+// now: the agent is alive and may take part in a rollout. Callers decide
+// liveness with this, not with Status == MemberOffline, so a silent ACTIVE or
+// DOWN member counts as offline before the manager's OFFLINE mark lands.
+func (m Member) Online(now time.Time) bool {
+	return m.Status.Eligible() && now.Before(m.HeartbeatAt.Add(HeartbeatTimeout))
+}
+
+// Stale reports whether the member is eligible but silent: its heartbeat is
+// older than the timeout at now. The manager marks it OFFLINE. OPTED_OUT and
+// OFFLINE members are never stale.
+func (m Member) Stale(now time.Time) bool {
+	return m.Status.Eligible() && !m.Online(now)
+}
+
+// Down reports whether the member is online and its core service is not
+// running: a DONE task of this agent counts as failed.
+func (m Member) Down(now time.Time) bool {
+	return m.Status == MemberDown && m.Online(now)
 }
 
 // ParseMember reads a member record.
