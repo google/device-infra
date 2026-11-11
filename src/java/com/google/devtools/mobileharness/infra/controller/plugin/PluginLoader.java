@@ -21,10 +21,13 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collection;
+import java.util.Enumeration;
+import java.util.ServiceLoader;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
@@ -60,13 +63,17 @@ public class PluginLoader {
   /**
    * Operates exactly as a {@link URLClassLoader}, with the exception that any classes with names
    * matching the optional {@link #forceLoadFromJarClassPattern} will not be loaded from the parent
-   * {@link ClassLoader}.
+   * {@link ClassLoader}, and neither will the files that name the {@link ServiceLoader} providers
+   * of such a class.
    *
    * <p>This gives plugin authors a mechanism to force the system to load certain classes from their
    * plugin library, rather than from Mobile Harness, in situations where an unintended mixing of
    * classes from the parent (Mobile Harness) classloader results in problems.
    */
   private static class PluginClassLoader extends URLClassLoader {
+
+    /** Where a jar keeps the files that name the providers of a service, by service class name. */
+    private static final String PROVIDER_FILE_DIR = "META-INF/services/";
 
     /**
      * If specified, force loading of classes with names matching the supplied regex from this class
@@ -91,8 +98,7 @@ public class PluginLoader {
         // First, check if the class has already been loaded
         Class<?> c = findLoadedClass(name);
         if (c == null) {
-          if (forceLoadFromJarClassPattern != null
-              && forceLoadFromJarClassPattern.matcher(name).matches()) {
+          if (isForcedToLoadFromJar(name)) {
             logger.atInfo().log(
                 "Class %s forced to load from plugin library only, by"
                     + " *_force_load_from_jar_class_regex = %s",
@@ -107,6 +113,37 @@ public class PluginLoader {
         }
         return c;
       }
+    }
+
+    @Override
+    @Nullable
+    public URL getResource(String name) {
+      return isProviderFileOfForcedService(name) ? findResource(name) : super.getResource(name);
+    }
+
+    @Override
+    public Enumeration<URL> getResources(String name) throws IOException {
+      return isProviderFileOfForcedService(name) ? findResources(name) : super.getResources(name);
+    }
+
+    /**
+     * Returns whether {@code resourceName} is the file that names the {@link ServiceLoader}
+     * providers of a service whose class is forced to load from the plugin library. Such a file is
+     * read from the plugin library only.
+     *
+     * <p>The parent's file names the providers of the parent's copy of the service, which {@link
+     * ServiceLoader} fails to load as providers of the plugin library's copy. So a plugin library
+     * has to name the providers it bundles in a file of its own, and a lookup of the parent's copy
+     * of the service through this class loader finds none of the parent's providers.
+     */
+    private boolean isProviderFileOfForcedService(String resourceName) {
+      return resourceName.startsWith(PROVIDER_FILE_DIR)
+          && isForcedToLoadFromJar(resourceName.substring(PROVIDER_FILE_DIR.length()));
+    }
+
+    private boolean isForcedToLoadFromJar(String className) {
+      return forceLoadFromJarClassPattern != null
+          && forceLoadFromJarClassPattern.matcher(className).matches();
     }
   }
 }

@@ -64,6 +64,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ServiceLoader;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -120,7 +121,9 @@ public class JobInfo extends JobScheduleUnit {
    *
    * <p>If specified, this can be used to resolve problems arising from a plugin's unintended use of
    * classes from Mobile Harness, rather than its own classes (since parent classes are always used,
-   * if they are present).
+   * if they are present). For any {@link ServiceLoader} service loaded from the plugin jars this
+   * way, {@code META-INF/services/} provider files are also read from the plugin jars only, so the
+   * plugin jars must carry the provider files for the providers they bundle.
    */
   public static final String PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX =
       "client_plugin_force_load_from_jar_class_regex";
@@ -187,7 +190,9 @@ public class JobInfo extends JobScheduleUnit {
    *
    * <p>If specified, this can be used to resolve problems arising from a plugin's unintended use of
    * classes from Mobile Harness, rather than its own classes (since parent classes are always used,
-   * if they are present).
+   * if they are present). For any {@link ServiceLoader} service loaded from the plugin jars this
+   * way, {@code META-INF/services/} provider files are also read from the plugin jars only, so the
+   * plugin jars must carry the provider files for the providers they bundle.
    */
   public static final String PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX =
       "lab_plugin_force_load_from_jar_class_regex";

@@ -57,6 +57,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.ServiceLoader;
 import java.util.Set;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -75,7 +76,9 @@ import javax.annotation.concurrent.NotThreadSafe;
  * the supplied regex from our plugin {@link #classLoader}, rather than its parent {@link
  * ClassLoader}. This can be used to resolve problems arising from a plugin's unintended use of
  * classes from Mobile Harness, rather than its own classes (since parent classes are always used,
- * if they are present).
+ * if they are present). For any {@link ServiceLoader} service loaded this way, {@code
+ * META-INF/services/} provider files are also read from the plugin jars only, so the plugin jars
+ * must carry the provider files for the providers they bundle.
  *
  * <p>{@code moduleClassNames} follows the same pattern, however uses {@link PluginModule} instead.
  */
