@@ -109,9 +109,12 @@ message AndroidRoboTestSpec {
     help: "Internal name of the infrastructure invoking the crawl."
   }];
 
-  optional string user_project_override = 26 [
-    (field_detail) = { help: "Project name to override for internal users." }
-  ];
+  optional string user_project_override = 26 [(field_detail) = {
+    help: "Google Cloud project that the crawler service bills and checks the API for. "
+          "With LOAS (Borg and gLinux hosts), robo-dev-users if not set. With application "
+          "default credentials (other hosts, like Cloud ATE), the project of the host's "
+          "identity if not set."
+  }];
 
   reserved 1, 10, 15;
 }
