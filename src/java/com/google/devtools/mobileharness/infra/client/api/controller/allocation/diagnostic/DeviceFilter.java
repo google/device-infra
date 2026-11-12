@@ -35,7 +35,7 @@ import java.util.Optional;
  * For pre-filtering the device candidates. For the devices that are excluded by this filter, it
  * won't be included in the allocation diagnostic report of the jobs.
  */
-public class DeviceFilter {
+public final class DeviceFilter {
   /**
    * Diagnostic candidate filter to remove device candidates that do not match the field with the
    * given job from the diagnostic report.
@@ -58,8 +58,8 @@ public class DeviceFilter {
    */
   public static DeviceQueryFilter getFilter(
       JobScheduleUnit job, List<FilterType> filterTypes, SubDeviceSpec subDeviceSpec) {
-    DeviceQueryFilter.Builder filter = DeviceQueryFilter.newBuilder();
-    filter.addTypeRegex(subDeviceSpec.type());
+    DeviceQueryFilter.Builder filter =
+        DeviceQueryFilter.newBuilder().addTypeRegex(subDeviceSpec.type());
     if (SharedPoolJobUtil.isUsingSharedPool(job)) {
       filter.addDimensionFilter(
           DimensionFilter.newBuilder()
@@ -68,48 +68,33 @@ public class DeviceFilter {
     }
     filterTypes.forEach(diagnosticFilter -> {
       switch (diagnosticFilter) {
-        case ACCESS:
-          filter.addOwnerRegex("public|" + job.jobUser().getRunAs());
-          break;
-        case DECORATOR:
-          filter.addAllDecoratorRegex(subDeviceSpec.decorators().getAll());
-          break;
-        case DIMENSION:
-          subDeviceSpec
-              .dimensions()
-              .getAll()
-              .forEach((name, value) ->
-                  convertForDeviceQueryApi(value)
-                      .ifPresent(valueRegex ->
-                          filter.addDimensionFilter(
-                              DimensionFilter.newBuilder()
-                                  .setName(name)
-                                  .setValueRegex(valueRegex))));
-          break;
-        case DRIVER:
-          filter.addDriverRegex(job.type().getDriver());
-          break;
-        case STATUS:
-          filter.addStatus("idle");
-          break;
+        case ACCESS -> filter.addOwnerRegex("public|" + job.jobUser().getRunAs());
+        case DECORATOR -> filter.addAllDecoratorRegex(subDeviceSpec.decorators().getAll());
+        case DIMENSION ->
+            subDeviceSpec
+                .dimensions()
+                .getAll()
+                .forEach((name, value) ->
+                    convertForDeviceQueryApi(value)
+                        .ifPresent(valueRegex ->
+                            filter.addDimensionFilter(
+                                DimensionFilter.newBuilder()
+                                    .setName(name)
+                                    .setValueRegex(valueRegex))));
+        case DRIVER -> filter.addDriverRegex(job.type().getDriver());
+        case STATUS -> filter.addStatus("idle");
       }
     });
-    List<DimensionFilter> dedupedDimensionFilters =
+    ImmutableList<DimensionFilter> dedupedDimensionFilters =
         filter.getDimensionFilterList().stream().distinct().collect(toImmutableList());
-    filter.clearDimensionFilter().addAllDimensionFilter(dedupedDimensionFilters);
-    return filter.build();
+    return filter.clearDimensionFilter().addAllDimensionFilter(dedupedDimensionFilters).build();
   }
 
   /** Gets the filter from the device dimensions. */
   public static DeviceQueryFilter getFilter(Map<String, String> dimensions) {
     DeviceQueryFilter.Builder filter = DeviceQueryFilter.newBuilder();
-    dimensions
-        .entrySet()
-        .forEach(entry ->
-            filter.addDimensionFilter(
-                DimensionFilter.newBuilder()
-                    .setName(entry.getKey())
-                    .setValueRegex(entry.getValue())));
+    dimensions.forEach((key, value) ->
+        filter.addDimensionFilter(DimensionFilter.newBuilder().setName(key).setValueRegex(value)));
     return filter.build();
   }
 
@@ -125,16 +110,21 @@ public class DeviceFilter {
    */
   private static Optional<String> convertForDeviceQueryApi(String jobDimensionValue) {
     switch (jobDimensionValue) {
-      case Value.EXCLUDE:
+      case Value.EXCLUDE -> {
         return Optional.empty();
-      case Value.ALL_VALUE_FOR_DEVICE:
+      }
+      case Value.ALL_VALUE_FOR_DEVICE -> {
         return Optional.of(".*");
-      default:
+      }
+      default -> {
         if (jobDimensionValue.startsWith(Value.PREFIX_REGEX)) {
           return Optional.of(jobDimensionValue.substring(Value.PREFIX_REGEX.length()));
         } else {
           return Optional.of(jobDimensionValue);
         }
+      }
     }
   }
+
+  private DeviceFilter() {}
 }
