@@ -373,14 +373,14 @@ public class AndroidFileUtil {
       String serial, int sdkVersion, String targetPath, boolean followSymlink)
       throws MobileHarnessException, InterruptedException {
     FileInfo.Builder fileInfoBuilder = FileInfo.builder().setPath(targetPath);
-    if ("/".equals(targetPath)) {
+    if (targetPath.equals("/")) {
       fileInfoBuilder.setType(FileType.DIR);
       return Optional.of(fileInfoBuilder.build());
     }
     // Append '/' to ensure it lists children of targetParentDirPath, required if
     // targetParentDirPath is a symlink
     String targetDirName = PathUtil.dirname(targetPath);
-    String targetParentDirPath = "/".equals(targetDirName) ? "/" : targetDirName + "/";
+    String targetParentDirPath = targetDirName.equals("/") ? "/" : targetDirName + "/";
     String targetBasename = PathUtil.basename(targetPath);
     String output;
     StringBuilder listFilesOutput = new StringBuilder();
@@ -1249,7 +1249,7 @@ public class AndroidFileUtil {
     // Append '/' to ensure it lists children of targetParentDirPath, required if
     // targetParentDirPath is a symlink
     String targetDirName = PathUtil.dirname(targetPath);
-    String targetParentDirPath = "/".equals(targetDirName) ? "/" : targetDirName + "/";
+    String targetParentDirPath = targetDirName.equals("/") ? "/" : targetDirName + "/";
     String targetBasename = PathUtil.basename(targetPath);
     String output;
     String followSymlinkCmd;
@@ -1297,13 +1297,13 @@ public class AndroidFileUtil {
     }
 
     String fileOrDirIndicator = matchTargetLine.get().substring(0, 2);
-    if ((String.valueOf(ADB_SHELL_LIST_SYMLINK_INDICATOR) + ADB_SHELL_LIST_FILE_INDICATOR)
-        .equals(fileOrDirIndicator)) {
+    if (fileOrDirIndicator.equals(
+        String.valueOf(ADB_SHELL_LIST_SYMLINK_INDICATOR) + ADB_SHELL_LIST_FILE_INDICATOR)) {
       return Optional.of(FileType.FILE);
-    } else if ((String.valueOf(ADB_SHELL_LIST_SYMLINK_INDICATOR) + ADB_SHELL_LIST_DIR_INDICATOR)
-        .equals(fileOrDirIndicator)) {
+    } else if (fileOrDirIndicator.equals(
+        String.valueOf(ADB_SHELL_LIST_SYMLINK_INDICATOR) + ADB_SHELL_LIST_DIR_INDICATOR)) {
       return Optional.of(FileType.DIR);
-    } else if ((ADB_SHELL_LIST_SYMLINK_INDICATOR + "?").equals(fileOrDirIndicator)) {
+    } else if (fileOrDirIndicator.equals(ADB_SHELL_LIST_SYMLINK_INDICATOR + "?")) {
       // The final target for symlink doesn't exist
       logger.atInfo().log(
           "Symbolic link %s points to a non-existent file/dir%n%s", targetPath, output);

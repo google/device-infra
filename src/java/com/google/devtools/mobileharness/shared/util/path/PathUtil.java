@@ -122,7 +122,7 @@ public final class PathUtil {
 
     int lastSlash = path.lastIndexOf("/");
 
-    if ("/".equals(path) || lastSlash == 0) {
+    if (path.equals("/") || lastSlash == 0) {
       return "/";
     } else if (lastSlash == -1) {
       return ".";

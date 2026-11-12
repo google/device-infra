@@ -175,7 +175,7 @@ public class DeviceDaemonHelper {
         deviceDaemonApkInfo.getActivityName(),
         deviceId);
     for (String permission : deviceDaemonApkInfo.getExtraPermissionNames()) {
-      if ("android.permission.CHANGE_CONFIGURATION".equals(permission) && sdkVersion < 17) {
+      if (permission.equals("android.permission.CHANGE_CONFIGURATION") && sdkVersion < 17) {
         continue;
       }
       grantPermission(deviceId, sdkVersion, deviceDaemonApkInfo.getPackageName(), permission);
