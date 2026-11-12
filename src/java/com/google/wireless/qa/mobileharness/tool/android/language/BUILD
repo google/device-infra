@@ -21,7 +21,7 @@ load("@rules_android//android:rules.bzl", "android_binary")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:__pkg__",
     ],
 )
 
