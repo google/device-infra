@@ -47,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_info_source",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",

@@ -57,6 +57,54 @@ describe('bulk_config_utils', () => {
       );
     });
 
+    it('distinguishes duplicate deviceIds on the same hostName across different universes', () => {
+      const emulatorCtrl1 = {
+        id: 'emulator-5554',
+        cells: [
+          {
+            link: {
+              text: 'emulator-5554',
+              target: {
+                device: {
+                  id: 'emulator-5554',
+                  hostName: 'localhost',
+                  universe: 'ctrl-1',
+                },
+              },
+            },
+          },
+        ],
+      };
+      const emulatorCtrl2 = {
+        id: 'emulator-5554',
+        cells: [
+          {
+            link: {
+              text: 'emulator-5554',
+              target: {
+                device: {
+                  id: 'emulator-5554',
+                  hostName: 'localhost',
+                  universe: 'ctrl-2',
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      expect(extractDeviceTarget(emulatorCtrl1)).toEqual({
+        deviceId: 'emulator-5554',
+        hostName: 'localhost',
+      });
+      expect(getDeviceTargetKey(emulatorCtrl1)).toBe(
+        'emulator-5554@@localhost@@ctrl-1',
+      );
+      expect(getDeviceTargetKey(emulatorCtrl2)).toBe(
+        'emulator-5554@@localhost@@ctrl-2',
+      );
+    });
+
     it('normalizes empty or undefined row.id and distinguishes empty-UUID rows across hosts', () => {
       const emptyIdRow = {
         id: '',

@@ -38,10 +38,12 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw.DeviceKey;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceInfoSource;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDisplay;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -433,18 +435,24 @@ public final class FleetIndexBuilderTest {
 
   @Test
   public void build_hostAtsController_indexedOnHosts() {
-    LabQueryResult labResult =
+    LabQueryResult lab1Result =
         LabQueryResult.newBuilder()
             .setLabView(
                 LabQueryResult.LabView.newBuilder()
-                    .setLabTotalCount(2)
+                    .setLabTotalCount(1)
                     .addLabData(
                         labData(
                             "lab1",
                             "1.1.1.1",
                             LabStatus.LAB_RUNNING,
                             HostProperties.getDefaultInstance(),
-                            device0()))
+                            device0())))
+            .build();
+    LabQueryResult lab2Result =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
                     .addLabData(
                         labData(
                             "lab2",
@@ -454,21 +462,23 @@ public final class FleetIndexBuilderTest {
                             device1())))
             .build();
 
+    UniverseScope controllerUniverse = new UniverseScope.RoutedUniverse("ctrl-1");
     CoreFleetRawData raw =
         CoreFleetRawData.builder()
-            .setLabData(labResult)
-            .setHostEnrichments(
+            .setLabDataByUniverse(
+                ImmutableMap.of(controllerUniverse, lab1Result, UniverseScope.SELF, lab2Result))
+            .setUniverseHostEnrichments(
                 ImmutableMap.of(
-                    "lab1", hostAtsControllerEnrichment("xiaomi", "Partner Lab: Xiaomi")))
+                    controllerUniverse, hostAtsControllerEnrichment("ctrl-1", "Partner Lab: One")))
             .build();
 
     FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
     FleetIndex hostIndex = snapshot.hostIndex();
 
     assertThat(snapshot.hosts().get(0).values("host_field::ats_controller_id"))
-        .containsExactly("xiaomi");
+        .containsExactly("ctrl-1");
     assertThat(snapshot.hosts().get(0).values("host_field::ats_lab_display_name"))
-        .containsExactly("Partner Lab: Xiaomi");
+        .containsExactly("Partner Lab: One");
     assertThat(snapshot.hosts().get(1).values("host_field::ats_controller_id")).isEmpty();
     assertThat(snapshot.hosts().get(1).values("host_field::ats_lab_display_name")).isEmpty();
 
@@ -476,9 +486,121 @@ public final class FleetIndexBuilderTest {
         .containsAtLeast("host_field::ats_controller_id", "host_field::ats_lab_display_name");
 
     LazyPostings hostPostings = LazyPostings.forHosts(snapshot.hosts());
-    assertThat(posting(hostPostings, "host_field::ats_controller_id", "xiaomi")).containsExactly(0);
-    assertThat(posting(hostPostings, "host_field::ats_lab_display_name", "partner lab: xiaomi"))
+    assertThat(posting(hostPostings, "host_field::ats_controller_id", "ctrl-1")).containsExactly(0);
+    assertThat(posting(hostPostings, "host_field::ats_lab_display_name", "partner lab: one"))
         .containsExactly(0);
+  }
+
+  @Test
+  public void build_partitionsWithIdenticalHostNames_stampsEachUniverseIndependently() {
+    LabQueryResult labA =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .addLabData(
+                        labData(
+                            "localhost",
+                            "10.0.0.1",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            device1())))
+            .build();
+    LabQueryResult labB =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .addLabData(
+                        labData(
+                            "localhost",
+                            "10.0.0.2",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            device2())))
+            .build();
+
+    UniverseScope universeA = new UniverseScope.RoutedUniverse("universe-a");
+    UniverseScope universeB = new UniverseScope.RoutedUniverse("universe-b");
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
+            .setLabDataByUniverse(ImmutableMap.of(universeA, labA, universeB, labB))
+            .setUniverseHostEnrichments(
+                ImmutableMap.of(
+                    universeA,
+                    hostAtsControllerEnrichment("universe-a", "Lab A"),
+                    universeB,
+                    hostAtsControllerEnrichment("universe-b", "Lab B")))
+            .build();
+
+    FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
+
+    assertThat(snapshot.universes()).containsExactly(universeA, universeB);
+    assertThat(snapshot.hosts()).hasSize(2);
+    assertThat(snapshot.hosts().get(0).values("host_field::ats_controller_id"))
+        .containsExactly("universe-a");
+    assertThat(snapshot.hosts().get(0).values("host_field::ats_lab_display_name"))
+        .containsExactly("Lab A");
+    assertThat(snapshot.hosts().get(1).values("host_field::ats_controller_id"))
+        .containsExactly("universe-b");
+    assertThat(snapshot.hosts().get(1).values("host_field::ats_lab_display_name"))
+        .containsExactly("Lab B");
+    assertThat(snapshot.devices().get(0).values("host_field::ats_controller_id"))
+        .containsExactly("universe-a");
+    assertThat(snapshot.devices().get(1).values("host_field::ats_controller_id"))
+        .containsExactly("universe-b");
+    assertThat(snapshot.uuidToIndex())
+        .containsExactly(
+            new DeviceKey(universeA, "localhost", "device-1"),
+            0,
+            new DeviceKey(universeA, "", "device-1"),
+            0,
+            DeviceKey.ofUuid("device-1"),
+            0,
+            new DeviceKey(universeB, "localhost", "device-2"),
+            1,
+            new DeviceKey(universeB, "", "device-2"),
+            1,
+            DeviceKey.ofUuid("device-2"),
+            1);
+  }
+
+  @Test
+  public void
+      build_duplicateDeviceIdWithEmptyOrIdenticalHostNameInSameUniverse_dropsAmbiguousKeys() {
+    LabQueryResult lab =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .addLabData(
+                        labData(
+                            "",
+                            "10.0.0.1",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            device1(),
+                            device2()))
+                    .addLabData(
+                        labData(
+                            "",
+                            "10.0.0.2",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            device1())))
+            .build();
+
+    FleetSnapshot snapshot =
+        builder.build(
+            CoreFleetRawData.builder()
+                .setLabDataByUniverse(
+                    ImmutableMap.of(new UniverseScope.RoutedUniverse("universe-a"), lab))
+                .build(),
+            BUILD_TIME);
+
+    assertThat(snapshot.uuidToIndex())
+        .containsExactly(
+            new DeviceKey(new UniverseScope.RoutedUniverse("universe-a"), "", "device-2"),
+            1,
+            DeviceKey.ofUuid("device-2"),
+            1);
   }
 
   @Test

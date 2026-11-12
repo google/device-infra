@@ -17,10 +17,12 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.Map;
 
 /**
  * Read view over loaded on-demand dimension overlays for one query/corpus context.
@@ -78,14 +80,26 @@ public interface OverlayView {
     return new BoundOverlayView(snapshot, overlays);
   }
 
-  /** Bound implementation of {@link OverlayView} over a specific snapshot. */
+  /**
+   * Bound implementation of {@link OverlayView} over a specific snapshot.
+   *
+   * <p>Each {@link DimensionOverlay} is bound once during construction and its {@link
+   * DimensionOverlay.SnapshotBoundPostings} is retained locally for the lifetime of this query
+   * view, avoiding repeated volatile checks or re-index thrashing when concurrent queries span a
+   * snapshot rotation.
+   */
   final class BoundOverlayView implements OverlayView {
     private final FleetSnapshot snapshot;
     private final ImmutableMap<String, DimensionOverlay> overlays;
+    private final ImmutableMap<String, DimensionOverlay.SnapshotBoundPostings> boundByKey;
 
     BoundOverlayView(FleetSnapshot snapshot, ImmutableMap<String, DimensionOverlay> overlays) {
       this.snapshot = checkNotNull(snapshot);
       this.overlays = checkNotNull(overlays);
+      this.boundByKey =
+          overlays.entrySet().stream()
+              .collect(
+                  toImmutableMap(Map.Entry::getKey, entry -> entry.getValue().bind(this.snapshot)));
     }
 
     @Override
@@ -106,8 +120,8 @@ public interface OverlayView {
 
     @Override
     public ImmutableMap<String, Integer> valueCounts(String keyId) {
-      DimensionOverlay overlay = overlays.get(keyId);
-      return overlay != null ? overlay.bind(snapshot).valueCounts() : ImmutableMap.of();
+      DimensionOverlay.SnapshotBoundPostings bound = boundByKey.get(keyId);
+      return bound != null ? bound.valueCounts() : ImmutableMap.of();
     }
 
     @Override
@@ -118,26 +132,26 @@ public interface OverlayView {
 
     @Override
     public int valueCount(String keyId, String value) {
-      DimensionOverlay overlay = overlays.get(keyId);
-      return overlay != null ? overlay.bind(snapshot).get(value).length : 0;
+      DimensionOverlay.SnapshotBoundPostings bound = boundByKey.get(keyId);
+      return bound != null ? bound.get(value).length : 0;
     }
 
     @Override
     public KeyStats keyStats(String keyId) {
-      DimensionOverlay overlay = overlays.get(keyId);
-      return overlay != null ? overlay.bind(snapshot).stats() : KeyStats.EMPTY;
+      DimensionOverlay.SnapshotBoundPostings bound = boundByKey.get(keyId);
+      return bound != null ? bound.stats() : KeyStats.EMPTY;
     }
 
     @Override
     public int[] getPostings(String keyId, String value) {
-      DimensionOverlay overlay = overlays.get(keyId);
-      return overlay != null ? overlay.bind(snapshot).get(value) : EMPTY_INT_ARRAY;
+      DimensionOverlay.SnapshotBoundPostings bound = boundByKey.get(keyId);
+      return bound != null ? bound.get(value) : EMPTY_INT_ARRAY;
     }
 
     @Override
     public ImmutableMap<String, int[]> postingsForKey(String keyId) {
-      DimensionOverlay overlay = overlays.get(keyId);
-      return overlay != null ? overlay.bind(snapshot).postings() : ImmutableMap.of();
+      DimensionOverlay.SnapshotBoundPostings bound = boundByKey.get(keyId);
+      return bound != null ? bound.postings() : ImmutableMap.of();
     }
 
     @Override
@@ -145,9 +159,8 @@ public interface OverlayView {
       if (deviceIndex < 0 || deviceIndex >= snapshot.devices().size()) {
         return ImmutableSet.of();
       }
-      String uuid = snapshot.devices().get(deviceIndex).deviceId();
-      DimensionOverlay overlay = overlays.get(keyId);
-      return overlay != null ? overlay.lowerValuesForUuid(uuid) : ImmutableSet.of();
+      DimensionOverlay.SnapshotBoundPostings bound = boundByKey.get(keyId);
+      return bound != null ? bound.lowerValuesForIndex(deviceIndex) : ImmutableSet.of();
     }
 
     @Override
@@ -155,9 +168,8 @@ public interface OverlayView {
       if (deviceIndex < 0 || deviceIndex >= snapshot.devices().size()) {
         return ImmutableList.of();
       }
-      String uuid = snapshot.devices().get(deviceIndex).deviceId();
-      DimensionOverlay overlay = overlays.get(keyId);
-      return overlay != null ? overlay.valuesForUuid(uuid) : ImmutableList.of();
+      DimensionOverlay.SnapshotBoundPostings bound = boundByKey.get(keyId);
+      return bound != null ? bound.displayValuesForIndex(deviceIndex) : ImmutableList.of();
     }
 
     private static final int[] EMPTY_INT_ARRAY = new int[0];

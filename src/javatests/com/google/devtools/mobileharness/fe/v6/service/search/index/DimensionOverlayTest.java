@@ -17,10 +17,20 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw.DeviceKey;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.time.Instant;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -47,7 +57,14 @@ public final class DimensionOverlayTest {
             .setHosts(ImmutableList.of())
             .setIndex(CoreFleetIndex.empty())
             .setHostIndex(CoreFleetIndex.empty())
-            .setUuidToIndex(ImmutableMap.of("uuid-1", 0, "uuid-2", 1, "uuid-3", 2))
+            .setUuidToIndex(
+                ImmutableMap.of(
+                    DeviceKey.ofUuid("uuid-1"),
+                    0,
+                    DeviceKey.ofUuid("uuid-2"),
+                    1,
+                    DeviceKey.ofUuid("uuid-3"),
+                    2))
             .build();
 
     DimensionOverlay overlay = DimensionOverlay.create(raw, snapshotA);
@@ -72,7 +89,8 @@ public final class DimensionOverlayTest {
             .setHosts(ImmutableList.of())
             .setIndex(CoreFleetIndex.empty())
             .setHostIndex(CoreFleetIndex.empty())
-            .setUuidToIndex(ImmutableMap.of("uuid-1", 5, "uuid-3", 1))
+            .setUuidToIndex(
+                ImmutableMap.of(DeviceKey.ofUuid("uuid-1"), 5, DeviceKey.ofUuid("uuid-3"), 1))
             .build();
 
     DimensionOverlay.SnapshotBoundPostings boundB = overlay.bind(snapshotB);
@@ -99,7 +117,16 @@ public final class DimensionOverlayTest {
             .setHosts(ImmutableList.of())
             .setIndex(CoreFleetIndex.empty())
             .setHostIndex(CoreFleetIndex.empty())
-            .setUuidToIndex(ImmutableMap.of("uuid-1", 0, "uuid-2", 1, "uuid-3", 2, "uuid-empty", 3))
+            .setUuidToIndex(
+                ImmutableMap.of(
+                    DeviceKey.ofUuid("uuid-1"),
+                    0,
+                    DeviceKey.ofUuid("uuid-2"),
+                    1,
+                    DeviceKey.ofUuid("uuid-3"),
+                    2,
+                    DeviceKey.ofUuid("uuid-empty"),
+                    3))
             .build();
 
     DimensionOverlay overlay = DimensionOverlay.create(raw, snapshotA);
@@ -124,7 +151,7 @@ public final class DimensionOverlayTest {
             .setHosts(ImmutableList.of())
             .setIndex(CoreFleetIndex.empty())
             .setHostIndex(CoreFleetIndex.empty())
-            .setUuidToIndex(ImmutableMap.of("uuid-1", 0))
+            .setUuidToIndex(ImmutableMap.of(DeviceKey.ofUuid("uuid-1"), 0))
             .build();
 
     // Only uuid-1 ({"alpha"}) remains, so the key is single-valued in snapshotB.
@@ -134,5 +161,178 @@ public final class DimensionOverlayTest {
     assertThat(viewB.valueCounts("dimension::tag")).containsExactly("alpha", 1);
     assertThat(viewB.valueCount("dimension::tag", "alpha")).isEqualTo(1);
     assertThat(viewB.valueCount("dimension::tag", "beta")).isEqualTo(0);
+  }
+
+  @Test
+  public void bind_and_overlayView_disambiguatesDuplicateEmulatorUuidAcrossHostsInSameUniverse() {
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setLabInfo(
+                                LabInfo.newBuilder()
+                                    .setLabLocator(LabLocator.newBuilder().setHostName("host-a")))
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceLocator(
+                                                DeviceLocator.newBuilder()
+                                                    .setId("emulator-5554")))))
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setLabInfo(
+                                LabInfo.newBuilder()
+                                    .setLabLocator(LabLocator.newBuilder().setHostName("host-b")))
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceLocator(
+                                                DeviceLocator.newBuilder()
+                                                    .setId("emulator-5554"))))))
+            .build();
+    FleetSnapshot snapshot = new FleetIndexBuilder().build(labResult, Instant.ofEpochSecond(1000));
+
+    // Bare "emulator-5554" is ambiguous across host-a and host-b and is omitted from uuidToIndex.
+    assertThat(snapshot.uuidToIndex()).doesNotContainKey(DeviceKey.ofUuid("emulator-5554"));
+
+    DimensionOverlayRaw raw =
+        DimensionOverlayRaw.createForDevices(
+            "dimension::carrier",
+            ImmutableMap.of(
+                new DeviceKey(UniverseScope.SELF, "host-a", "emulator-5554"),
+                ImmutableList.of("Verizon"),
+                new DeviceKey(UniverseScope.SELF, "host-b", "emulator-5554"),
+                ImmutableList.of("T-Mobile"),
+                DeviceKey.ofUuid("emulator-5554"),
+                ImmutableList.of("AmbiguousIgnored")));
+
+    DimensionOverlay overlay = DimensionOverlay.create(raw, snapshot);
+    OverlayView view = OverlayView.bind(snapshot, ImmutableMap.of("dimension::carrier", overlay));
+
+    assertThat(view.getPostings("dimension::carrier", "verizon")).asList().containsExactly(0);
+    assertThat(view.getPostings("dimension::carrier", "t-mobile")).asList().containsExactly(1);
+    assertThat(view.postingsForKey("dimension::carrier").get("verizon"))
+        .asList()
+        .containsExactly(0);
+    assertThat(view.postingsForKey("dimension::carrier").get("t-mobile"))
+        .asList()
+        .containsExactly(1);
+    assertThat(view.postingsForKey("dimension::unknown")).isEmpty();
+    assertThat(view.displayValues(0, "dimension::carrier")).containsExactly("Verizon");
+    assertThat(view.displayValues(1, "dimension::carrier")).containsExactly("T-Mobile");
+    assertThat(view.displayValues(0, "dimension::unknown")).isEmpty();
+    assertThat(view.displayValues(-1, "dimension::carrier")).isEmpty();
+    assertThat(view.displayValues(2, "dimension::carrier")).isEmpty();
+    assertThat(view.valuesForKey(0, "dimension::carrier")).containsExactly("verizon");
+    assertThat(view.valuesForKey(1, "dimension::carrier")).containsExactly("t-mobile");
+    assertThat(view.valuesForKey(0, "dimension::unknown")).isEmpty();
+    assertThat(view.valuesForKey(-1, "dimension::carrier")).isEmpty();
+    assertThat(view.valuesForKey(2, "dimension::carrier")).isEmpty();
+    assertThat(view.valueCounts("dimension::unknown")).isEmpty();
+    assertThat(view.valueCount("dimension::unknown", "verizon")).isEqualTo(0);
+    assertThat(view.keyStats("dimension::unknown")).isEqualTo(KeyStats.EMPTY);
+    assertThat(view.getPostings("dimension::unknown", "verizon")).isEmpty();
+    assertThat(overlay.bind(snapshot).displayValuesForIndex(-1)).isEmpty();
+    assertThat(overlay.bind(snapshot).displayValuesForIndex(2)).isEmpty();
+    assertThat(CoreFleetRawData.ofLabData(labResult).labData()).isSameInstanceAs(labResult);
+    assertThat(
+            CoreFleetRawData.builder()
+                .setLabDataByUniverse(
+                    ImmutableMap.of(
+                        UniverseScope.SELF,
+                        labResult,
+                        new UniverseScope.RoutedUniverse("u1"),
+                        labResult))
+                .build()
+                .labData()
+                .getLabView()
+                .getLabDataCount())
+        .isEqualTo(4);
+    assertThrows(
+        IllegalStateException.class,
+        () ->
+            CoreFleetRawData.builder()
+                .setLabData(LabQueryResult.getDefaultInstance())
+                .setLabDataByUniverse(ImmutableMap.of())
+                .build());
+  }
+
+  @Test
+  public void
+      bind_fallsBackToUniverseScopedKeyWhenUniqueAndDoesNotShadowExactOrCrossUniverseMatches() {
+    UniverseScope ctrl1 = new UniverseScope.RoutedUniverse("ctrl-1");
+    UniverseScope ctrl2 = new UniverseScope.RoutedUniverse("ctrl-2");
+    LabQueryResult ctrl1Result =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setLabInfo(
+                                LabInfo.newBuilder()
+                                    .setLabLocator(LabLocator.newBuilder().setHostName("host-b")))
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceLocator(
+                                                DeviceLocator.newBuilder()
+                                                    .setId("emulator-5554")))))
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setLabInfo(
+                                LabInfo.newBuilder()
+                                    .setLabLocator(LabLocator.newBuilder().setHostName("host-c")))
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceLocator(
+                                                DeviceLocator.newBuilder().setId("unique-dev")))
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceLocator(
+                                                DeviceLocator.newBuilder()
+                                                    .setId("only-in-ctrl1"))))))
+            .build();
+    FleetSnapshot snapshot =
+        new FleetIndexBuilder()
+            .build(
+                CoreFleetRawData.builder()
+                    .setLabDataByUniverse(ImmutableMap.of(ctrl1, ctrl1Result))
+                    .build(),
+                Instant.ofEpochSecond(1000));
+
+    // 1. emulator-5554 was on both host-a and host-b when the overlay was pulled, and host-a went
+    //    offline in the snapshot (leaving only host-b at index 0). Because (ctrl1, "emulator-5554")
+    //    is not unique in deviceValues, host-a's entry does not fall back onto host-b's index, so
+    //    host-b's exact match ("T-Mobile") wins.
+    // 2. unique-dev moved from host-a to host-c inside ctrl-1 (index 1): unique in deviceValues, so
+    //    it resolves via the universe-scoped fallback (ctrl1, "", "unique-dev").
+    // 3. (ctrl2, "host-d", "only-in-ctrl1") is in a different universe and never falls back across
+    //    universes onto ctrl-1's only-in-ctrl1 (index 2).
+    DimensionOverlayRaw raw =
+        DimensionOverlayRaw.createForDevices(
+            "dimension::carrier",
+            ImmutableMap.of(
+                new DeviceKey(ctrl1, "host-a", "emulator-5554"),
+                ImmutableList.of("Verizon"),
+                new DeviceKey(ctrl1, "host-b", "emulator-5554"),
+                ImmutableList.of("T-Mobile"),
+                new DeviceKey(ctrl1, "host-a", "unique-dev"),
+                ImmutableList.of("AT&T"),
+                new DeviceKey(ctrl2, "host-d", "only-in-ctrl1"),
+                ImmutableList.of("CrossUniverseIgnored")));
+
+    DimensionOverlay overlay = DimensionOverlay.create(raw, snapshot);
+    OverlayView view = OverlayView.bind(snapshot, ImmutableMap.of("dimension::carrier", overlay));
+
+    assertThat(view.displayValues(0, "dimension::carrier")).containsExactly("T-Mobile");
+    assertThat(view.displayValues(1, "dimension::carrier")).containsExactly("AT&T");
+    assertThat(view.displayValues(2, "dimension::carrier")).isEmpty();
   }
 }

@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw.DeviceKey;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -88,8 +89,10 @@ public final class LabInfoFleetPuller {
           .addPaths("device_feature.composite_dimension")
           .build();
 
-  private static final LabInfoMask EMPTY_LAB_INFO_MASK =
-      LabInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()).build();
+  private static final LabInfoMask LAB_HOST_NAME_MASK =
+      LabInfoMask.newBuilder()
+          .setFieldMask(FieldMask.newBuilder().addPaths("lab_locator.host_name").build())
+          .build();
 
   private final LabInfoProvider labInfoProvider;
 
@@ -172,7 +175,7 @@ public final class LabInfoFleetPuller {
             .setLabViewRequest(LabQuery.LabViewRequest.getDefaultInstance())
             .setMask(
                 LabQuery.Mask.newBuilder()
-                    .setLabInfoMask(EMPTY_LAB_INFO_MASK)
+                    .setLabInfoMask(LAB_HOST_NAME_MASK)
                     .setDeviceInfoMask(
                         LabQuery.Mask.DeviceInfoMask.newBuilder()
                             .setFieldMask(SINGLE_DIM_FIELD_MASK)
@@ -199,10 +202,18 @@ public final class LabInfoFleetPuller {
     return Futures.transform(
         labInfoProvider.getLabInfoAsync(request, universeScope),
         response -> {
-          ImmutableList<DeviceInfo> devices =
+          ImmutableList<ScopedDevice> devices =
               response.getLabQueryResult().getLabView().getLabDataList().stream()
-                  .flatMap(labData -> labData.getDeviceList().getDeviceInfoList().stream())
-                  .filter(deviceInfo -> !deviceInfo.getDeviceLocator().getId().isEmpty())
+                  .flatMap(labData -> {
+                    String hostName = labData.getLabInfo().getLabLocator().getHostName();
+                    return labData.getDeviceList().getDeviceInfoList().stream()
+                        .filter(deviceInfo -> !deviceInfo.getDeviceLocator().getId().isEmpty())
+                        .map(deviceInfo ->
+                            new ScopedDevice(
+                                new DeviceKey(
+                                    universeScope, hostName, deviceInfo.getDeviceLocator().getId()),
+                                deviceInfo));
+                  })
                   .collect(toImmutableList());
           // Keyed by each requested key id, so every requested key gets an entry.
           ImmutableMap<String, DimensionOverlayRaw> overlays =
@@ -211,7 +222,7 @@ public final class LabInfoFleetPuller {
                       toImmutableMap(
                           DeviceKeyDescriptor::id,
                           key ->
-                              DimensionOverlayRaw.create(
+                              DimensionOverlayRaw.createForDevices(
                                   key.id(), extractDimensionValues(devices, key.bareName())),
                           (first, second) -> first));
 
@@ -227,6 +238,8 @@ public final class LabInfoFleetPuller {
         },
         directExecutor());
   }
+
+  private record ScopedDevice(DeviceKey key, DeviceInfo deviceInfo) {}
 
   /** Starts a batched on-demand pull of multiple dimensions from the self universe. */
   public ListenableFuture<ImmutableMap<String, DimensionOverlayRaw>> pullDimensions(
@@ -255,11 +268,10 @@ public final class LabInfoFleetPuller {
         .build();
   }
 
-  private static ImmutableMap<String, ImmutableList<String>> extractDimensionValues(
-      ImmutableList<DeviceInfo> devices, String dimName) {
+  private static ImmutableMap<DeviceKey, ImmutableList<String>> extractDimensionValues(
+      ImmutableList<ScopedDevice> devices, String dimName) {
     return devices.stream()
-        .map(deviceInfo ->
-            Map.entry(deviceInfo.getDeviceLocator().getId(), dimensionValues(deviceInfo, dimName)))
+        .map(device -> Map.entry(device.key(), dimensionValues(device.deviceInfo(), dimName)))
         .filter(entry -> !entry.getValue().isEmpty())
         .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (first, second) -> second));
   }

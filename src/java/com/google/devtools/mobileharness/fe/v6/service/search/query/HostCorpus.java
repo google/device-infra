@@ -24,7 +24,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Column;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetUtilization;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.HostRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
@@ -110,7 +112,14 @@ public final class HostCorpus implements SearchCorpus {
 
   @Override
   public String recordId(int index) {
-    return snapshot.hosts().get(index).hostName();
+    HostRecord host = snapshot.hosts().get(index);
+    String baseId = host.hostName();
+    if (baseId.isEmpty()) {
+      ImmutableList<String> ips = host.values(HostKeys.HOST_IP.id());
+      baseId = ips.isEmpty() ? Integer.toString(index) : ips.get(0);
+    }
+    ImmutableList<String> controllers = host.values(FleetIndexBuilder.HOST_FIELD_ATS_CONTROLLER_ID);
+    return controllers.isEmpty() ? baseId : controllers.get(0) + ":" + baseId;
   }
 
   @Override

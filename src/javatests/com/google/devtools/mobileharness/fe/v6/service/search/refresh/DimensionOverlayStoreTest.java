@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRaw
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DimensionOverlay;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw.DeviceKey;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
@@ -76,7 +77,8 @@ public final class DimensionOverlayStoreTest {
             .setHosts(ImmutableList.of())
             .setIndex(CoreFleetIndex.empty())
             .setHostIndex(CoreFleetIndex.empty())
-            .setUuidToIndex(ImmutableMap.of("dev-1", 0, "dev-2", 1))
+            .setUuidToIndex(
+                ImmutableMap.of(DeviceKey.ofUuid("dev-1"), 0, DeviceKey.ofUuid("dev-2"), 1))
             .build();
     snapshotStore.publish(Fleet.FLEET_SELF, snapshot);
 
@@ -146,7 +148,8 @@ public final class DimensionOverlayStoreTest {
                 .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor)
                 .get()
                 .get("dimension::carrier")
-                .valuesForUuid("dev-1"))
+                .deviceValues()
+                .get(DeviceKey.ofUuid("dev-1")))
         .containsExactly("Verizon");
     assertThat(dataSource.pullCount.get()).isEqualTo(1);
 
@@ -156,7 +159,8 @@ public final class DimensionOverlayStoreTest {
                 .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor)
                 .get()
                 .get("dimension::carrier")
-                .valuesForUuid("dev-1"))
+                .deviceValues()
+                .get(DeviceKey.ofUuid("dev-1")))
         .containsExactly("Verizon");
     assertThat(dataSource.pullCount.get()).isEqualTo(1);
 
@@ -169,7 +173,8 @@ public final class DimensionOverlayStoreTest {
                 .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor)
                 .get()
                 .get("dimension::carrier")
-                .valuesForUuid("dev-1"))
+                .deviceValues()
+                .get(DeviceKey.ofUuid("dev-1")))
         .containsExactly("TMobile");
     assertThat(dataSource.pullCount.get()).isEqualTo(2);
   }
@@ -280,12 +285,16 @@ public final class DimensionOverlayStoreTest {
 
     ImmutableMap<String, DimensionOverlay> result1 = call1.get();
     assertThat(result1.keySet()).containsExactly("dimension::carrier", "dimension::os_version");
-    assertThat(result1.get("dimension::carrier").valuesForUuid("dev-1")).containsExactly("Verizon");
-    assertThat(result1.get("dimension::os_version").valuesForUuid("dev-2")).containsExactly("16");
+    assertThat(result1.get("dimension::carrier").deviceValues().get(DeviceKey.ofUuid("dev-1")))
+        .containsExactly("Verizon");
+    assertThat(result1.get("dimension::os_version").deviceValues().get(DeviceKey.ofUuid("dev-2")))
+        .containsExactly("16");
     ImmutableMap<String, DimensionOverlay> result2 = call2.get();
     assertThat(result2.keySet()).containsExactly("dimension::carrier", "dimension::build_id");
-    assertThat(result2.get("dimension::carrier").valuesForUuid("dev-1")).containsExactly("Verizon");
-    assertThat(result2.get("dimension::build_id").valuesForUuid("dev-1")).containsExactly("AP4A");
+    assertThat(result2.get("dimension::carrier").deviceValues().get(DeviceKey.ofUuid("dev-1")))
+        .containsExactly("Verizon");
+    assertThat(result2.get("dimension::build_id").deviceValues().get(DeviceKey.ofUuid("dev-1")))
+        .containsExactly("AP4A");
   }
 
   @Test
@@ -374,7 +383,8 @@ public final class DimensionOverlayStoreTest {
                 .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor)
                 .get()
                 .get("dimension::carrier")
-                .valuesForUuid("dev-1"))
+                .deviceValues()
+                .get(DeviceKey.ofUuid("dev-1")))
         .containsExactly("ATT");
     assertThat(batchedSource.batchCalls).hasSize(1);
 
@@ -390,7 +400,8 @@ public final class DimensionOverlayStoreTest {
                 .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(OS_VERSION_KEY), executor)
                 .get()
                 .get("dimension::os_version")
-                .valuesForUuid("dev-2"))
+                .deviceValues()
+                .get(DeviceKey.ofUuid("dev-2")))
         .containsExactly("16");
     assertThat(batchedSource.batchCalls).hasSize(2);
   }
@@ -416,8 +427,10 @@ public final class DimensionOverlayStoreTest {
                 Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY, OS_VERSION_KEY), executor)
             .get();
 
-    assertThat(retryResult.get("dimension::carrier").valuesForUuid("dev-1")).containsExactly("ATT");
-    assertThat(retryResult.get("dimension::os_version").valuesForUuid("dev-2"))
+    assertThat(retryResult.get("dimension::carrier").deviceValues().get(DeviceKey.ofUuid("dev-1")))
+        .containsExactly("ATT");
+    assertThat(
+            retryResult.get("dimension::os_version").deviceValues().get(DeviceKey.ofUuid("dev-2")))
         .containsExactly("16");
   }
 

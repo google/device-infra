@@ -36,10 +36,12 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw.DeviceKey;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -107,21 +109,26 @@ public final class FleetIndexBuilder {
 
   /** Builds a snapshot from the raw data, stamping the given build time. */
   public FleetSnapshot build(CoreFleetRawData raw, Instant buildTime) {
-    LabQueryResult labResult = raw.labData();
+    record ScopedLabData(UniverseScope universe, LabData labData) {}
 
-    ImmutableList<LabData> labDataList =
-        labResult.hasLabView()
-            ? ImmutableList.copyOf(labResult.getLabView().getLabDataList())
-            : ImmutableList.of();
+    ImmutableList<ScopedLabData> scopedLabs =
+        raw.labDataByUniverse().entrySet().stream()
+            .filter(entry -> entry.getValue().hasLabView())
+            .flatMap(entry ->
+                entry.getValue().getLabView().getLabDataList().stream()
+                    .map(labData -> new ScopedLabData(entry.getKey(), labData)))
+            .collect(toImmutableList());
 
-    record HostDevices(HostRecord host, List<DeviceRecord> devices) {}
+    record HostDevices(UniverseScope universe, HostRecord host, List<DeviceRecord> devices) {}
 
     ConcurrentMap<Thread, Accumulator> accumulatorsByThread = new ConcurrentHashMap<>();
     ConcurrentMap<Thread, Accumulator> hostAccumulatorsByThread = new ConcurrentHashMap<>();
 
     List<HostDevices> hostDevices =
-        labDataList.parallelStream()
-            .map(labData -> {
+        scopedLabs.parallelStream()
+            .map(entry -> {
+              UniverseScope universe = entry.universe();
+              LabData labData = entry.labData();
               LabInfo labInfo = labData.getLabInfo();
               LabLocator locator = labInfo.getLabLocator();
               String hostName = locator.getHostName();
@@ -131,7 +138,8 @@ public final class FleetIndexBuilder {
               }
               ImmutableMap<String, String> hostProperties = extractHostProperties(labInfo);
               Optional<HostEnrichment> hostEnrichment =
-                  Optional.ofNullable(raw.hostEnrichments().get(hostName));
+                  Optional.ofNullable(raw.universeHostEnrichments().get(universe))
+                      .or(() -> Optional.ofNullable(raw.hostEnrichments().get(hostName)));
 
               String hostOs = hostProperties.getOrDefault("host_os", "Unknown");
               String hostConnectivity =
@@ -166,24 +174,36 @@ public final class FleetIndexBuilder {
                 devices.add(record);
                 indexDevice(accum, record);
               }
-              return new HostDevices(hostRecord, devices);
+              return new HostDevices(universe, hostRecord, devices);
             })
             .toList();
 
     List<DeviceRecord> allDevices = new ArrayList<>();
     ImmutableList.Builder<HostRecord> allHosts = ImmutableList.builder();
-    ImmutableMap.Builder<String, Integer> uuidToIndex = ImmutableMap.builder();
+    ImmutableSet.Builder<UniverseScope> contributingUniverses = ImmutableSet.builder();
+    Map<DeviceKey, Integer> uuidToIndex = new LinkedHashMap<>();
+    Set<DeviceKey> duplicateKeys = new HashSet<>();
+
     int devIdx = 0;
     for (HostDevices hd : hostDevices) {
       allHosts.add(hd.host());
+      String hostName = hd.host().hostName();
+      UniverseScope universe = hd.universe();
+      contributingUniverses.add(universe);
       for (DeviceRecord device : hd.devices()) {
         allDevices.add(device);
-        if (!device.deviceId().isEmpty()) {
-          uuidToIndex.put(device.deviceId(), devIdx);
+        String deviceId = device.deviceId();
+        if (!deviceId.isEmpty()) {
+          recordDeviceKey(
+              uuidToIndex, duplicateKeys, new DeviceKey(universe, hostName, deviceId), devIdx);
+          recordDeviceKey(
+              uuidToIndex, duplicateKeys, new DeviceKey(universe, "", deviceId), devIdx);
+          recordDeviceKey(uuidToIndex, duplicateKeys, DeviceKey.ofUuid(deviceId), devIdx);
         }
         devIdx++;
       }
     }
+    duplicateKeys.forEach(uuidToIndex::remove);
 
     Accumulator merged = new Accumulator();
     for (Accumulator a : accumulatorsByThread.values()) {
@@ -201,8 +221,20 @@ public final class FleetIndexBuilder {
         .setHosts(allHosts.build())
         .setIndex(merged.toIndex())
         .setHostIndex(hostMerged.toIndex())
-        .setUuidToIndex(uuidToIndex.buildKeepingLast())
+        .setUuidToIndex(ImmutableMap.copyOf(uuidToIndex))
+        .setUniverses(contributingUniverses.build())
         .build();
+  }
+
+  private static void recordDeviceKey(
+      Map<DeviceKey, Integer> uuidToIndex,
+      Set<DeviceKey> duplicateKeys,
+      DeviceKey key,
+      int devIdx) {
+    Integer existing = uuidToIndex.putIfAbsent(key, devIdx);
+    if (existing != null && existing != devIdx) {
+      duplicateKeys.add(key);
+    }
   }
 
   private static HostRecord buildHostRecord(

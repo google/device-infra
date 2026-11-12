@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeD
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition.DimensionMatchCondition;
@@ -38,10 +39,16 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMulti
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.DimensionOverlay;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.OverlayView;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw.DeviceKey;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
@@ -54,6 +61,7 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.protobuf.FieldMask;
+import java.time.Instant;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -138,7 +146,10 @@ public final class LabInfoFleetPullerTest {
     assertThat(raw.uuidToValues())
         .containsExactly("dev-1", ImmutableList.of("Verizon", "T-Mobile"));
     assertThat(labInfoProvider.lastRequest.getLabQuery().getMask().getLabInfoMask())
-        .isEqualTo(LabInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()).build());
+        .isEqualTo(
+            LabInfoMask.newBuilder()
+                .setFieldMask(FieldMask.newBuilder().addPaths("lab_locator.host_name").build())
+                .build());
     assertThat(labInfoProvider.lastRequest.getLabQuery().getFilter())
         .isEqualTo(
             LabQuery.Filter.newBuilder()
@@ -168,6 +179,76 @@ public final class LabInfoFleetPullerTest {
                 .getSupportedDimensionsMask()
                 .getDimensionNamesList())
         .containsExactly("carrier");
+  }
+
+  @Test
+  public void pullDimension_roundTripsWithFleetIndexBuilderWhenHostsShareDeviceUuid()
+      throws Exception {
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setLabInfo(
+                                LabInfo.newBuilder()
+                                    .setLabLocator(LabLocator.newBuilder().setHostName("host-a")))
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceLocator(
+                                                DeviceLocator.newBuilder().setId("emulator-5554"))
+                                            .setDeviceFeature(
+                                                DeviceFeature.newBuilder()
+                                                    .setCompositeDimension(
+                                                        DeviceCompositeDimension.newBuilder()
+                                                            .addSupportedDimension(
+                                                                DeviceDimension.newBuilder()
+                                                                    .setName("carrier")
+                                                                    .setValue("Verizon")))))))
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setLabInfo(
+                                LabInfo.newBuilder()
+                                    .setLabLocator(LabLocator.newBuilder().setHostName("host-b")))
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceLocator(
+                                                DeviceLocator.newBuilder().setId("emulator-5554"))
+                                            .setDeviceFeature(
+                                                DeviceFeature.newBuilder()
+                                                    .setCompositeDimension(
+                                                        DeviceCompositeDimension.newBuilder()
+                                                            .addSupportedDimension(
+                                                                DeviceDimension.newBuilder()
+                                                                    .setName("carrier")
+                                                                    .setValue("T-Mobile"))))))))
+            .build();
+    labInfoProvider.setResult(labResult);
+
+    DeviceKeyDescriptor carrierKey =
+        new AtsDeviceKeyRegistry().createLongTailDimensionKey("carrier").get();
+    DimensionOverlayRaw raw = puller.pullDimension(carrierKey).get();
+
+    assertThat(raw.deviceValues())
+        .containsExactly(
+            new DeviceKey(UniverseScope.SELF, "host-a", "emulator-5554"),
+            ImmutableList.of("Verizon"),
+            new DeviceKey(UniverseScope.SELF, "host-b", "emulator-5554"),
+            ImmutableList.of("T-Mobile"));
+
+    FleetSnapshot snapshot =
+        com.google.inject.Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(labResult, Instant.EPOCH);
+    DimensionOverlay overlay = DimensionOverlay.create(raw, snapshot);
+    OverlayView view = OverlayView.bind(snapshot, ImmutableMap.of("dimension::carrier", overlay));
+
+    assertThat(view.displayValues(0, "dimension::carrier")).containsExactly("Verizon");
+    assertThat(view.displayValues(1, "dimension::carrier")).containsExactly("T-Mobile");
   }
 
   @Test

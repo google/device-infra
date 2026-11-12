@@ -68,6 +68,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@grpc-java//core",
         "@maven//:com_google_code_findbugs_jsr305",

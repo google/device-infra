@@ -19,6 +19,9 @@ package com.google.devtools.mobileharness.fe.v6.service.search.index;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw.DeviceKey;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.time.Instant;
 
 /**
@@ -31,7 +34,7 @@ import java.time.Instant;
  *
  * <p>This class holds the forward store (device and host records) plus the {@link FleetIndex} with
  * the posting lists, value counts, sorted value lists, and key catalog. {@link FleetIndexBuilder}
- * populates both from a single lab query result.
+ * populates both from {@link CoreFleetRawData}.
  */
 @AutoValue
 public abstract class FleetSnapshot {
@@ -51,8 +54,14 @@ public abstract class FleetSnapshot {
   /** Inverted index and value index over {@link #hosts()}. */
   public abstract FleetIndex hostIndex();
 
-  /** Map from device UUID to integer index in {@link #devices()}, used for overlay alignment. */
-  public abstract ImmutableMap<String, Integer> uuidToIndex();
+  /**
+   * Map from unambiguous {@link DeviceKey} to integer index in {@link #devices()}, used for overlay
+   * alignment.
+   */
+  public abstract ImmutableMap<DeviceKey, Integer> uuidToIndex();
+
+  /** All {@link UniverseScope}s that contributed to this snapshot. */
+  public abstract ImmutableSet<UniverseScope> universes();
 
   /** Convenience: number of devices in this snapshot. */
   public int deviceCount() {
@@ -66,7 +75,9 @@ public abstract class FleetSnapshot {
 
   /** Creates a new builder. */
   public static Builder builder() {
-    return new AutoValue_FleetSnapshot.Builder().setUuidToIndex(ImmutableMap.of());
+    return new AutoValue_FleetSnapshot.Builder()
+        .setUuidToIndex(ImmutableMap.of())
+        .setUniverses(ImmutableSet.of());
   }
 
   /** An empty snapshot, used as the initial state before the first refresh completes. */
@@ -78,6 +89,7 @@ public abstract class FleetSnapshot {
         .setIndex(CoreFleetIndex.empty())
         .setHostIndex(CoreFleetIndex.empty())
         .setUuidToIndex(ImmutableMap.of())
+        .setUniverses(ImmutableSet.of())
         .build();
   }
 
@@ -94,7 +106,9 @@ public abstract class FleetSnapshot {
 
     public abstract Builder setHostIndex(FleetIndex hostIndex);
 
-    public abstract Builder setUuidToIndex(ImmutableMap<String, Integer> uuidToIndex);
+    public abstract Builder setUuidToIndex(ImmutableMap<DeviceKey, Integer> uuidToIndex);
+
+    public abstract Builder setUniverses(ImmutableSet<UniverseScope> universes);
 
     public abstract FleetSnapshot build();
   }

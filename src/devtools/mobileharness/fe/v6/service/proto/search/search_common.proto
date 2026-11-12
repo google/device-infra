@@ -87,7 +87,9 @@ message Column {
 // A single row in a search results table.
 message Row {
   // Stable entity identifier used for selection, linking, and deduplication.
-  // For devices: UUID. For tests/jobs/sessions: their respective IDs.
+  // For devices: UUID. For hosts: host_name (or <ats_controller_id>:<host_name>
+  // in multi-controller fleets, falling back to host_ip or row index when
+  // host_name is empty). For tests/jobs/sessions: their respective IDs.
   string id = 1;
 
   // Cell values, parallel to the columns array in the response (same order,

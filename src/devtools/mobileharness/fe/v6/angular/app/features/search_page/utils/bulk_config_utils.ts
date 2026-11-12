@@ -24,15 +24,27 @@ export function extractDeviceTarget(
 }
 
 /**
- * Returns a unique composite key (`deviceId@@hostName` or `deviceId`)
- * for either a DeviceTarget/review entry or a search result Row.
+ * Returns a unique composite key (`deviceId@@hostName@@universe`,
+ * `deviceId@@hostName`, or `deviceId`) for either a DeviceTarget/review entry
+ * or a search result Row.
  */
 export function getDeviceTargetKey(
   item: DeviceTarget | Pick<Row, 'id' | 'cells'>,
 ): string {
   const {deviceId = '', hostName} =
     'deviceId' in item ? item : extractDeviceTarget(item);
-  return hostName ? `${deviceId}@@${hostName}` : deviceId;
+  const baseKey = hostName ? `${deviceId}@@${hostName}` : deviceId;
+  if ('deviceId' in item) {
+    return baseKey;
+  }
+  for (const cell of item.cells || []) {
+    const universe =
+      cell.link?.target?.device?.universe || cell.link?.target?.host?.universe;
+    if (universe) {
+      return `${baseKey}@@${universe}`;
+    }
+  }
+  return baseKey;
 }
 
 /** Formats a device count with locale-aware grouping and pluralization (e.g. '1 device', '1,200 devices'). */

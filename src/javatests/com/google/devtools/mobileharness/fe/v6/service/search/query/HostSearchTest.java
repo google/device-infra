@@ -56,6 +56,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBu
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import java.time.Instant;
 import java.util.Optional;
@@ -314,7 +315,50 @@ public final class HostSearchTest {
             FleetPageRequest.getDefaultInstance());
 
     Row row = results.getRows(0);
+    assertThat(row.getId()).isEqualTo("oppo:lab-a");
     assertThat(row.getCells(0).getLink().getTarget().getHost().getUniverse()).isEqualTo("oppo");
+  }
+
+  @Test
+  public void flat_emptyHostNameFallsBackToIpOrIndexInRecordId() {
+    LabQueryResult emptyHostNameFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(2)
+                    .addLabData(
+                        hostLab(
+                            "",
+                            "10.0.0.1",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            0))
+                    .addLabData(
+                        hostLab(
+                            "", "", LabStatus.LAB_RUNNING, HostProperties.getDefaultInstance(), 0)))
+            .build();
+    UniverseScope oppo = new UniverseScope.RoutedUniverse("oppo");
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
+            .setLabDataByUniverse(ImmutableMap.of(oppo, emptyHostNameFleet))
+            .setUniverseHostEnrichments(
+                ImmutableMap.of(
+                    oppo, HostEnrichment.builder().setAtsControllerId(Optional.of("oppo")).build()))
+            .build();
+    FleetSnapshot enriched =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(raw, BUILD_TIME);
+    HostCorpus enrichedCorpus =
+        new HostCorpus(enriched, LazyPostings.forHosts(enriched.hosts()), null);
+
+    FleetFlatResults results =
+        flatSearcher.searchFlat(
+            enrichedCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
+
+    assertThat(rowIds(results)).containsExactly("oppo:1", "oppo:10.0.0.1").inOrder();
   }
 
   // --- Group by ---
