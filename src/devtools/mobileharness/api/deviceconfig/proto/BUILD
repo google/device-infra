@@ -112,9 +112,9 @@ proto_library(
     name = "device_config_service_proto",
     srcs = ["device_config_service.proto"],
     deps = [
-        "//src/devtools/mobileharness/api/deviceconfig/proto:device_proto",
-        "//src/devtools/mobileharness/api/deviceconfig/proto:global_proto",
-        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_proto",
+        ":device_proto",
+        ":global_proto",
+        ":lab_proto",
         "@protobuf//:field_mask_proto",
     ],
 )

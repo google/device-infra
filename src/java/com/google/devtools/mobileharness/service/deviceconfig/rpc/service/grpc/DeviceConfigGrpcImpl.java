@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.service.deviceconfig.rpc.service.grpc;
 
+import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceGrpc;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceGrpc.DeviceConfigServiceImplBase;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsResponse;
@@ -45,44 +47,68 @@ public final class DeviceConfigGrpcImpl extends DeviceConfigServiceImplBase {
   @Override
   public void getDeviceConfigs(
       GetDeviceConfigsRequest request, StreamObserver<GetDeviceConfigsResponse> responseObserver) {
-    responseObserver.onNext(deviceConfigServiceImpl.getDeviceConfigs(request));
-    responseObserver.onCompleted();
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        deviceConfigServiceImpl::getDeviceConfigs,
+        DeviceConfigServiceGrpc.getServiceDescriptor(),
+        DeviceConfigServiceGrpc.getGetDeviceConfigsMethod());
   }
 
   @Override
   public void updateDeviceConfigs(
       UpdateDeviceConfigsRequest request,
       StreamObserver<UpdateDeviceConfigsResponse> responseObserver) {
-    responseObserver.onNext(deviceConfigServiceImpl.updateDeviceConfigs(request));
-    responseObserver.onCompleted();
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        deviceConfigServiceImpl::updateDeviceConfigs,
+        DeviceConfigServiceGrpc.getServiceDescriptor(),
+        DeviceConfigServiceGrpc.getUpdateDeviceConfigsMethod());
   }
 
   @Override
   public void deleteDeviceConfigs(
       DeleteDeviceConfigsRequest request,
       StreamObserver<DeleteDeviceConfigsResponse> responseObserver) {
-    responseObserver.onNext(deviceConfigServiceImpl.deleteDeviceConfigs(request));
-    responseObserver.onCompleted();
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        deviceConfigServiceImpl::deleteDeviceConfigs,
+        DeviceConfigServiceGrpc.getServiceDescriptor(),
+        DeviceConfigServiceGrpc.getDeleteDeviceConfigsMethod());
   }
 
   @Override
   public void getLabConfig(
       GetLabConfigRequest request, StreamObserver<GetLabConfigResponse> responseObserver) {
-    responseObserver.onNext(deviceConfigServiceImpl.getLabConfig(request));
-    responseObserver.onCompleted();
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        deviceConfigServiceImpl::getLabConfig,
+        DeviceConfigServiceGrpc.getServiceDescriptor(),
+        DeviceConfigServiceGrpc.getGetLabConfigMethod());
   }
 
   @Override
   public void updateLabConfig(
       UpdateLabConfigRequest request, StreamObserver<UpdateLabConfigResponse> responseObserver) {
-    responseObserver.onNext(deviceConfigServiceImpl.updateLabConfig(request));
-    responseObserver.onCompleted();
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        deviceConfigServiceImpl::updateLabConfig,
+        DeviceConfigServiceGrpc.getServiceDescriptor(),
+        DeviceConfigServiceGrpc.getUpdateLabConfigMethod());
   }
 
   @Override
   public void deleteLabConfig(
       DeleteLabConfigRequest request, StreamObserver<DeleteLabConfigResponse> responseObserver) {
-    responseObserver.onNext(deviceConfigServiceImpl.deleteLabConfig(request));
-    responseObserver.onCompleted();
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        deviceConfigServiceImpl::deleteLabConfig,
+        DeviceConfigServiceGrpc.getServiceDescriptor(),
+        DeviceConfigServiceGrpc.getDeleteLabConfigMethod());
   }
 }

@@ -28,6 +28,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_config_service_grpc",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_config_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/rpc/service:device_config_service_impl",
         "@grpc-java//stub",
         "@maven//:javax_inject_jsr330_api",

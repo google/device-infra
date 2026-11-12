@@ -32,10 +32,8 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigResponse;
-import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.service.deviceconfig.storage.StorageClient;
-import java.util.Optional;
 import javax.inject.Inject;
 
 /** Implementation of the DeviceConfigService. */
@@ -50,20 +48,13 @@ public final class DeviceConfigServiceImpl {
     this.storageClient = storageClient;
   }
 
-  public GetDeviceConfigsResponse getDeviceConfigs(GetDeviceConfigsRequest request) {
+  public GetDeviceConfigsResponse getDeviceConfigs(GetDeviceConfigsRequest request)
+      throws MobileHarnessException {
     GetDeviceConfigsResponse.Builder responseBuilder = GetDeviceConfigsResponse.newBuilder();
     for (DeviceLocator deviceLocator : request.getDeviceLocatorList()) {
-      String deviceUuid = deviceLocator.getDeviceUuid();
-
-      try {
-        Optional<DeviceConfig> deviceConfig = storageClient.getDeviceConfig(deviceUuid);
-        if (deviceConfig.isPresent()) {
-          responseBuilder.addDeviceConfig(deviceConfig.get());
-        }
-      } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to get device config for device %s", deviceUuid);
-      }
+      storageClient
+          .getDeviceConfig(deviceLocator.getDeviceUuid())
+          .ifPresent(responseBuilder::addDeviceConfig);
     }
 
     return responseBuilder.build();
@@ -116,39 +107,23 @@ public final class DeviceConfigServiceImpl {
     return responseBuilder.build();
   }
 
-  public GetLabConfigResponse getLabConfig(GetLabConfigRequest request) {
-    String hostName = request.getLabHost();
-    try {
-      Optional<LabConfig> labConfig = storageClient.getLabConfig(hostName);
-      if (labConfig.isPresent()) {
-        return GetLabConfigResponse.newBuilder().setLabConfig(labConfig.get()).build();
-      }
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to get lab config for host %s", hostName);
-    }
-    return GetLabConfigResponse.getDefaultInstance();
+  public GetLabConfigResponse getLabConfig(GetLabConfigRequest request)
+      throws MobileHarnessException {
+    return storageClient
+        .getLabConfig(request.getLabHost())
+        .map(config -> GetLabConfigResponse.newBuilder().setLabConfig(config).build())
+        .orElse(GetLabConfigResponse.getDefaultInstance());
   }
 
-  public UpdateLabConfigResponse updateLabConfig(UpdateLabConfigRequest request) {
-    String hostName = request.getLabConfig().getHostName();
-    LabConfig labConfig = request.getLabConfig();
-
-    try {
-      storageClient.upsertLabConfig(labConfig);
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to update lab config for host %s", hostName);
-    }
-
+  public UpdateLabConfigResponse updateLabConfig(UpdateLabConfigRequest request)
+      throws MobileHarnessException {
+    storageClient.upsertLabConfig(request.getLabConfig());
     return UpdateLabConfigResponse.getDefaultInstance();
   }
 
-  public DeleteLabConfigResponse deleteLabConfig(DeleteLabConfigRequest request) {
-    String hostName = request.getLabHost();
-    try {
-      storageClient.deleteLabConfig(hostName);
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to delete lab config for host %s", hostName);
-    }
+  public DeleteLabConfigResponse deleteLabConfig(DeleteLabConfigRequest request)
+      throws MobileHarnessException {
+    storageClient.deleteLabConfig(request.getLabHost());
     return DeleteLabConfigResponse.getDefaultInstance();
   }
 }
