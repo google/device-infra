@@ -112,7 +112,7 @@ public class GcsFileResolver extends AbstractFileResolver {
 
     logger.atInfo().log("Downloading GCS file %s to %s", gcsPath, localPath);
     gcsUtil.copyFileOrDirectoryToLocal(gcsPath, Path.of(localPath));
-    Optional<String> checksum = gcsUtil.getCrc32c(Path.of(filePath));
+    Optional<String> checksum = gcsUtil.getDecodedCrc32c(Path.of(filePath));
     return ResolveResult.of(
         ImmutableList.of(
             ResolvedFile.create(localPath, checksum.orElse(null), resolveSource.path())),
