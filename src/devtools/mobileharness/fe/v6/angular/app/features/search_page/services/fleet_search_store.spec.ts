@@ -375,7 +375,10 @@ describe('FleetSearchStore', () => {
         'mh_fe_v6_visible_columns_devices_internal',
         JSON.stringify(staleColumns),
       );
-      failSearchesThenSucceed(1, unknownKeyError('Unknown device key: field::uuid'));
+      failSearchesThenSucceed(
+        1,
+        unknownKeyError('Unknown device key: field::uuid'),
+      );
 
       const store = await createStoreAt({});
       await flushAsync();
@@ -383,7 +386,9 @@ describe('FleetSearchStore', () => {
       expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(2);
       expect(mockSearchService.searchFleet.calls.argsFor(0)[0]).toEqual(
         jasmine.objectContaining({
-          flat: jasmine.objectContaining({columns: ['field::uuid', 'dim::pool']}),
+          flat: jasmine.objectContaining({
+            columns: ['field::uuid', 'dim::pool'],
+          }),
         }),
       );
       expect(mockSearchService.searchFleet.calls.argsFor(1)[0]).toEqual(
@@ -432,7 +437,10 @@ describe('FleetSearchStore', () => {
         'mh_fe_v6_visible_columns_devices_internal',
         JSON.stringify(staleColumns),
       );
-      failSearchesThenSucceed(1, {status: 500, error: {code: 13, message: 'boom'}});
+      failSearchesThenSucceed(1, {
+        status: 500,
+        error: {code: 13, message: 'boom'},
+      });
 
       const store = await createStoreAt({});
       await flushAsync();
@@ -446,7 +454,10 @@ describe('FleetSearchStore', () => {
     });
 
     it('does not retry when nothing is saved (the default columns were rejected)', async () => {
-      failSearchesThenSucceed(1, unknownKeyError('Unknown device key: device_field::uuid'));
+      failSearchesThenSucceed(
+        1,
+        unknownKeyError('Unknown device key: device_field::uuid'),
+      );
 
       await createStoreAt({});
       await flushAsync();
@@ -460,7 +471,10 @@ describe('FleetSearchStore', () => {
         'mh_fe_v6_visible_columns_devices_internal',
         JSON.stringify(staleColumns),
       );
-      failSearchesThenSucceed(5, unknownKeyError('Unknown device key: field::uuid'));
+      failSearchesThenSucceed(
+        5,
+        unknownKeyError('Unknown device key: field::uuid'),
+      );
 
       const store = await createStoreAt({});
       await flushAsync();
@@ -2297,6 +2311,90 @@ describe('FleetSearchStore', () => {
 
       expect(store.isResolvingChips()).toBeFalse();
       expect(store.isLoading()).toBeFalse();
+    });
+
+    it('forwards src query parameter as source in resolveFleetChips and strips src from the URL', async () => {
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [
+            {valid: {pillKey: 'Type', pillCondition: 'AndroidRealDevice'}},
+          ],
+          groupByChips: [{valid: {pillKey: 'Status', displayName: 'Status'}}],
+        }),
+      );
+      const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+
+      await createStoreAt({
+        'f': 'device_field::type~AndroidRealDevice',
+        'gb': 'device_field::status',
+        'src': 'alloc_diag',
+      });
+      await flushAsync();
+
+      expect(mockSearchService.resolveFleetChips).toHaveBeenCalledOnceWith({
+        filters: [
+          {
+            key: 'device_field::type',
+            simple: {
+              values: [{value: 'AndroidRealDevice'}],
+              negated: false,
+            },
+          },
+        ],
+        groupByKeys: ['device_field::status'],
+        entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+        fleet: Fleet.FLEET_SELF,
+        source: 'alloc_diag',
+      });
+      expect(navigateSpy).toHaveBeenCalledWith(
+        [],
+        jasmine.objectContaining({
+          queryParams: {'src': null},
+          replaceUrl: true,
+        }),
+      );
+      expect(router.url).not.toContain('src=');
+    });
+
+    it('keeps src in the URL when resolveFleetChips fails with an RPC error', async () => {
+      mockSearchService.resolveFleetChips.and.returnValue(
+        throwError(() => new Error('RPC failed')),
+      );
+      const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+
+      await createStoreAt({
+        'f': 'device_field::type~AndroidRealDevice',
+        'gb': 'device_field::status',
+        'src': 'alloc_diag',
+      });
+      await flushAsync();
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+      expect(router.url).toContain('src=alloc_diag');
+    });
+
+    it('forwards src query parameter and strips src even when f and gb are absent', async () => {
+      mockSearchService.resolveFleetChips.and.returnValue(of({}));
+      const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+
+      await createStoreAt({'src': 'cli'});
+      await flushAsync();
+
+      expect(mockSearchService.resolveFleetChips).toHaveBeenCalledOnceWith({
+        filters: undefined,
+        groupByKeys: undefined,
+        entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+        fleet: Fleet.FLEET_SELF,
+        source: 'cli',
+      });
+      expect(navigateSpy).toHaveBeenCalledWith(
+        [],
+        jasmine.objectContaining({
+          queryParams: {'src': null},
+          replaceUrl: true,
+        }),
+      );
+      expect(router.url).not.toContain('src=');
     });
   });
 });

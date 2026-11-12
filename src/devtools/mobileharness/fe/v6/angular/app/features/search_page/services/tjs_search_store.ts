@@ -514,8 +514,6 @@ export class TjsSearchStore extends SearchPageStore {
           },
         ),
       ),
-      // TODO: Uniformly handle backend RPC error / 500 / offline display in search UI.
-      catchError(() => of([])),
     );
   }
 
