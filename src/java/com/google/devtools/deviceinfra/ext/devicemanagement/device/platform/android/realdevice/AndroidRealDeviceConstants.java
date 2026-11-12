@@ -147,6 +147,7 @@ public class AndroidRealDeviceConstants {
           .add("PIXEL_EXPERIENCE")
           .add("android\\.hardware\\.nfc$")
           .add("android\\.hardware\\.sensor\\.hinge_angle$")
+          .add("amazon\\.hardware\\.fire_tv$")
           .build();
 
   /** The free external storage space threshold of alert. */
