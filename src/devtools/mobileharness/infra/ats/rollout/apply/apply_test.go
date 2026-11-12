@@ -93,6 +93,25 @@ func TestApplyOrderAndErrors(t *testing.T) {
 			wantIDs: []string{"a-row1", "a-row2", "c-row1", "a-mark1", "b-mark1", "c-mark1", "a-mark2", "c-mark2", "a-mark3"},
 		},
 		{
+			name: "cleanup last, round-robin across decisions",
+			decisions: []Decision{
+				{Cleanup: []Sequence{{create("a-delete1")}, {create("a-delete2")}, {create("a-delete3")}}},
+				{Row: []Sequence{{create("b-row1")}}, Bookkeeping: []Sequence{{create("b-mark1")}, {create("b-mark2")}}, Cleanup: []Sequence{{create("b-delete1")}}},
+				{Row: []Sequence{{create("c-row1")}}},
+			},
+			wantIDs: []string{"b-row1", "c-row1", "b-mark1", "b-mark2", "a-delete1", "b-delete1", "a-delete2", "a-delete3"},
+		},
+		{
+			name: "a failed cleanup write does not stop the other cleanup writes",
+			decisions: []Decision{
+				{Cleanup: []Sequence{{create("delete1")}, {create("delete2")}}},
+			},
+			fail:          map[string]error{"delete1": errWrite},
+			wantIDs:       []string{"delete1", "delete2"},
+			wantErrs:      1,
+			wantErrTarget: errWrite,
+		},
+		{
 			name: "an error stops its own sequence only",
 			decisions: []Decision{
 				{Row: []Sequence{{create("a-row1"), create("a-row2")}}, Bookkeeping: []Sequence{{create("a-mark1")}}},

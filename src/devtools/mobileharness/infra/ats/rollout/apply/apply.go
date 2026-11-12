@@ -6,9 +6,9 @@
 // A run's decision is a set of independent write sequences (see "Reconciler
 // contract" in node_auto_rollout_concepts.md). The matched row of a decision
 // table contributes one sequence for each set of writes that must happen in
-// order, and each bookkeeping write is a sequence of its own. A failed write
-// stops its own sequence only, so a write that loses a race with an agent
-// never starves the rest of the run.
+// order, and each bookkeeping write and each cleanup write is a sequence of
+// its own. A failed write stops its own sequence only, so a write that loses
+// a race with an agent never starves the rest of the run.
 package apply
 
 import (
@@ -76,6 +76,11 @@ type Decision struct {
 	// Bookkeeping holds one sequence per mark that is made on every run,
 	// whatever the row decides (OFFLINE, LOST, down_after_done_at).
 	Bookkeeping []Sequence
+	// Cleanup holds one sequence per record to remove after the work is
+	// over (each slot of a concluded rollout). Nothing waits for a cleanup
+	// write except the end of the rollout it belongs to, so cleanup has the
+	// lowest priority.
+	Cleanup []Sequence
 }
 
 // Writer is the write half of store.Store.
@@ -115,11 +120,13 @@ type Result struct {
 // Apply applies the decisions to w and reports what it did. The decisions are
 // in the order their groups are visited.
 //
-// The Row sequences are applied first, then the Bookkeeping sequences, each
-// kind round-robin across decisions: the first sequence of each decision,
-// then the second of each, and so on. So a burst of marks delays only marks,
-// and one group with many slots to close does not hold back another group's
-// action. The time budget is spent in that order.
+// The Row sequences are applied first, then the Bookkeeping sequences, then
+// the Cleanup sequences, each kind round-robin across decisions: the first
+// sequence of each decision, then the second of each, and so on. So a burst
+// of marks delays only marks and cleanup, deleting the slots of a large
+// rollout delays nothing but the end of that rollout, and one group with
+// many slots to close does not hold back another group's action. The time
+// budget is spent in that order.
 //
 // A failed write stops its sequence and no other. Apply returns no error:
 // every failure is left to the next run, which reads the store again.
@@ -132,6 +139,7 @@ func Apply(ctx context.Context, w Writer, decisions []Decision, opts Options) Re
 	a := applier{w: w, writeTimeout: opts.WriteTimeout}
 	a.roundRobin(ctx, decisions, func(d Decision) []Sequence { return d.Row })
 	a.roundRobin(ctx, decisions, func(d Decision) []Sequence { return d.Bookkeeping })
+	a.roundRobin(ctx, decisions, func(d Decision) []Sequence { return d.Cleanup })
 	return a.res
 }
 
