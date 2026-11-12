@@ -24,14 +24,20 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.CopyLabConfigsResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -63,6 +69,14 @@ public interface DeviceConfigStub {
   ListenableFuture<GetLabConfigResponse> getLabConfigAsync(
       GetLabConfigRequest request, boolean useClientRpcAuthority);
 
+  /** Gets the global configuration. Only supported in ATS. */
+  GetGlobalConfigResponse getGlobalConfig(GetGlobalConfigRequest request)
+      throws RpcExceptionWithErrorId;
+
+  /** Gets the global configuration asynchronously. Only supported in ATS. */
+  ListenableFuture<GetGlobalConfigResponse> getGlobalConfigAsync(
+      GetGlobalConfigRequest request, boolean useClientRpcAuthority);
+
   /** Deletes a list of configurations of devices. */
   DeleteDeviceConfigsResponse deleteDeviceConfigs(DeleteDeviceConfigsRequest request)
       throws RpcExceptionWithErrorId;
@@ -70,6 +84,15 @@ public interface DeviceConfigStub {
   /** Deletes the configuration of a lab. */
   DeleteLabConfigResponse deleteLabConfig(DeleteLabConfigRequest request)
       throws RpcExceptionWithErrorId;
+
+  /** Deletes the global configuration. Only supported in ATS. */
+  @CanIgnoreReturnValue
+  DeleteGlobalConfigResponse deleteGlobalConfig(DeleteGlobalConfigRequest request)
+      throws RpcExceptionWithErrorId;
+
+  /** Deletes the global configuration asynchronously. Only supported in ATS. */
+  ListenableFuture<DeleteGlobalConfigResponse> deleteGlobalConfigAsync(
+      DeleteGlobalConfigRequest request, boolean useClientRpcAuthority);
 
   /** Updates a list of configurations of devices. */
   @CanIgnoreReturnValue
@@ -103,6 +126,23 @@ public interface DeviceConfigStub {
   /** Updates the configuration of a lab asynchronously. */
   ListenableFuture<UpdateLabConfigResponse> updateLabConfigAsync(
       UpdateLabConfigRequest request, boolean useClientRpcAuthority);
+
+  /** Updates the global configuration. Only supported in ATS. */
+  @CanIgnoreReturnValue
+  UpdateGlobalConfigResponse updateGlobalConfig(UpdateGlobalConfigRequest request)
+      throws RpcExceptionWithErrorId;
+
+  /** Updates the global configuration. Only supported in ATS. */
+  @CanIgnoreReturnValue
+  default UpdateGlobalConfigResponse updateGlobalConfig(
+      UpdateGlobalConfigRequest request, @Nullable String impersonationUser)
+      throws RpcExceptionWithErrorId {
+    return updateGlobalConfig(request);
+  }
+
+  /** Updates the global configuration asynchronously. Only supported in ATS. */
+  ListenableFuture<UpdateGlobalConfigResponse> updateGlobalConfigAsync(
+      UpdateGlobalConfigRequest request, boolean useClientRpcAuthority);
 
   /** Copies the configuration of a device to multiple ones. */
   CopyDeviceConfigsResponse copyDeviceConfigs(CopyDeviceConfigsRequest request)

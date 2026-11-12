@@ -21,14 +21,20 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceGrpc.DeviceConfigServiceImplBase;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigResponse;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.service.DeviceConfigServiceImpl;
@@ -110,5 +116,40 @@ public final class DeviceConfigGrpcImpl extends DeviceConfigServiceImplBase {
         deviceConfigServiceImpl::deleteLabConfig,
         DeviceConfigServiceGrpc.getServiceDescriptor(),
         DeviceConfigServiceGrpc.getDeleteLabConfigMethod());
+  }
+
+  @Override
+  public void getGlobalConfig(
+      GetGlobalConfigRequest request, StreamObserver<GetGlobalConfigResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        deviceConfigServiceImpl::getGlobalConfig,
+        DeviceConfigServiceGrpc.getServiceDescriptor(),
+        DeviceConfigServiceGrpc.getGetGlobalConfigMethod());
+  }
+
+  @Override
+  public void updateGlobalConfig(
+      UpdateGlobalConfigRequest request,
+      StreamObserver<UpdateGlobalConfigResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        deviceConfigServiceImpl::updateGlobalConfig,
+        DeviceConfigServiceGrpc.getServiceDescriptor(),
+        DeviceConfigServiceGrpc.getUpdateGlobalConfigMethod());
+  }
+
+  @Override
+  public void deleteGlobalConfig(
+      DeleteGlobalConfigRequest request,
+      StreamObserver<DeleteGlobalConfigResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        deviceConfigServiceImpl::deleteGlobalConfig,
+        DeviceConfigServiceGrpc.getServiceDescriptor(),
+        DeviceConfigServiceGrpc.getDeleteGlobalConfigMethod());
   }
 }

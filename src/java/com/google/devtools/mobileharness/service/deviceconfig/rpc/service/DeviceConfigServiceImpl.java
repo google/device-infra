@@ -22,26 +22,39 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceLoc
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceLocatorConfigPair;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.GlobalConfig;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.service.deviceconfig.storage.StorageClient;
+import com.google.protobuf.FieldMask;
+import com.google.protobuf.util.FieldMaskUtil;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** Implementation of the DeviceConfigService. */
+@Singleton
 public final class DeviceConfigServiceImpl {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final StorageClient storageClient;
+  private final Object globalConfigLock = new Object();
 
   @Inject
   DeviceConfigServiceImpl(StorageClient storageClient) {
@@ -125,5 +138,52 @@ public final class DeviceConfigServiceImpl {
       throws MobileHarnessException {
     storageClient.deleteLabConfig(request.getLabHost());
     return DeleteLabConfigResponse.getDefaultInstance();
+  }
+
+  public GetGlobalConfigResponse getGlobalConfig(GetGlobalConfigRequest request)
+      throws MobileHarnessException {
+    synchronized (globalConfigLock) {
+      return storageClient
+          .getGlobalConfig()
+          .map(config -> GetGlobalConfigResponse.newBuilder().setGlobalConfig(config).build())
+          .orElse(GetGlobalConfigResponse.getDefaultInstance());
+    }
+  }
+
+  public UpdateGlobalConfigResponse updateGlobalConfig(UpdateGlobalConfigRequest request)
+      throws MobileHarnessException {
+    GlobalConfig globalConfig = request.getGlobalConfig();
+    FieldMask updateMask = request.getUpdateMask();
+    boolean hasNonEmptyMask = request.hasUpdateMask() && !updateMask.getPathsList().isEmpty();
+    if (hasNonEmptyMask && !FieldMaskUtil.isValid(GlobalConfig.class, updateMask)) {
+      throw new MobileHarnessException(
+          InfraErrorId.GLOBAL_CONFIG_ILLEGAL,
+          String.format("Invalid update_mask for GlobalConfig: %s", updateMask));
+    }
+    synchronized (globalConfigLock) {
+      if (hasNonEmptyMask) {
+        GlobalConfig.Builder mergedConfig =
+            storageClient.getGlobalConfig().orElse(GlobalConfig.getDefaultInstance()).toBuilder();
+        FieldMaskUtil.merge(
+            updateMask,
+            globalConfig,
+            mergedConfig,
+            new FieldMaskUtil.MergeOptions()
+                .setReplaceRepeatedFields(true)
+                .setReplaceMessageFields(true)
+                .setReplacePrimitiveFields(true));
+        globalConfig = mergedConfig.build();
+      }
+      storageClient.upsertGlobalConfig(globalConfig);
+    }
+    return UpdateGlobalConfigResponse.getDefaultInstance();
+  }
+
+  public DeleteGlobalConfigResponse deleteGlobalConfig(DeleteGlobalConfigRequest request)
+      throws MobileHarnessException {
+    synchronized (globalConfigLock) {
+      storageClient.deleteGlobalConfig();
+    }
+    return DeleteGlobalConfigResponse.getDefaultInstance();
   }
 }

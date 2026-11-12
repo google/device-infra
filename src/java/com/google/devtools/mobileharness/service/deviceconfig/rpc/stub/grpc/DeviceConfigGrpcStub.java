@@ -30,18 +30,25 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.CopyLabConfigsResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateGlobalConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigResponse;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Inject;
 
 /** Blocking GRPC stub class for talking to device config service. */
@@ -115,6 +122,30 @@ final class DeviceConfigGrpcStub implements DeviceConfigStub {
   }
 
   @Override
+  public GetGlobalConfigResponse getGlobalConfig(GetGlobalConfigRequest request)
+      throws GrpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        deviceConfigStub::getGlobalConfig,
+        request,
+        InfraErrorId.DEVICE_CONFIG_RPC_STUB_GET_GLOBAL_CONFIG_ERROR,
+        "Failed to get global config");
+  }
+
+  @Override
+  public ListenableFuture<GetGlobalConfigResponse> getGlobalConfigAsync(
+      GetGlobalConfigRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return GrpcStubUtil.invokeAsync(
+        deviceConfigServiceFutureStub::getGlobalConfig,
+        request,
+        InfraErrorId.DEVICE_CONFIG_RPC_STUB_GET_GLOBAL_CONFIG_ERROR,
+        "Failed to get global config");
+  }
+
+  @Override
   public DeleteDeviceConfigsResponse deleteDeviceConfigs(DeleteDeviceConfigsRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
@@ -132,6 +163,31 @@ final class DeviceConfigGrpcStub implements DeviceConfigStub {
         request,
         InfraErrorId.DEVICE_CONFIG_RPC_STUB_DELETE_LAB_CONFIG_ERROR,
         String.format("Failed to delete config for lab %s", request.getLabHost()));
+  }
+
+  @CanIgnoreReturnValue
+  @Override
+  public DeleteGlobalConfigResponse deleteGlobalConfig(DeleteGlobalConfigRequest request)
+      throws GrpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        deviceConfigStub::deleteGlobalConfig,
+        request,
+        InfraErrorId.DEVICE_CONFIG_RPC_STUB_DELETE_GLOBAL_CONFIG_ERROR,
+        "Failed to delete global config");
+  }
+
+  @Override
+  public ListenableFuture<DeleteGlobalConfigResponse> deleteGlobalConfigAsync(
+      DeleteGlobalConfigRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return GrpcStubUtil.invokeAsync(
+        deviceConfigServiceFutureStub::deleteGlobalConfig,
+        request,
+        InfraErrorId.DEVICE_CONFIG_RPC_STUB_DELETE_GLOBAL_CONFIG_ERROR,
+        "Failed to delete global config");
   }
 
   @Override
@@ -190,6 +246,31 @@ final class DeviceConfigGrpcStub implements DeviceConfigStub {
         request,
         InfraErrorId.DEVICE_CONFIG_RPC_STUB_UPDATE_LAB_CONFIG_ERROR,
         String.format("Failed to update config for lab %s", request.getLabConfig().getHostName()));
+  }
+
+  @CanIgnoreReturnValue
+  @Override
+  public UpdateGlobalConfigResponse updateGlobalConfig(UpdateGlobalConfigRequest request)
+      throws GrpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        deviceConfigStub::updateGlobalConfig,
+        request,
+        InfraErrorId.DEVICE_CONFIG_RPC_STUB_UPDATE_GLOBAL_CONFIG_ERROR,
+        "Failed to update global config");
+  }
+
+  @Override
+  public ListenableFuture<UpdateGlobalConfigResponse> updateGlobalConfigAsync(
+      UpdateGlobalConfigRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return GrpcStubUtil.invokeAsync(
+        deviceConfigServiceFutureStub::updateGlobalConfig,
+        request,
+        InfraErrorId.DEVICE_CONFIG_RPC_STUB_UPDATE_GLOBAL_CONFIG_ERROR,
+        "Failed to update global config");
   }
 
   @Override
