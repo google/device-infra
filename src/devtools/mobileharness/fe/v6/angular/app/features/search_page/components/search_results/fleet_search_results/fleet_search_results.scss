@@ -306,8 +306,8 @@ mat-card.results-area.grouped-mode,
     )
   );
 
-  min-width: 240px;
-  max-width: 360px;
+  min-width: 280px;
+  max-width: 380px;
   overflow: hidden;
   border: 1px solid #c4c7c5;
 
@@ -363,6 +363,48 @@ mat-card.results-area.grouped-mode,
     height: 38px;
     padding: 0 16px;
     font-size: 0.8125rem;
+
+    .mat-mdc-menu-item-text {
+      width: 100%;
+    }
+  }
+
+  .dim-menu-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .dim-raw-key {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: #1f1f1f;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dim-list-badge {
+    flex-shrink: 0;
+    padding: 1px 8px;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 400;
+    line-height: 1rem;
+    letter-spacing: 0.01em;
+  }
+
+  .dim-list-badge-supported {
+    background: #f0f4f9;
+    color: #445e91;
+  }
+
+  .dim-list-badge-required {
+    background: #f7f2fa;
+    color: #6b4c8c;
   }
 
   .menu-empty-message {

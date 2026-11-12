@@ -372,8 +372,6 @@ export enum DimensionList {
 export declare interface ConfigurableDimension {
   /** Dimension name in DeviceConfig (e.g. "recovery", "skip_suw_app", "pool"). */
   dimensionName: string;
-  /** Exact label shown in toolbar menu and dialog header. */
-  displayName: string;
   /** Which dimension list in composite_dimension this entry configures. */
   dimensionList: DimensionList;
 }

@@ -138,10 +138,9 @@ export class BulkConfigDimensionDialog {
     this.dialogData.dimension?.dimensionName ?? '',
   );
 
-  /** Display label derived from curated dimension metadata or custom dimension key/scope. */
+  /** Display label derived from dimension key and scope. */
   readonly displayName = computed<string>(
     () =>
-      this.dialogData.dimension?.displayName ??
       `${this.isRequired ? 'Required' : 'Supported'} Dimension: ${this.dimensionKey()}`,
   );
 

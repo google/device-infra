@@ -38,17 +38,14 @@ public final class FakeBatchDeviceConfigPolicy implements BatchDeviceConfigPolic
       ImmutableList.of(
           ConfigurableDimension.newBuilder()
               .setDimensionName("pool")
-              .setDisplayName("Required Dimension: pool")
               .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
               .build(),
           ConfigurableDimension.newBuilder()
               .setDimensionName("label")
-              .setDisplayName("label")
               .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
               .build(),
           ConfigurableDimension.newBuilder()
               .setDimensionName("cluster")
-              .setDisplayName("cluster")
               .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
               .build());
 

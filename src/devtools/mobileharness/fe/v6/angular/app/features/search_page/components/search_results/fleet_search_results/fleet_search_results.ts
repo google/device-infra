@@ -19,6 +19,7 @@ import {MatSelectModule} from '@angular/material/select';
 import {MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
+import {DimensionList} from '../../../../../core/models/device_config_models';
 import {Column} from '../../../../../core/models/search';
 import {useCopyToClipboard} from '../../../../../shared/composables/copy';
 import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
@@ -74,6 +75,7 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
 export class FleetSearchResultsComponent {
   readonly store = inject(FleetSearchStore);
   readonly bulkConfig = useBulkConfigActions();
+  readonly DimensionList = DimensionList;
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   private readonly doc = inject(DOCUMENT);

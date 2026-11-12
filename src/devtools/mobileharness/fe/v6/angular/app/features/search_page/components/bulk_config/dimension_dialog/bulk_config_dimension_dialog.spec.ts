@@ -47,7 +47,6 @@ describe('BulkConfigDimensionDialog', () => {
     ],
     dimension: {
       dimensionName: 'recovery',
-      displayName: 'recovery',
       dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
     },
   };
@@ -160,7 +159,9 @@ describe('BulkConfigDimensionDialog', () => {
     it('initializes on values phase and loads value suggestions without pre-filling target values', () => {
       expect(component.wizard.phase()).toBe('values');
       expect(component.isCustom).toBeFalse();
-      expect(component.headline()).toBe('Configure recovery');
+      expect(component.headline()).toBe(
+        'Configure Supported Dimension: recovery',
+      );
       expect(component.supportText()).toContain('Step 1 of 2');
 
       expect(
@@ -395,7 +396,9 @@ describe('BulkConfigDimensionDialog', () => {
       component.apply();
 
       expect(component.wizard.viewMode()).toBe('applying');
-      expect(component.headline()).toBe('Applying recovery');
+      expect(component.headline()).toBe(
+        'Applying Supported Dimension: recovery',
+      );
       expect(component.supportText()).toBe('');
 
       applySubject.next({errors: {}});
@@ -410,14 +413,16 @@ describe('BulkConfigDimensionDialog', () => {
         target: {valueList: {values: ['true']}},
       });
       expect(component.wizard.viewMode()).toBe('success');
-      expect(component.headline()).toBe('recovery updated');
+      expect(component.headline()).toBe(
+        'Supported Dimension: recovery updated',
+      );
       detectChanges();
       expect(
         document.body.querySelector('.bw-success-support')?.textContent,
       ).toBe('1 device already matched; 1 device read-only.');
       const successCard = document.body.querySelector('.bw-success-card');
       expect(successCard?.querySelector('.bw-new-label')?.textContent).toBe(
-        'recovery',
+        'Supported Dimension: recovery',
       );
       expect(successCard?.textContent).toContain('true');
 
@@ -449,7 +454,7 @@ describe('BulkConfigDimensionDialog', () => {
       const clearSuccessCard = document.body.querySelector('.bw-success-card');
       expect(
         clearSuccessCard?.querySelector('.bw-new-label')?.textContent,
-      ).toBe('recovery');
+      ).toBe('Supported Dimension: recovery');
       expect(clearSuccessCard?.textContent).toContain('Not set');
       expect(clearSuccessCard?.textContent).toContain(
         'Removed from updated devices',
@@ -473,7 +478,9 @@ describe('BulkConfigDimensionDialog', () => {
       component.apply();
 
       expect(component.wizard.viewMode()).toBe('errors');
-      expect(component.headline()).toBe('Configure recovery');
+      expect(component.headline()).toBe(
+        'Configure Supported Dimension: recovery',
+      );
       expect(component.supportText()).toBe('Apply completed with errors');
       expect(component.wizard.applyErrors()).toEqual([
         {deviceId: 'device-3', reason: 'Locked by system policy'},
@@ -501,7 +508,7 @@ describe('BulkConfigDimensionDialog', () => {
       );
       const bannerEl = document.body.querySelector('.bw-apply-error-banner');
       expect(bannerEl?.textContent).toContain(
-        'Failed to apply recovery update',
+        'Failed to apply Supported Dimension: recovery update',
       );
       expect(bannerEl?.textContent).toContain(
         'Deadline exceeded calling LabServer',
@@ -543,7 +550,7 @@ describe('BulkConfigDimensionDialog', () => {
       expect(clearBanner).not.toBeNull();
       expect(clearBanner?.textContent).toContain('Not set');
       expect(clearBanner?.textContent).toContain(
-        'Removes recovery from the selected devices',
+        'Removes Supported Dimension: recovery from the selected devices',
       );
 
       const setValuesBtn = clearBanner?.querySelector(
@@ -640,12 +647,12 @@ describe('BulkConfigDimensionDialog', () => {
 
       expect(component.wizard.reviewSummary().willUpdateCount).toBe(0);
       expect(component.nothingToUpdateMessage()).toContain(
-        'already have this recovery value',
+        'already have this Supported Dimension: recovery value',
       );
 
       component.clearTargetDimension();
       expect(component.nothingToUpdateMessage()).toContain(
-        'already have recovery unset',
+        'already have Supported Dimension: recovery unset',
       );
     });
   });

@@ -127,7 +127,6 @@ describe('FleetSearchResultsComponent', () => {
         dimensions: [
           {
             dimensionName: 'recovery',
-            displayName: 'recovery',
             dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
           },
         ],
@@ -341,7 +340,7 @@ describe('FleetSearchResultsComponent', () => {
   });
 
   describe('Toolbar Selections', () => {
-    it('shows Configure Wi-Fi and Configure Dimension buttons only for devices', () => {
+    it('shows Configure Wi-Fi and Configure buttons only for devices', () => {
       mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
       mockStore.entity.set('devices');
       fixture.detectChanges();
@@ -354,8 +353,10 @@ describe('FleetSearchResultsComponent', () => {
       );
       expect(buttonTexts.some((t) => t.includes('Configure Wi-Fi'))).toBeTrue();
       expect(
-        buttonTexts.some((t) => t.includes('Configure Dimension')),
-      ).toBeTrue();
+        fixture.debugElement.query(
+          By.css('button[title="Configure device dimensions"]'),
+        ),
+      ).toBeTruthy();
 
       mockStore.entity.set('hosts');
       fixture.detectChanges();
@@ -369,8 +370,10 @@ describe('FleetSearchResultsComponent', () => {
         hostButtonTexts.some((t) => t.includes('Configure Wi-Fi')),
       ).toBeFalse();
       expect(
-        hostButtonTexts.some((t) => t.includes('Configure Dimension')),
-      ).toBeFalse();
+        fixture.debugElement.query(
+          By.css('button[title="Configure device dimensions"]'),
+        ),
+      ).toBeNull();
     });
 
     it('does not open dialog when entity is hosts', () => {
@@ -615,8 +618,8 @@ describe('FleetSearchResultsComponent', () => {
       const wifiBtnLoading = loadingButtons.find((b) =>
         b.nativeElement.textContent.includes('Configure Wi-Fi'),
       );
-      const configBtnLoading = loadingButtons.find((b) =>
-        b.nativeElement.textContent.includes('Configure Dimension'),
+      const configBtnLoading = fixture.debugElement.query(
+        By.css('button[title="Configure device dimensions"]'),
       );
       expect(wifiBtnLoading?.nativeElement.disabled).toBeTrue();
       expect(configBtnLoading?.nativeElement.disabled).toBeTrue();
@@ -652,8 +655,8 @@ describe('FleetSearchResultsComponent', () => {
       const wifiBtnLoaded = loadedButtons.find((b) =>
         b.nativeElement.textContent.includes('Configure Wi-Fi'),
       );
-      const configBtnLoaded = loadedButtons.find((b) =>
-        b.nativeElement.textContent.includes('Configure Dimension'),
+      const configBtnLoaded = fixture.debugElement.query(
+        By.css('button[title="Configure device dimensions"]'),
       );
       expect(wifiBtnLoaded?.nativeElement.disabled).toBeFalse();
       expect(configBtnLoaded?.nativeElement.disabled).toBeFalse();
@@ -744,7 +747,6 @@ describe('FleetSearchResultsComponent', () => {
           dimensions: [
             {
               dimensionName: 'recovery',
-              displayName: 'recovery',
               dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
             },
           ],
@@ -777,7 +779,6 @@ describe('FleetSearchResultsComponent', () => {
 
       const dim: ConfigurableDimension = {
         dimensionName: 'recovery',
-        displayName: 'recovery',
         dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
       };
 
@@ -828,7 +829,6 @@ describe('FleetSearchResultsComponent', () => {
       expect(mockStore.clearSelection).toHaveBeenCalled();
       expect(mockStore.executeSearch).toHaveBeenCalled();
     });
-
     it('renders Custom Supported/Required Dimension menu items without icons when allowCustom is true', async () => {
       mockStore.selectedItems.set(toSelectedMap(['dev-1']));
       fixture.detectChanges();
@@ -859,6 +859,77 @@ describe('FleetSearchResultsComponent', () => {
         'Custom Supported Dimension…',
         'Custom Required Dimension…',
       ]);
+    });
+
+    it('renders dimensionName and compact Supported/Required Dimension tonal pill badges in configure dropdown menu', async () => {
+      mockConfigService.getConfigurableDimensions.and.returnValue(
+        of({
+          enabled: true,
+          dimensions: [
+            {
+              dimensionName: 'skip_suw_app',
+              dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+            },
+            {
+              dimensionName: 'pool',
+              dimensionList: DimensionList.DIMENSION_LIST_REQUIRED,
+            },
+          ],
+          allowCustomDimensions: true,
+        }),
+      );
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const configBtn = fixture.debugElement.query(
+        By.css('button[title="Configure device dimensions"]'),
+      );
+      expect(configBtn).toBeTruthy();
+      configBtn.nativeElement.click();
+      fixture.detectChanges();
+
+      const itemButtons = Array.from(
+        document.querySelectorAll(
+          '.configure-menu-items button[mat-menu-item]',
+        ),
+      );
+      expect(itemButtons.length).toBe(2);
+
+      const rawKeys = itemButtons.map((btn) =>
+        btn.querySelector('.dim-raw-key')?.textContent?.trim(),
+      );
+      const badges = itemButtons.map((btn) =>
+        btn.querySelector('.dim-list-badge')?.textContent?.trim(),
+      );
+
+      expect(
+        itemButtons.map((btn) => btn.querySelector('.dim-display-name')),
+      ).toEqual([null, null]);
+      expect(rawKeys).toEqual(['skip_suw_app', 'pool']);
+      expect(badges).toEqual(['Supported Dimension', 'Required Dimension']);
+      expect(
+        itemButtons[0]
+          .querySelector('.dim-list-badge')
+          ?.classList.contains('dim-list-badge-supported'),
+      ).toBeTrue();
+      expect(
+        itemButtons[1]
+          .querySelector('.dim-list-badge')
+          ?.classList.contains('dim-list-badge-required'),
+      ).toBeTrue();
+
+      const footerButtons = Array.from(
+        document.querySelectorAll(
+          '.configure-menu-footer button[mat-menu-item]',
+        ),
+      );
+      expect(footerButtons.length).toBe(2);
+      expect(footerButtons.map((btn) => btn.querySelector('mat-icon'))).toEqual(
+        [null, null],
+      );
     });
   });
 

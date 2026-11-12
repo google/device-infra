@@ -308,7 +308,7 @@
         } @else {
           <mat-icon class="material-symbols-outlined">tune</mat-icon>
         }
-        Configure Dimension
+        Configure
         <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
       </button>
       <mat-menu #configureMenu="matMenu" class="configure-dropdown-menu">
@@ -332,9 +332,17 @@
           </div>
         } @else {
           <div class="configure-menu-items">
-            @for (dim of dimConfig.dimensions; track dim.dimensionName) {
+            @for (dim of dimConfig.dimensions; track dim.dimensionList + ':' + dim.dimensionName) {
+              @let isRequired = dim.dimensionList === DimensionList.DIMENSION_LIST_REQUIRED;
               <button mat-menu-item (click)="bulkConfig.openDimensionDialog(dim)">
-                <span>{{ dim.displayName }}</span>
+                <span class="dim-menu-item-row">
+                  <span class="dim-raw-key">{{ dim.dimensionName }}</span>
+                  <span
+                    class="dim-list-badge"
+                    [class.dim-list-badge-required]="isRequired"
+                    [class.dim-list-badge-supported]="!isRequired"
+                  >{{ isRequired ? 'Required Dimension' : 'Supported Dimension' }}</span>
+                </span>
               </button>
             } @empty {
               @if (!dimConfig.allowCustom) {

@@ -312,7 +312,6 @@ describe('HttpConfigService', () => {
       dimensions: [
         {
           dimensionName: 'recovery',
-          displayName: 'recovery',
           dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
         },
       ],

@@ -436,27 +436,22 @@ export class FakeConfigService extends ConfigService {
     const dimensions: ConfigurableDimension[] = [
       {
         dimensionName: 'recovery',
-        displayName: 'recovery',
         dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
       },
       {
         dimensionName: 'skip_suw_app',
-        displayName: 'skip_suw_app',
         dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
       },
       {
         dimensionName: 'pool',
-        displayName: 'pool',
         dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
       },
       {
         dimensionName: 'persist_test_harness',
-        displayName: 'persist_test_harness',
         dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
       },
       {
         dimensionName: 'sim_operator',
-        displayName: 'sim_operator',
         dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
       },
     ];

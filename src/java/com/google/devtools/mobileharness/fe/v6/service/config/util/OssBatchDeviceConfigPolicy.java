@@ -32,22 +32,18 @@ public final class OssBatchDeviceConfigPolicy implements BatchDeviceConfigPolicy
       ImmutableList.of(
           ConfigurableDimension.newBuilder()
               .setDimensionName("recovery")
-              .setDisplayName("recovery")
               .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
               .build(),
           ConfigurableDimension.newBuilder()
               .setDimensionName("skip_suw_app")
-              .setDisplayName("skip_suw_app")
               .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
               .build(),
           ConfigurableDimension.newBuilder()
               .setDimensionName("pool")
-              .setDisplayName("Required Dimension: pool")
               .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
               .build(),
           ConfigurableDimension.newBuilder()
               .setDimensionName("persist_test_harness")
-              .setDisplayName("Required Dimension: persist_test_harness")
               .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
               .build());
 

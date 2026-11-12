@@ -410,12 +410,12 @@ enum DeviceConfigChangeStatus {
 
 // Metadata for a configurable dimension in the selection toolbar.
 message ConfigurableDimension {
+  reserved 2;
+  reserved "display_name";
+
   // Dimension name in DeviceConfig (e.g. "recovery", "skip_suw_app", "pool",
   // "persist_test_harness").
   string dimension_name = 1;
-
-  // Exact label shown in the toolbar menu and dialog header.
-  string display_name = 2;
 
   // Which dimension list in composite_dimension this entry configures.
   DimensionList dimension_list = 3;
