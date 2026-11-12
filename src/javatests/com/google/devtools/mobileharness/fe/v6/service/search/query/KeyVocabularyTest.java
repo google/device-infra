@@ -244,6 +244,23 @@ public final class KeyVocabularyTest {
     assertThat(device.discoverableKeys()).contains(batteryStatus);
   }
 
+  @Test
+  public void deviceVocabulary_excludesUnindexedCoreMaskDimensionsFromCatalogFallback() {
+    KeyVocabulary vocabWithCoreInCatalog =
+        new DeviceKeyVocabulary(
+            deviceRegistry,
+            KeyAliasTable.of(deviceRegistry.builtInKeys()),
+            snapshot.index(),
+            ImmutableSet.of("battery_status", "release_version"),
+            curation);
+    DeviceKeyDescriptor releaseVersion = deviceRegistry.dimensionKey("release_version").get();
+    assertThat(releaseVersion.inCoreMask()).isTrue();
+    assertThat(releaseVersion.isOverlay()).isFalse();
+    assertThat(vocabWithCoreInCatalog.discoverableKeys()).contains(batteryStatus);
+    assertThat(vocabWithCoreInCatalog.discoverableKeys()).doesNotContain(releaseVersion);
+    assertThat(vocabWithCoreInCatalog.resolve("release_version")).isEmpty();
+  }
+
   // ---- Discovered names: case and separators are the lab's business, not the user's ----
 
   @Test
@@ -456,12 +473,13 @@ public final class KeyVocabularyTest {
     KeyDescriptor deviceModel = device.describe(DeviceKeys.MODEL.id()).get();
     assertThat(device.titleDisplayName(deviceModel)).isEqualTo("Model");
     assertThat(deviceModel.isLongTail()).isFalse();
-    assertThat(device.isColdCapable(deviceModel)).isTrue();
+    assertThat(device.isColdCapable(deviceModel)).isFalse();
 
     assertThat(device.titleDisplayName(customTag)).isEqualTo("Dimension custom_tag");
     assertThat(device.pillKey(customTag)).isEqualTo("custom_tag");
     assertThat(customTag.bareName()).isEqualTo("custom_tag");
     assertThat(customTag.isLongTail()).isTrue();
+    assertThat(device.isColdCapable(customTag)).isTrue();
 
     assertThat(device.isColdCapable(DeviceKeys.STATUS)).isFalse();
 

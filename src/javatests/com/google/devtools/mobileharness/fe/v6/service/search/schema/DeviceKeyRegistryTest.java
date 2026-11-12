@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -100,8 +101,55 @@ public final class DeviceKeyRegistryTest {
   @Test
   public void builtInKeysAreNotLongTail() {
     assertThat(registry.getKey("device_field::uuid").get().isLongTail()).isFalse();
+    assertThat(registry.getKey("device_field::uuid").get().inCoreMask()).isFalse();
     assertThat(registry.getKey("dimension::model").get().isLongTail()).isFalse();
+    assertThat(registry.getKey("dimension::model").get().inCoreMask()).isTrue();
+    assertThat(registry.getKey("dimension::model").get().isOverlay()).isFalse();
     assertThat(registry.getKey("host_field::host_name").get().isLongTail()).isFalse();
+    assertThat(registry.getKey("host_field::host_name").get().isOverlay()).isFalse();
+  }
+
+  @Test
+  public void dimensionsInCoreMask_stayLongTailForPresentation_butAreNotOverlays() {
+    // release_version is fetched in the core mask by DeviceKeys.VERSION: it remains a long-tail
+    // dimension for UI display/catalog curation, but isOverlay() is false so it never triggers an
+    // on-demand pull.
+    DeviceKeyDescriptor releaseVersion = registry.getKey("dimension::release_version").get();
+    assertThat(releaseVersion.isLongTail()).isTrue();
+    assertThat(releaseVersion.inCoreMask()).isTrue();
+    assertThat(releaseVersion.isOverlay()).isFalse();
+
+    // Dimension names keep exact lab-reported casing and whitespace so mixed-version controllers
+    // whose DimensionsMask is exact-case still trigger an on-demand pull for case/padded variants.
+    DeviceKeyDescriptor upperModel = registry.getKey("dimension::Model").get();
+    assertThat(upperModel.id()).isEqualTo("dimension::Model");
+    assertThat(upperModel.isLongTail()).isTrue();
+    assertThat(upperModel.inCoreMask()).isFalse();
+    assertThat(upperModel.isOverlay()).isTrue();
+
+    DeviceKeyDescriptor paddedRelease = registry.getKey("dimension::release_version ").get();
+    assertThat(paddedRelease.inCoreMask()).isFalse();
+    assertThat(paddedRelease.isOverlay()).isTrue();
+
+    // A dimension absent from the core mask remains an on-demand overlay.
+    DeviceKeyDescriptor carrier = registry.getKey("dimension::carrier").get();
+    assertThat(carrier.isLongTail()).isTrue();
+    assertThat(carrier.inCoreMask()).isFalse();
+    assertThat(carrier.isOverlay()).isTrue();
+  }
+
+  @Test
+  public void constructor_rejectsInvalidPreIndexedDimensionNames() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new DeviceKeyRegistry(ImmutableList.of(), ImmutableSet.of("")) {});
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new DeviceKeyRegistry(ImmutableList.of(), ImmutableSet.of(" pool")) {});
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new DeviceKeyRegistry(ImmutableList.of(), ImmutableSet.of("subdevice_dimensions")) {});
   }
 
   @Test

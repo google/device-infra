@@ -215,7 +215,8 @@ public final class FleetFilterKeyCatalogerTest {
   public void deviceSearch_filtersCategoriesAndIncludesCatalogDimensionsWithCoverage() {
     DimensionCatalogStore store = new DimensionCatalogStore();
     store.setDimensionCounts(
-        Fleet.FLEET_SELF, ImmutableMap.of("custom_catalog_dim", 0, "counted_catalog_dim", 25));
+        Fleet.FLEET_SELF,
+        ImmutableMap.of("custom_catalog_dim", 0, "counted_catalog_dim", 25, "release_version", 10));
     FleetFilterKeyCataloger customCataloger = new FleetFilterKeyCataloger(store);
 
     FleetFilterKeyCatalogResponse response =
@@ -236,6 +237,15 @@ public final class FleetFilterKeyCatalogerTest {
     assertThat(uncountedEntry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
     assertThat(uncountedEntry.getMetadata().getKeyDisplayName())
         .isEqualTo("Dimension custom_catalog_dim");
+
+    // release_version is in the core mask (inCoreMask() == true, isOverlay() == false) and has 0
+    // carrying devices in the snapshot, so stale DimensionCatalogStore entries must not resurrect
+    // it.
+    FleetFilterKeyCatalogResponse coreMaskResponse =
+        customCataloger.getFilterKeyCatalog(
+            deviceCorpus,
+            FleetFilterKeyCatalogRequest.newBuilder().setQuery("release_version").build());
+    assertThat(coreMaskResponse.getSectionsList()).isEmpty();
   }
 
   @Test

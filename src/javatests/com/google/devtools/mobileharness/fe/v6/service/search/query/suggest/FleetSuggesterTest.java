@@ -888,8 +888,14 @@ public final class FleetSuggesterTest {
     assertThat(minted.getMainText(0).getText()).isEqualTo("Dimension brand_new_dim");
 
     // An unindexed built-in key (SDK_VERSION has 0 devices in this snapshot and isLongTail=false)
-    // is not a cold overlay, so it is not offered for grouping.
+    // and an unindexed core-mask dimension (release_version has 0 devices and isOverlay=false)
+    // are not cold overlays, so neither is offered for grouping.
     assertThat(suggester.suggest(corpus, request("group by sdk_version")).getItemsList()).isEmpty();
+    assertThat(suggester.suggest(corpus, request("group by release_version")).getItemsList())
+        .isEmpty();
+    assertThat(suggester.suggest(corpus, request("release_version is 16")).getItemsList())
+        .isEmpty();
+    assertThat(suggester.suggest(corpus, request("release_version is")).getItemsList()).isEmpty();
   }
 
   @Test

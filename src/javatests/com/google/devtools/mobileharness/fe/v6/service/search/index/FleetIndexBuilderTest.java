@@ -151,9 +151,15 @@ public final class FleetIndexBuilderTest {
     assertThat(posting(postings, "host_field::host_name", "lab1")).containsExactly(0, 1).inOrder();
 
     // A device carrying a dimension in both supported and required is counted once per distinct
-    // value in the index.
+    // value in the index and deduplicated in the forward values map, while required-only
+    // dimensions are also indexed.
     assertThat(index.valueCount("dimension::model", "pixel")).isEqualTo(1);
     assertThat(posting(postings, "dimension::model", "pixel")).containsExactly(0);
+    assertThat(snapshot.devices().get(0).values("dimension::model")).containsExactly("pixel");
+    assertThat(snapshot.devices().get(0).values("dimension::req_only")).containsExactly("req_val");
+    assertThat(index.valueCount("dimension::req_only", "req_val")).isEqualTo(1);
+    assertThat(snapshot.devices().get(0).values("dimension::os").get(0))
+        .isSameInstanceAs(snapshot.devices().get(1).values("dimension::os").get(0));
 
     // Sorted distinct values.
     assertThat(index.sortedValues("dimension::os")).containsExactly("android", "ios").inOrder();
@@ -1102,7 +1108,8 @@ public final class FleetIndexBuilderTest {
                     DeviceCompositeDimension.newBuilder()
                         .addSupportedDimension(dimension("os", "android"))
                         .addSupportedDimension(dimension("model", "pixel"))
-                        .addRequiredDimension(dimension("model", "pixel"))))
+                        .addRequiredDimension(dimension("model", "pixel"))
+                        .addRequiredDimension(dimension("req_only", "req_val"))))
         .build();
   }
 

@@ -88,14 +88,6 @@ public final class FleetIndexBuilder {
   public static final String HOST_FIELD_ATS_CONTROLLER_ID =
       HostKeys.PREFIX_HOST_FIELD + "ats_controller_id";
 
-  /**
-   * Dimension names excluded from forward values and indexing. These dimensions carry non-textual
-   * data (e.g. serialized binary protos, base64 blobs) that have no search, filter, column, or
-   * group-by utility and would needlessly bloat the in-memory index.
-   */
-  private static final ImmutableSet<String> EXCLUDED_DIMENSIONS =
-      ImmutableSet.of("subdevice_dimensions");
-
   private static final ImmutableSet<String> IDENTIFIER_KEYS =
       ImmutableSet.of(DeviceKeys.UUID.id(), HostKeys.HOST_NAME.id(), HostKeys.HOST_IP.id());
 
@@ -123,6 +115,8 @@ public final class FleetIndexBuilder {
 
     ConcurrentMap<Thread, Accumulator> accumulatorsByThread = new ConcurrentHashMap<>();
     ConcurrentMap<Thread, Accumulator> hostAccumulatorsByThread = new ConcurrentHashMap<>();
+    ConcurrentMap<String, String> dimensionKeyIdsByName = new ConcurrentHashMap<>();
+    ConcurrentMap<String, String> internedValues = new ConcurrentHashMap<>();
 
     List<HostDevices> hostDevices =
         scopedLabs.parallelStream()
@@ -170,7 +164,12 @@ public final class FleetIndexBuilder {
                     Optional.ofNullable(raw.deviceEnrichments().get(deviceId));
                 DeviceRecord record =
                     buildDeviceRecord(
-                        deviceInfo, hostRecord, deviceEnrichment, raw.derivedDeviceKeys());
+                        deviceInfo,
+                        hostRecord,
+                        deviceEnrichment,
+                        raw.derivedDeviceKeys(),
+                        dimensionKeyIdsByName,
+                        internedValues);
                 devices.add(record);
                 indexDevice(accum, record);
               }
@@ -306,7 +305,9 @@ public final class FleetIndexBuilder {
       DeviceInfo deviceInfo,
       HostRecord host,
       Optional<DeviceEnrichment> enrichment,
-      ImmutableList<DeviceKeyDescriptor> derivedDeviceKeys) {
+      ImmutableList<DeviceKeyDescriptor> derivedDeviceKeys,
+      ConcurrentMap<String, String> dimensionKeyIdsByName,
+      ConcurrentMap<String, String> internedValues) {
     DeviceFeature feature = deviceInfo.getDeviceFeature();
     DeviceCondition condition = deviceInfo.getDeviceCondition();
     String deviceId = deviceInfo.getDeviceLocator().getId();
@@ -350,8 +351,8 @@ public final class FleetIndexBuilder {
       addCombinedSources(values, deviceInfo, derivedKey);
     }
 
-    // Dimensions: append supported and required directly without deduplicating.
-    addDimensions(values, feature.getCompositeDimension());
+    // Dimensions: append distinct supported and required values per key in encounter order.
+    addDimensions(values, feature.getCompositeDimension(), dimensionKeyIdsByName, internedValues);
 
     // Host attributes projected onto device.
     for (Map.Entry<String, ImmutableList<String>> entry : host.values().entrySet()) {
@@ -408,26 +409,33 @@ public final class FleetIndexBuilder {
     }
   }
 
-  /** Appends all supported and required dimensions without deduplication. */
+  /** Appends distinct supported and required dimensions per key in encounter order. */
   private static void addDimensions(
       ImmutableMap.Builder<String, ImmutableList<String>> valuesBuilder,
-      DeviceCompositeDimension composite) {
-    Map<String, List<String>> dimMap = new LinkedHashMap<>();
-    for (DeviceDimension dim : composite.getSupportedDimensionList()) {
+      DeviceCompositeDimension composite,
+      ConcurrentMap<String, String> dimensionKeyIdsByName,
+      ConcurrentMap<String, String> internedValues) {
+    Map<String, Set<String>> dimMap = new LinkedHashMap<>();
+    for (DeviceDimension dim :
+        Stream.concat(
+                composite.getSupportedDimensionList().stream(),
+                composite.getRequiredDimensionList().stream())
+            .toList()) {
       String name = dim.getName();
       String val = dim.getValue();
-      if (!name.isEmpty() && !val.isEmpty() && !EXCLUDED_DIMENSIONS.contains(name)) {
-        dimMap.computeIfAbsent(DeviceKeys.PREFIX_DIMENSION + name, k -> new ArrayList<>()).add(val);
+      if (!name.isEmpty() && !val.isEmpty() && !DeviceKeys.EXCLUDED_DIMENSIONS.contains(name)) {
+        String keyId = dimensionKeyIdsByName.get(name);
+        if (keyId == null) {
+          keyId = dimensionKeyIdsByName.computeIfAbsent(name, n -> DeviceKeys.PREFIX_DIMENSION + n);
+        }
+        String internedVal = internedValues.get(val);
+        if (internedVal == null) {
+          internedVal = internedValues.computeIfAbsent(val, v -> v);
+        }
+        dimMap.computeIfAbsent(keyId, k -> new LinkedHashSet<>()).add(internedVal);
       }
     }
-    for (DeviceDimension dim : composite.getRequiredDimensionList()) {
-      String name = dim.getName();
-      String val = dim.getValue();
-      if (!name.isEmpty() && !val.isEmpty() && !EXCLUDED_DIMENSIONS.contains(name)) {
-        dimMap.computeIfAbsent(DeviceKeys.PREFIX_DIMENSION + name, k -> new ArrayList<>()).add(val);
-      }
-    }
-    for (Map.Entry<String, List<String>> entry : dimMap.entrySet()) {
+    for (Map.Entry<String, Set<String>> entry : dimMap.entrySet()) {
       valuesBuilder.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
     }
   }

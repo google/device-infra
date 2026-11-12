@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.schema;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.device.util.DeviceHealth;
 
 /**
@@ -46,6 +47,14 @@ public final class DeviceKeys {
 
   public static final String PREFIX_DIMENSION = "dimension::";
   public static final String PREFIX_DEVICE_CONFIG = "device_config::";
+
+  /**
+   * Dimension names excluded from forward values, indexing, and dimension discovery. These
+   * dimensions carry non-textual data (such as serialized binary protos or base64 blobs) that have
+   * no search, filter, column, or group-by utility and would needlessly bloat the in-memory index.
+   */
+  public static final ImmutableSet<String> EXCLUDED_DIMENSIONS =
+      ImmutableSet.of("subdevice_dimensions");
 
   // Group 1: Universal common device keys (typed DeviceInfo fields).
   public static final DeviceKeyDescriptor UUID =
@@ -248,7 +257,8 @@ public final class DeviceKeys {
         .setDeviceInfoSource(DeviceInfoSource.dimension(dimensionName))
         .setDisplay(display)
         .setAliases(aliases)
-        .setIsDimension(true);
+        .setIsDimension(true)
+        .setInCoreMask(true);
   }
 
   /**
@@ -260,6 +270,10 @@ public final class DeviceKeys {
    * display (raw name) and is flagged long-tail.
    */
   static DeviceKeyDescriptor longTailDimensionKey(String dimensionName) {
+    return longTailDimensionKey(dimensionName, /* inCoreMask= */ false);
+  }
+
+  static DeviceKeyDescriptor longTailDimensionKey(String dimensionName, boolean inCoreMask) {
     if (dimensionName == null || dimensionName.trim().isEmpty()) {
       throw new IllegalArgumentException("Dimension name cannot be empty");
     }
@@ -269,6 +283,7 @@ public final class DeviceKeys {
         .setDisplay(KeyDisplay.of(dimensionName))
         .setIsDimension(true)
         .setIsLongTail(true)
+        .setInCoreMask(inCoreMask)
         .build();
   }
 

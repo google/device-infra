@@ -39,6 +39,7 @@ java_library(
         "//src/devtools/mobileharness/api/query/proto:filter_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",

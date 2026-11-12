@@ -68,6 +68,13 @@ public abstract class DeviceKeyDescriptor implements KeyDescriptor {
   @Override
   public abstract boolean isLongTail();
 
+  /**
+   * Whether this dimension is included in the deployment's core-snapshot {@code DeviceInfoMask}
+   * (either a built-in dimension key, a dimension referenced by another built-in key such as {@code
+   * DeviceKeys.VERSION}, or a dimension listed in the registry's pre-indexed dimension set).
+   */
+  public abstract boolean inCoreMask();
+
   /** Whether this descriptor represents a composite device dimension. */
   public abstract boolean isDimension();
 
@@ -86,7 +93,7 @@ public abstract class DeviceKeyDescriptor implements KeyDescriptor {
 
   /** Whether this descriptor represents an on-demand long-tail dimension overlay. */
   public boolean isOverlay() {
-    return isDimension() && isLongTail();
+    return isDimension() && !inCoreMask();
   }
 
   /** Returns the bare name of this key without its namespace prefix. */
@@ -103,6 +110,7 @@ public abstract class DeviceKeyDescriptor implements KeyDescriptor {
         .setLabInfoSources(ImmutableList.of())
         .setAliases(ImmutableSet.of())
         .setIsLongTail(false)
+        .setInCoreMask(false)
         .setIsDimension(false)
         .setIsHostProperty(false)
         .setIsHostField(false)
@@ -138,6 +146,8 @@ public abstract class DeviceKeyDescriptor implements KeyDescriptor {
     }
 
     public abstract Builder setIsLongTail(boolean isLongTail);
+
+    public abstract Builder setInCoreMask(boolean inCoreMask);
 
     public abstract Builder setIsDimension(boolean isDimension);
 

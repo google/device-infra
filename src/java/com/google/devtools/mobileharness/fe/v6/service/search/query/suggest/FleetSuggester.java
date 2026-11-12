@@ -758,7 +758,7 @@ public final class FleetSuggester {
     }
     KeyVocabulary vocabulary = context.vocabulary();
     boolean indexed = context.isIndexed(keyId);
-    if (!indexed && !key.isLongTail()) {
+    if (!indexed && !vocabulary.isColdCapable(key)) {
       return Optional.empty();
     }
     if (!indexed || !count) {

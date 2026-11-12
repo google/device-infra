@@ -148,7 +148,9 @@ final class DeviceKeyVocabulary implements KeyVocabulary {
     Stream<KeyDescriptor> indexed =
         index.keyIds().stream().flatMap(keyId -> describe(keyId).stream());
     Stream<KeyDescriptor> cataloged =
-        catalogDimensionNames.stream().flatMap(name -> registry.dimensionKey(name).stream());
+        catalogDimensionNames.stream()
+            .flatMap(name ->
+                registry.dimensionKey(name).filter(DeviceKeyDescriptor::isOverlay).stream());
     return Stream.concat(indexed, cataloged).collect(toImmutableSet());
   }
 
@@ -170,7 +172,7 @@ final class DeviceKeyVocabulary implements KeyVocabulary {
   @Override
   public boolean isColdCapable(KeyDescriptor key) {
     DeviceKeyDescriptor owned = own(key);
-    return owned.isDimension() || owned.isHostProperty();
+    return owned.isOverlay() || owned.isHostProperty();
   }
 
   @Override
@@ -214,7 +216,8 @@ final class DeviceKeyVocabulary implements KeyVocabulary {
         Stream.concat(
                 indexed.stream().filter(DeviceKeyDescriptor::isDimension),
                 catalogDimensionNames.stream()
-                    .flatMap(name -> registry.dimensionKey(name).stream()))
+                    .flatMap(name -> registry.dimensionKey(name).stream())
+                    .filter(DeviceKeyDescriptor::isOverlay))
             .collect(
                 toImmutableMap(
                     DeviceKeyVocabulary::normalizedName, key -> key, (first, second) -> first));

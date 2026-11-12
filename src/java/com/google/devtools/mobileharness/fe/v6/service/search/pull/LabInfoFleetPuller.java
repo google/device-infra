@@ -48,6 +48,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw.DeviceKey;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
@@ -79,9 +80,6 @@ import javax.inject.Inject;
 public final class LabInfoFleetPuller {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final ImmutableSet<String> EXCLUDED_DIMENSIONS =
-      ImmutableSet.of("subdevice_dimensions");
 
   private static final FieldMask SINGLE_DIM_FIELD_MASK =
       FieldMask.newBuilder()
@@ -292,7 +290,7 @@ public final class LabInfoFleetPuller {
                   .filter(dim ->
                       !dim.getName().isEmpty()
                           && dim.getDeviceCount() > 0
-                          && !EXCLUDED_DIMENSIONS.contains(dim.getName()))
+                          && !DeviceKeys.EXCLUDED_DIMENSIONS.contains(dim.getName()))
                   .collect(
                       toImmutableMap(
                           DeviceDimensionSummary::getName,

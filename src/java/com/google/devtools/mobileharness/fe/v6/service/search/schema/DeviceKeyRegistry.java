@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.schema;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -29,6 +30,7 @@ import com.google.protobuf.FieldMask;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /**
@@ -58,12 +60,23 @@ public abstract class DeviceKeyRegistry {
           HostKeys.PREFIX_HOST_PROPERTY);
 
   private final ImmutableMap<String, DeviceKeyDescriptor> builtInKeys;
+  private final ImmutableSet<String> preIndexedDimensionNames;
+  private final ImmutableSet<String> coreMaskDimensionNames;
 
   /**
    * Composes the universal common device keys and projected common host keys with a subclass's
    * extra keys. Fails fast on a duplicate id or an id with an unknown namespace prefix.
    */
   protected DeviceKeyRegistry(ImmutableList<DeviceKeyDescriptor> extraKeys) {
+    this(extraKeys, ImmutableSet.of());
+  }
+
+  /**
+   * Composes the universal common device keys and projected common host keys with a subclass's
+   * extra keys and deployment-specific pre-indexed long-tail dimension names.
+   */
+  protected DeviceKeyRegistry(
+      ImmutableList<DeviceKeyDescriptor> extraKeys, ImmutableSet<String> preIndexedDimensionNames) {
     ImmutableList<DeviceKeyDescriptor> all =
         ImmutableList.<DeviceKeyDescriptor>builder()
             .addAll(DeviceKeys.COMMON_DEVICE_KEYS)
@@ -78,6 +91,21 @@ public abstract class DeviceKeyRegistry {
     }
     // The two-arg collector throws IllegalArgumentException on a duplicate id (fail-fast).
     this.builtInKeys = all.stream().collect(toImmutableMap(DeviceKeyDescriptor::id, key -> key));
+    for (String dimName : preIndexedDimensionNames) {
+      if (dimName.isEmpty()
+          || !dimName.equals(dimName.strip())
+          || DeviceKeys.EXCLUDED_DIMENSIONS.contains(dimName)) {
+        throw new IllegalArgumentException("Invalid pre-indexed dimension name: '" + dimName + "'");
+      }
+    }
+    this.preIndexedDimensionNames = ImmutableSet.copyOf(preIndexedDimensionNames);
+    this.coreMaskDimensionNames =
+        Stream.concat(
+                all.stream()
+                    .flatMap(key -> key.deviceInfoSources().stream())
+                    .flatMap(source -> source.maskDimensionNames().stream()),
+                this.preIndexedDimensionNames.stream())
+            .collect(toImmutableSet());
   }
 
   /**
@@ -136,7 +164,8 @@ public abstract class DeviceKeyRegistry {
     if (dimensionName == null || dimensionName.trim().isEmpty()) {
       return Optional.empty();
     }
-    return Optional.of(DeviceKeys.longTailDimensionKey(dimensionName));
+    boolean inCoreMask = coreMaskDimensionNames.contains(dimensionName);
+    return Optional.of(DeviceKeys.longTailDimensionKey(dimensionName, inCoreMask));
   }
 
   /**
@@ -181,6 +210,7 @@ public abstract class DeviceKeyRegistry {
         dimensionNames.addAll(source.maskDimensionNames());
       }
     }
+    dimensionNames.addAll(preIndexedDimensionNames);
     DeviceInfoMask.Builder mask = DeviceInfoMask.newBuilder();
     if (!fieldPaths.isEmpty()) {
       mask.setFieldMask(FieldMask.newBuilder().addAllPaths(fieldPaths));

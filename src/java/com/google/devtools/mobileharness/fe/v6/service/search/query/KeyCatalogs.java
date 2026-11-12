@@ -136,6 +136,7 @@ final class KeyCatalogs {
           corpus
               .deviceKeyRegistry()
               .dimensionKey(name)
+              .filter(DeviceKeyDescriptor::isOverlay)
               .ifPresent(desc -> {
                 catalogDimensions.add(desc);
                 if (count > 0) {
