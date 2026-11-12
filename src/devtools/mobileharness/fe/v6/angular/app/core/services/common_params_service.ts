@@ -12,6 +12,7 @@ export const COMMON_QUERY_PARAMS = [
   'force_host_ready',
   'force_device_ready',
   'force_all_ready',
+  'force_bulk_config_ready',
 ] as const;
 
 /** Key type for supported common query parameters. */

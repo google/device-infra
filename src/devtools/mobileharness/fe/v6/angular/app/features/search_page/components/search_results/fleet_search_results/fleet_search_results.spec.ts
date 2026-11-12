@@ -16,6 +16,7 @@ import {
   CONFIG_SERVICE,
   ConfigService,
 } from '../../../../../core/services/config/config_service';
+import {FeatureEnablementService} from '../../../../../core/services/feature_enablement_service';
 import {ClipboardService} from '../../../../../shared/services/clipboard_service';
 import {SnackBarService} from '../../../../../shared/services/snackbar_service';
 import {BulkConfigDialogResult, FleetScope} from '../../../models';
@@ -112,6 +113,7 @@ describe('FleetSearchResultsComponent', () => {
   let mockStore: MockFleetSearchStore;
   let mockDialog: jasmine.SpyObj<MatDialog>;
   let mockConfigService: jasmine.SpyObj<ConfigService>;
+  let mockFeatureEnablementService: jasmine.SpyObj<FeatureEnablementService>;
   let mockClipboardService: jasmine.SpyObj<ClipboardService>;
   let mockSnackBarService: jasmine.SpyObj<SnackBarService>;
 
@@ -133,6 +135,14 @@ describe('FleetSearchResultsComponent', () => {
         allowCustomDimensions: true,
       }),
     );
+    // Bulk configuration is developer-gated; default to the enabled view so
+    // the bulk configuration specs below exercise the enabled behavior.
+    mockFeatureEnablementService =
+      jasmine.createSpyObj<FeatureEnablementService>(
+        'FeatureEnablementService',
+        ['isBulkConfigEnabled'],
+      );
+    mockFeatureEnablementService.isBulkConfigEnabled.and.returnValue(true);
     mockClipboardService = jasmine.createSpyObj<ClipboardService>(
       'ClipboardService',
       ['copyToClipboard'],
@@ -150,6 +160,10 @@ describe('FleetSearchResultsComponent', () => {
         {provide: FleetSearchStore, useValue: mockStore},
         {provide: MatDialog, useValue: mockDialog},
         {provide: CONFIG_SERVICE, useValue: mockConfigService},
+        {
+          provide: FeatureEnablementService,
+          useValue: mockFeatureEnablementService,
+        },
         {provide: ClipboardService, useValue: mockClipboardService},
         {provide: SnackBarService, useValue: mockSnackBarService},
       ],
@@ -374,6 +388,42 @@ describe('FleetSearchResultsComponent', () => {
           By.css('button[title="Configure device dimensions"]'),
         ),
       ).toBeNull();
+    });
+
+    it('hides Configure Wi-Fi and Configure Dimension buttons and skips fetching dimensions when bulk config is not enabled', async () => {
+      // End-user view: the feature is not enabled for this session.
+      mockFeatureEnablementService.isBulkConfigEnabled.and.returnValue(false);
+      fixture = TestBed.createComponent(FleetSearchResultsComponent);
+      component = fixture.componentInstance;
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      mockStore.entity.set('devices');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeFalse();
+      expect(mockConfigService.getConfigurableDimensions).not.toHaveBeenCalled();
+      const buttonTexts = fixture.debugElement
+        .queryAll(By.css('.rt-toolbar button'))
+        .map((b) => b.nativeElement.textContent.trim());
+      expect(
+        buttonTexts.some((t) => t.includes('Configure Wi-Fi')),
+      ).toBeFalse();
+      expect(
+        buttonTexts.some((t) => t.includes('Configure Dimension')),
+      ).toBeFalse();
+      // The rest of the selection toolbar is unaffected.
+      expect(buttonTexts.some((t) => t.includes('Export'))).toBeTrue();
+
+      // The programmatic path stays closed as well.
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      );
+      component.bulkConfig.openWifiDialog();
+      component.bulkConfig.openDimensionDialog('supported');
+      expect(openSpy).not.toHaveBeenCalled();
     });
 
     it('does not open dialog when entity is hosts', () => {

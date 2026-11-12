@@ -9,6 +9,7 @@ import {
   GetConfigurableDimensionsResponse,
 } from '../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
+import {FeatureEnablementService} from '../../../../core/services/feature_enablement_service';
 import {getErrorMessage} from '../../../../shared/utils/error_utils';
 import {BulkConfigDialogData, BulkConfigDialogResult} from '../../models';
 import {FleetSearchStore} from '../../services/fleet_search_store';
@@ -25,6 +26,7 @@ export function useBulkConfigActions() {
   const dialog = inject(MatDialog);
   const destroyRef = inject(DestroyRef);
   const configService = inject(CONFIG_SERVICE);
+  const featureEnablementService = inject(FeatureEnablementService);
 
   /**
    * Batch device configuration applies only to devices on the deployment's own
@@ -37,12 +39,21 @@ export function useBulkConfigActions() {
   );
 
   /**
+   * Bulk configuration is not generally available yet (see
+   * `FeatureEnablementService`): when it is disabled, no bulk configuration
+   * action is shown and no dimension loading is triggered.
+   */
+  const isBulkConfigAvailable = computed(
+    () => featureEnablementService.isBulkConfigEnabled() && isOwnFleetDevices(),
+  );
+
+  /**
    * Latches once at least one device is selected on the deployment's own fleet,
    * retaining the loaded dimension metadata across selection clear/re-select
    * and tab switches.
    */
   const shouldLoadDimensions = linkedSignal<boolean, boolean>({
-    source: () => isOwnFleetDevices() && store.selectedItems().size > 0,
+    source: () => isBulkConfigAvailable() && store.selectedItems().size > 0,
     computation: (active, previous) => active || Boolean(previous?.value),
   });
 
@@ -57,7 +68,7 @@ export function useBulkConfigActions() {
 
   /** Consolidated dimension configuration state for the active view. */
   const dimensionConfig = computed(() => {
-    if (!isOwnFleetDevices()) {
+    if (!isBulkConfigAvailable()) {
       return {
         isLoading: false,
         error: null,
