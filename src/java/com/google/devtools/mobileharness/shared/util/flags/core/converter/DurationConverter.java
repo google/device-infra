@@ -57,7 +57,7 @@ public class DurationConverter implements ITypeConverter<Duration> {
 
     value = whitespace().trimFrom(value);
 
-    if ("0".equals(value)) {
+    if (value.equals("0")) {
       return Duration.ZERO;
     }
 
@@ -68,7 +68,7 @@ public class DurationConverter implements ITypeConverter<Duration> {
     Matcher matcher = UNIT_PATTERN.matcher(value);
     while (matcher.find(index) && matcher.start() == index) {
       // Prevent strings like ".s" or "d" by requiring at least one digit.
-      checkFormat(ASCII_DIGIT.matchesAnyOf(matcher.group(0)), "expected at least one digit");
+      checkFormat(ASCII_DIGIT.matchesAnyOf(matcher.group()), "expected at least one digit");
       try {
         String unit = matcher.group("unit");
 

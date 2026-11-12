@@ -1634,7 +1634,7 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
   protected SetupResult setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
-    if (!"AndroidRealDevice".equals(getDevice().getClass().getSimpleName())) {
+    if (!getDevice().getClass().getSimpleName().equals("AndroidRealDevice")) {
       testInfo
           .log()
           .atWarning()
