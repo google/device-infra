@@ -41,6 +41,8 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidFilePullerDecoratorSpec;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -55,6 +57,9 @@ public class AndroidFilePullerDecorator extends LifecycleDecorator
     implements AndroidFilePullerSpec, SpecConfigable<AndroidFilePullerDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  /** Finding metadata key of the missing paths, joined by {@link #PATH_DELIMITER}. */
+  private static final String FINDING_METADATA_KEY_PATHS = "paths";
 
   private final AndroidFileUtil androidFileUtil;
   private final LocalFileUtil localFileUtil;
@@ -160,6 +165,7 @@ public class AndroidFilePullerDecorator extends LifecycleDecorator
               .splitToStream(spec.getPulledFilePaths())
               .collect(toImmutableList());
     }
+    List<String> missingPaths = new ArrayList<>();
     for (int i = 0; i < fileOrDirPathsOnDevice.size(); i++) {
       String path = fileOrDirPathsOnDevice.get(i);
       String targetRootDirOrPath;
@@ -174,8 +180,6 @@ public class AndroidFilePullerDecorator extends LifecycleDecorator
       } else {
         targetRootDirOrPath = testInfo.getGenFileDir();
       }
-      String noPathLog =
-          "Skip pulling file/dir because directory [" + path + "] does not exist in the device. ";
       boolean isPathExist = false;
 
       // First check if file existed on device.
@@ -185,15 +189,7 @@ public class AndroidFilePullerDecorator extends LifecycleDecorator
         testInfo.log().atInfo().alsoTo(logger).withCause(e).log("Failed to check if file existed");
       }
       if (!isPathExist) {
-        if (ignoreFilesNotExist) {
-          testInfo.log().atInfo().alsoTo(logger).log("%s", noPathLog);
-        } else {
-          MobileHarnessException exception =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_FILE_PULLER_DECORATOR_OUTPUT_FILE_NOT_FOUND, noPathLog);
-          testInfo.findings().addAndLog(Severity.SEVERE, exception, logger);
-          testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
-        }
+        missingPaths.add(path);
         continue;
       }
 
@@ -221,6 +217,24 @@ public class AndroidFilePullerDecorator extends LifecycleDecorator
           testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
           break;
         }
+      }
+    }
+    // Reports all the missing paths.
+    if (!missingPaths.isEmpty()) {
+      MobileHarnessException exception =
+          new MobileHarnessException(
+              AndroidErrorId.ANDROID_FILE_PULLER_DECORATOR_OUTPUT_FILE_NOT_FOUND,
+              "Skipped pulling files/dirs that do not exist on the device.");
+      exception.addMetadata(FINDING_METADATA_KEY_PATHS, String.join(PATH_DELIMITER, missingPaths));
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .log("%s. Non-existent paths: %s", exception.getMessage(), missingPaths);
+      if (ignoreFilesNotExist) {
+        testInfo.findings().add(Severity.WARNING, exception);
+      } else {
+        testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
       }
     }
   }
