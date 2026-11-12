@@ -290,8 +290,10 @@ public interface AndroidInstrumentationDriverSpec {
   @ParamAnnotation(
       required = false,
       help =
-          "If true, mark the test as failure if all tests are ignored or assumption failures."
-              + " By default, this is false.")
+          "If true, mark the test as failure if no test case is executed, i.e., every test case"
+              + " is ignored or fails an assumption, or the test runner reports no test case (for"
+              + " example, an empty shard of uniform sharding). Otherwise, such a test is marked as"
+              + " skipped. Only applies when the raw results are shown. By default, this is false.")
   String PARAM_FAIL_ON_ALL_SKIPPED = "fail_on_all_skipped";
 
   @ParamAnnotation(

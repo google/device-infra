@@ -496,8 +496,10 @@ public class AndroidInstrumentation extends BaseDriver
     boolean hasError = false;
     boolean hasFail = false;
     boolean hasPass = false;
+    boolean hasSkip = false;
     MobileHarnessException errorResultCause = null;
     MobileHarnessException failResultCause = null;
+    MobileHarnessException skipResultCause = null;
 
     properties.add(PropertyName.Test.ANDROID_INST_TEST_METHOD_REPEAT_TIMES, String.valueOf(1));
     boolean hasSequentialOptionMaps =
@@ -726,26 +728,48 @@ public class AndroidInstrumentation extends BaseDriver
           result = gtestResult.testResult();
           errorMsg.append(gtestResult.errorMessage());
         }
-        if (job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_FAIL_ON_ALL_SKIPPED, false)
-            && result == TestResult.PASS
-            && testSuiteResultBuilder != null) {
+        if (result == TestResult.PASS && testSuiteResultBuilder != null) {
           TestSuiteResult testSuiteResult = testSuiteResultBuilder.build();
           if (testSuiteResult.getTestResultList().stream()
               .allMatch(testResult -> testResult.getTestStatus() == TestStatus.IGNORED)) {
-            logger.atInfo().log(
-                "All tests were ignored or assumption failures, assigning FAIL result.");
-            result = TestResult.FAIL;
-            errorMsg.append("All tests were ignored or assumption failures.");
-            if (testSuiteResult.getTestResultList().isEmpty()) {
-              // No test cases ran at all, e.g., an empty shard of uniform sharding. Retrying won't
-              // change the result, so halt further retries. This is consistent with the legacy FTL
-              // behavior of not rerunning steps that have zero test cases.
+            // No test case was executed, e.g., an empty shard of uniform sharding, or a run whose
+            // test cases were all ignored or failed assumptions. Nothing was tested, so mark it
+            // as skipped rather than passed, or as failed if fail_on_all_skipped is set.
+            boolean testSuiteEmpty = testSuiteResult.getTestResultList().isEmpty();
+            if (testSuiteEmpty) {
+              errorMsg.append(
+                  "No test case was executed since the test runner reported no test case, e.g.,"
+                      + " the test filters matched no test case, or this is an empty shard of"
+                      + " uniform sharding.");
+            } else {
+              errorMsg.append(
+                  "No test case was executed since every test case was ignored or failed an"
+                      + " assumption.");
+            }
+            if (job.params()
+                .getBool(AndroidInstrumentationDriverSpec.PARAM_FAIL_ON_ALL_SKIPPED, false)) {
               testInfo
                   .log()
                   .atInfo()
                   .alsoTo(logger)
-                  .log("No test cases ran. Halt retries of this test since retry won't help.");
-              properties.add(Test.HALT_RETRY, "true");
+                  .log(
+                      "%s Assigning FAIL result since %s is set.",
+                      errorMsg, AndroidInstrumentationDriverSpec.PARAM_FAIL_ON_ALL_SKIPPED);
+              result = TestResult.FAIL;
+              if (testSuiteEmpty) {
+                // No test cases ran at all, e.g., an empty shard of uniform sharding. Retrying
+                // won't change the result, so halt further retries. This is consistent with the
+                // legacy FTL behavior of not rerunning steps that have zero test cases.
+                testInfo
+                    .log()
+                    .atInfo()
+                    .alsoTo(logger)
+                    .log("No test cases ran. Halt retries of this test since retry won't help.");
+                properties.add(Test.HALT_RETRY, "true");
+              }
+            } else {
+              testInfo.log().atInfo().alsoTo(logger).log("%s Assigning SKIP result.", errorMsg);
+              result = TestResult.SKIP;
             }
           }
         }
@@ -766,6 +790,15 @@ public class AndroidInstrumentation extends BaseDriver
                         + "\"adb shell am instrument ...\" with your local devices, without "
                         + "Mobile Harness.",
                     mhException);
+            break;
+          case SKIP:
+            hasSkip = true;
+            skipResultCause =
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_INSTRUMENTATION_NO_TEST_EXECUTED, errorMsg.toString());
+            // Also records it as a warning, which is kept even if the test passes because another
+            // option map of it executes test cases.
+            testInfo.warnings().addAndLog(skipResultCause, logger);
             break;
           case ERROR:
             hasError = true;
@@ -893,6 +926,9 @@ public class AndroidInstrumentation extends BaseDriver
       testInfo.resultWithCause().setNonPassing(TestResult.FAIL, failResultCause);
     } else if (hasPass) {
       testInfo.resultWithCause().setPass();
+    } else if (hasSkip) {
+      // Only skipped if no option map executes any test case.
+      testInfo.resultWithCause().setNonPassing(TestResult.SKIP, skipResultCause);
     }
   }
 

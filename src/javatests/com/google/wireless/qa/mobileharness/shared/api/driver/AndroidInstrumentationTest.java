@@ -36,6 +36,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import androidx.test.services.storage.TestStorageConstants;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flags.testing.SetFlags;
@@ -54,6 +55,7 @@ import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
+import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
@@ -83,6 +85,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 import javax.annotation.Nullable;
 import org.junit.Before;
 import org.junit.Rule;
@@ -348,6 +351,14 @@ public class AndroidInstrumentationTest {
     when(androidInstrumentationUtil.showRawResultsIfNeeded(testInfo)).thenReturn(true);
     String instrumentationLog =
         "INSTRUMENTATION_STATUS: numtests=1\n"
+            + "INSTRUMENTATION_STATUS: stream=\n"
+            + "INSTRUMENTATION_STATUS: id=AndroidJUnitRunner\n"
+            + "INSTRUMENTATION_STATUS: test=testText\n"
+            + "INSTRUMENTATION_STATUS: class=com.google.codelab.mobileharness."
+            + "android.hellomobileharness.HelloMobileHarnessTest\n"
+            + "INSTRUMENTATION_STATUS: current=1\n"
+            + "INSTRUMENTATION_STATUS_CODE: 1\n"
+            + "INSTRUMENTATION_STATUS: numtests=1\n"
             + "INSTRUMENTATION_STATUS: stream=.\n"
             + "INSTRUMENTATION_STATUS: id=AndroidJUnitRunner\n"
             + "INSTRUMENTATION_STATUS: test=testText\n"
@@ -371,7 +382,15 @@ public class AndroidInstrumentationTest {
             eq(setting),
             eq(TEST_TIMEOUT),
             ArgumentMatchers.isNotNull()))
-        .thenReturn(instrumentationLog);
+        .thenAnswer(invocation -> {
+          // Streams the raw results to the parser, like the real instrumentation does.
+          Supplier<LineCallback> lineCallbackFactory = invocation.getArgument(4);
+          LineCallback lineCallback = lineCallbackFactory.get();
+          for (String line : Splitter.on('\n').split(instrumentationLog)) {
+            lineCallback.onLine(line);
+          }
+          return instrumentationLog;
+        });
 
     driver.run(testInfo);
 
