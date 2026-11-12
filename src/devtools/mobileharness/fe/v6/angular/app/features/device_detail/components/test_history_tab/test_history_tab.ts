@@ -16,12 +16,10 @@ import {MatTableModule} from '@angular/material/table';
 import {EMPTY, Observable, Subject} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 
-import {DebugService} from '@deviceinfra/app/core/services/debug_service';
 import {
   NavLink,
   NavLinkConfig,
 } from '@deviceinfra/app/shared/components/nav_link/nav_link';
-import {stayOnLegacyFe} from '../../../../core/models/app_data';
 import {
   Indicator,
   LinkCell,
@@ -67,7 +65,6 @@ export class TestHistoryTab implements OnInit {
   @Input() hostName = '';
 
   private readonly deviceService = inject(DEVICE_SERVICE);
-  readonly debugService = inject(DebugService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly loadTrigger$ = new Subject<LoadAction>();
 
@@ -85,6 +82,10 @@ export class TestHistoryTab implements OnInit {
   private currentToken = '';
   private nextToken = '';
   private readonly prevTokens: string[] = [];
+  private readonly linkConfigCache = new WeakMap<
+    LinkCell,
+    NavLinkConfig | null
+  >();
 
   /**
    * Initializes the component by loading the first page of test history and
@@ -118,9 +119,18 @@ export class TestHistoryTab implements OnInit {
           this.prevTokens.length = 0;
         }
 
+        const nextRows = response.rows ?? [];
+        for (const row of nextRows) {
+          for (const cell of row.cells ?? []) {
+            if (cell.link) {
+              this.getNavLinkConfig(cell.link);
+            }
+          }
+        }
+
         this.currentToken = token;
         this.columns.set(response.columns ?? []);
-        this.rows.set(response.rows ?? []);
+        this.rows.set(nextRows);
         this.nextToken = response.nextPageToken ?? '';
         this.hasNextPage.set(this.nextToken !== '');
         this.canPrev.set(this.prevTokens.length > 0);
@@ -165,27 +175,6 @@ export class TestHistoryTab implements OnInit {
   }
 
   /**
-   * Generates the URL for the test detail page in legacy MHFE.
-   * TODO: remove this non-debug branch after we release the TJS formally.
-   * @param link The LinkCell containing the test and job IDs.
-   * @return The absolute URL to the legacy MHFE test detail view.
-   *
-   * Input: link (LinkCell) containing the test and job IDs.
-   * Output: string representing the absolute URL to legacy MHFE.
-   * Explanation: This function extracts jobId and testId from the LinkCell target
-   * to construct a direct link to the test detail page (hosted in legacy UI).
-   * If either ID is missing, it logs an error to the console.
-   */
-  linkHref(link: LinkCell): string {
-    const testId = link.target?.test?.testId ?? '';
-    const jobId = link.target?.test?.jobId ?? '';
-    if (!testId || !jobId) {
-      console.error('Missing testId or jobId for link:', link);
-    }
-    return stayOnLegacyFe(`http://mhfe/testdetailview/${jobId}/${testId}`);
-  }
-
-  /**
    * Generates the NavLinkConfig for a LinkCell.
    *
    * @param link The LinkCell containing the navigation target.
@@ -199,17 +188,27 @@ export class TestHistoryTab implements OnInit {
    * returned for device test history.
    */
   getNavLinkConfig(link: LinkCell): NavLinkConfig | null {
+    if (this.linkConfigCache.has(link)) {
+      return this.linkConfigCache.get(link) ?? null;
+    }
+    const config = this.buildNavLinkConfig(link);
+    this.linkConfigCache.set(link, config);
+    return config;
+  }
+
+  private buildNavLinkConfig(link: LinkCell): NavLinkConfig | null {
     const target = link.target;
     if (!target) return null;
 
     if (target.test) {
       if (!target.test.jobId || !target.test.testId) {
         console.error('Missing testId or jobId for link:', link);
+        return null;
       }
       return {
         type: 'test',
-        jobId: target.test.jobId || '',
-        testId: target.test.testId || '',
+        jobId: target.test.jobId,
+        testId: target.test.testId,
       };
     }
     console.error('Unsupported link target:', link);

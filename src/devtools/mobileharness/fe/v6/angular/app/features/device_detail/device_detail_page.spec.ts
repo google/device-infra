@@ -11,6 +11,7 @@ import {
   convertToParamMap,
   ParamMap,
   provideRouter,
+  Router,
 } from '@angular/router';
 import {BehaviorSubject, of} from 'rxjs';
 
@@ -65,6 +66,7 @@ const MOCK_PAGE_DATA: DeviceOverviewPageData = {
 describe('DeviceDetailPage Component', () => {
   let fixture: ComponentFixture<DeviceDetailPage>;
   let deviceServiceSpy: jasmine.SpyObj<DeviceService>;
+  let envUniverseSpy: jasmine.SpyObj<EnvUniverseService>;
   let paramMapSubject: BehaviorSubject<ParamMap>;
   let queryParamMapSubject: BehaviorSubject<ParamMap>;
 
@@ -81,14 +83,19 @@ describe('DeviceDetailPage Component', () => {
 
     deviceServiceSpy = jasmine.createSpyObj<DeviceService>('DeviceService', [
       'getDeviceOverview',
+      'getDeviceTestHistory',
     ]);
     deviceServiceSpy.getDeviceOverview.and.returnValue(of(MOCK_PAGE_DATA));
+    deviceServiceSpy.getDeviceTestHistory.and.returnValue(
+      of({columns: [], rows: [], nextPageToken: ''}),
+    );
 
-    const envUniverseSpy = jasmine.createSpyObj<EnvUniverseService>(
+    envUniverseSpy = jasmine.createSpyObj<EnvUniverseService>(
       'EnvUniverseService',
-      ['isGoogle1P'],
+      ['isGoogle1P', 'isGoogleInternal'],
     );
     envUniverseSpy.isGoogle1P.and.returnValue(false);
+    envUniverseSpy.isGoogleInternal.and.returnValue(true);
 
     await TestBed.configureTestingModule({
       imports: [DeviceDetailPage, NoopAnimationsModule],
@@ -187,5 +194,115 @@ describe('DeviceDetailPage Component', () => {
     fixture.destroy();
 
     expect(title.getTitle()).toBe('OmniLab Console');
+  });
+
+  it('initializes activeTab from the tab query parameter and syncs tab changes to the URL', () => {
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.returnValue(Promise.resolve(true));
+
+    queryParamMapSubject.next(
+      convertToParamMap({
+        'host_name': 'host-1.example.com',
+        'tab': 'test-history',
+      }),
+    );
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    expect(component.activeTab()).toBe('test-history');
+    expect(component.testHistoryVisited()).toBeTrue();
+    expect(router.navigate).not.toHaveBeenCalled();
+
+    component.setActiveTab('overview');
+    expect(component.activeTab()).toBe('overview');
+    expect(router.navigate).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: null},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+
+    (router.navigate as jasmine.Spy).calls.reset();
+    component.setActiveTab('test-history');
+    expect(component.activeTab()).toBe('test-history');
+    expect(router.navigate).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: 'test-history'},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+
+    fixture.destroy();
+    envUniverseSpy.isGoogle1P.and.returnValue(true);
+    const google1pFixture = TestBed.createComponent(DeviceDetailPage);
+    (router.navigate as jasmine.Spy).calls.reset();
+    queryParamMapSubject.next(
+      convertToParamMap({
+        'host_name': 'host-1.example.com',
+        'tab': 'health',
+      }),
+    );
+    google1pFixture.detectChanges();
+    expect(google1pFixture.componentInstance.activeTab()).toBe('health');
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('falls back to overview and clears unsupported tab query parameters', () => {
+    fixture.destroy();
+    envUniverseSpy.isGoogleInternal.and.returnValue(false);
+    const ossFixture = TestBed.createComponent(DeviceDetailPage);
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.returnValue(Promise.resolve(true));
+
+    queryParamMapSubject.next(
+      convertToParamMap({
+        'host_name': 'host-1.example.com',
+        'tab': 'test-history',
+      }),
+    );
+    ossFixture.detectChanges();
+
+    expect(ossFixture.componentInstance.activeTab()).toBe('overview');
+    expect(ossFixture.componentInstance.testHistoryVisited()).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: null},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+
+    (router.navigate as jasmine.Spy).calls.reset();
+    queryParamMapSubject.next(
+      convertToParamMap({
+        'host_name': 'host-1.example.com',
+        'tab': 'health',
+      }),
+    );
+    ossFixture.detectChanges();
+
+    expect(ossFixture.componentInstance.activeTab()).toBe('overview');
+    expect(router.navigate).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: null},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+
+    (router.navigate as jasmine.Spy).calls.reset();
+    queryParamMapSubject.next(
+      convertToParamMap({
+        'host_name': 'host-1.example.com',
+        'tab': 'record',
+      }),
+    );
+    ossFixture.detectChanges();
+
+    expect(ossFixture.componentInstance.activeTab()).toBe('overview');
+    expect(router.navigate).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: null},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   });
 });

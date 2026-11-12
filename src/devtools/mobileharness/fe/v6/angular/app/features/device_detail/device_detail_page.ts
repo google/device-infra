@@ -14,7 +14,7 @@ import {MatMenuModule} from '@angular/material/menu';
 import {MatSnackBarRef} from '@angular/material/snack-bar';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {Title} from '@angular/platform-browser';
-import {ActivatedRoute, RouterModule} from '@angular/router';
+import {ActivatedRoute, Router, RouterModule} from '@angular/router';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {
   combineLatest,
@@ -59,6 +59,17 @@ declare interface DevicePageData {
   id?: string | null;
 }
 
+type DeviceDetailTab = 'overview' | 'test-history' | 'health' | 'record';
+
+function parseDeviceDetailTab(
+  value: string | null | undefined,
+): DeviceDetailTab | null {
+  if (value === 'overview' || value === 'test-history' || value === 'health') {
+    return value;
+  }
+  return null;
+}
+
 /**
  * Component for displaying the detailed information of a single device.
  * It fetches device data based on the ID from the route parameters and
@@ -94,6 +105,7 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   @ViewChild(DeviceActionBar) actionBar!: DeviceActionBar;
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly snackBar = inject(SnackBarService);
   private readonly titleService = inject(Title);
@@ -130,16 +142,33 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     this.overviewRefresh$.next();
   }
 
-  activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
-    'overview',
-  );
+  activeTab = signal<DeviceDetailTab>('overview');
+  private rawTabParam: string | null = null;
   // Latches true the first time the Test History tab is opened. The tab is then
   // kept mounted (hidden when inactive) so switching away and back does not
   // recreate the component and refetch its data.
   readonly testHistoryVisited = signal(false);
+  readonly isGoogleInternal = this.envUniverseService.isGoogleInternal();
   readonly isGoogle1p = this.envUniverseService.isGoogle1P();
 
   ngOnInit() {
+    this.route.queryParamMap
+      .pipe(
+        map((params) => params.get('tab')),
+        distinctUntilChanged(),
+        takeUntil(this.destroyed),
+      )
+      .subscribe((rawTab) => {
+        this.rawTabParam = rawTab;
+        const parsedTab = parseDeviceDetailTab(rawTab);
+        const isTabAvailable =
+          parsedTab === 'overview' ||
+          (parsedTab === 'test-history' && this.isGoogleInternal) ||
+          (parsedTab === 'health' && this.isGoogle1p);
+        const tab = parsedTab && isTabAvailable ? parsedTab : 'overview';
+        this.setActiveTab(tab, Boolean(rawTab) && tab === 'overview');
+      });
+
     combineLatest([
       this.route.paramMap.pipe(
         map((params) => params.get('id')),
@@ -292,11 +321,21 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     shareReplay(1),
   );
 
-  setActiveTab(tab: 'overview' | 'test-history' | 'health' | 'record'): void {
+  setActiveTab(tab: DeviceDetailTab, syncUrl = true): void {
     if (tab === 'test-history') {
       this.testHistoryVisited.set(true);
     }
     this.activeTab.set(tab);
+    const targetParam = tab === 'overview' ? null : tab;
+    if (syncUrl && this.rawTabParam !== targetParam) {
+      this.rawTabParam = targetParam;
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {tab: targetParam},
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   unquarantineDevice() {

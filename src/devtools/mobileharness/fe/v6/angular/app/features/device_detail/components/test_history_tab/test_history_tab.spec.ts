@@ -1,8 +1,8 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import {provideRouter} from '@angular/router';
 import {of, Subject, throwError} from 'rxjs';
 
-import {DebugService} from '@deviceinfra/app/core/services/debug_service';
 import {DeviceTestHistoryResponse} from '../../../../core/models/device_test_history';
 import {
   DEVICE_SERVICE,
@@ -35,7 +35,6 @@ describe('TestHistoryTab Component', () => {
   let fixture: ComponentFixture<TestHistoryTab>;
   let component: TestHistoryTab;
   let deviceServiceSpy: jasmine.SpyObj<DeviceService>;
-  let debugServiceSpy: jasmine.SpyObj<DebugService>;
 
   beforeEach(async () => {
     deviceServiceSpy = jasmine.createSpyObj<DeviceService>('DeviceService', [
@@ -43,16 +42,11 @@ describe('TestHistoryTab Component', () => {
     ]);
     deviceServiceSpy.getDeviceTestHistory.and.returnValue(of(FIRST_PAGE));
 
-    debugServiceSpy = jasmine.createSpyObj<DebugService>('DebugService', [
-      'isDebug',
-    ]);
-    debugServiceSpy.isDebug.and.returnValue(false);
-
     await TestBed.configureTestingModule({
       imports: [TestHistoryTab, NoopAnimationsModule],
       providers: [
+        provideRouter([]),
         {provide: DEVICE_SERVICE, useValue: deviceServiceSpy},
-        {provide: DebugService, useValue: debugServiceSpy},
       ],
     }).compileComponents();
 
@@ -76,26 +70,74 @@ describe('TestHistoryTab Component', () => {
     expect(component.canPrev()).toBeFalse();
   });
 
-  it('builds the test nav link config', () => {
-    expect(
-      component.getNavLinkConfig({
-        text: 't1',
-        target: {test: {testId: 't1', jobId: 'j1'}},
-      }),
-    ).toEqual({
+  it('builds and memoizes the test nav link config', () => {
+    const link = {
+      text: 't1',
+      target: {test: {testId: 't1', jobId: 'j1'}},
+    };
+    const firstConfig = component.getNavLinkConfig(link);
+    expect(firstConfig).toEqual({
       type: 'test',
       jobId: 'j1',
       testId: 't1',
     });
+    expect(component.getNavLinkConfig(link)).toBe(firstConfig);
   });
 
-  it('builds the legacy test detail link with redirect_to_v6=0', () => {
+  it('returns null and renders plain text when jobId or testId is missing', () => {
     expect(
-      component.linkHref({
+      component.getNavLinkConfig({
         text: 't1',
-        target: {test: {testId: 't1', jobId: 'j1'}},
+        target: {test: {testId: 't1', jobId: ''}},
       }),
-    ).toBe('http://mhfe/testdetailview/j1/t1?redirect_to_v6=0');
+    ).toBeNull();
+    expect(
+      component.getNavLinkConfig({
+        text: 't1',
+        target: {test: {testId: '', jobId: 'j1'}},
+      }),
+    ).toBeNull();
+
+    deviceServiceSpy.getDeviceTestHistory.and.returnValue(
+      of({
+        ...FIRST_PAGE,
+        rows: [
+          {
+            id: 't-missing-job',
+            cells: [
+              {link: {text: 't-missing-job', target: {test: {testId: 't1'}}}},
+              {status: {text: 'Pass', indicator: 'INDICATOR_OK'}},
+              {text: {value: '1700000000000'}},
+              {text: {value: '125000'}},
+            ],
+          },
+        ],
+      }),
+    );
+
+    component.nextPage();
+    fixture.detectChanges();
+
+    const hostElement = fixture.nativeElement as HTMLElement;
+    expect(hostElement.querySelector('a.test-link')).toBeNull();
+    expect(
+      hostElement.querySelector('td .text-cell')?.textContent?.trim(),
+    ).toBe('t-missing-job');
+  });
+
+  it('renders native FE v6 test detail links via app-nav-link', () => {
+    const hostElement = fixture.nativeElement as HTMLElement;
+    const testLink =
+      hostElement.querySelector<HTMLAnchorElement>('a.test-link');
+    const accessoryLink =
+      hostElement.querySelector<HTMLAnchorElement>('a.accessory-link');
+    expect(testLink).not.toBeNull();
+    expect(testLink!.getAttribute('href')).toBe('/jobs/j1/tests/t1');
+    expect(testLink!.getAttribute('target')).toBe('_self');
+    expect(testLink!.textContent?.trim()).toBe('t1');
+    expect(accessoryLink).not.toBeNull();
+    expect(accessoryLink!.getAttribute('href')).toBe('/jobs/j1/tests/t1');
+    expect(accessoryLink!.getAttribute('target')).toBe('_blank');
   });
 
   it('returns null for unsupported link targets', () => {
