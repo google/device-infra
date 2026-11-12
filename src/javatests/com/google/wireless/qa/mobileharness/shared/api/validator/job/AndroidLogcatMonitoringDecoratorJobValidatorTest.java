@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
@@ -58,6 +59,7 @@ public class AndroidLogcatMonitoringDecoratorJobValidatorTest {
     AndroidLogcatMonitoringDecoratorSpec spec =
         AndroidLogcatMonitoringDecoratorSpec.newBuilder()
             .addReportAsFailurePackages("com.test.me")
+            .setMaxDropboxEntries(25)
             .addDeviceEventConfig(
                 DeviceEventConfig.newBuilder()
                     .setEventName("FAKE_EVENT")
@@ -67,13 +69,17 @@ public class AndroidLogcatMonitoringDecoratorJobValidatorTest {
     setProtoSpec(spec);
 
     assertThat(validator.validate(jobInfo)).isEmpty();
+    assertThat(jobInfo.log().get(0))
+        .contains("--- Running AndroidLogcatMonitoringDecoratorJobValidator ---");
   }
 
   @Test
   public void validate_noPackageUnderTest_hasError() throws Exception {
     setProtoSpec(AndroidLogcatMonitoringDecoratorSpec.getDefaultInstance());
 
-    assertThat(validator.validate(jobInfo)).isNotEmpty();
+    ImmutableList<String> errors = validator.validate(jobInfo);
+    assertThat(errors).hasSize(1);
+    assertThat(errors.get(0)).contains("report_as_failure_packages");
   }
 
   @Test
@@ -82,13 +88,62 @@ public class AndroidLogcatMonitoringDecoratorJobValidatorTest {
         AndroidLogcatMonitoringDecoratorSpec.newBuilder()
             .addReportAsFailurePackages("com.test.me")
             .addDeviceEventConfig(
-                DeviceEventConfig.newBuilder() /* No event_name */
-                    .setTag("fake_log_tag")
-                    .setLineRegex("fake log message [0-9]*"))
+                DeviceEventConfig.newBuilder() /* No event_name, tag, or line_regex */)
             .build();
     setProtoSpec(spec);
 
-    assertThat(validator.validate(jobInfo)).isNotEmpty();
+    ImmutableList<String> errors = validator.validate(jobInfo);
+    assertThat(errors).hasSize(3);
+    assertThat(errors.get(0)).contains("event_name cannot be empty");
+    assertThat(errors.get(1)).contains("tag cannot be empty");
+    assertThat(errors.get(2)).contains("line_regex cannot be empty");
+  }
+
+  @Test
+  public void validate_invalidDeviceEventConfigRegexes_returnsErrors() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.me")
+            .addDeviceEventConfig(
+                DeviceEventConfig.newBuilder()
+                    .setEventName("INVALID_REGEX_EVENT")
+                    .setTag("[unclosed_tag")
+                    .setLineRegex("(?invalid_group"))
+            .build();
+    setProtoSpec(spec);
+
+    ImmutableList<String> errors = validator.validate(jobInfo);
+    assertThat(errors).hasSize(2);
+    assertThat(errors.get(0))
+        .contains("Invalid tag regex in deviceEventConfig with name INVALID_REGEX_EVENT");
+    assertThat(errors.get(1))
+        .contains("Invalid line_regex regex in deviceEventConfig with name INVALID_REGEX_EVENT");
+  }
+
+  @Test
+  public void validate_negativeMaxDropboxEntries_returnsError() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec negativeSpec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.me")
+            .setMaxDropboxEntries(-1)
+            .build();
+    setProtoSpec(negativeSpec);
+
+    ImmutableList<String> errors = validator.validate(jobInfo);
+    assertThat(errors).hasSize(1);
+    assertThat(errors.get(0)).contains("max_dropbox_entries must be non-negative, got: -1");
+  }
+
+  @Test
+  public void validate_zeroMaxDropboxEntries_succeeds() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec zeroSpec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.me")
+            .setMaxDropboxEntries(0)
+            .build();
+    setProtoSpec(zeroSpec);
+
+    assertThat(validator.validate(jobInfo)).isEmpty();
   }
 
   private void setProtoSpec(AndroidLogcatMonitoringDecoratorSpec spec) throws Exception {

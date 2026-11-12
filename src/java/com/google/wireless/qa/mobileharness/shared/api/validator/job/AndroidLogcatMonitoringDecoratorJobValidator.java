@@ -24,6 +24,8 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfiga
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidLogcatMonitoringDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidLogcatMonitoringDecoratorSpec.DeviceEventConfig;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /** {@link JobValidator} for AndroidLogcatMonitoringDecorator. */
 public class AndroidLogcatMonitoringDecoratorJobValidator
@@ -33,7 +35,10 @@ public class AndroidLogcatMonitoringDecoratorJobValidator
   @Override
   public ImmutableList<String> validate(JobInfo job) throws InterruptedException {
     ImmutableList.Builder<String> errorsBuilder = ImmutableList.builder();
-    job.log().atInfo().alsoTo(logger).log("--- Running AndroidRoboTestJobValidator ---");
+    job.log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("--- Running AndroidLogcatMonitoringDecoratorJobValidator ---");
     List<AndroidLogcatMonitoringDecoratorSpec> specs;
     try {
       specs =
@@ -55,6 +60,10 @@ public class AndroidLogcatMonitoringDecoratorJobValidator
             "report_as_failure_packages list is empty. Either add package to monitor or remove the "
                 + "decorator from the job config.");
       }
+      if (spec.hasMaxDropboxEntries() && spec.getMaxDropboxEntries() < 0) {
+        errorsBuilder.add(
+            "max_dropbox_entries must be non-negative, got: " + spec.getMaxDropboxEntries());
+      }
 
       for (DeviceEventConfig eventConfig : spec.getDeviceEventConfigList()) {
         if (eventConfig.getEventName().isEmpty()) {
@@ -63,14 +72,34 @@ public class AndroidLogcatMonitoringDecoratorJobValidator
         if (eventConfig.getTag().isEmpty()) {
           errorsBuilder.add(
               "tag cannot be empty in deviceEventConfig with name " + eventConfig.getEventName());
+        } else {
+          validateRegex(eventConfig.getTag(), "tag", eventConfig.getEventName(), errorsBuilder);
         }
         if (eventConfig.getLineRegex().isEmpty()) {
           errorsBuilder.add(
               "line_regex cannot be empty in deviceEventConfig with name "
                   + eventConfig.getEventName());
+        } else {
+          validateRegex(
+              eventConfig.getLineRegex(), "line_regex", eventConfig.getEventName(), errorsBuilder);
         }
       }
     }
     return errorsBuilder.build();
+  }
+
+  private static void validateRegex(
+      String regex,
+      String fieldName,
+      String eventName,
+      ImmutableList.Builder<String> errorsBuilder) {
+    try {
+      var unused = Pattern.compile(regex);
+    } catch (PatternSyntaxException e) {
+      errorsBuilder.add(
+          String.format(
+              "Invalid %s regex in deviceEventConfig with name %s: %s",
+              fieldName, eventName, e.getMessage()));
+    }
   }
 }
