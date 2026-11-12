@@ -68,6 +68,9 @@ public class AllocatedDeviceProvider implements DeviceProvider {
                         "Dimension 'device_class_name' missing from DeviceFeature:\n%s", feature)));
     Class<? extends Device> deviceClass = ClassUtil.getDeviceClass(deviceClassName);
     DeviceInfo isolatedInfo = LiteDeviceInfoFactory.create(deviceId);
+    isolatedInfo.deviceTypes().addAll(feature.getTypeList());
+    isolatedInfo.supportedDrivers().addAll(feature.getDriverList());
+    isolatedInfo.supportedDecorators().addAll(feature.getDecoratorList());
     feature
         .getCompositeDimension()
         .getSupportedDimensionList()
