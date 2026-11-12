@@ -77,9 +77,8 @@ public class CacheFileResolver extends AbstractFileResolver {
     super(executorService);
     this.localFileUtil = localFileUtil;
     this.instantSource = instantSource;
-    this.localCache = new LocalCache(executorService, instantSource, key -> super.resolve(key));
-    this.persistentResolvedFileCache =
-        PersistentResolvedFileCache.create(key -> super.resolve(key));
+    this.localCache = new LocalCache(executorService, instantSource, super::resolve);
+    this.persistentResolvedFileCache = PersistentResolvedFileCache.create(super::resolve);
   }
 
   @VisibleForTesting
@@ -91,7 +90,7 @@ public class CacheFileResolver extends AbstractFileResolver {
     super(executorService);
     this.localFileUtil = localFileUtil;
     this.instantSource = instantSource;
-    this.localCache = new LocalCache(executorService, instantSource, key -> super.resolve(key));
+    this.localCache = new LocalCache(executorService, instantSource, super::resolve);
     this.persistentResolvedFileCache = persistentResolvedFileCache;
   }
 
@@ -278,6 +277,8 @@ public class CacheFileResolver extends AbstractFileResolver {
                 PathUtil.join(
                     thisRootPath, PathUtil.makeRelative(cachedRootPath, cachedResolvedFile.path()));
             if (!localFileUtil.isFileOrDirExist(thisPath)) {
+              // Whether thisPath holds the cached file.
+              boolean copied;
               try {
                 localFileUtil.prepareDir(PathUtil.dirname(thisPath));
                 // Hard links can be used for read-only archive/package files so multiple jobs
@@ -289,6 +290,7 @@ public class CacheFileResolver extends AbstractFileResolver {
                     && !localFileUtil.isDirExist(cachedResolvedFile.path())) {
                   try {
                     localFileUtil.hardLinkFile(cachedResolvedFile.path(), thisPath);
+                    copied = true;
                   } catch (MobileHarnessException e) {
                     // Hard links may fail across filesystems or due to permissions. If the cached
                     // file is gone or a concurrent resolve already created thisPath, let the outer
@@ -300,17 +302,10 @@ public class CacheFileResolver extends AbstractFileResolver {
                     logger.atInfo().withCause(e).log(
                         "Failed to hard link %s to %s. Fall back to copy.",
                         cachedResolvedFile.path(), thisPath);
-                    localFileUtil.copyFileOrDir(cachedResolvedFile.path(), thisPath);
+                    copied = copyCachedFileOrDir(cachedResolvedFile.path(), thisPath);
                   }
                 } else {
-                  // copyFileOrDir() silently copies nothing if the source is gone, so let the
-                  // outer catch re-resolve instead.
-                  if (!localFileUtil.isFileOrDirExist(cachedResolvedFile.path())) {
-                    throw new MobileHarnessException(
-                        BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND,
-                        "Cached resolved file " + cachedResolvedFile.path() + " doesn't exist");
-                  }
-                  localFileUtil.copyFileOrDir(cachedResolvedFile.path(), thisPath);
+                  copied = copyCachedFileOrDir(cachedResolvedFile.path(), thisPath);
                 }
               } catch (MobileHarnessException e) {
                 // There may be race condition. The cached file is removed after first check.
@@ -321,20 +316,32 @@ public class CacheFileResolver extends AbstractFileResolver {
                   logger.atInfo().withCause(e).log(
                       "Failed to copy or link file because of two concurrent copies to same"
                           + " destination. It's acceptable because the former copy succeeds.");
+                  copied = true;
                 } else {
                   logger.atInfo().withCause(e).log(
                       "Previous cached resolved file for %s doesn't exist any more. Need to"
                           + " re-resolve.",
                       resolveSource);
-                  // If any file in the cached result doesn't exist any more, retire cached value
-                  // and re-resolve.
-                  localCache.removeItemIfValueMatch(resolveSource, cachedResult.cachedResult());
-                  // Remove already copied file.
-                  for (ResolvedFile resolvedFile : thisResolvedFiles) {
-                    localFileUtil.removeFileOrDir(resolvedFile.path());
-                  }
-                  return internalResolve(resolveSource);
+                  copied = false;
                 }
+              }
+              if (!copied) {
+                // If any file in the cached result doesn't exist any more, retire cached value
+                // and re-resolve.
+                localCache.removeItemIfValueMatch(resolveSource, cachedResult.cachedResult());
+                // Remove already copied file.
+                for (ResolvedFile resolvedFile : thisResolvedFiles) {
+                  localFileUtil.removeFileOrDir(resolvedFile.path());
+                }
+                // A directory copied in part, by a copy that failed or not, would pass for a
+                // finished copy when the file is resolved again and another job has cached it by
+                // then. While the cached directory is there, thisPath may instead belong to a
+                // concurrent copy to the same destination.
+                if (localFileUtil.isDirExist(thisPath)
+                    && !localFileUtil.isDirExist(cachedResolvedFile.path())) {
+                  localFileUtil.removeFileOrDir(thisPath);
+                }
+                return internalResolve(resolveSource);
               }
             }
             thisResolvedFiles.add(
@@ -354,6 +361,32 @@ public class CacheFileResolver extends AbstractFileResolver {
       }
       return optionalResolveResult;
     }
+  }
+
+  /**
+   * Copies a cached resolved file or directory to {@code thisPath}, which must not exist, and
+   * returns whether {@code thisPath} holds the copy. A directory copied only in part is left for
+   * the caller to remove.
+   *
+   * <p>{@link LocalFileUtil#copyFileOrDir(String, String)} skips whatever vanishes while it runs
+   * instead of failing, and the job that resolved the cached files may remove them at any time. A
+   * partial copy of a directory whose removal has not finished when the copy ends goes undetected.
+   */
+  private boolean copyCachedFileOrDir(String cachedPath, String thisPath)
+      throws MobileHarnessException, InterruptedException {
+    if (localFileUtil.isFileOrDirExist(cachedPath)) {
+      localFileUtil.copyFileOrDir(cachedPath, thisPath);
+      // A file is copied whole or not at all, but a directory can be copied in part, which shows
+      // only in its source being gone.
+      if (localFileUtil.isFileOrDirExist(thisPath)
+          && (!localFileUtil.isDirExist(thisPath) || localFileUtil.isDirExist(cachedPath))) {
+        return true;
+      }
+    }
+    logger.atInfo().log(
+        "Cached resolved file %s is gone, so it was not copied to %s in full. Need to re-resolve.",
+        cachedPath, thisPath);
+    return false;
   }
 
   @Override
