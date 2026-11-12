@@ -349,18 +349,44 @@ public class GcsFileManager {
     }
   }
 
-  /** Downloads GCS file {@code gcsFile} to {@code local}. */
+  /** Downloads GCS file {@code gcsFile} to {@code localCache}. */
   @CanIgnoreReturnValue
   private Path downloadGcsFile(GcsApiObject gcsFile, Path localCache)
       throws MobileHarnessException, InterruptedException {
     localFileUtil.prepareParentDir(localCache);
-    if (downloadShardSize.isPresent()) {
-      gcsUtil.copyFileToLocalInParallel(gcsFile, localCache, downloadShardSize.get());
-    } else {
-      gcsUtil.copyFileToLocal(gcsFile, localCache);
+    // Stage to a sibling temp file and rename so hard links to an evicted entry are never
+    // overwritten in place.
+    Path tmpFile =
+        localCache.resolveSibling(
+            String.format(
+                "TMP_%s_%s", localCache.getFileName(), Long.toUnsignedString(random.nextLong())));
+    try {
+      if (downloadShardSize.isPresent()) {
+        gcsUtil.copyFileToLocalInParallel(gcsFile, tmpFile, downloadShardSize.get());
+      } else {
+        gcsUtil.copyFileToLocal(gcsFile, tmpFile);
+      }
+      localFileUtil.setFilePermission(tmpFile, "r-xr-xr-x");
+      localFileUtil.moveFileOrDir(tmpFile, localCache);
+      return localCache;
+    } finally {
+      boolean interrupted = Thread.interrupted();
+      try {
+        if (localFileUtil.isFileExist(tmpFile)) {
+          localFileUtil.removeFileOrDir(tmpFile);
+        }
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log("Failed to remove temporary file: %s", tmpFile);
+      } catch (InterruptedException e) {
+        logger.atWarning().withCause(e).log(
+            "Interrupted when removing temporary file: %s", tmpFile);
+        interrupted = true;
+      } finally {
+        if (interrupted) {
+          Thread.currentThread().interrupt();
+        }
+      }
     }
-    localFileUtil.setFilePermission(localCache, "r-xr-xr-x");
-    return localCache;
   }
 
   /**
