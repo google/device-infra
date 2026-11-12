@@ -39,6 +39,7 @@ java_library(
     name = "prepare_test",
     srcs = ["PrepareTestServiceImpl.java"],
     deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:mode_setting_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
         "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",

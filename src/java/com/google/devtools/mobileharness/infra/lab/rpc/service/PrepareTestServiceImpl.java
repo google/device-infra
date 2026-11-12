@@ -35,6 +35,7 @@ import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -92,7 +93,6 @@ import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.Resol
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.DualConduitUtil;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.ServerType;
-import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -504,25 +504,19 @@ public class PrepareTestServiceImpl {
       String jobId, String testId, ProxyTestRunner proxyTestRunner) throws MobileHarnessException {
     TestEngineStatus testEngineStatus = proxyTestRunner.getTestEngineStatus();
     Optional<TestEngineLocator> testEngineLocator = proxyTestRunner.getTestEngineLocator();
-    Optional<Throwable> testEngineErrorInResponse =
-        proxyTestRunner.getTestEngineError().map(e -> e);
+    Optional<MobileHarnessException> testEngineError = proxyTestRunner.getTestEngineError();
 
     Optional<ListenableFuture<List<ResolveResult>>> resolveJobFilesFuture =
         jobManager.getResolveJobFilesFuture(jobId, testId);
     ResolveFileStatus resolveFileStatus;
-    Optional<Throwable> resolveFileErrorInResponse = Optional.empty();
+    Optional<Throwable> resolveFileError = Optional.empty();
     if (resolveJobFilesFuture.isPresent()) {
       try {
         resolveJobFilesFuture.get().get(0, SECONDS);
         resolveFileStatus = ResolveFileStatus.RESOLVE_FILE_RESOLVED;
       } catch (ExecutionException e) {
         resolveFileStatus = ResolveFileStatus.RESOLVE_FILE_FAILED;
-        if (testEngineErrorInResponse.isPresent()) {
-          MoreThrowables.addSuppressed(testEngineErrorInResponse.get(), e.getCause());
-        } else {
-          testEngineErrorInResponse = Optional.ofNullable(e.getCause());
-        }
-        resolveFileErrorInResponse = Optional.ofNullable(e.getCause());
+        resolveFileError = Optional.ofNullable(e.getCause());
       } catch (TimeoutException e) {
         resolveFileStatus = ResolveFileStatus.RESOLVE_FILE_RESOLVING;
       } catch (InterruptedException e) {
@@ -542,12 +536,20 @@ public class PrepareTestServiceImpl {
             .setTestEngineStatus(testEngineStatus)
             .setResolveFileStatus(resolveFileStatus);
     testEngineLocator.ifPresent(response::setTestEngineLocator);
-    testEngineErrorInResponse
-        .map(ErrorModelConverter::toExceptionDetail)
-        .ifPresent(response::setExceptionDetail);
-    resolveFileErrorInResponse
-        .map(ErrorModelConverter::toExceptionDetail)
-        .ifPresent(response::setResolveFileExceptionDetail);
+
+    // Do not mutate testEngineError from ProxyTestRunner, as it is shared across calls. Merge
+    // resolveFileExceptionDetail at the proto level instead.
+    Optional<ExceptionDetail> resolveFileExceptionDetail =
+        resolveFileError.map(ErrorModelConverter::toExceptionDetail);
+    if (testEngineError.isPresent()) {
+      ExceptionDetail.Builder exceptionDetail =
+          ErrorModelConverter.toExceptionDetail(testEngineError.get()).toBuilder();
+      resolveFileExceptionDetail.ifPresent(exceptionDetail::addSuppressed);
+      response.setExceptionDetail(exceptionDetail);
+    } else {
+      resolveFileExceptionDetail.ifPresent(response::setExceptionDetail);
+    }
+    resolveFileExceptionDetail.ifPresent(response::setResolveFileExceptionDetail);
     return response.build();
   }
 
