@@ -158,6 +158,19 @@ func (s *Store) Delete(ctx context.Context, key store.Key, v store.Version) erro
 	return nil
 }
 
+// All returns every record in the store, in unspecified order. It is not
+// part of store.Store: tests use it to compare the whole content of two
+// stores.
+func (s *Store) All() []store.Item {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	items := make([]store.Item, 0, len(s.records))
+	for _, e := range s.records {
+		items = append(items, store.Item{Key: e.key, Record: e.record.Canonical(), Version: store.NewVersion(e.version)})
+	}
+	return items
+}
+
 // put stores r at key under a new version. s.mu must be held.
 func (s *Store) put(key store.Key, r store.Record) store.Version {
 	s.lastVersion++
