@@ -88,7 +88,7 @@ public class WifiMonitorService extends IntentService {
     FileOutputStream out = null;
     try {
       final File file = getFileStreamPath(DATA_FILE);
-      if (MAX_DATA_FILE_SIZE < file.length()) {
+      if (file.length() > MAX_DATA_FILE_SIZE) {
         Log.d(TAG, "data file is too big. clearing...");
         clearData(this);
       }
@@ -122,7 +122,7 @@ public class WifiMonitorService extends IntentService {
       Log.d(TAG, "network connection is good.");
     } catch (final WifiException e) {
       Log.e(TAG, "failed to reconnect", e);
-    } catch (final Exception e) {
+    } catch (final RuntimeException e) {
       Log.e(TAG, "failed to check network connection", e);
     }
 
@@ -204,7 +204,7 @@ public class WifiMonitorService extends IntentService {
    * Returns the latency history data.
    *
    * @param context a {@link Context} object.
-   * @returns a comma-separated list of latency history for the given URL in milliseconds.
+   * @return a comma-separated list of latency history for the given URL in milliseconds.
    */
   public static String getData(final Context context) {
     String output = "";
