@@ -64,7 +64,7 @@ public class WifiUtil extends Instrumentation {
     mArguments = arguments;
     // elevate permission if on Qt or later
     int apiLevel = Build.VERSION.SDK_INT;
-    if (!"REL".equals(Build.VERSION.CODENAME)) {
+    if (!Build.VERSION.CODENAME.equals("REL")) {
       // add one extra if platform is under development
       // i.e. trying to predict the next API level number
       apiLevel++;
@@ -186,13 +186,13 @@ public class WifiUtil extends Instrumentation {
       // As a pattern, method implementations below should gather arguments _first_, and then
       // use those arguments so that the system is not left in an inconsistent state if an
       // argument is missing in the middle of an implementation.
-      if ("enableWifi".equals(method)) {
+      if (method.equals("enableWifi")) {
         // Doesn't work on Q
         result.putBoolean("result", wifiManager.setWifiEnabled(true));
-      } else if ("disableWifi".equals(method)) {
+      } else if (method.equals("disableWifi")) {
         // Doesn't work on Q
         result.putBoolean("result", wifiManager.setWifiEnabled(false));
-      } else if ("addOpenNetwork".equals(method)) {
+      } else if (method.equals("addOpenNetwork")) {
         final String ssid = expectString("ssid");
         final boolean scanSsid = getBoolean("scan_ssid", false);
         final boolean disableMacRandomization = getBoolean("disableMacRandomization", false);
@@ -200,7 +200,7 @@ public class WifiUtil extends Instrumentation {
         result.putInt(
             "result", connector.addNetwork(ssid, null, scanSsid, disableMacRandomization));
 
-      } else if ("addWpaPskNetwork".equals(method)) {
+      } else if (method.equals("addWpaPskNetwork")) {
         final String ssid = expectString("ssid");
         final boolean scanSsid = getBoolean("scan_ssid", false);
         final String psk = expectString("psk");
@@ -208,24 +208,24 @@ public class WifiUtil extends Instrumentation {
 
         result.putInt("result", connector.addNetwork(ssid, psk, scanSsid, disableMacRandomization));
 
-      } else if ("associateNetwork".equals(method)) {
+      } else if (method.equals("associateNetwork")) {
         final int id = expectInteger("id");
 
         result.putBoolean(
             "result", wifiManager.enableNetwork(id, true /* disable other networks */));
 
-      } else if ("disconnect".equals(method)) {
+      } else if (method.equals("disconnect")) {
         result.putBoolean("result", wifiManager.disconnect());
 
-      } else if ("disableNetwork".equals(method)) {
+      } else if (method.equals("disableNetwork")) {
         final int id = expectInteger("id");
 
         result.putBoolean("result", wifiManager.disableNetwork(id));
 
-      } else if ("isWifiEnabled".equals(method)) {
+      } else if (method.equals("isWifiEnabled")) {
         result.putBoolean("result", wifiManager.isWifiEnabled());
 
-      } else if ("getIpAddress".equals(method)) {
+      } else if (method.equals("getIpAddress")) {
         final WifiInfo info = wifiManager.getConnectionInfo();
         final int addr = info.getIpAddress();
 
@@ -237,39 +237,39 @@ public class WifiUtil extends Instrumentation {
 
         result.putString("result", String.format("%s.%s.%s.%s", a, b, c, d));
 
-      } else if ("getSSID".equals(method)) {
+      } else if (method.equals("getSSID")) {
         final WifiInfo info = wifiManager.getConnectionInfo();
 
         result.putString("result", info.getSSID());
 
-      } else if ("getBSSID".equals(method)) {
+      } else if (method.equals("getBSSID")) {
         final WifiInfo info = wifiManager.getConnectionInfo();
 
         result.putString("result", info.getBSSID());
 
-      } else if ("removeAllNetworks".equals(method)) {
+      } else if (method.equals("removeAllNetworks")) {
         connector.removeAllNetworks(true);
 
         result.putBoolean("result", true);
 
-      } else if ("removeNetwork".equals(method)) {
+      } else if (method.equals("removeNetwork")) {
         final int id = expectInteger("id");
 
         result.putBoolean("result", wifiManager.removeNetwork(id));
 
-      } else if ("saveConfiguration".equals(method)) {
+      } else if (method.equals("saveConfiguration")) {
         result.putBoolean("result", wifiManager.saveConfiguration());
 
-      } else if ("getSupplicantState".equals(method)) {
+      } else if (method.equals("getSupplicantState")) {
         String state = wifiManager.getConnectionInfo().getSupplicantState().name();
         result.putString("result", state);
 
-      } else if ("checkConnectivity".equals(method)) {
+      } else if (method.equals("checkConnectivity")) {
         final String url = getString("urlToCheck", DEFAULT_URL_TO_CHECK);
 
         result.putBoolean("result", WifiConnector.checkConnectivity(url, /* enableRetry= */ true));
 
-      } else if ("connectToNetwork".equals(method)) {
+      } else if (method.equals("connectToNetwork")) {
         final String ssid = expectString("ssid");
         final boolean scanSsid = getBoolean("scan_ssid", false);
         final String psk = getString("psk", null);
@@ -281,15 +281,15 @@ public class WifiUtil extends Instrumentation {
 
         result.putBoolean("result", true);
 
-      } else if ("disconnectFromNetwork".equals(method)) {
+      } else if (method.equals("disconnectFromNetwork")) {
         connector.disconnectFromNetwork();
 
         result.putBoolean("result", true);
 
-      } else if ("getWifiInfo".equals(method)) {
+      } else if (method.equals("getWifiInfo")) {
         result.putString("result", connector.getWifiInfo().toString());
 
-      } else if ("startMonitor".equals(method)) {
+      } else if (method.equals("startMonitor")) {
         final int interval = expectInteger("interval");
         final String urlToCheck = getString("urlToCheck", DEFAULT_URL_TO_CHECK);
 
@@ -297,7 +297,7 @@ public class WifiUtil extends Instrumentation {
 
         result.putBoolean("result", true);
 
-      } else if ("stopMonitor".equals(method)) {
+      } else if (method.equals("stopMonitor")) {
         final Context context = getContext();
         WifiMonitorService.disable(context);
 

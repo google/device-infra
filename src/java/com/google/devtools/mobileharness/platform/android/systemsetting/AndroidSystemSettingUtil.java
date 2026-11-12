@@ -1412,7 +1412,7 @@ public class AndroidSystemSettingUtil {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_DEVICE_PROPERTY_ERROR, e.getMessage(), e);
     }
-    return "1".equals(propertyValue);
+    return Objects.equals(propertyValue, "1");
   }
 
   /**
@@ -1928,10 +1928,9 @@ public class AndroidSystemSettingUtil {
   private boolean isScreenLockDisabled(String serial)
       throws MobileHarnessException, InterruptedException {
     try {
-      return "1"
-          .equals(
-              adbUtil.sqlite(
-                  serial, ANDROID_LOCKSETTINGS_DB_PATH, SQL_GET_LOCKSCREEN_DISABLED_VALUE));
+      return Objects.equals(
+          adbUtil.sqlite(serial, ANDROID_LOCKSETTINGS_DB_PATH, SQL_GET_LOCKSCREEN_DISABLED_VALUE),
+          "1");
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_SETTING_SQLITE_CMD_ERROR, e.getMessage(), e);

@@ -186,7 +186,7 @@ class CommandFileParser {
    * @return {@code true} if the line matches the macro format, {@code false} otherwise
    */
   private static boolean isLineMacro(CommandLine line) {
-    return line.size() >= 4 && "MACRO".equals(line.get(0)) && "=".equals(line.get(2));
+    return line.size() >= 4 && line.get(0).equals("MACRO") && line.get(2).equals("=");
   }
 
   /**
@@ -196,7 +196,7 @@ class CommandFileParser {
    * @return {@code true} if the line matches the long macro format, {@code false} otherwise
    */
   private static boolean isLineLongMacro(CommandLine line) {
-    return line.size() == 3 && "LONG".equals(line.get(0)) && "MACRO".equals(line.get(1));
+    return line.size() == 3 && line.get(0).equals("LONG") && line.get(1).equals("MACRO");
   }
 
   /**
@@ -205,7 +205,7 @@ class CommandFileParser {
    * @return {@code true} if the line is an INCLUDE directive, {@code false} otherwise
    */
   private static boolean isLineIncludeDirective(CommandLine line) {
-    return line.size() == 2 && "INCLUDE".equals(line.get(0));
+    return line.size() == 2 && line.get(0).equals("INCLUDE");
   }
 
   /**
