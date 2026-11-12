@@ -18,6 +18,7 @@ import {
   SEARCH_SERVICE,
   SearchService,
 } from '../../core/services/search/search_service';
+import {UrlService} from '../../core/services/url_service';
 import {SearchPage} from './search_page';
 import {FleetSearchStore} from './services/fleet_search_store';
 import {SearchPageStore} from './services/search_page_store';
@@ -356,5 +357,72 @@ describe('SearchPage (OSS build integration)', () => {
     expect(count(fixture, 'app-fleet-search-results')).toBe(0);
     expect(searchService.searchFleet).not.toHaveBeenCalled();
     expect(count(fixture, '.scope-switcher')).toBe(0);
+  });
+
+  it('does not frame the results card when not embedded in the ATS host', async () => {
+    const {fixture} = await openPage('devices');
+    expect(
+      fixture.nativeElement.querySelector('.search-page-container.results-mode'),
+    ).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('.search-page-container.ats-embedded'),
+    ).toBeNull();
+  });
+
+  it('frames the results card on all sides when embedded in the ATS host', async () => {
+    spyOn(UrlService.prototype, 'isInAtsEmbeddedMode').and.returnValue(true);
+    const {fixture} = await openPage('devices');
+    expect(
+      fixture.nativeElement.querySelector(
+        '.search-page-container.results-mode.ats-embedded',
+      ),
+    ).not.toBeNull();
+  });
+
+  it('remembers that the quick filter panel was hidden, separately for devices and hosts', async () => {
+    const {fixture} = await openPage('devices');
+    const hideButton = fixture.nativeElement.querySelector(
+      '.preset-hide-btn',
+    ) as HTMLButtonElement;
+    expect(hideButton).not.toBeNull();
+
+    hideButton.click();
+    fixture.detectChanges();
+
+    expect(count(fixture, '.preset-show-pill')).toBe(1);
+    expect(
+      window.localStorage.getItem('mh_fe_v6_filter_collapsed_devices'),
+    ).toBe('true');
+    expect(
+      window.localStorage.getItem('mh_fe_v6_filter_collapsed_hosts'),
+    ).toBeNull();
+  });
+
+  it('restores the hidden quick filter panel of the device page after a reload', async () => {
+    window.localStorage.setItem('mh_fe_v6_filter_collapsed_devices', 'true');
+    const {fixture} = await openPage('devices');
+
+    expect(count(fixture, '.preset-hide-btn')).toBe(0);
+    expect(count(fixture, '.preset-show-pill')).toBe(1);
+
+    // Showing it again is remembered too.
+    (
+      fixture.nativeElement.querySelector(
+        '.preset-show-pill',
+      ) as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+    expect(count(fixture, '.preset-hide-btn')).toBe(1);
+    expect(
+      window.localStorage.getItem('mh_fe_v6_filter_collapsed_devices'),
+    ).toBe('false');
+  });
+
+  it('keeps the host page quick filter panel visible when only the device one is hidden', async () => {
+    window.localStorage.setItem('mh_fe_v6_filter_collapsed_devices', 'true');
+    const {fixture} = await openPage('hosts');
+
+    expect(count(fixture, '.preset-hide-btn')).toBe(1);
+    expect(count(fixture, '.preset-show-pill')).toBe(0);
   });
 });

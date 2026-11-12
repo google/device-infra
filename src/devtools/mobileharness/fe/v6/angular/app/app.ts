@@ -15,13 +15,15 @@
  */
 
 import {PortalModule} from '@angular/cdk/portal';
-import {CommonModule} from '@angular/common';
+import {CommonModule, DOCUMENT} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   OnDestroy,
   ViewEncapsulation,
+  computed,
+  effect,
   inject,
 } from '@angular/core';
 import {MatButtonModule, MatIconButton} from '@angular/material/button';
@@ -51,7 +53,7 @@ import {
 } from '@deviceinfra/app/core/models/app_data';
 import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
-import {isHeaderJumpBarVisibleOnRoute} from '@deviceinfra/app/features/all_site_search/all_site_search_scope';
+import {ENTITY_SEARCH_PATHS, isHeaderJumpBarVisibleOnRoute} from '@deviceinfra/app/features/all_site_search/all_site_search_scope';
 import {HeaderJumpBar} from '@deviceinfra/app/features/all_site_search/components/header_jump_bar/header_jump_bar';
 import {HeaderSearchDockService} from '@deviceinfra/app/shared/services/header_search_dock_service';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
@@ -63,6 +65,18 @@ function isAssistantEnabled(
 ): boolean {
   return false;
 }
+
+/** Height of the embedded header band until the host page sends its slot. */
+const DEFAULT_EMBEDDED_HEADER_BAND_HEIGHT = 64;
+/**
+ * Class set on <body> while the embedded header band is shown; app.scss then
+ * keeps every layer that covers the whole viewport (dialogs, the loading
+ * spinner) below the band.
+ */
+export const EMBEDDED_HEADER_BAND_CLASS = 'with-embedded-header-band';
+/** CSS custom property on <body> carrying the band height for that offset. */
+export const EMBEDDED_HEADER_BAND_HEIGHT_PROPERTY =
+  '--embedded-header-band-height';
 
 /** Homepage */
 @Component({
@@ -111,6 +125,23 @@ export class App implements OnDestroy {
   isFakeData = false;
   showContent = true;
   isAssistantEnabled = false;
+  /**
+   * Whether the embedded header band is shown: when embedded in the ATS host
+   * (MTT UI2) on the entity search pages, the host lets the iframe paint into
+   * a slot of its own header, and this band hosts the docked search input
+   * there. Never shown in the Google-internal build (its embedded mode, e.g.
+   * Arsenal, has no such host slot).
+   */
+  showEmbeddedHeaderBand = false;
+  /** Header slot geometry provided by the host page (embedded mode only). */
+  readonly embeddedHeaderSlot = this.urlService.embeddedHeaderSlot;
+  /** Height of the embedded header band, following the host header. */
+  readonly embeddedHeaderBandHeight = computed(
+    () =>
+      this.embeddedHeaderSlot()?.height || DEFAULT_EMBEDDED_HEADER_BAND_HEIGHT,
+  );
+  private readonly document = inject(DOCUMENT);
+  private headerSlotRequested = false;
 
   get isStandaloneMode(): boolean {
     return !this.isEmbeddedMode;
@@ -229,9 +260,16 @@ export class App implements OnDestroy {
       const newUrl = new URL(url, window.location.origin);
       this.router.navigateByUrl(newUrl.pathname + newUrl.search);
     });
+
+    // The host header can change its height (and so the band's) at any time.
+    effect(() => {
+      this.embeddedHeaderBandHeight();
+      this.updateEmbeddedOverlayOffset();
+    });
   }
 
   updateShowContent() {
+    this.updateEmbeddedHeaderBand();
     if (this.isFakeData) {
       this.showContent = true;
       this.cdr.markForCheck();
@@ -279,7 +317,58 @@ export class App implements OnDestroy {
     this.cdr.markForCheck();
   }
 
+  /**
+   * Recomputes whether the embedded header band is shown and, the first time
+   * it is needed, asks the host page for its header slot geometry.
+   *
+   * Explanation: The band only exists when embedded in the ATS host (OSS
+   * build) on the entity search routes (`/devices`, `/hosts`, ...); detail
+   * pages and the Google-internal embedded mode keep the plain embedded
+   * layout. The host answers the request with an `EMBEDDED_HEADER_SLOT`
+   * message and keeps sending updates when the slot moves or resizes.
+   */
+  private updateEmbeddedHeaderBand() {
+    this.showEmbeddedHeaderBand =
+      this.urlService.isInAtsEmbeddedMode() &&
+      ENTITY_SEARCH_PATHS.has(this.getCurrentRoutePath());
+    if (this.showEmbeddedHeaderBand && !this.headerSlotRequested) {
+      this.headerSlotRequested = true;
+      this.urlService.requestEmbeddedHeaderSlot();
+    }
+    this.updateEmbeddedOverlayOffset();
+  }
+
+  /**
+   * Keeps the layers that cover the whole viewport (dialogs, the loading
+   * spinner) below the embedded header band.
+   *
+   * Explanation: The host page only paints the slot column of the band, so
+   * anything centered over the whole iframe (V6's `app-dialog` shell is a
+   * fixed full-viewport container, the CDK global overlay wrapper centers
+   * mat-dialog panes, the loading spinner overlay is fixed too) would have
+   * its top edge land in the band and be cut off (and not clickable) outside
+   * the slot. While the band is shown, <body> is marked with the band height
+   * and app.scss offsets those layers by it, so they center in the area
+   * below the band. Connected overlays (menus, autocomplete panels, tooltips)
+   * are anchored to their trigger and need no offset.
+   */
+  private updateEmbeddedOverlayOffset() {
+    const body = this.document.body;
+    if (this.showEmbeddedHeaderBand) {
+      body.classList.add(EMBEDDED_HEADER_BAND_CLASS);
+      body.style.setProperty(
+        EMBEDDED_HEADER_BAND_HEIGHT_PROPERTY,
+        `${this.embeddedHeaderBandHeight()}px`,
+      );
+    } else {
+      body.classList.remove(EMBEDDED_HEADER_BAND_CLASS);
+      body.style.removeProperty(EMBEDDED_HEADER_BAND_HEIGHT_PROPERTY);
+    }
+  }
+
   ngOnDestroy() {
+    this.showEmbeddedHeaderBand = false;
+    this.updateEmbeddedOverlayOffset();
     this.destroy.next();
     this.destroy.complete();
   }

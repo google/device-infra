@@ -617,6 +617,36 @@ app-root {
     overflow: auto;
     background-color: $labconsole-bg;
     @include common.shared-scrollbar-style();
+
+    // With the header band the routed page takes the remaining height.
+    &.with-header-band {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  // Embedded mode, entity search pages: band painted into the host page's
+  // header slot. Its height / border colour follow the host header (see
+  // UrlService.embeddedHeaderSlot) so that it blends in seamlessly.
+  .embedded-header-band {
+    position: relative;
+    z-index: 250;
+    flex: none;
+    display: flex;
+    align-items: center;
+    height: 64px;
+    box-sizing: border-box;
+    background-color: $white;
+    border-bottom: 1px solid $border-menu;
+
+    .embedded-header-search-dock {
+      display: flex;
+      align-items: center;
+      flex: 0 0 auto;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
   }
 
   footer {
@@ -633,4 +663,25 @@ app-root {
 
 .display-hidden {
   display: none;
+}
+
+// Embedded mode, entity search pages (see App.updateEmbeddedOverlayOffset):
+// the host page paints only the slot column of the header band, so every
+// layer that covers the whole iframe viewport must start below the band, or
+// whatever it centers (dialog cards, the loading spinner) lands in the band
+// and is cut off outside the slot. Covered: V6's own dialog shell
+// (`app-dialog`: a fixed `.config-modal-container` that centers its card
+// itself), the CDK global overlay wrapper (mat-dialog panes) and the loading
+// spinner overlay. Connected overlays (menus, autocomplete panels, tooltips)
+// follow their trigger and need nothing. `overflow: hidden` cuts a card that
+// is taller than the area below the band at the band, exactly like the old
+// iframe edge used to, instead of letting it paint over the band.
+body.with-embedded-header-band {
+  .cdk-global-overlay-wrapper,
+  .config-modal-container,
+  .loading-spinner-overlay {
+    top: var(--embedded-header-band-height, 64px);
+    height: calc(100% - var(--embedded-header-band-height, 64px));
+    overflow: hidden;
+  }
 }

@@ -1,7 +1,9 @@
 import {
   clearStoredAutoCollapseAfterApply,
   getStoredAutoCollapseAfterApply,
+  getStoredFilterCollapsed,
   saveStoredAutoCollapseAfterApply,
+  saveStoredFilterCollapsed,
 } from './search_suggestions_utils';
 
 describe('search_suggestions_utils', () => {
@@ -45,6 +47,33 @@ describe('search_suggestions_utils', () => {
         'invalid-json-{',
       );
       expect(getStoredAutoCollapseAfterApply('devices', 'internal')).toBeNull();
+    });
+  });
+
+  describe('quick filter panel collapsed persistence', () => {
+    it('returns null when no stored collapsed state exists', () => {
+      expect(getStoredFilterCollapsed('devices')).toBeNull();
+    });
+
+    it('saves and retrieves the collapsed state separately per entity', () => {
+      saveStoredFilterCollapsed('devices', true);
+      expect(getStoredFilterCollapsed('devices')).toBeTrue();
+      expect(getStoredFilterCollapsed('hosts')).toBeNull();
+
+      saveStoredFilterCollapsed('hosts', false);
+      expect(getStoredFilterCollapsed('hosts')).toBeFalse();
+      expect(getStoredFilterCollapsed('devices')).toBeTrue();
+      expect(
+        window.localStorage.getItem('mh_fe_v6_filter_collapsed_devices'),
+      ).toBe('true');
+    });
+
+    it('returns null when the stored collapsed value is not a boolean', () => {
+      window.localStorage.setItem(
+        'mh_fe_v6_filter_collapsed_devices',
+        '"yes"',
+      );
+      expect(getStoredFilterCollapsed('devices')).toBeNull();
     });
   });
 });
