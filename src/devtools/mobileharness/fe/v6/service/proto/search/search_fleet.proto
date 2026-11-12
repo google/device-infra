@@ -327,7 +327,8 @@ message FleetItemCountSort {}
 
 // Cursor-based pagination for flat, group-header, and group-expand views.
 message FleetPageRequest {
-  // Page size. 0 or absent = backend default (e.g. 25).
+  // Page size. 0 or absent = backend default (e.g. 25). Sizes above 5000 are
+  // clamped to 5000 for flat and group-expand rows.
   int32 page_size = 1;
 
   // Opaque cursor. Empty = first page.

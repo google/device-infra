@@ -8,6 +8,7 @@ import {
   FleetChipResolverRequest,
   FleetChipResolverResponse,
   FleetSearchConfig,
+  FleetSearchRequest,
   FleetSearchResults,
   FleetSuggestion,
   IntComparisonOperator,
@@ -39,6 +40,9 @@ describe('FleetSearchStore', () => {
   };
 
   beforeEach(() => {
+    // Page-size preferences are read from localStorage when the store is
+    // created, so every spec starts from a clean slate regardless of order.
+    localStorage.clear();
     queryParams$ = new Subject();
     activatedRouteStub = {
       queryParams: queryParams$,
@@ -118,6 +122,236 @@ describe('FleetSearchStore', () => {
     await flushAsync();
     return store;
   }
+
+  describe('Rows per page persistence', () => {
+    const DEFAULT_COLUMNS_CONFIG = {
+      columns: {
+        defaults: [
+          {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        ],
+      },
+    };
+
+    /** Page size of the most recent SearchFleet request's flat / groupHeader / groupExpand view. */
+    function lastRequestedPageSize(
+      view: 'flat' | 'groupHeader' | 'groupExpand',
+    ): number | undefined {
+      const req = mockSearchService.searchFleet.calls.mostRecent()
+        .args[0] as FleetSearchRequest;
+      switch (view) {
+        case 'flat':
+          return req.flat?.page?.pageSize;
+        case 'groupHeader':
+          return req.groupHeader?.page?.pageSize;
+        case 'groupExpand':
+          return req.groupExpand?.page?.pageSize;
+        default:
+          return undefined;
+      }
+    }
+
+    beforeEach(() => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of(DEFAULT_COLUMNS_CONFIG),
+      );
+      // Keep URL filter chips valid so flat searches stay out of the landing state.
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [{valid: {pillKey: 'Filter', pillCondition: 'value'}}],
+          groupByChips: [],
+        }),
+      );
+    });
+
+    it('restores the saved flat page size of the entity on creation and persists changes', async () => {
+      localStorage.setItem('mh_fe_v6_page_size_devices', '5000');
+      localStorage.setItem('mh_fe_v6_page_size_hosts', '500');
+
+      const store = await createStoreAt({'f': 'dimension::model~pixel 8'});
+
+      expect(store.pageSize()).toBe(5000);
+      expect(lastRequestedPageSize('flat')).toBe(5000);
+
+      store.setPageSize(1000);
+      await flushAsync();
+
+      expect(localStorage.getItem('mh_fe_v6_page_size_devices')).toBe('1000');
+      expect(lastRequestedPageSize('flat')).toBe(1000);
+      // The host preference is a separate key and stays untouched.
+      expect(localStorage.getItem('mh_fe_v6_page_size_hosts')).toBe('500');
+    });
+
+    it('restores the host page size from its own key', async () => {
+      localStorage.setItem('mh_fe_v6_page_size_devices', '5000');
+      localStorage.setItem('mh_fe_v6_page_size_hosts', '2000');
+
+      const store = await createStoreAt(
+        {'f': 'host_field::host_name~lab1'},
+        'hosts',
+      );
+
+      expect(store.pageSize()).toBe(2000);
+      expect(lastRequestedPageSize('flat')).toBe(2000);
+    });
+
+    it('falls back to the default when the saved flat page size is not an offered option', async () => {
+      localStorage.setItem('mh_fe_v6_page_size_devices', '123');
+
+      const store = await createStoreAt({'f': 'dimension::model~pixel 8'});
+
+      expect(store.pageSize()).toBe(25);
+      expect(lastRequestedPageSize('flat')).toBe(25);
+    });
+
+    it('keeps "Groups per page" independent of the saved flat page size and does not persist it', async () => {
+      localStorage.setItem('mh_fe_v6_page_size_devices', '5000');
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groups: [{groupId: 'g1', values: ['Pixel 8']}],
+            totalGroups: 1,
+            totalItems: 5,
+          },
+        }),
+      );
+
+      const store = await createStoreAt({'gb': 'dimension::model'});
+
+      expect(store.pageSize()).toBe(5000);
+      expect(store.groupHeaderPageSize()).toBe(25);
+      expect(lastRequestedPageSize('groupHeader')).toBe(25);
+
+      store.pageIndex.set(1);
+      store.pageToken.set('tok-1');
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      store.openGroupIds.set(new Set(['g1']));
+      store.setGroupHeaderPageSize(50);
+      await flushAsync();
+
+      expect(store.groupHeaderPageSize()).toBe(50);
+      expect(lastRequestedPageSize('groupHeader')).toBe(50);
+      expect(store.pageIndex()).toBe(0);
+      expect(store.pageToken()).toBe('');
+      expect(store.selectedItems().size).toBe(0);
+      expect(store.openGroupIds().size).toBe(0);
+      // Only the flat page size is persisted; the flat value itself is unchanged.
+      expect(store.pageSize()).toBe(5000);
+      expect(localStorage.getItem('mh_fe_v6_page_size_devices')).toBe('5000');
+      expect(
+        Object.keys(localStorage).filter((key) => key.startsWith('mh_fe_v6_')),
+      ).toEqual(['mh_fe_v6_page_size_devices']);
+
+      // Re-selecting the current size is a no-op.
+      mockSearchService.searchFleet.calls.reset();
+      store.setGroupHeaderPageSize(50);
+      await flushAsync();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+    });
+
+    it('seeds each group page size from the saved preference only when the group is first loaded', async () => {
+      const groupIds = ['g1', 'g2', 'g3', 'g4'];
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groups: groupIds.map((groupId) => ({groupId, values: [groupId]})),
+            totalGroups: 4,
+            totalItems: 400,
+          },
+          flat: {rows: [{id: 'dev-1', cells: []}], total: 100},
+        }),
+      );
+      const store = await createStoreAt({'gb': 'host_field::host_name'});
+      const groupPageSize = (groupId: string) =>
+        store.expandedGroupPages().get(groupId)?.pageSize;
+
+      // 1. First group ever expanded: nothing saved yet, so the default of 100.
+      store.toggleGroup('g1');
+      await flushAsync();
+      expect(lastRequestedPageSize('groupExpand')).toBe(100);
+      expect(groupPageSize('g1')).toBe(100);
+
+      // 2. Changing it in group 1 saves 5000 and reloads group 1 with it.
+      store.setGroupPageSize('g1', 5000);
+      await flushAsync();
+      expect(
+        localStorage.getItem('mh_fe_v6_group_expand_page_size_devices'),
+      ).toBe('5000');
+      expect(lastRequestedPageSize('groupExpand')).toBe(5000);
+      expect(groupPageSize('g1')).toBe(5000);
+
+      // 3. Group 2 is expanded for the first time with the saved 5000.
+      store.toggleGroup('g2');
+      await flushAsync();
+      expect(lastRequestedPageSize('groupExpand')).toBe(5000);
+      expect(groupPageSize('g2')).toBe(5000);
+
+      // 4. Changing group 2 to 1000 saves 1000; group 1 keeps its 5000.
+      store.setGroupPageSize('g2', 1000);
+      await flushAsync();
+      expect(
+        localStorage.getItem('mh_fe_v6_group_expand_page_size_devices'),
+      ).toBe('1000');
+      expect(groupPageSize('g2')).toBe(1000);
+      expect(groupPageSize('g1')).toBe(5000);
+
+      // 5. Group 3 picks up the latest saved value, 1000.
+      store.toggleGroup('g3');
+      await flushAsync();
+      expect(lastRequestedPageSize('groupExpand')).toBe(1000);
+      expect(groupPageSize('g3')).toBe(1000);
+
+      // 6. Collapsing and re-expanding group 2 reuses its cached page: no RPC,
+      //    and it still shows its own 1000 rows per page.
+      mockSearchService.searchFleet.calls.reset();
+      store.toggleGroup('g2');
+      store.toggleGroup('g2');
+      await flushAsync();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+      expect(store.openGroupIds().has('g2')).toBeTrue();
+      expect(groupPageSize('g2')).toBe(1000);
+
+      // 7. Changing group 2 to 2000 saves 2000.
+      store.setGroupPageSize('g2', 2000);
+      await flushAsync();
+      expect(
+        localStorage.getItem('mh_fe_v6_group_expand_page_size_devices'),
+      ).toBe('2000');
+      expect(groupPageSize('g2')).toBe(2000);
+
+      // 8. Group 4 is expanded for the first time with 2000.
+      store.toggleGroup('g4');
+      await flushAsync();
+      expect(lastRequestedPageSize('groupExpand')).toBe(2000);
+      expect(groupPageSize('g4')).toBe(2000);
+
+      // The flat page-size key is a separate preference and was never written.
+      expect(localStorage.getItem('mh_fe_v6_page_size_devices')).toBeNull();
+    });
+
+    it('uses the host-specific saved group page size on the hosts page', async () => {
+      localStorage.setItem('mh_fe_v6_group_expand_page_size_devices', '5000');
+      localStorage.setItem('mh_fe_v6_group_expand_page_size_hosts', '500');
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groups: [{groupId: 'g1', values: ['lab']}],
+            totalGroups: 1,
+            totalItems: 5,
+          },
+          flat: {rows: [{id: 'host-1', cells: []}], total: 5},
+        }),
+      );
+
+      const store = await createStoreAt(
+        {'gb': 'host_field::lab_type'},
+        'hosts',
+      );
+      store.toggleGroup('g1');
+      await flushAsync();
+
+      expect(lastRequestedPageSize('groupExpand')).toBe(500);
+    });
+  });
 
   it('defaults to the internal fleet when the URL has no fleet param', async () => {
     const store = await createStoreAt({'fake_data': 'true'});

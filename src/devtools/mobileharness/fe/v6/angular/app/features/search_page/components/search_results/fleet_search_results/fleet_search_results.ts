@@ -20,12 +20,17 @@ import {MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {DimensionList} from '../../../../../core/models/device_config_models';
-import {Column} from '../../../../../core/models/search';
+import {Column, Row} from '../../../../../core/models/search';
 import {useCopyToClipboard} from '../../../../../shared/composables/copy';
 import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {SnackBarService} from '../../../../../shared/services/snackbar_service';
-import {ColumnSelectorDialogData, ColumnSelectorResult} from '../../../models';
+import {
+  ColumnSelectorDialogData,
+  ColumnSelectorResult,
+  PAGE_SIZE_OPTIONS,
+  ROW_HEIGHT_BY_DENSITY,
+} from '../../../models';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
 import {
   buildCsvString,
@@ -41,7 +46,19 @@ import {ColumnSelectorComponent} from '../common/column_selector/column_selector
 import {DensityDropdownComponent} from '../common/density_dropdown/density_dropdown';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
 import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
+import {
+  isTableWindowSpacer,
+  TableWindowDirective,
+  TableWindowSpacer,
+} from '../common/table_window/table_window';
 import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
+
+/** Flat table row item: the search row plus its pre-computed tracking key and selection state. */
+interface TableRowItem {
+  readonly row: Row;
+  readonly key: string;
+  readonly selected: boolean;
+}
 
 /** Component representing search results for lab fleet (devices/hosts). */
 @Component({
@@ -70,6 +87,7 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
     FleetGroupCardComponent,
     SearchPaginationComponent,
     SearchCellComponent,
+    TableWindowDirective,
   ],
 })
 export class FleetSearchResultsComponent {
@@ -101,7 +119,7 @@ export class FleetSearchResultsComponent {
   });
 
   /** Flat table rows with pre-computed composite tracking keys and selection state. */
-  readonly tableRows = computed(() => {
+  readonly tableRows = computed<TableRowItem[]>(() => {
     const selected = this.store.selectedItems();
     return this.store.rows().map((row) => {
       const key = getDeviceTargetKey(row);
@@ -110,6 +128,25 @@ export class FleetSearchResultsComponent {
   });
 
   readonly trackByRow = (_: number, item: {key: string}) => item.key;
+
+  /** Rows-per-page choices of the flat table footer (10 … 5000). */
+  readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+
+  /** Initial row-height estimate for the windowed table; the directive measures the real height. */
+  readonly rowHeightEstimate = computed<number>(
+    () =>
+      ROW_HEIGHT_BY_DENSITY[this.store.density()] ??
+      ROW_HEIGHT_BY_DENSITY['default'],
+  );
+
+  /** Column list of the spacer row definition (a single cell spanning every column). */
+  readonly vsSpacerColumns = ['vsSpacer'];
+
+  /** `matRowDef` predicate routing the windowing spacers to the spacer row definition. */
+  readonly isSpacerRow = (
+    _index: number,
+    item: TableRowItem | TableWindowSpacer,
+  ): boolean => isTableWindowSpacer(item);
 
   /**
    * Label representing the current fleet partition. Empty when the build has a

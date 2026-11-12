@@ -368,6 +368,24 @@
     background-color: #0b57d008;
   }
 
+  // Windowed (virtual scroll) spacer rows: a single empty cell sized by the
+  // TableWindowDirective to cover the rows hidden above/below the rendered
+  // window. It must add no padding or border and never look hoverable.
+  tbody tr.vs-spacer-row {
+    pointer-events: none;
+
+    &:hover {
+      background-color: transparent;
+    }
+
+    td.vs-spacer-cell {
+      padding: 0;
+      border-bottom: 0;
+      min-width: 0;
+      max-width: none;
+    }
+  }
+
   thead th.rt-check-cell,
   tbody td.rt-check-cell,
   th.rt-check-cell,

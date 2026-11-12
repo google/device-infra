@@ -47,6 +47,14 @@ function toSelectedMap(
   );
 }
 
+/** Builds `count` single-text-cell rows `dev-0 … dev-{count-1}`. */
+function makeRows(count: number): Row[] {
+  return Array.from({length: count}, (_, i) => ({
+    id: `dev-${i}`,
+    cells: [{text: {value: `dev-${i}`}}],
+  }));
+}
+
 class MockFleetSearchStore {
   readonly groupByKeys = signal<string[]>([]);
   readonly fleet = signal<FleetScope>('internal');
@@ -100,6 +108,8 @@ class MockFleetSearchStore {
   readonly toggleSort = jasmine.createSpy('toggleSort');
   readonly pageSize = signal<number>(50);
   readonly setPageSize = jasmine.createSpy('setPageSize');
+  readonly groupHeaderPageSize = signal<number>(25);
+  readonly setGroupHeaderPageSize = jasmine.createSpy('setGroupHeaderPageSize');
   readonly visibleColumnDescriptors = signal<unknown[]>([]);
   readonly searchConfig = signal<unknown>(null);
   readonly effectiveFilters = signal<unknown[]>([]);
@@ -173,6 +183,15 @@ describe('FleetSearchResultsComponent', () => {
     component = fixture.componentInstance;
   });
 
+  /** Rendered flat-table data rows (excluding header and windowing spacer rows). */
+  function dataRowEls(): HTMLElement[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll(
+        'table.results-table tr.mat-mdc-row:not(.vs-spacer-row)',
+      ),
+    );
+  }
+
   describe('Flat Table View Modes', () => {
     it('computes empty_all when rows are empty and no active filters', () => {
       mockStore.rows.set([]);
@@ -235,6 +254,75 @@ describe('FleetSearchResultsComponent', () => {
       expect(component.columnsToDisplay()).toEqual(['checkbox', 'id']);
       const tableEl = fixture.debugElement.query(By.css('table.results-table'));
       expect(tableEl).toBeTruthy();
+    });
+
+    it('offers rows-per-page options up to 5000 in the flat footer', () => {
+      mockStore.displayColumns.set([{key: 'id', displayName: 'Device ID'}]);
+      mockStore.rows.set([{id: 'dev-1', cells: [{text: {value: 'dev-1'}}]}]);
+      mockStore.pageSize.set(5000);
+      fixture.detectChanges();
+
+      const paginationDebug = fixture.debugElement.query(
+        By.css('app-search-pagination'),
+      );
+      expect(paginationDebug.componentInstance.pageSizeOptions()).toEqual([
+        10, 25, 50, 100, 500, 1000, 2000, 5000,
+      ]);
+      expect(paginationDebug.componentInstance.pageSize()).toBe(5000);
+
+      paginationDebug.componentInstance.pageSizeChange.emit(1000);
+      expect(mockStore.setPageSize).toHaveBeenCalledWith(1000);
+    });
+
+    it('renders every row of a page of 100 rows or fewer without windowing', () => {
+      mockStore.displayColumns.set([{key: 'id', displayName: 'Device ID'}]);
+      mockStore.rows.set(makeRows(100));
+      fixture.detectChanges();
+
+      expect(dataRowEls().length).toBe(100);
+      expect(
+        fixture.nativeElement.querySelector('tr.vs-spacer-row'),
+      ).toBeNull();
+    });
+
+    it('windows pages larger than 100 rows: only a slice is in the DOM plus a spacer row covering the rest', async () => {
+      // The results card fills its host; give the host a real height so the
+      // table container is a bounded scroller, as in the app layout.
+      (fixture.nativeElement as HTMLElement).style.height = '600px';
+      mockStore.displayColumns.set([{key: 'id', displayName: 'Device ID'}]);
+      mockStore.rows.set(makeRows(5000));
+      fixture.detectChanges();
+      // Let the ResizeObserver report the laid-out container, then re-render.
+      await new Promise((resolve) => {
+        setTimeout(resolve, 20);
+      });
+      fixture.detectChanges();
+
+      const table = fixture.nativeElement.querySelector(
+        'table.results-table',
+      ) as HTMLTableElement;
+      expect(table.getAttribute('aria-rowcount')).toBe('5001');
+
+      const rendered = dataRowEls();
+      expect(rendered.length).toBeGreaterThan(0);
+      expect(rendered.length).toBeLessThan(200);
+      expect(rendered[0].textContent).toContain('dev-0');
+
+      const spacers = Array.from(
+        fixture.nativeElement.querySelectorAll('tr.vs-spacer-row'),
+      ) as HTMLElement[];
+      expect(spacers.length).toBe(1);
+      const spacerCell = spacers[0].querySelector('td.vs-spacer-cell')!;
+      expect(spacerCell.getAttribute('colspan')).toBe('2');
+      const rowHeight = rendered[0].getBoundingClientRect().height;
+      expect(spacers[0].getBoundingClientRect().height).toBe(
+        (5000 - rendered.length) * rowHeight,
+      );
+
+      // The header checkbox still operates on the whole page, not the window.
+      const selState = fixture.debugElement.query(By.css('th mat-checkbox'));
+      selState.triggerEventHandler('change', {});
+      expect(mockStore.toggleSelectRows).toHaveBeenCalledWith(mockStore.rows());
     });
 
     it('renders a header info icon only for columns with a description', () => {
@@ -1151,10 +1239,12 @@ describe('FleetSearchResultsComponent', () => {
       expect(tb.textContent).toContain('by host');
     });
 
-    it('renders group pagination with "Groups per page:" label and delegates pageSizeChange to store', () => {
+    it('renders group pagination with "Groups per page:" label and delegates pageSizeChange to the group header page size', () => {
       mockStore.groupByKeys.set(['host']);
       mockStore.groups.set([{groupId: 'group-1', title: 'Host A'}]);
-      mockStore.pageSize.set(25);
+      // A large (persisted) flat page size must not leak into "Groups per page".
+      mockStore.pageSize.set(5000);
+      mockStore.groupHeaderPageSize.set(25);
       fixture.detectChanges();
 
       const pageLabelEl = fixture.nativeElement.querySelector('.rt-page-label');
@@ -1164,9 +1254,14 @@ describe('FleetSearchResultsComponent', () => {
         By.css('app-search-pagination'),
       );
       expect(paginationDebug.componentInstance.pageSize()).toBe(25);
+      // Groups per page keeps the default options; only row tables offer up to 5000.
+      expect(paginationDebug.componentInstance.pageSizeOptions()).toEqual([
+        10, 25, 50, 100,
+      ]);
 
       paginationDebug.componentInstance.pageSizeChange.emit(50);
-      expect(mockStore.setPageSize).toHaveBeenCalledWith(50);
+      expect(mockStore.setGroupHeaderPageSize).toHaveBeenCalledWith(50);
+      expect(mockStore.setPageSize).not.toHaveBeenCalled();
     });
 
     it('applies active selection toolbar background color in grouped mode matching flat view', () => {

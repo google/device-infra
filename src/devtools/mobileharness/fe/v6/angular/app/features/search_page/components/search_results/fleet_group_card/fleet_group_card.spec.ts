@@ -50,6 +50,33 @@ describe('FleetGroupCardComponent', () => {
     component = fixture.componentInstance;
   });
 
+  /** A loaded group page of `count` rows `Device 0 … Device {count-1}` with one text column. */
+  function groupStateWithRows(count: number): GroupPageState {
+    return {
+      loading: false,
+      pageSize: count,
+      data: {
+        rows: Array.from({length: count}, (_, i) => ({
+          id: `dev-${i}`,
+          cells: [{text: {value: `Device ${i}`}}],
+        })),
+        columns: [{key: 'name', displayName: 'Device Name'}],
+        rangeStart: 1,
+        rangeEnd: count,
+        total: count,
+      },
+    };
+  }
+
+  /** Rendered inner-table data rows (excluding windowing spacer rows). */
+  function innerDataRowEls(): HTMLElement[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll(
+        'table.rt-inner-table tbody tr:not(.vs-spacer-row)',
+      ),
+    );
+  }
+
   it('computes structured utilization metrics correctly', () => {
     fixture.componentRef.setInput('group', mockGroup);
     fixture.detectChanges();
@@ -194,6 +221,69 @@ describe('FleetGroupCardComponent', () => {
     // Test page size change
     paginationEl.componentInstance.pageSizeChange.emit(100);
     expect(mockStore.setGroupPageSize).toHaveBeenCalledWith('group-1', 100);
+
+    // The inner footer offers the same large page sizes as the flat table.
+    expect(paginationEl.componentInstance.pageSizeOptions()).toEqual([
+      10, 25, 50, 100, 500, 1000, 2000, 5000,
+    ]);
+  });
+
+  it('renders every row of a group page of 100 rows or fewer without windowing', () => {
+    fixture.componentRef.setInput('group', mockGroup);
+    mockStore.openGroupIds.set(new Set(['group-1']));
+    mockStore.expandedGroupPages.set(
+      new Map([['group-1', groupStateWithRows(100)]]),
+    );
+    fixture.detectChanges();
+
+    expect(innerDataRowEls().length).toBe(100);
+    expect(fixture.nativeElement.querySelector('tr.vs-spacer-row')).toBeNull();
+  });
+
+  it('windows group pages larger than 100 rows: only a slice is in the DOM plus a spacer row covering the rest', async () => {
+    fixture.componentRef.setInput('group', mockGroup);
+    mockStore.openGroupIds.set(new Set(['group-1']));
+    mockStore.expandedGroupPages.set(
+      new Map([['group-1', groupStateWithRows(2000)]]),
+    );
+    fixture.detectChanges();
+    // Let the ResizeObserver report the laid-out scroller, then re-render.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 20);
+    });
+    fixture.detectChanges();
+
+    const table = fixture.nativeElement.querySelector(
+      'table.rt-inner-table',
+    ) as HTMLTableElement;
+    expect(table.getAttribute('aria-rowcount')).toBe('2001');
+
+    const rendered = innerDataRowEls();
+    expect(rendered.length).toBeGreaterThan(0);
+    expect(rendered.length).toBeLessThan(200);
+    expect(rendered[0].textContent).toContain('Device 0');
+
+    const spacers = Array.from(
+      fixture.nativeElement.querySelectorAll('tr.vs-spacer-row'),
+    ) as HTMLElement[];
+    expect(spacers.length).toBe(1);
+    // Checkbox column + one data column.
+    expect(
+      spacers[0].querySelector('td.vs-spacer-cell')!.getAttribute('colspan'),
+    ).toBe('2');
+    const rowHeight = rendered[0].getBoundingClientRect().height;
+    expect(spacers[0].getBoundingClientRect().height).toBe(
+      (2000 - rendered.length) * rowHeight,
+    );
+
+    // The header checkbox still selects the whole group page, not the window.
+    const headerCheckbox = fixture.debugElement.query(
+      By.css('thead mat-checkbox'),
+    );
+    headerCheckbox.triggerEventHandler('change', {});
+    expect(mockStore.toggleSelectRows).toHaveBeenCalledWith(
+      mockStore.expandedGroupPages().get('group-1')!.data!.rows,
+    );
   });
 
   it('keeps table visible with progress bar when reloading an already populated group page', () => {

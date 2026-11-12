@@ -96,8 +96,15 @@
           @let selState = selectionState();
           @let sortCol = state?.sortColumn;
           @let sortIcon = (state?.sortAsc ?? true) ? 'arrow_upward' : 'arrow_downward';
-          <div class="rt-group-scroll" [class.stale-loading]="isReloading">
-            <table class="rt-inner-table">
+          <div
+            class="rt-group-scroll"
+            [class.stale-loading]="isReloading"
+            [appTableWindow]="items"
+            #tableWindow="appTableWindow"
+            [itemHeight]="rowHeightEstimate"
+            [scrollResetKey]="data"
+          >
+            <table class="rt-inner-table" [attr.aria-rowcount]="items.length + 1">
               <thead>
                 <tr>
                   <th class="rt-check-cell">
@@ -137,23 +144,34 @@
                 </tr>
               </thead>
               <tbody>
-                @for (item of items; track item.key) {
-                  <tr [class.selected-row]="item.selected">
-                    <td class="rt-check-cell">
-                      <mat-checkbox
-                        [checked]="item.selected"
-                        (change)="store.toggleSelectRows([item.row])"
-                      ></mat-checkbox>
-                    </td>
-                    @for (col of groupCols; track col.key; let colIdx = $index) {
-                      <td [class]="'col-' + col.key">
-                        <app-search-cell
-                          [cell]="item.row.cells?.[colIdx]"
-                          [column]="col"
-                        ></app-search-cell>
+                @for (item of tableWindow.windowedItems(); track item.key) {
+                  @if (isSpacer(item)) {
+                    <!-- Windowing spacer standing in for the rows hidden above/below the rendered window -->
+                    <tr class="vs-spacer-row" aria-hidden="true">
+                      <td
+                        class="vs-spacer-cell"
+                        [attr.colspan]="groupCols.length + 1"
+                        [style.height.px]="item.heightPx"
+                      ></td>
+                    </tr>
+                  } @else {
+                    <tr [class.selected-row]="item.selected">
+                      <td class="rt-check-cell">
+                        <mat-checkbox
+                          [checked]="item.selected"
+                          (change)="store.toggleSelectRows([item.row])"
+                        ></mat-checkbox>
                       </td>
-                    }
-                  </tr>
+                      @for (col of groupCols; track col.key; let colIdx = $index) {
+                        <td [class]="'col-' + col.key">
+                          <app-search-cell
+                            [cell]="item.row.cells?.[colIdx]"
+                            [column]="col"
+                          ></app-search-cell>
+                        </td>
+                      }
+                    </tr>
+                  }
                 }
               </tbody>
             </table>
@@ -167,6 +185,7 @@
           [compact]="true"
           [disabled]="isReloading"
           [pageSize]="state?.pageSize ?? defaultPageSize"
+          [pageSizeOptions]="pageSizeOptions"
           [rangeText]="innerRangeText()"
           [hasPrev]="!!data.prevPageToken"
           [hasNext]="!!data.nextPageToken"

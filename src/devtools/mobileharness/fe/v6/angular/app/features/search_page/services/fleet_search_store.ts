@@ -36,6 +36,7 @@ import {getErrorMessage} from '../../../shared/utils/error_utils';
 import {
   createInitialValuePickerState,
   DEFAULT_GROUP_EXPAND_PAGE_SIZE,
+  DEFAULT_PAGE_SIZE,
   EntityType,
   FilterChip,
   FilterKeyMetadata,
@@ -68,12 +69,16 @@ import {
   getChipKey,
   getDeviceTargetKey,
   getRowsSelectionState,
+  getStoredGroupExpandPageSize,
+  getStoredPageSize,
   getStoredVisibleColumns,
   getUnknownColumnKeyFromError,
   isChipNegated,
   isRowSelected,
   isValuePickerSelectionEmpty,
   parseArsenalQueryParam,
+  saveStoredGroupExpandPageSize,
+  saveStoredPageSize,
   saveStoredVisibleColumns,
   toFleetProto,
   toSearchEntityProto,
@@ -107,6 +112,13 @@ export class FleetSearchStore extends SearchPageStore {
 
   constructor() {
     super();
+
+    // The entity is fixed for the lifetime of this store instance, so the saved
+    // "Rows per page" of the flat table can be restored once up front.
+    const storedPageSize = getStoredPageSize(this.entity());
+    if (storedPageSize !== null) {
+      this.pageSize.set(storedPageSize);
+    }
 
     this.translateArsenalSubject
       .pipe(
@@ -410,12 +422,34 @@ export class FleetSearchStore extends SearchPageStore {
     this.resetPagination();
   }
 
-  /** Updates page size, resets pagination, and clears row selection and expanded groups. */
+  /**
+   * Updates the flat table's rows per page, persists it per entity, resets pagination, and clears
+   * row selection and expanded groups.
+   */
   override setPageSize(newSize: number) {
     if (this.pageSize() === newSize) {
       return;
     }
+    saveStoredPageSize(this.entity(), newSize);
     super.setPageSize(newSize);
+    this.resetExpandedGroups();
+    this.clearSelection();
+  }
+
+  /**
+   * Groups per page of the grouped header list. Kept apart from the flat table's `pageSize` (which
+   * is persisted and goes up to 5000 rows) so a large saved rows-per-page never turns into
+   * thousands of group cards; the grouped footer keeps its own small, session-only choice.
+   */
+  readonly groupHeaderPageSize = signal<number>(DEFAULT_PAGE_SIZE);
+
+  /** Updates groups per page, resets pagination, and clears row selection and expanded groups. */
+  setGroupHeaderPageSize(newSize: number) {
+    if (this.groupHeaderPageSize() === newSize) {
+      return;
+    }
+    this.groupHeaderPageSize.set(newSize);
+    this.resetPagination();
     this.resetExpandedGroups();
     this.clearSelection();
   }
@@ -686,8 +720,13 @@ export class FleetSearchStore extends SearchPageStore {
     this.onLoadGroupRows(groupId, undefined, {sortColumn: colKey, sortAsc});
   }
 
-  /** Updates rows-per-page size for an expanded group card and reloads its first page. */
+  /**
+   * Updates rows-per-page size for an expanded group card and reloads its first page. The choice is
+   * also saved per entity so the next group expanded for the first time starts with it; groups that
+   * are already loaded keep their own size.
+   */
   setGroupPageSize(groupId: string, pageSize: number) {
+    saveStoredGroupExpandPageSize(this.entity(), pageSize);
     const currentSize =
       this.expandedGroupPages().get(groupId)?.pageSize ??
       DEFAULT_GROUP_EXPAND_PAGE_SIZE;
@@ -711,7 +750,7 @@ export class FleetSearchStore extends SearchPageStore {
       !!state.sortColumn && visibleCols.has(state.sortColumn);
     const sortColumn = hasCustomSort ? state.sortColumn : this.sortColumn();
     const sortAsc = hasCustomSort ? (state.sortAsc ?? true) : true;
-    const pageSize = state.pageSize ?? DEFAULT_GROUP_EXPAND_PAGE_SIZE;
+    const pageSize = this.resolveGroupPageSize(state);
     const filters = this.effectiveFilters();
 
     const req: FleetSearchRequest = {
@@ -761,6 +800,25 @@ export class FleetSearchStore extends SearchPageStore {
       });
 
     this.groupLoadSubs.set(groupId, sub);
+  }
+
+  /**
+   * Rows per page to load for a group.
+   *
+   * 1. A group that has already been loaded keeps the page size it was loaded with (changing one
+   *    group never affects the others).
+   * 2. A group expanded for the first time starts from the page size saved for this entity.
+   * 3. When nothing is saved yet, the default applies.
+   */
+  private resolveGroupPageSize(state: GroupPageState): number {
+    if (state.pageSize !== undefined) {
+      return state.pageSize;
+    }
+    const storedPageSize = getStoredGroupExpandPageSize(this.entity());
+    if (storedPageSize !== null) {
+      return storedPageSize;
+    }
+    return DEFAULT_GROUP_EXPAND_PAGE_SIZE;
   }
 
   /** Helper to update state for an expanded group in expandedGroupPages map. */
@@ -881,7 +939,6 @@ export class FleetSearchStore extends SearchPageStore {
       if (this.isLandingState()) return undefined;
 
       const fleet = this.fleet();
-      const pageSize = this.pageSize();
       const pageToken = this.pageToken();
 
       const filters = this.effectiveFilters();
@@ -899,7 +956,7 @@ export class FleetSearchStore extends SearchPageStore {
           groupBy: groupByKeys,
           sort: buildFleetGroupSort(groupSort),
           page: {
-            pageSize,
+            pageSize: this.groupHeaderPageSize(),
             pageToken: pageToken || undefined,
           },
         };
@@ -919,7 +976,7 @@ export class FleetSearchStore extends SearchPageStore {
           columns: visibleColumns,
           sort: {key: sortColumn, ascending: sortAsc},
           page: {
-            pageSize,
+            pageSize: this.pageSize(),
             pageToken: pageToken || undefined,
           },
         };

@@ -382,6 +382,45 @@ public final class FleetFlatSearcherTest {
   }
 
   @Test
+  public void pagination_pageSizeAboveMaxIsClampedToMax() {
+    // One more device than the cap, so a request for "everything" must still leave a second page.
+    int deviceCount = FleetFlatSearcher.MAX_PAGE_SIZE + 1;
+    FleetSnapshot large =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(uniformFleet(deviceCount), BUILD_TIME);
+    DeviceCorpus largeCorpus = new DeviceCorpus(large, new LazyPostings(large.devices()), null);
+    FleetPageRequest oversized =
+        FleetPageRequest.newBuilder().setPageSize(FleetFlatSearcher.MAX_PAGE_SIZE + 500).build();
+
+    FleetFlatResults page1 =
+        searcher.searchFlat(
+            largeCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            oversized);
+
+    assertThat(page1.getTotal()).isEqualTo(deviceCount);
+    assertThat(page1.getRowsCount()).isEqualTo(FleetFlatSearcher.MAX_PAGE_SIZE);
+    assertThat(page1.getRangeStart()).isEqualTo(1);
+    assertThat(page1.getRangeEnd()).isEqualTo(FleetFlatSearcher.MAX_PAGE_SIZE);
+    assertThat(page1.getNextPageToken()).isNotEmpty();
+
+    FleetFlatResults page2 =
+        searcher.searchFlat(
+            largeCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            oversized.toBuilder().setPageToken(page1.getNextPageToken()).build());
+
+    assertThat(page2.getRowsCount()).isEqualTo(1);
+    assertThat(page2.getRangeStart()).isEqualTo(deviceCount);
+    assertThat(page2.getNextPageToken()).isEmpty();
+  }
+
+  @Test
   public void sortByOverlayDimension_ordersMixedCaseAndMissingValues() {
     String overlayKey = "dimension::carrier";
     DimensionOverlay overlay =
@@ -782,6 +821,30 @@ public final class FleetFlatSearcherTest {
                 .setLabLocator(LabLocator.newBuilder().setHostName(hostName).setIp(ip))
                 .setLabStatus(LabStatus.LAB_RUNNING))
         .setDeviceList(deviceList)
+        .build();
+  }
+
+  // A single-host fleet of `deviceCount` identical IDLE android devices (device-00000, ...).
+  private static LabQueryResult uniformFleet(int deviceCount) {
+    DeviceInfo[] devices = new DeviceInfo[deviceCount];
+    for (int i = 0; i < deviceCount; i++) {
+      devices[i] =
+          DeviceInfo.newBuilder()
+              .setDeviceLocator(DeviceLocator.newBuilder().setId(String.format("device-%05d", i)))
+              .setDeviceStatus(DeviceStatus.IDLE)
+              .setDeviceFeature(
+                  DeviceFeature.newBuilder()
+                      .addType("AndroidRealDevice")
+                      .setCompositeDimension(
+                          DeviceCompositeDimension.newBuilder()
+                              .addSupportedDimension(dimension("os", "android"))))
+              .build();
+    }
+    return LabQueryResult.newBuilder()
+        .setLabView(
+            LabQueryResult.LabView.newBuilder()
+                .setLabTotalCount(1)
+                .addLabData(labData("lab1", "1.1.1.1", devices)))
         .build();
   }
 

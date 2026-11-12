@@ -32,7 +32,7 @@ export class SearchPaginationComponent {
   readonly pageSizeLabel = input<string>('Rows per page:');
 
   /** Available options for page size selection dropdown. */
-  readonly pageSizeOptions = input<number[]>([10, 25, 50, 100]);
+  readonly pageSizeOptions = input<readonly number[]>([10, 25, 50, 100]);
 
   /** Whether to render in compact height mode (e.g. for nested card pagination). */
   readonly compact = input<boolean>(false);
