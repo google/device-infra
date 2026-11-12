@@ -75,7 +75,8 @@ public final class DeviceHealth {
           "OFFLINE",
           "UNAUTHORIZED",
           "FASTBOOT",
-          "FASTBOOTDMODE");
+          "FASTBOOTDMODE",
+          "RECOVERY");
 
   /** Statuses in which the device is temporarily unavailable but expected to self-recover. */
   private static final ImmutableSet<String> TRANSIT_STATUSES =

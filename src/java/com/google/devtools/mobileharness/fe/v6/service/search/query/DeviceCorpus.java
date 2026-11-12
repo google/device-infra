@@ -64,7 +64,8 @@ public final class DeviceCorpus implements SearchCorpus {
           "OFFLINE",
           "UNAUTHORIZED",
           "FASTBOOT",
-          "FASTBOOTDMODE");
+          "FASTBOOTDMODE",
+          "RECOVERY");
 
   private static final ImmutableSet<String> IDENTIFIER_DIMENSIONS =
       ImmutableSet.of(
