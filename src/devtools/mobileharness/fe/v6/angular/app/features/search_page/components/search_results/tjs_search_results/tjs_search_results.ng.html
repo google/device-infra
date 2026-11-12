@@ -75,6 +75,7 @@
 
         <!-- Pagination Footer -->
         <app-search-pagination
+          [disabled]="isLoading"
           [rangeText]="store.rangeText()"
           [hasPrev]="store.hasPrevPage()"
           [hasNext]="store.hasNextPage()"

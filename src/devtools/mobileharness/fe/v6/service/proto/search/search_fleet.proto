@@ -283,10 +283,8 @@ message FleetGroupHeaderView {
   FleetPageRequest page = 3;
 }
 
-// Expand one group: returns rows inside a specific group card.
-// Page size is fixed server-side at 100 (not overridable by the client) and the
-// rows are ordered by device UUID, so a group card shows a bounded, stable peek
-// rather than an arbitrarily long or client-sortable list.
+// Expand one group: paginated rows with columns and sort inside a specific
+// group card.
 message FleetGroupExpandView {
   // Opaque group identifier from the GroupHeaderView response.
   string group_id = 1;
@@ -294,13 +292,14 @@ message FleetGroupExpandView {
   // Same column spec as FlatView.
   repeated string columns = 2;
 
-  // The group expansion is a fixed device-UUID-ascending peek, so it carries no
-  // client sort; field number 3 and the field name "sort" are reserved.
-  reserved 3;
-  reserved "sort";
+  // Sort order. Optional; backend picks a default (e.g. uuid asc) if absent.
+  FleetColumnSort sort = 3;
 
-  // Cursor for pagination within this group. Empty = first page.
-  string page_token = 4;
+  reserved 4;
+  reserved "page_token";
+
+  // Pagination within this group.
+  FleetPageRequest page = 5;
 }
 
 // Sort by a column value. The key must be one of the requested columns.
@@ -326,7 +325,7 @@ message FleetGroupSortField {
 // Marker: sort groups by their item count (devices or hosts).
 message FleetItemCountSort {}
 
-// Cursor-based pagination for flat and group-header views.
+// Cursor-based pagination for flat, group-header, and group-expand views.
 message FleetPageRequest {
   // Page size. 0 or absent = backend default (e.g. 25).
   int32 page_size = 1;

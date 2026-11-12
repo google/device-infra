@@ -42,9 +42,15 @@ export interface SearchBoxSuggestion {
 export type SearchPageConfig = Partial<FleetSearchConfig> &
   Partial<TjsSearchConfig>;
 
+/** Default rows-per-page size inside an expanded group card. */
+export const DEFAULT_GROUP_EXPAND_PAGE_SIZE = 100;
+
 /** Data state structure for an expanded group card page. */
 export interface GroupPageState {
   readonly loading?: boolean;
   readonly error?: string;
   readonly data?: FleetFlatResults;
+  readonly sortColumn?: string;
+  readonly sortAsc?: boolean;
+  readonly pageSize?: number;
 }

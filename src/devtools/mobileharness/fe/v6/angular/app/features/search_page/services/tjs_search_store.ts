@@ -354,8 +354,7 @@ export class TjsSearchStore extends SearchPageStore {
 
   /** Triggers execution of primary TJS search and forces resource reload. */
   override executeSearch() {
-    this.pageIndex.set(0);
-    this.pageToken.set('');
+    this.resetPagination();
     this.prevPageTokens.set([]);
     this.tjsResource.reload();
   }

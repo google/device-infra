@@ -605,12 +605,42 @@ describe('TjsSearchStore', () => {
     expect(store.isLoading()).toBeTrue();
 
     resolveSubject.next({
-      chips: [{keyDisplayName: 'User', pillKey: 'User', pillCondition: 'alice'}],
+      chips: [
+        {keyDisplayName: 'User', pillKey: 'User', pillCondition: 'alice'},
+      ],
     });
     resolveSubject.complete();
     await flushAsync();
 
     expect(store.isResolvingChips()).toBeFalse();
     expect(store.isLoading()).toBeFalse();
+  });
+
+  it('resets pagination, prevPageTokens, and reloads tjsResource when executeSearch is called', async () => {
+    mockSearchService.searchTjs.and.returnValue(
+      of({
+        columns: [{key: 'id', displayName: 'Test ID'}],
+        rows: [{id: 'test-1', cells: [{text: {value: 'test-1'}}]}],
+        nextPageToken: 'page-2-token',
+      }),
+    );
+
+    store.executeSearch();
+    await flushAsync();
+
+    store.nextPage();
+    await flushAsync();
+    expect(store.pageIndex()).toBe(1);
+    expect(store.pageToken()).toBe('page-2-token');
+    expect(store.prevPageTokens()).toEqual(['']);
+
+    mockSearchService.searchTjs.calls.reset();
+    store.executeSearch();
+    await flushAsync();
+
+    expect(store.pageIndex()).toBe(0);
+    expect(store.pageToken()).toBe('');
+    expect(store.prevPageTokens()).toEqual([]);
+    expect(mockSearchService.searchTjs).toHaveBeenCalledTimes(1);
   });
 });

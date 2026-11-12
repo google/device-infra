@@ -1,9 +1,12 @@
 <div class="rt-pagination" [class.compact]="compact()">
+  @let isDisabled = disabled();
   <ng-content select="[paginationLeading]"></ng-content>
   @if (pageSize() !== undefined) {
     <span class="rt-page-label">{{ pageSizeLabel() }}</span>
     <mat-select
       [value]="pageSize()"
+      [disabled]="isDisabled"
+      [attr.aria-label]="pageSizeLabel()"
       (valueChange)="pageSizeChange.emit($event)"
       class="rt-page-size"
       panelClass="rt-page-size-panel"
@@ -23,20 +26,24 @@
   <span class="rt-grow"></span>
 
   <button
+    type="button"
     class="rt-btn-text"
-    [disabled]="!hasPrev()"
+    [disabled]="isDisabled || !hasPrev()"
     (click)="prev.emit()"
     title="Previous page"
+    aria-label="Previous page"
   >
     <mat-icon class="material-symbols-outlined">chevron_left</mat-icon>
     <span class="rt-btn-label">Previous</span>
   </button>
 
   <button
+    type="button"
     class="rt-btn-text"
-    [disabled]="!hasNext()"
+    [disabled]="isDisabled || !hasNext()"
     (click)="next.emit()"
     title="Next page"
+    aria-label="Next page"
   >
     <span class="rt-btn-label">Next</span>
     <mat-icon class="material-symbols-outlined">chevron_right</mat-icon>

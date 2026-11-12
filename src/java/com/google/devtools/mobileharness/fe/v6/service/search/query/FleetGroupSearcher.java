@@ -86,10 +86,10 @@ public final class FleetGroupSearcher {
   private static final int DEFAULT_PAGE_SIZE = 25;
 
   /**
-   * Page size for an expanded group's rows. Fixed server-side and not overridable by the client: a
-   * group card shows a bounded peek, not an arbitrarily long list.
+   * Default page size for an expanded group's rows when the request leaves it unset (or
+   * non-positive).
    */
-  private static final int EXPAND_PAGE_SIZE = 100;
+  private static final int DEFAULT_EXPAND_PAGE_SIZE = 100;
 
   /** Prefix stamped into the opaque page token so a foreign token decodes to the first page. */
   private static final String TOKEN_PREFIX = "o:";
@@ -194,23 +194,24 @@ public final class FleetGroupSearcher {
    *
    * <p>The group id encodes the group's value combination, which is turned back into an exact-set
    * predicate per group-by key and applied on top of the base filters. The rows are then produced
-   * by the flat searcher, so paging and cell typing are identical to the flat view. The page size
-   * is fixed at {@value #EXPAND_PAGE_SIZE} and the rows are ordered by the corpus identifier key,
-   * so the group expansion is a bounded, stable peek rather than a client-sortable list; the
-   * request supplies only a cursor.
+   * by the flat searcher, so sorting, paging, and cell typing are identical to the flat view.
    *
    * @param corpus the corpus to search
    * @param baseFilters the same base filters the grouped headers were computed under
    * @param groupId an opaque group id from a {@link #searchGrouped} response
    * @param columnKeys the column keys to include in each row, in display order
-   * @param pageToken the cursor within this group; empty selects the first page
+   * @param sort the sort order; when null or with an empty key, sorts by the corpus identifier key
+   *     ascending
+   * @param page the page request within this group; when null or with a non-positive size, uses
+   *     {@link #DEFAULT_EXPAND_PAGE_SIZE}
    */
   public FleetFlatResults expandGroup(
       SearchCorpus corpus,
       List<Filter> baseFilters,
       String groupId,
       List<String> columnKeys,
-      String pageToken) {
+      FleetColumnSort sort,
+      FleetPageRequest page) {
     ImmutableList<GroupEntry> entries = decodeGroupId(groupId);
     if (entries.isEmpty()) {
       // A missing, malformed, or foreign group id names no group, so it expands to no rows rather
@@ -223,10 +224,14 @@ public final class FleetGroupSearcher {
       filters.add(groupEntryFilter(entry));
     }
 
-    FleetPageRequest page =
-        FleetPageRequest.newBuilder().setPageSize(EXPAND_PAGE_SIZE).setPageToken(pageToken).build();
-    return flatSearcher.searchFlat(
-        corpus, filters, columnKeys, FleetColumnSort.getDefaultInstance(), page);
+    FleetPageRequest effectivePage =
+        (page == null || page.getPageSize() <= 0)
+            ? FleetPageRequest.newBuilder()
+                .setPageSize(DEFAULT_EXPAND_PAGE_SIZE)
+                .setPageToken(page == null ? "" : page.getPageToken())
+                .build()
+            : page;
+    return flatSearcher.searchFlat(corpus, filters, columnKeys, sort, effectivePage);
   }
 
   /**

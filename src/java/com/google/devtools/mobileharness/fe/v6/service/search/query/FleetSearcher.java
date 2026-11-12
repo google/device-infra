@@ -89,7 +89,8 @@ public final class FleetSearcher {
                 request.getFiltersList(),
                 expand.getGroupId(),
                 expand.getColumnsList(),
-                expand.getPageToken());
+                expand.getSort(),
+                expand.getPage());
         yield FleetSearchResults.newBuilder().setFlat(results).build();
       }
       case VIEW_NOT_SET -> FleetSearchResults.getDefaultInstance();
@@ -120,10 +121,16 @@ public final class FleetSearcher {
                 ? Stream.concat(groupBys, Stream.of(header.getSort().getField().getGroupKey()))
                 : groupBys;
           }
-          case GROUP_EXPAND ->
-              Stream.concat(
-                  request.getGroupExpand().getColumnsList().stream(),
-                  FleetGroupSearcher.extractGroupIdKeys(request.getGroupExpand().getGroupId()));
+          case GROUP_EXPAND -> {
+            FleetGroupExpandView expand = request.getGroupExpand();
+            Stream<String> keys =
+                Stream.concat(
+                    expand.getColumnsList().stream(),
+                    FleetGroupSearcher.extractGroupIdKeys(expand.getGroupId()));
+            yield expand.hasSort()
+                ? Stream.concat(keys, Stream.of(expand.getSort().getKey()))
+                : keys;
+          }
           case VIEW_NOT_SET -> Stream.empty();
         };
     return Stream.concat(filterKeys, viewKeys)

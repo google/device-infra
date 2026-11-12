@@ -270,6 +270,11 @@ export abstract class SearchPageStore {
   /** Updates the page size and resets page navigation cursor and index. */
   setPageSize(newSize: number) {
     this.pageSize.set(newSize);
+    this.resetPagination();
+  }
+
+  /** Resets pagination index and cursor token to the first page. */
+  protected resetPagination() {
     this.pageIndex.set(0);
     this.pageToken.set('');
   }

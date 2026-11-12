@@ -24,6 +24,23 @@
     padding: 0 12px;
     font-size: 0.75rem;
 
+    .rt-page-label,
+    .rt-range {
+      font-size: 0.75rem;
+    }
+
+    .rt-page-size {
+      height: 28px;
+      min-width: 56px;
+      padding: 0 6px;
+
+      @include mat.select-overrides(
+        (
+          trigger-text-size: 0.75rem,
+        )
+      );
+    }
+
     .rt-btn-text {
       height: 28px;
       min-height: 28px;

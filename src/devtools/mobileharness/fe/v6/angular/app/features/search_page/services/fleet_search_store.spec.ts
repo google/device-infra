@@ -375,7 +375,10 @@ describe('FleetSearchStore', () => {
         'mh_fe_v6_visible_columns_devices_internal',
         JSON.stringify(staleColumns),
       );
-      failSearchesThenSucceed(1, unknownKeyError('Unknown device key: field::uuid'));
+      failSearchesThenSucceed(
+        1,
+        unknownKeyError('Unknown device key: field::uuid'),
+      );
 
       const store = await createStoreAt({});
       await flushAsync();
@@ -383,7 +386,9 @@ describe('FleetSearchStore', () => {
       expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(2);
       expect(mockSearchService.searchFleet.calls.argsFor(0)[0]).toEqual(
         jasmine.objectContaining({
-          flat: jasmine.objectContaining({columns: ['field::uuid', 'dim::pool']}),
+          flat: jasmine.objectContaining({
+            columns: ['field::uuid', 'dim::pool'],
+          }),
         }),
       );
       expect(mockSearchService.searchFleet.calls.argsFor(1)[0]).toEqual(
@@ -432,7 +437,10 @@ describe('FleetSearchStore', () => {
         'mh_fe_v6_visible_columns_devices_internal',
         JSON.stringify(staleColumns),
       );
-      failSearchesThenSucceed(1, {status: 500, error: {code: 13, message: 'boom'}});
+      failSearchesThenSucceed(1, {
+        status: 500,
+        error: {code: 13, message: 'boom'},
+      });
 
       const store = await createStoreAt({});
       await flushAsync();
@@ -446,7 +454,10 @@ describe('FleetSearchStore', () => {
     });
 
     it('does not retry when nothing is saved (the default columns were rejected)', async () => {
-      failSearchesThenSucceed(1, unknownKeyError('Unknown device key: device_field::uuid'));
+      failSearchesThenSucceed(
+        1,
+        unknownKeyError('Unknown device key: device_field::uuid'),
+      );
 
       await createStoreAt({});
       await flushAsync();
@@ -460,7 +471,10 @@ describe('FleetSearchStore', () => {
         'mh_fe_v6_visible_columns_devices_internal',
         JSON.stringify(staleColumns),
       );
-      failSearchesThenSucceed(5, unknownKeyError('Unknown device key: field::uuid'));
+      failSearchesThenSucceed(
+        5,
+        unknownKeyError('Unknown device key: field::uuid'),
+      );
 
       const store = await createStoreAt({});
       await flushAsync();
@@ -1422,8 +1436,48 @@ describe('FleetSearchStore', () => {
       expect(store.pickerState().advanced.text).toBe('^shared');
     });
 
-    it('resets pagination, selection, and expanded group states when setPageSize is called', async () => {
+    it('toggles flat table sort and resets pagination, selection, and expanded group states when setPageSize is called', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {
+            defaults: [
+              {key: 'id', displayName: 'Device ID', locked: true},
+              {key: 'status', displayName: 'Status'},
+            ],
+          },
+        }),
+      );
       const store = await createStoreAt({});
+      expect(store.sortColumn()).toBe('id');
+      expect(store.sortAsc()).toBeTrue();
+
+      // Toggling the active sort column flips direction and resets pagination.
+      store.pageIndex.set(2);
+      store.pageToken.set('tok-2');
+      store.toggleSort('id');
+      expect(store.sortColumn()).toBe('id');
+      expect(store.sortAsc()).toBeFalse();
+      expect(store.pageIndex()).toBe(0);
+      expect(store.pageToken()).toBe('');
+
+      // Toggling the same column again flips back to ascending, then descending.
+      store.toggleSort('id');
+      expect(store.sortAsc()).toBeTrue();
+      store.toggleSort('id');
+      expect(store.sortAsc()).toBeFalse();
+
+      // Switching to a different sort column activates ascending and resets pagination.
+      store.pageIndex.set(1);
+      store.pageToken.set('tok-1');
+      store.toggleSort('status');
+      expect(store.sortColumn()).toBe('status');
+      expect(store.sortAsc()).toBeTrue();
+      expect(store.pageIndex()).toBe(0);
+      expect(store.pageToken()).toBe('');
+
+      // setPageSize with a new size updates pageSize and resets pagination, selection, and expanded groups.
+      store.pageIndex.set(3);
+      store.pageToken.set('tok-3');
       store.toggleSelectRows([{id: 'dev-1'}]);
       store.openGroupIds.set(new Set(['group-1']));
       store.expandedGroupPages.set(new Map([['group-1', {loading: false}]]));
@@ -1436,6 +1490,22 @@ describe('FleetSearchStore', () => {
       expect(store.selectedItems().size).toBe(0);
       expect(store.openGroupIds().size).toBe(0);
       expect(store.expandedGroupPages().size).toBe(0);
+
+      // Calling setPageSize with the same size is a no-op and preserves pagination, selection, and expanded groups.
+      store.pageIndex.set(1);
+      store.pageToken.set('tok-1');
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      store.openGroupIds.set(new Set(['group-1']));
+      store.expandedGroupPages.set(new Map([['group-1', {loading: false}]]));
+
+      store.setPageSize(50);
+
+      expect(store.pageSize()).toBe(50);
+      expect(store.pageIndex()).toBe(1);
+      expect(store.pageToken()).toBe('tok-1');
+      expect(store.selectedItems().size).toBe(1);
+      expect(store.openGroupIds().size).toBe(1);
+      expect(store.expandedGroupPages().size).toBe(1);
     });
   });
 
@@ -2025,7 +2095,321 @@ describe('FleetSearchStore', () => {
       expect(groupState?.error).toBeUndefined();
     });
 
-    it('exposes searchError when searchFleet fails and recovers on executeSearch()', async () => {
+    it('sorts expanded group rows via toggleGroupRowSort and sends sort in groupExpand', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {
+            defaults: [
+              {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+              {key: 'device_field::status', displayName: 'Status'},
+            ],
+          },
+        }),
+      );
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groups: [
+              {groupId: 'dimension::model=pixel 8', values: ['Pixel 8']},
+            ],
+            totalGroups: 1,
+            totalItems: 5,
+          },
+          flat: {rows: [{id: 'dev-1', cells: []}]},
+        }),
+      );
+
+      const store = await createStoreAt({'gb': 'dimension::model'});
+      mockSearchService.searchFleet.calls.reset();
+
+      // 1. Initial group expand uses default locked sortColumn ascending and default pageSize 100.
+      store.toggleGroup('dimension::model=pixel 8');
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          groupExpand: {
+            groupId: 'dimension::model=pixel 8',
+            columns: ['device_field::uuid', 'device_field::status'],
+            sort: {key: 'device_field::uuid', ascending: true},
+            page: {pageSize: 100, pageToken: undefined},
+          },
+        }),
+      );
+
+      // 2. Toggling the same default column flips ascending to false.
+      mockSearchService.searchFleet.calls.reset();
+      store.toggleGroupRowSort(
+        'dimension::model=pixel 8',
+        'device_field::uuid',
+      );
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          groupExpand: {
+            groupId: 'dimension::model=pixel 8',
+            columns: ['device_field::uuid', 'device_field::status'],
+            sort: {key: 'device_field::uuid', ascending: false},
+            page: {pageSize: 100, pageToken: undefined},
+          },
+        }),
+      );
+
+      // 3. Switching to a different column resets ascending to true; toggling it again flips to
+      //    false, and removing that column from visibleColumns falls back to default sortColumn
+      //    ascending.
+      mockSearchService.searchFleet.calls.reset();
+      store.toggleGroupRowSort(
+        'dimension::model=pixel 8',
+        'device_field::status',
+      );
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          groupExpand: {
+            groupId: 'dimension::model=pixel 8',
+            columns: ['device_field::uuid', 'device_field::status'],
+            sort: {key: 'device_field::status', ascending: true},
+            page: {pageSize: 100, pageToken: undefined},
+          },
+        }),
+      );
+
+      mockSearchService.searchFleet.calls.reset();
+      store.toggleGroupRowSort(
+        'dimension::model=pixel 8',
+        'device_field::status',
+      );
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          groupExpand: {
+            groupId: 'dimension::model=pixel 8',
+            columns: ['device_field::uuid', 'device_field::status'],
+            sort: {key: 'device_field::status', ascending: false},
+            page: {pageSize: 100, pageToken: undefined},
+          },
+        }),
+      );
+
+      mockSearchService.searchFleet.calls.reset();
+      store.setVisibleColumns([
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+      ]);
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          groupExpand: {
+            groupId: 'dimension::model=pixel 8',
+            columns: ['device_field::uuid'],
+            sort: {key: 'device_field::uuid', ascending: true},
+            page: {pageSize: 100, pageToken: undefined},
+          },
+        }),
+      );
+
+      // 4. Collapsing and re-opening a group with cached data does not re-fetch; collapsing while
+      //    a load is in flight aborts the subscription.
+      mockSearchService.searchFleet.calls.reset();
+      store.toggleGroup('dimension::model=pixel 8');
+      expect(store.openGroupIds().has('dimension::model=pixel 8')).toBeFalse();
+      store.toggleGroup('dimension::model=pixel 8');
+      expect(store.openGroupIds().has('dimension::model=pixel 8')).toBeTrue();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+
+      const pendingExpand = new Subject<FleetSearchResults>();
+      mockSearchService.searchFleet.and.returnValue(pendingExpand);
+      store.onLoadGroupRows('dimension::model=pixel 8');
+      expect(pendingExpand.observed).toBeTrue();
+      store.toggleGroup('dimension::model=pixel 8');
+      expect(store.openGroupIds().has('dimension::model=pixel 8')).toBeFalse();
+      expect(pendingExpand.observed).toBeFalse();
+
+      // 5. setGroupSort updates groupSort, resets pagination, and invalidates in-flight group loads
+      //    from the previous searchScopeKey.
+      const staleScopeNext = new Subject<FleetSearchResults>();
+      const staleScopeErr = new Subject<FleetSearchResults>();
+      mockSearchService.searchFleet.and.returnValues(
+        staleScopeNext,
+        staleScopeErr,
+        of({grouped: {groups: [], totalGroups: 0}}),
+      );
+      store.onLoadGroupRows('group-a');
+      store.onLoadGroupRows('group-b');
+      store.pageIndex.set(2);
+      store.pageToken.set('tok-2');
+
+      store.setGroupSort('gb_asc:dimension::model');
+      await flushAsync();
+
+      expect(store.groupSort()).toBe('gb_asc:dimension::model');
+      expect(store.pageIndex()).toBe(0);
+      expect(store.pageToken()).toBe('');
+
+      staleScopeNext.next({flat: {rows: [{id: 'stale-row', cells: []}]}});
+      staleScopeErr.error({});
+      expect(store.expandedGroupPages().size).toBe(0);
+    });
+
+    it('paginates expanded group rows with pageToken and setGroupPageSize', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {
+            defaults: [
+              {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+            ],
+          },
+        }),
+      );
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groups: [
+              {groupId: 'dimension::model=pixel 8', values: ['Pixel 8']},
+            ],
+            totalGroups: 1,
+            totalItems: 150,
+          },
+          flat: {
+            rows: [{id: 'dev-1', cells: []}],
+            total: 150,
+            rangeStart: 1,
+            rangeEnd: 100,
+            nextPageToken: 'tok-100',
+          },
+        }),
+      );
+
+      const store = await createStoreAt({'gb': 'dimension::model'});
+      store.toggleGroup('dimension::model=pixel 8');
+      await flushAsync();
+      mockSearchService.searchFleet.calls.reset();
+
+      // Navigate to next inner page with token
+      store.onLoadGroupRows('dimension::model=pixel 8', 'tok-100');
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          groupExpand: {
+            groupId: 'dimension::model=pixel 8',
+            columns: ['device_field::uuid'],
+            sort: {key: 'device_field::uuid', ascending: true},
+            page: {pageSize: 100, pageToken: 'tok-100'},
+          },
+        }),
+      );
+
+      // Updating group page size to 50 resets pageToken to first page
+      mockSearchService.searchFleet.calls.reset();
+      store.setGroupPageSize('dimension::model=pixel 8', 50);
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          groupExpand: {
+            groupId: 'dimension::model=pixel 8',
+            columns: ['device_field::uuid'],
+            sort: {key: 'device_field::uuid', ascending: true},
+            page: {pageSize: 50, pageToken: undefined},
+          },
+        }),
+      );
+
+      // Selecting the same page size again is a no-op
+      mockSearchService.searchFleet.calls.reset();
+      store.setGroupPageSize('dimension::model=pixel 8', 50);
+      await flushAsync();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+
+      // Changing visible columns preserves the group's custom pageSize
+      store.setVisibleColumns([
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        {key: 'dimension::os', displayName: 'OS'},
+      ]);
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          groupExpand: {
+            groupId: 'dimension::model=pixel 8',
+            columns: ['device_field::uuid', 'dimension::os'],
+            sort: {key: 'device_field::uuid', ascending: true},
+            page: {pageSize: 50, pageToken: undefined},
+          },
+        }),
+      );
+
+      // Verify outer grouped and flat pagination controls (hasNextPage, hasPrevPage, nextPage, prevPage)
+      expect(store.hasNextPage()).toBeFalse();
+      expect(store.hasPrevPage()).toBeFalse();
+      store.nextPage();
+      store.prevPage();
+      expect(store.pageIndex()).toBe(0);
+      expect(store.pageToken()).toBe('');
+
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groups: [],
+            totalGroups: 2,
+            nextPageToken: 'grp-next',
+            prevPageToken: 'grp-prev',
+          },
+        }),
+      );
+      store.executeSearch();
+      await flushAsync();
+      expect(store.hasNextPage()).toBeTrue();
+      expect(store.hasPrevPage()).toBeTrue();
+
+      store.nextPage();
+      await flushAsync();
+      expect(store.pageIndex()).toBe(1);
+      expect(store.pageToken()).toBe('grp-next');
+
+      store.prevPage();
+      await flushAsync();
+      expect(store.pageIndex()).toBe(0);
+      expect(store.pageToken()).toBe('grp-prev');
+
+      // When pageIndex is already 0 and prevPageToken is present, prevPage clamps pageIndex at 0
+      store.prevPage();
+      await flushAsync();
+      expect(store.pageIndex()).toBe(0);
+      expect(store.pageToken()).toBe('grp-prev');
+
+      // In flat mode, hasPrevPage depends on pageIndex > 0, and prevPage from pageIndex 1 without
+      // prevPageToken resets pageToken to '' and pageIndex to 0.
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          flat: {
+            rows: [],
+            nextPageToken: 'flat-next',
+          },
+        }),
+      );
+      store.clearGroupByChips();
+      store.addFilterChip({
+        key: 'device_field::status',
+        pillKey: 'Status',
+        pillCondition: 'IDLE',
+        rawValues: ['IDLE'],
+      });
+      await flushAsync();
+      expect(store.hasNextPage()).toBeTrue();
+      expect(store.hasPrevPage()).toBeFalse();
+
+      store.nextPage();
+      await flushAsync();
+      expect(store.pageIndex()).toBe(1);
+      expect(store.pageToken()).toBe('flat-next');
+      expect(store.hasPrevPage()).toBeTrue();
+
+      store.prevPage();
+      await flushAsync();
+      expect(store.pageIndex()).toBe(0);
+      expect(store.pageToken()).toBe('');
+      expect(store.hasPrevPage()).toBeFalse();
+    });
+
+    it('exposes searchError when searchFleet fails and resets pagination, selection, and expanded groups on executeSearch()', async () => {
       mockSearchService.resolveFleetChips.and.returnValue(
         of({
           filterChips: [{valid: {pillKey: 'Status', pillCondition: 'IDLE'}}],
@@ -2043,14 +2427,50 @@ describe('FleetSearchStore', () => {
       expect(store.rows()).toEqual([]);
       expect(store.groups()).toEqual([]);
 
+      const inFlightGroupSubject = new Subject<FleetSearchResults>();
+      mockSearchService.searchFleet.and.returnValue(inFlightGroupSubject);
+      store.openGroupIds.set(new Set(['group-1']));
+      store.onLoadGroupRows('group-1');
+      expect(inFlightGroupSubject.observed).toBeTrue();
+
+      store.pageIndex.set(2);
+      store.pageToken.set('tok-2');
+      store.toggleSelectRows([{id: 'dev-selected'}]);
+
       mockSearchService.searchFleet.and.returnValue(
         of({flat: {rows: [{id: 'dev-recovered', cells: []}], total: 1}}),
       );
       store.executeSearch();
       await flushAsync();
 
+      expect(inFlightGroupSubject.observed).toBeFalse();
+      expect(store.pageIndex()).toBe(0);
+      expect(store.pageToken()).toBe('');
+      expect(store.openGroupIds().size).toBe(0);
+      expect(store.expandedGroupPages().size).toBe(0);
+      expect(store.selectedItems().size).toBe(0);
       expect(store.searchError()).toBeNull();
       expect(store.rows().map((r) => r.id)).toEqual(['dev-recovered']);
+
+      // Verify resetTransientUiState (via restoreDefaultState when searchScopeKey is unchanged)
+      // also cancels in-flight group loads and clears expanded groups and selection.
+      store.restoreDefaultState(false);
+      const inFlightResetGroupSubject = new Subject<FleetSearchResults>();
+      mockSearchService.searchFleet.and.returnValue(inFlightResetGroupSubject);
+      store.openGroupIds.set(new Set(['group-2']));
+      store.onLoadGroupRows('group-2');
+      store.toggleSelectRows([{id: 'dev-selected-2'}]);
+      expect(inFlightResetGroupSubject.observed).toBeTrue();
+      expect(store.openGroupIds().size).toBe(1);
+      expect(store.expandedGroupPages().size).toBe(1);
+      expect(store.selectedItems().size).toBe(1);
+
+      store.restoreDefaultState(false);
+
+      expect(inFlightResetGroupSubject.observed).toBeFalse();
+      expect(store.openGroupIds().size).toBe(0);
+      expect(store.expandedGroupPages().size).toBe(0);
+      expect(store.selectedItems().size).toBe(0);
     });
 
     it('selects and deselects all rows via toggleSelectRows even when a row has an empty id', async () => {

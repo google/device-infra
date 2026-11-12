@@ -177,8 +177,10 @@ export class FakeSearchService extends SearchService {
     }
 
     const total = filteredRows.length;
-    const pageSize = request.flat?.page?.pageSize || 25;
-    const pageToken = request.flat?.page?.pageToken;
+    const defaultPageSize = request.groupExpand ? 100 : 25;
+    const pageReq = request.flat?.page ?? request.groupExpand?.page;
+    const pageSize = pageReq?.pageSize || defaultPageSize;
+    const pageToken = pageReq?.pageToken;
     const offset = pageToken ? Number(pageToken) || 0 : 0;
     const pageRows = filteredRows.slice(offset, offset + pageSize);
     const rangeStart = total > 0 ? offset + 1 : 0;

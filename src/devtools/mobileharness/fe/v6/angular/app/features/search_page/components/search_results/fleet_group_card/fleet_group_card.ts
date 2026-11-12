@@ -3,20 +3,21 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  inject,
   input,
-  output,
 } from '@angular/core';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatIconModule} from '@angular/material/icon';
+import {MatProgressBarModule} from '@angular/material/progress-bar';
 
-import {Column, FleetGroup, Row} from '../../../../../core/models/search';
+import {Column, FleetGroup} from '../../../../../core/models/search';
 import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
-import {GroupPageState} from '../../../models';
 import {
-  formatPaginationRange,
-  getDeviceTargetKey,
-  getRowsSelectionState,
-} from '../../../utils';
+  DEFAULT_GROUP_EXPAND_PAGE_SIZE,
+  GroupPageState,
+} from '../../../models';
+import {FleetSearchStore} from '../../../services/fleet_search_store';
+import {formatPaginationRange, getDeviceTargetKey} from '../../../utils';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
 import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
 
@@ -31,14 +32,30 @@ import {SearchPaginationComponent} from '../common/search_pagination/search_pagi
     DecimalPipe,
     MatCheckboxModule,
     MatIconModule,
+    MatProgressBarModule,
     KeyDescriptionTooltipDirective,
     SearchCellComponent,
     SearchPaginationComponent,
   ],
 })
 export class FleetGroupCardComponent {
+  readonly store = inject(FleetSearchStore);
+
   /** Fleet group header card data object. */
   readonly group = input.required<FleetGroup>();
+
+  /** Default page size for expanded group inner table. */
+  protected readonly defaultPageSize = DEFAULT_GROUP_EXPAND_PAGE_SIZE;
+
+  /** Whether this group card accordion is currently open/expanded. */
+  readonly isOpen = computed<boolean>(() =>
+    this.store.openGroupIds().has(this.group().groupId),
+  );
+
+  /** Async state for lazy-loaded group row data. */
+  readonly groupState = computed<GroupPageState | undefined>(() =>
+    this.store.expandedGroupPages().get(this.group().groupId),
+  );
 
   /** Computed structured utilization view model for progress and legend bars. */
   readonly utilization = computed(() => {
@@ -68,58 +85,40 @@ export class FleetGroupCardComponent {
     };
   });
 
-  /** Whether this group card accordion is currently open/expanded. */
-  readonly isOpen = input<boolean>(false);
-
-  /** Async state for lazy-loaded group row data. */
-  readonly groupState = input<GroupPageState | undefined>();
-
-  /** Target search entity name ('devices' or 'hosts'). */
-  readonly entity = input<string>('devices');
-
-  /** Default table column definitions. */
-  readonly columns = input<Column[]>([]);
-
-  /** Descriptions of the column keys that have one, shown as header tooltips. */
-  readonly columnDescriptions = input<ReadonlyMap<string, string>>(new Map());
-
-  /** Currently selected row ID collection. */
-  readonly selectedSet = input<
-    ReadonlySet<string> | ReadonlyMap<string, unknown>
-  >(new Set());
-
-  /** Event emitted when user clicks group header button to toggle expansion. */
-  readonly toggleGroup = output<string>();
-
-  /** Event emitted when user clicks select-all or individual row checkbox inside group. */
-  readonly toggleSelectRows = output<Row[]>();
-
-  /** Event emitted when user requests inner page change (token passed). */
-  readonly loadGroupPage = output<string | undefined>();
-
   /** Group rows with pre-computed composite tracking keys and selection state. */
   readonly rowItems = computed(() => {
     const rows = this.groupState()?.data?.rows ?? [];
-    const selected = this.selectedSet();
+    const selected = this.store.selectedItems();
     return rows.map((row) => {
       const key = getDeviceTargetKey(row);
       return {row, key, selected: selected.has(key)};
     });
   });
 
-  /** Effective columns for the inner table (from state or default fallback). */
+  /** Effective columns for the inner table with pre-resolved header descriptions. */
   readonly innerColumns = computed<Column[]>(() => {
-    const cols = this.groupState()?.data?.columns;
-    return cols && cols.length > 0 ? cols : this.columns();
+    const rawCols = this.groupState()?.data?.columns;
+    const cols =
+      rawCols && rawCols.length > 0 ? rawCols : this.store.displayColumns();
+    const descriptions = this.store.columnDescriptions();
+    return cols.map((col) => {
+      const description = col.description || descriptions.get(col.key);
+      return description ? {...col, description} : col;
+    });
   });
 
   /** Tri-state checkbox selection state ({all, some}) for the current group page. */
-  readonly selectionState = computed(() =>
-    getRowsSelectionState(
-      this.groupState()?.data?.rows ?? [],
-      this.selectedSet(),
-    ),
-  );
+  readonly selectionState = computed(() => {
+    const items = this.rowItems();
+    let selectedCount = 0;
+    for (const item of items) {
+      if (item.selected) selectedCount++;
+    }
+    return {
+      all: items.length > 0 && selectedCount === items.length,
+      some: selectedCount > 0 && selectedCount < items.length,
+    };
+  });
 
   /** Formatted range text for the inner group pagination footer (e.g. "1–25 of 100"). */
   readonly innerRangeText = computed<string>(() => {

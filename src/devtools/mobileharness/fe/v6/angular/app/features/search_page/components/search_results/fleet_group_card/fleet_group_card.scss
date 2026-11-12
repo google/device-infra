@@ -250,11 +250,22 @@
   flex-direction: column;
 }
 
+.inner-table-progress-bar {
+  height: 2px;
+  flex-shrink: 0;
+}
+
 .rt-group-scroll {
   flex: 1;
   overflow: auto;
   min-height: 0;
+  transition: opacity 0.15s ease-in-out;
   @include common.shared-scrollbar-style();
+
+  &.stale-loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
 }
 
 .rt-inner-table {
@@ -286,6 +297,16 @@
     box-sizing: border-box;
     overflow: hidden;
     text-overflow: ellipsis;
+    user-select: none;
+
+    &.sortable-header {
+      cursor: pointer;
+
+      &:hover {
+        color: #1f1f1f;
+        background: #e9eef6;
+      }
+    }
 
     .rt-header-content {
       display: inline-flex;
@@ -310,6 +331,14 @@
       line-height: 14px;
       color: #444746;
       cursor: help;
+    }
+
+    .rt-sort-icon {
+      flex-shrink: 0;
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+      line-height: 15px;
     }
   }
 

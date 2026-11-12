@@ -1,14 +1,15 @@
 <section class="rt-group">
   @let isGroupOpen = isOpen();
-  @let currentEntity = entity();
+  @let currentEntity = store.entity();
   @let groupData = group();
 
   <!-- Group Header Row -->
   <div class="rt-group-row" [class.open]="isGroupOpen">
     <button
+      type="button"
       class="rt-group-head"
       [attr.aria-expanded]="isGroupOpen"
-      (click)="toggleGroup.emit(groupData.groupId)"
+      (click)="store.toggleGroup(groupData.groupId)"
     >
       <mat-icon class="material-symbols-outlined rt-caret-icon">
         {{ isGroupOpen ? 'expand_more' : 'chevron_right' }}
@@ -76,76 +77,102 @@
     @let data = state?.data;
     @let items = rowItems();
     <div class="rt-group-body">
-      @if (!state || state.loading) {
+      @if (!state || (state.loading && !data)) {
         <div class="rt-group-loading">Loading {{ currentEntity }}...</div>
       } @else if (state?.error; as error) {
         <div class="rt-group-empty rt-group-error-msg">
           {{ error }}
         </div>
-      } @else if (items.length > 0 && data) {
-        @let groupCols = innerColumns();
-        @let selState = selectionState();
-        <div class="rt-group-scroll">
-          <table class="rt-inner-table">
-            <thead>
-              <tr>
-                <th class="rt-check-cell">
-                  <mat-checkbox
-                    [checked]="selState.all"
-                    [indeterminate]="selState.some"
-                    (change)="toggleSelectRows.emit(data.rows ?? [])"
-                  ></mat-checkbox>
-                </th>
-                @for (col of groupCols; track col.key) {
-                  <th [class]="'col-' + col.key">
-                    <span #groupColHeader class="rt-header-content">
-                      <span class="rt-header-name">{{ col.displayName }}</span>
-                      @if (col.description || columnDescriptions().get(col.key); as description) {
-                        <mat-icon
-                          class="material-symbols-outlined rt-header-info"
-                          tabindex="0"
-                          role="img"
-                          [appKeyDescriptionTooltip]="description"
-                          [tooltipAlignOrigin]="groupColHeader"
-                          [attr.aria-label]="description"
-                        >info</mat-icon>
-                      }
-                    </span>
-                  </th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of items; track item.key) {
-                <tr [class.selected-row]="item.selected">
-                  <td class="rt-check-cell">
+      } @else if (data && (items.length > 0 || !!data.prevPageToken)) {
+        @let isReloading = !!state?.loading;
+        @if (isReloading) {
+          <mat-progress-bar
+            mode="indeterminate"
+            class="inner-table-progress-bar"
+          ></mat-progress-bar>
+        }
+        @if (items.length > 0) {
+          @let groupCols = innerColumns();
+          @let selState = selectionState();
+          @let sortCol = state?.sortColumn;
+          @let sortIcon = (state?.sortAsc ?? true) ? 'arrow_upward' : 'arrow_downward';
+          <div class="rt-group-scroll" [class.stale-loading]="isReloading">
+            <table class="rt-inner-table">
+              <thead>
+                <tr>
+                  <th class="rt-check-cell">
                     <mat-checkbox
-                      [checked]="item.selected"
-                      (change)="toggleSelectRows.emit([item.row])"
+                      [checked]="selState.all"
+                      [indeterminate]="selState.some"
+                      (change)="store.toggleSelectRows(data.rows ?? [])"
                     ></mat-checkbox>
-                  </td>
-                  @for (col of groupCols; track col.key; let colIdx = $index) {
-                    <td [class]="'col-' + col.key">
-                      <app-search-cell
-                        [cell]="item.row.cells?.[colIdx]"
-                        [column]="col"
-                      ></app-search-cell>
-                    </td>
+                  </th>
+                  @for (col of groupCols; track col.key) {
+                    <th
+                      class="sortable-header"
+                      [class]="'col-' + col.key"
+                      (click)="store.toggleGroupRowSort(groupData.groupId, col.key)"
+                    >
+                      <span #groupColHeader class="rt-header-content">
+                        <span class="rt-header-name">{{ col.displayName }}</span>
+                        @if (col.description; as description) {
+                          <mat-icon
+                            class="material-symbols-outlined rt-header-info"
+                            tabindex="0"
+                            role="img"
+                            [appKeyDescriptionTooltip]="description"
+                            [tooltipAlignOrigin]="groupColHeader"
+                            [attr.aria-label]="description"
+                            (click)="$event.stopPropagation()"
+                          >info</mat-icon>
+                        }
+                        @if (sortCol === col.key) {
+                          <mat-icon class="material-symbols-outlined rt-sort-icon">
+                            {{ sortIcon }}
+                          </mat-icon>
+                        }
+                      </span>
+                    </th>
                   }
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                @for (item of items; track item.key) {
+                  <tr [class.selected-row]="item.selected">
+                    <td class="rt-check-cell">
+                      <mat-checkbox
+                        [checked]="item.selected"
+                        (change)="store.toggleSelectRows([item.row])"
+                      ></mat-checkbox>
+                    </td>
+                    @for (col of groupCols; track col.key; let colIdx = $index) {
+                      <td [class]="'col-' + col.key">
+                        <app-search-cell
+                          [cell]="item.row.cells?.[colIdx]"
+                          [column]="col"
+                        ></app-search-cell>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="rt-group-empty">No {{ currentEntity }} on this page.</div>
+        }
 
         <!-- Inner Group Pagination -->
         <app-search-pagination
           [compact]="true"
+          [disabled]="isReloading"
+          [pageSize]="state?.pageSize ?? defaultPageSize"
           [rangeText]="innerRangeText()"
           [hasPrev]="!!data.prevPageToken"
           [hasNext]="!!data.nextPageToken"
-          (prev)="loadGroupPage.emit(data.prevPageToken)"
-          (next)="loadGroupPage.emit(data.nextPageToken)"
+          (pageSizeChange)="store.setGroupPageSize(groupData.groupId, $event)"
+          (prev)="store.onLoadGroupRows(groupData.groupId, data.prevPageToken)"
+          (next)="store.onLoadGroupRows(groupData.groupId, data.nextPageToken)"
         ></app-search-pagination>
       } @else {
         <div class="rt-group-empty">No {{ currentEntity }} in this group.</div>

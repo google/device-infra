@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnSort;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFlatView;
@@ -50,6 +51,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupBy
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeySection;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupExpandView;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupHeaderView;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPageRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfig;
@@ -377,7 +379,7 @@ public final class SearchServiceLogicImplTest {
     assertThat(grouped.getGrouped().getGroupsList()).hasSize(1);
     String groupId = grouped.getGrouped().getGroups(0).getGroupId();
 
-    FleetSearchResults expanded =
+    FleetSearchResults expandedPage1 =
         logic
             .searchFleet(
                 FleetSearchRequest.newBuilder()
@@ -386,10 +388,44 @@ public final class SearchServiceLogicImplTest {
                     .setGroupExpand(
                         FleetGroupExpandView.newBuilder()
                             .setGroupId(groupId)
-                            .addColumns("device_field::uuid"))
+                            .addColumns("device_field::uuid")
+                            .setSort(
+                                FleetColumnSort.newBuilder()
+                                    .setKey("device_field::uuid")
+                                    .setAscending(false))
+                            .setPage(FleetPageRequest.newBuilder().setPageSize(2)))
                     .build())
             .get();
-    assertThat(expanded.getFlat().getRowsList()).hasSize(3);
+    assertThat(expandedPage1.getFlat().getTotal()).isEqualTo(3);
+    assertThat(expandedPage1.getFlat().getRowsList()).hasSize(2);
+    assertThat(expandedPage1.getFlat().getRows(0).getId()).isEqualTo("device-2");
+    assertThat(expandedPage1.getFlat().getRows(1).getId()).isEqualTo("device-1");
+    assertThat(expandedPage1.getFlat().getNextPageToken()).isNotEmpty();
+
+    FleetSearchResults expandedPage2 =
+        logic
+            .searchFleet(
+                FleetSearchRequest.newBuilder()
+                    .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                    .setFleet(Fleet.FLEET_SELF)
+                    .setGroupExpand(
+                        FleetGroupExpandView.newBuilder()
+                            .setGroupId(groupId)
+                            .addColumns("device_field::uuid")
+                            .setSort(
+                                FleetColumnSort.newBuilder()
+                                    .setKey("device_field::uuid")
+                                    .setAscending(false))
+                            .setPage(
+                                FleetPageRequest.newBuilder()
+                                    .setPageSize(2)
+                                    .setPageToken(expandedPage1.getFlat().getNextPageToken())))
+                    .build())
+            .get();
+    assertThat(expandedPage2.getFlat().getRowsList()).hasSize(1);
+    assertThat(expandedPage2.getFlat().getRows(0).getId()).isEqualTo("device-0");
+    assertThat(expandedPage2.getFlat().getNextPageToken()).isEmpty();
+    assertThat(expandedPage2.getFlat().getPrevPageToken()).isNotEmpty();
   }
 
   // --- Synthetic fleet: three devices across two hosts. ---

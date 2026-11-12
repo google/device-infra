@@ -74,6 +74,8 @@ class MockFleetSearchStore {
   readonly groups = signal<unknown[]>([]);
   readonly toggleGroup = jasmine.createSpy('toggleGroup');
   readonly toggleSelectRows = jasmine.createSpy('toggleSelectRows');
+  readonly toggleGroupRowSort = jasmine.createSpy('toggleGroupRowSort');
+  readonly setGroupPageSize = jasmine.createSpy('setGroupPageSize');
   readonly onLoadGroupRows = jasmine.createSpy('onLoadGroupRows');
   readonly hasActiveFilters = signal<boolean>(false);
   readonly searchError = signal<string | null>(null);
@@ -267,13 +269,17 @@ describe('FleetSearchResultsComponent', () => {
       mockStore.groupByKeys.set(['host']);
     });
 
-    it('computes groups mode when group list is non-empty', () => {
-      mockStore.groups.set([{groupId: 'group-1', title: 'Host A'}]);
+    it('computes groups mode when group list is non-empty and renders group cards', () => {
+      mockStore.groups.set([{groupId: 'group-1', values: ['Host A']}]);
       fixture.detectChanges();
 
       expect(component.groupedViewMode()).toBe('groups');
       const cardEl = fixture.debugElement.query(By.css('app-fleet-group-card'));
       expect(cardEl).toBeTruthy();
+
+      const headBtn = cardEl.query(By.css('.rt-group-head'));
+      headBtn.nativeElement.click();
+      expect(mockStore.toggleGroup).toHaveBeenCalledWith('group-1');
     });
 
     it('computes empty_all mode when groups are empty without filters', () => {

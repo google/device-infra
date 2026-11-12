@@ -15,6 +15,7 @@ import {SearchPaginationComponent} from './search_pagination';
       [pageSize]="pageSize"
       [pageSizeLabel]="pageSizeLabel"
       [compact]="compact"
+      [disabled]="disabled"
       (prev)="onPrev()"
       (next)="onNext()"
       (pageSizeChange)="onPageSizeChange($event)"
@@ -28,6 +29,7 @@ class TestHostComponent {
   pageSize: number | undefined = undefined;
   pageSizeLabel = 'Rows per page:';
   compact = false;
+  disabled = false;
 
   prevClicked = false;
   nextClicked = false;
@@ -143,5 +145,18 @@ describe('SearchPaginationComponent', () => {
 
     const container = fixture.nativeElement.querySelector('.rt-pagination');
     expect(container.classList.contains('compact')).toBeTrue();
+  });
+
+  it('disables prev and next buttons when disabled is true even if hasPrev and hasNext are true', () => {
+    host.hasPrev = true;
+    host.hasNext = true;
+    host.disabled = true;
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll(
+      '.rt-btn-text',
+    ) as NodeListOf<HTMLButtonElement>;
+    expect(buttons[0].disabled).toBeTrue();
+    expect(buttons[1].disabled).toBeTrue();
   });
 });

@@ -1,14 +1,31 @@
+import {signal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 
-import {FleetGroup, Row} from '../../../../../core/models/search';
+import {Column, FleetGroup, Row} from '../../../../../core/models/search';
 import {GroupPageState} from '../../../models';
+import {FleetSearchStore} from '../../../services/fleet_search_store';
 import {FleetGroupCardComponent} from './fleet_group_card';
+
+class MockFleetSearchStore {
+  readonly entity = signal<string>('devices');
+  readonly openGroupIds = signal<Set<string>>(new Set());
+  readonly expandedGroupPages = signal<Map<string, GroupPageState>>(new Map());
+  readonly displayColumns = signal<Column[]>([]);
+  readonly columnDescriptions = signal<ReadonlyMap<string, string>>(new Map());
+  readonly selectedItems = signal<Map<string, Row>>(new Map());
+  readonly toggleGroup = jasmine.createSpy('toggleGroup');
+  readonly toggleSelectRows = jasmine.createSpy('toggleSelectRows');
+  readonly toggleGroupRowSort = jasmine.createSpy('toggleGroupRowSort');
+  readonly setGroupPageSize = jasmine.createSpy('setGroupPageSize');
+  readonly onLoadGroupRows = jasmine.createSpy('onLoadGroupRows');
+}
 
 describe('FleetGroupCardComponent', () => {
   let component: FleetGroupCardComponent;
   let fixture: ComponentFixture<FleetGroupCardComponent>;
+  let mockStore: MockFleetSearchStore;
 
   const mockGroup: FleetGroup = {
     groupId: 'group-1',
@@ -23,8 +40,10 @@ describe('FleetGroupCardComponent', () => {
   };
 
   beforeEach(async () => {
+    mockStore = new MockFleetSearchStore();
     await TestBed.configureTestingModule({
       imports: [FleetGroupCardComponent, NoopAnimationsModule],
+      providers: [{provide: FleetSearchStore, useValue: mockStore}],
     }).compileComponents();
 
     fixture = TestBed.createComponent(FleetGroupCardComponent);
@@ -60,19 +79,14 @@ describe('FleetGroupCardComponent', () => {
     expect(component.utilization()).toBeNull();
   });
 
-  it('emits toggleGroup output when group header is clicked', () => {
+  it('calls store.toggleGroup when group header is clicked', () => {
     fixture.componentRef.setInput('group', mockGroup);
     fixture.detectChanges();
-
-    let toggledId = '';
-    component.toggleGroup.subscribe((id) => {
-      toggledId = id;
-    });
 
     const headBtn = fixture.debugElement.query(By.css('.rt-group-head'));
     headBtn.nativeElement.click();
 
-    expect(toggledId).toBe('group-1');
+    expect(mockStore.toggleGroup).toHaveBeenCalledWith('group-1');
   });
 
   it('renders expanded group rows and handles row selection', () => {
@@ -93,9 +107,9 @@ describe('FleetGroupCardComponent', () => {
     };
 
     fixture.componentRef.setInput('group', mockGroup);
-    fixture.componentRef.setInput('isOpen', true);
-    fixture.componentRef.setInput('groupState', groupState);
-    fixture.componentRef.setInput('selectedSet', new Set(['dev-1']));
+    mockStore.openGroupIds.set(new Set(['group-1']));
+    mockStore.expandedGroupPages.set(new Map([['group-1', groupState]]));
+    mockStore.selectedItems.set(new Map([['dev-1', mockRows[0]]]));
     fixture.detectChanges();
 
     expect(component.selectionState()).toEqual({all: false, some: true});
@@ -107,32 +121,34 @@ describe('FleetGroupCardComponent', () => {
       rows[1].nativeElement.classList.contains('selected-row'),
     ).toBeFalse();
 
-    fixture.componentRef.setInput('selectedSet', new Set(['dev-1', 'dev-2']));
+    mockStore.selectedItems.set(
+      new Map([
+        ['dev-1', mockRows[0]],
+        ['dev-2', mockRows[1]],
+      ]),
+    );
     fixture.detectChanges();
     expect(component.selectionState()).toEqual({all: true, some: false});
 
-    fixture.componentRef.setInput('selectedSet', new Set());
+    mockStore.selectedItems.set(new Map());
     fixture.detectChanges();
     expect(component.selectionState()).toEqual({all: false, some: false});
 
-    let emittedRows: Row[] = [];
-    component.toggleSelectRows.subscribe((r) => {
-      emittedRows = r;
-    });
     const checkboxes = fixture.debugElement.queryAll(By.css('mat-checkbox'));
     checkboxes[0].triggerEventHandler('change', {});
-    expect(emittedRows).toEqual(mockRows);
+    expect(mockStore.toggleSelectRows).toHaveBeenCalledWith(mockRows);
     checkboxes[1].triggerEventHandler('change', {});
-    expect(emittedRows).toEqual([mockRows[0]]);
+    expect(mockStore.toggleSelectRows).toHaveBeenCalledWith([mockRows[0]]);
   });
 
-  it('renders inner pagination and emits loadGroupPage output on page navigation', () => {
+  it('renders inner pagination with pageSize and delegates page and pageSize changes to store', () => {
     const mockRows: Row[] = [
       {id: 'dev-1', cells: [{text: {value: 'Device 1'}}]},
     ];
 
     const groupState: GroupPageState = {
       loading: false,
+      pageSize: 50,
       data: {
         rows: mockRows,
         columns: [{key: 'name', displayName: 'Device Name'}],
@@ -145,8 +161,8 @@ describe('FleetGroupCardComponent', () => {
     };
 
     fixture.componentRef.setInput('group', mockGroup);
-    fixture.componentRef.setInput('isOpen', true);
-    fixture.componentRef.setInput('groupState', groupState);
+    mockStore.openGroupIds.set(new Set(['group-1']));
+    mockStore.expandedGroupPages.set(new Map([['group-1', groupState]]));
     fixture.detectChanges();
 
     expect(component.innerRangeText()).toBe('1–10 of 25');
@@ -155,36 +171,79 @@ describe('FleetGroupCardComponent', () => {
       By.css('app-search-pagination'),
     );
     expect(paginationEl).not.toBeNull();
-
-    let emittedToken = '';
-    component.loadGroupPage.subscribe((token) => {
-      emittedToken = token || '';
-    });
+    expect(paginationEl.componentInstance.pageSize()).toBe(50);
 
     // Test next page click
     const nextBtn = paginationEl.query(By.css('button[title="Next page"]'));
     expect(nextBtn).not.toBeNull();
     nextBtn.nativeElement.click();
-    expect(emittedToken).toBe('token-next');
+    expect(mockStore.onLoadGroupRows).toHaveBeenCalledWith(
+      'group-1',
+      'token-next',
+    );
 
     // Test previous page click
     const prevBtn = paginationEl.query(By.css('button[title="Previous page"]'));
     expect(prevBtn).not.toBeNull();
     prevBtn.nativeElement.click();
-    expect(emittedToken).toBe('token-prev');
+    expect(mockStore.onLoadGroupRows).toHaveBeenCalledWith(
+      'group-1',
+      'token-prev',
+    );
+
+    // Test page size change
+    paginationEl.componentInstance.pageSizeChange.emit(100);
+    expect(mockStore.setGroupPageSize).toHaveBeenCalledWith('group-1', 100);
+  });
+
+  it('keeps table visible with progress bar when reloading an already populated group page', () => {
+    const groupState: GroupPageState = {
+      loading: true,
+      data: {
+        rows: [{id: 'dev-1', cells: [{text: {value: 'Device 1'}}]}],
+        columns: [{key: 'name', displayName: 'Device Name'}],
+        rangeStart: 1,
+        rangeEnd: 1,
+        total: 50,
+        prevPageToken: 'token-prev',
+        nextPageToken: 'token-next',
+      },
+    };
+
+    fixture.componentRef.setInput('group', mockGroup);
+    mockStore.openGroupIds.set(new Set(['group-1']));
+    mockStore.expandedGroupPages.set(new Map([['group-1', groupState]]));
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.rt-group-loading'))).toBeNull();
+    expect(
+      fixture.debugElement.query(By.css('.inner-table-progress-bar')),
+    ).not.toBeNull();
+    const scrollEl = fixture.debugElement.query(By.css('.rt-group-scroll'));
+    expect(
+      scrollEl.nativeElement.classList.contains('stale-loading'),
+    ).toBeTrue();
+
+    const nextBtn = fixture.debugElement.query(
+      By.css('button[title="Next page"]'),
+    );
+    const prevBtn = fixture.debugElement.query(
+      By.css('button[title="Previous page"]'),
+    );
+    expect(nextBtn.nativeElement.disabled).toBeTrue();
+    expect(prevBtn.nativeElement.disabled).toBeTrue();
   });
 
   it('renders loading state when groupState is undefined or loading is true', () => {
     fixture.componentRef.setInput('group', mockGroup);
-    fixture.componentRef.setInput('isOpen', true);
-    fixture.componentRef.setInput('groupState', undefined);
+    mockStore.openGroupIds.set(new Set(['group-1']));
     fixture.detectChanges();
 
     let loadingEl = fixture.debugElement.query(By.css('.rt-group-loading'));
     expect(loadingEl).not.toBeNull();
     expect(loadingEl.nativeElement.textContent).toContain('Loading devices...');
 
-    fixture.componentRef.setInput('groupState', {loading: true});
+    mockStore.expandedGroupPages.set(new Map([['group-1', {loading: true}]]));
     fixture.detectChanges();
 
     loadingEl = fixture.debugElement.query(By.css('.rt-group-loading'));
@@ -193,11 +252,18 @@ describe('FleetGroupCardComponent', () => {
 
   it('renders error message when groupState has an error', () => {
     fixture.componentRef.setInput('group', mockGroup);
-    fixture.componentRef.setInput('isOpen', true);
-    fixture.componentRef.setInput('groupState', {
-      loading: false,
-      error: 'Network connection failed',
-    });
+    mockStore.openGroupIds.set(new Set(['group-1']));
+    mockStore.expandedGroupPages.set(
+      new Map([
+        [
+          'group-1',
+          {
+            loading: false,
+            error: 'Network connection failed',
+          },
+        ],
+      ]),
+    );
     fixture.detectChanges();
 
     const errorEl = fixture.debugElement.query(By.css('.rt-group-error-msg'));
@@ -222,10 +288,9 @@ describe('FleetGroupCardComponent', () => {
     };
 
     fixture.componentRef.setInput('group', mockGroup);
-    fixture.componentRef.setInput('isOpen', true);
-    fixture.componentRef.setInput('groupState', groupState);
-    fixture.componentRef.setInput(
-      'columnDescriptions',
+    mockStore.openGroupIds.set(new Set(['group-1']));
+    mockStore.expandedGroupPages.set(new Map([['group-1', groupState]]));
+    mockStore.columnDescriptions.set(
       new Map([['device_field::version', 'The device OS version.']]),
     );
     fixture.detectChanges();
@@ -249,23 +314,84 @@ describe('FleetGroupCardComponent', () => {
     );
   });
 
-  it('renders empty message when group has no rows', () => {
+  it('renders empty message when group has no rows and falls back to store displayColumns when group columns are empty', () => {
     fixture.componentRef.setInput('group', mockGroup);
-    fixture.componentRef.setInput('isOpen', true);
-    fixture.componentRef.setInput('groupState', {
-      loading: false,
-      data: {
-        rows: [],
-        columns: [],
-      },
-    });
+    mockStore.displayColumns.set([{key: 'id', displayName: 'Device ID'}]);
+    mockStore.openGroupIds.set(new Set(['group-1']));
+    mockStore.expandedGroupPages.set(
+      new Map([
+        [
+          'group-1',
+          {
+            loading: false,
+            data: {
+              rows: [],
+              columns: [],
+            },
+          },
+        ],
+      ]),
+    );
     fixture.detectChanges();
 
+    expect(component.innerColumns()).toEqual([
+      {key: 'id', displayName: 'Device ID'},
+    ]);
     expect(component.rowItems().length).toBe(0);
     const emptyEl = fixture.debugElement.query(By.css('.rt-group-empty'));
     expect(emptyEl).not.toBeNull();
     expect(emptyEl.nativeElement.textContent).toContain(
       'No devices in this group.',
+    );
+  });
+
+  it('renders sort icon on active sort column and calls store.toggleGroupRowSort on header click', () => {
+    const groupState: GroupPageState = {
+      loading: false,
+      sortColumn: 'device_field::status',
+      sortAsc: false,
+      data: {
+        rows: [
+          {
+            id: 'dev-1',
+            cells: [{text: {value: 'D1'}}, {text: {value: 'IDLE'}}],
+          },
+        ],
+        columns: [
+          {key: 'device_field::uuid', displayName: 'UUID'},
+          {
+            key: 'device_field::status',
+            displayName: 'Status',
+            description: 'Current status.',
+          },
+        ],
+      },
+    };
+
+    fixture.componentRef.setInput('group', mockGroup);
+    mockStore.openGroupIds.set(new Set(['group-1']));
+    mockStore.expandedGroupPages.set(new Map([['group-1', groupState]]));
+    fixture.detectChanges();
+
+    const headers = fixture.debugElement.queryAll(By.css('thead th'));
+    // headers[0] is checkbox, headers[1] is UUID, headers[2] is Status
+    expect(headers[1].query(By.css('.rt-sort-icon'))).toBeNull();
+    const statusSortIcon = headers[2].query(By.css('.rt-sort-icon'));
+    expect(statusSortIcon).not.toBeNull();
+    expect(statusSortIcon.nativeElement.textContent.trim()).toBe(
+      'arrow_downward',
+    );
+
+    // Clicking the info icon should not call toggleGroupRowSort
+    const infoIcon = headers[2].query(By.css('.rt-header-info'));
+    infoIcon.nativeElement.click();
+    expect(mockStore.toggleGroupRowSort).not.toHaveBeenCalled();
+
+    // Clicking the column header calls toggleGroupRowSort
+    headers[1].nativeElement.click();
+    expect(mockStore.toggleGroupRowSort).toHaveBeenCalledWith(
+      'group-1',
+      'device_field::uuid',
     );
   });
 });

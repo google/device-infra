@@ -6,7 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import {rxResource, takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {EMPTY, Observable, Subject, of, throwError} from 'rxjs';
+import {EMPTY, Observable, of, Subject, Subscription, throwError} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 
 import {
@@ -35,6 +35,7 @@ import {SnackBarService} from '../../../shared/services/snackbar_service';
 import {getErrorMessage} from '../../../shared/utils/error_utils';
 import {
   createInitialValuePickerState,
+  DEFAULT_GROUP_EXPAND_PAGE_SIZE,
   EntityType,
   FilterChip,
   FilterKeyMetadata,
@@ -398,7 +399,7 @@ export class FleetSearchStore extends SearchPageStore {
   /** Sort order direction (true = ascending, false = descending). */
   readonly sortAsc = signal<boolean>(true);
 
-  /** Toggles sort order for the specified column (flips direction if active, or activates ascending). */
+  /** Toggles sort order for the specified column (flips direction if active, or activates ascending) and resets to page 1. */
   toggleSort(colKey: string) {
     if (this.sortColumn() === colKey) {
       this.sortAsc.update((asc) => !asc);
@@ -406,13 +407,16 @@ export class FleetSearchStore extends SearchPageStore {
       this.sortColumn.set(colKey);
       this.sortAsc.set(true);
     }
+    this.resetPagination();
   }
 
   /** Updates page size, resets pagination, and clears row selection and expanded groups. */
   override setPageSize(newSize: number) {
+    if (this.pageSize() === newSize) {
+      return;
+    }
     super.setPageSize(newSize);
-    this.openGroupIds.set(new Set());
-    this.expandedGroupPages.set(new Map());
+    this.resetExpandedGroups();
     this.clearSelection();
   }
 
@@ -487,14 +491,20 @@ export class FleetSearchStore extends SearchPageStore {
     if (this.groupByKeys().length > 0) {
       // Group headers do not depend on visible columns, so the header page stays where it is and
       // only the open groups reload their rows for the new columns.
-      const openIds = Array.from(this.openGroupIds());
-      this.expandedGroupPages.set(new Map());
-      for (const groupId of openIds) {
+      this.expandedGroupPages.update(
+        (prev) =>
+          new Map(
+            Array.from(prev, ([id, state]) => [
+              id,
+              {...state, data: undefined},
+            ]),
+          ),
+      );
+      for (const groupId of this.openGroupIds()) {
         this.onLoadGroupRows(groupId);
       }
     } else {
-      this.pageIndex.set(0);
-      this.pageToken.set('');
+      this.resetPagination();
     }
   }
 
@@ -646,8 +656,7 @@ export class FleetSearchStore extends SearchPageStore {
 
   /** Sets the sort order mode for group header cards and resets pagination. */
   setGroupSort(value: string) {
-    this.pageIndex.set(0);
-    this.pageToken.set('');
+    this.resetPagination();
     this.groupSort.set(value);
   }
 
@@ -656,26 +665,53 @@ export class FleetSearchStore extends SearchPageStore {
     const current = new Set(this.openGroupIds());
     if (current.has(groupId)) {
       current.delete(groupId);
+      this.groupLoadSubs.get(groupId)?.unsubscribe();
     } else {
       current.add(groupId);
-      const existing = this.expandedGroupPages().get(groupId);
-      if (!existing?.data && !existing?.loading) {
+      if (!this.expandedGroupPages().get(groupId)?.data) {
         this.onLoadGroupRows(groupId);
       }
     }
     this.openGroupIds.set(current);
   }
 
-  /**
-   * Sequence number of the latest onLoadGroupRows request per group. A response from an older
-   * request, such as one for a previous column set, is dropped so it cannot overwrite newer rows.
-   */
-  private readonly groupLoadSeq = new Map<string, number>();
+  /** Active in-flight row-load subscription per group ID so newer loads abort superseded RPCs. */
+  private readonly groupLoadSubs = new Map<string, Subscription>();
 
-  /** Loads flat rows for a specific expanded group header. */
-  onLoadGroupRows(groupId: string, pageToken?: string) {
-    const seq = (this.groupLoadSeq.get(groupId) ?? 0) + 1;
-    this.groupLoadSeq.set(groupId, seq);
+  /** Toggles sort order for a column inside an expanded group card and reloads its first page. */
+  toggleGroupRowSort(groupId: string, colKey: string) {
+    const state = this.expandedGroupPages().get(groupId);
+    const currentCol = state?.sortColumn || this.sortColumn();
+    const sortAsc = currentCol === colKey ? !(state?.sortAsc ?? true) : true;
+    this.onLoadGroupRows(groupId, undefined, {sortColumn: colKey, sortAsc});
+  }
+
+  /** Updates rows-per-page size for an expanded group card and reloads its first page. */
+  setGroupPageSize(groupId: string, pageSize: number) {
+    const currentSize =
+      this.expandedGroupPages().get(groupId)?.pageSize ??
+      DEFAULT_GROUP_EXPAND_PAGE_SIZE;
+    if (currentSize !== pageSize) {
+      this.onLoadGroupRows(groupId, undefined, {pageSize});
+    }
+  }
+
+  /** Loads flat rows for a specific expanded group header, applying any state overrides. */
+  onLoadGroupRows(
+    groupId: string,
+    pageToken?: string,
+    overrides?: Partial<GroupPageState>,
+  ) {
+    this.groupLoadSubs.get(groupId)?.unsubscribe();
+
+    const scopeKey = this.searchScopeKey();
+    const visibleCols = this.visibleColumns();
+    const state = {...this.expandedGroupPages().get(groupId), ...overrides};
+    const hasCustomSort =
+      !!state.sortColumn && visibleCols.has(state.sortColumn);
+    const sortColumn = hasCustomSort ? state.sortColumn : this.sortColumn();
+    const sortAsc = hasCustomSort ? (state.sortAsc ?? true) : true;
+    const pageSize = state.pageSize ?? DEFAULT_GROUP_EXPAND_PAGE_SIZE;
     const filters = this.effectiveFilters();
 
     const req: FleetSearchRequest = {
@@ -684,30 +720,35 @@ export class FleetSearchStore extends SearchPageStore {
       filters: filters.length > 0 ? filters : undefined,
       groupExpand: {
         groupId,
-        columns: Array.from(this.visibleColumns()),
-        pageToken,
+        columns: Array.from(visibleCols),
+        ...(sortColumn ? {sort: {key: sortColumn, ascending: sortAsc}} : {}),
+        page: {pageSize, pageToken: pageToken || undefined},
       },
     };
 
-    this.updateGroupExpandState(groupId, {loading: true});
+    this.updateGroupExpandState(groupId, {
+      ...state,
+      loading: true,
+      error: undefined,
+      sortColumn,
+      sortAsc,
+      pageSize,
+    });
 
-    this.searchService
+    const sub = this.searchService
       .searchFleet(req)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          if (this.groupLoadSeq.get(groupId) !== seq) {
-            return;
-          }
+          if (this.searchScopeKey() !== scopeKey) return;
           this.updateGroupExpandState(groupId, {
             loading: false,
+            error: undefined,
             data: res.flat,
           });
         },
         error: (err) => {
-          if (this.groupLoadSeq.get(groupId) !== seq) {
-            return;
-          }
+          if (this.searchScopeKey() !== scopeKey) return;
           const msg = getErrorMessage(err);
           this.updateGroupExpandState(groupId, {
             loading: false,
@@ -718,6 +759,8 @@ export class FleetSearchStore extends SearchPageStore {
           });
         },
       });
+
+    this.groupLoadSubs.set(groupId, sub);
   }
 
   /** Helper to update state for an expanded group in expandedGroupPages map. */
@@ -1023,12 +1066,19 @@ export class FleetSearchStore extends SearchPageStore {
     {equal: areFilterArraysEqual},
   );
 
-  /** Reloads the primary search resource and resets page token and group expansions. */
-  override executeSearch() {
-    this.pageIndex.set(0);
-    this.pageToken.set('');
+  /** Cancels in-flight group loads and clears expanded group state. */
+  private resetExpandedGroups() {
+    for (const sub of this.groupLoadSubs.values()) {
+      sub.unsubscribe();
+    }
     this.openGroupIds.set(new Set());
     this.expandedGroupPages.set(new Map());
+  }
+
+  /** Reloads the primary search resource and resets page token and group expansions. */
+  override executeSearch() {
+    this.resetPagination();
+    this.resetExpandedGroups();
     this.clearSelection();
     this.searchResource.reload();
   }
@@ -1039,12 +1089,11 @@ export class FleetSearchStore extends SearchPageStore {
 
   /** Helper to extract next/prev page token from search results. */
   private getPaginationToken(type: 'next' | 'prev'): string | undefined {
-    const res = this.searchResults();
-    const isGrouped = this.groupByKeys().length > 0;
-    if (type === 'next') {
-      return isGrouped ? res?.grouped?.nextPageToken : res?.flat?.nextPageToken;
-    }
-    return isGrouped ? res?.grouped?.prevPageToken : res?.flat?.prevPageToken;
+    const page =
+      this.groupByKeys().length > 0
+        ? this.searchResults()?.grouped
+        : this.searchResults()?.flat;
+    return type === 'next' ? page?.nextPageToken : page?.prevPageToken;
   }
 
   /** Navigates to previous page of search results. */
@@ -1432,8 +1481,7 @@ export class FleetSearchStore extends SearchPageStore {
   protected override resetTransientUiState() {
     super.resetTransientUiState();
 
-    this.openGroupIds.set(new Set());
-    this.expandedGroupPages.set(new Map());
+    this.resetExpandedGroups();
     this.clearSelection();
   }
 }

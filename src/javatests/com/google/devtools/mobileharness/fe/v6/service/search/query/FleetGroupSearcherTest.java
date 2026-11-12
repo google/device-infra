@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnSort;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFlatResults;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroup;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupSort;
@@ -137,9 +138,53 @@ public final class FleetGroupSearcherTest {
 
     // Expanding it returns exactly the android devices, sorted by uuid.
     FleetFlatResults expanded =
-        searcher.expandGroup(corpus, ImmutableList.of(), androidGroupId, EXPAND_COLUMNS, "");
+        searcher.expandGroup(
+            corpus,
+            ImmutableList.of(),
+            androidGroupId,
+            EXPAND_COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
     assertThat(rowIds(expanded)).containsExactly("device-0", "device-1", "device-4").inOrder();
     assertThat(expanded.getTotal()).isEqualTo(3);
+  }
+
+  @Test
+  public void expandGroup_sortsRowsByRequestedColumnAndDirection() {
+    FleetGroupedResults results =
+        searcher.searchGrouped(
+            corpus,
+            ImmutableList.of(),
+            ImmutableList.of("dimension::os"),
+            FleetGroupSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
+    String androidGroupId = groupByFirstValue(results, "android").getGroupId();
+
+    // Sort by status ascending: BUSY (device-1), then IDLE (device-0, device-4 tie-broken by uuid).
+    FleetFlatResults sortedByStatusAsc =
+        searcher.expandGroup(
+            corpus,
+            ImmutableList.of(),
+            androidGroupId,
+            EXPAND_COLUMNS,
+            FleetColumnSort.newBuilder().setKey("device_field::status").setAscending(true).build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(sortedByStatusAsc))
+        .containsExactly("device-1", "device-0", "device-4")
+        .inOrder();
+
+    // Sort by uuid descending: device-4, device-1, device-0.
+    FleetFlatResults sortedByUuidDesc =
+        searcher.expandGroup(
+            corpus,
+            ImmutableList.of(),
+            androidGroupId,
+            EXPAND_COLUMNS,
+            FleetColumnSort.newBuilder().setKey("device_field::uuid").setAscending(false).build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(sortedByUuidDesc))
+        .containsExactly("device-4", "device-1", "device-0")
+        .inOrder();
   }
 
   @Test
@@ -159,7 +204,13 @@ public final class FleetGroupSearcherTest {
     assertThat(entries.get(0).noValue()).isTrue();
 
     FleetFlatResults expanded =
-        searcher.expandGroup(corpus, ImmutableList.of(), noValueId, EXPAND_COLUMNS, "");
+        searcher.expandGroup(
+            corpus,
+            ImmutableList.of(),
+            noValueId,
+            EXPAND_COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
     assertThat(rowIds(expanded)).containsExactly("device-3");
   }
 
@@ -182,7 +233,13 @@ public final class FleetGroupSearcherTest {
     assertThat(driverAc.getItemCount()).isEqualTo(1);
 
     FleetFlatResults expanded =
-        searcher.expandGroup(corpus, ImmutableList.of(), driverAc.getGroupId(), EXPAND_COLUMNS, "");
+        searcher.expandGroup(
+            corpus,
+            ImmutableList.of(),
+            driverAc.getGroupId(),
+            EXPAND_COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
     // Exact-set membership: device-2 (driverA+driverC) only, not the driverA-only devices.
     assertThat(rowIds(expanded)).containsExactly("device-2");
   }
@@ -262,47 +319,144 @@ public final class FleetGroupSearcherTest {
   }
 
   @Test
-  public void expand_fixedPageSizeOfOneHundred() {
-    // A single android group of 150 devices exercises the fixed 100-row expand page.
+  public void expand_defaultPageSizeAndCustomPaginationWalksPages() {
+    // A single android group of 150 devices exercises default page size (100) and custom page size.
     FleetSnapshot large =
         Guice.createInjector()
             .getInstance(FleetIndexBuilder.class)
             .build(uniformAndroidFleet(150), BUILD_TIME);
+    DeviceCorpus largeCorpus = new DeviceCorpus(large, new LazyPostings(large.devices()), null);
     FleetGroupedResults headers =
         searcher.searchGrouped(
-            new DeviceCorpus(large, postings, null),
+            largeCorpus,
             ImmutableList.of(),
             ImmutableList.of("dimension::os"),
             FleetGroupSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
     String groupId = headers.getGroups(0).getGroupId();
 
-    FleetFlatResults page1 =
+    // Null page request and default page request both use 100 rows per page, and a page token with
+    // an unset page size still advances to the next 100-row page.
+    FleetFlatResults nullPage =
         searcher.expandGroup(
-            new DeviceCorpus(large, new LazyPostings(large.devices()), null),
+            largeCorpus,
             ImmutableList.of(),
             groupId,
             EXPAND_COLUMNS,
-            "");
-    assertThat(page1.getTotal()).isEqualTo(150);
-    assertThat(page1.getRowsCount()).isEqualTo(100);
+            FleetColumnSort.getDefaultInstance(),
+            /* page= */ null);
+    assertThat(nullPage.getRowsCount()).isEqualTo(100);
+    assertThat(nullPage.getRangeStart()).isEqualTo(1);
+    assertThat(nullPage.getRangeEnd()).isEqualTo(100);
+
+    FleetFlatResults defaultPage1 =
+        searcher.expandGroup(
+            largeCorpus,
+            ImmutableList.of(),
+            groupId,
+            EXPAND_COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(defaultPage1.getTotal()).isEqualTo(150);
+    assertThat(defaultPage1.getRowsCount()).isEqualTo(100);
+    assertThat(defaultPage1.getRangeStart()).isEqualTo(1);
+    assertThat(defaultPage1.getRangeEnd()).isEqualTo(100);
+    assertThat(defaultPage1.getNextPageToken()).isNotEmpty();
+    assertThat(defaultPage1.getPrevPageToken()).isEmpty();
+
+    FleetFlatResults defaultPage2 =
+        searcher.expandGroup(
+            largeCorpus,
+            ImmutableList.of(),
+            groupId,
+            EXPAND_COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.newBuilder().setPageToken(defaultPage1.getNextPageToken()).build());
+    assertThat(defaultPage2.getRowsCount()).isEqualTo(50);
+    assertThat(defaultPage2.getRangeStart()).isEqualTo(101);
+    assertThat(defaultPage2.getRangeEnd()).isEqualTo(150);
+    assertThat(defaultPage2.getNextPageToken()).isEmpty();
+
+    // Custom page size (50) walks page 1 -> page 2 -> page 3 -> prev back to page 1.
+    FleetFlatResults page1 =
+        searcher.expandGroup(
+            largeCorpus,
+            ImmutableList.of(),
+            groupId,
+            EXPAND_COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.newBuilder().setPageSize(50).build());
+    assertThat(page1.getRowsCount()).isEqualTo(50);
+    assertThat(page1.getRangeStart()).isEqualTo(1);
+    assertThat(page1.getRangeEnd()).isEqualTo(50);
+    assertThat(page1.getRows(0).getId()).isEqualTo("device-000");
+    assertThat(page1.getRows(49).getId()).isEqualTo("device-049");
     assertThat(page1.getNextPageToken()).isNotEmpty();
+    assertThat(page1.getPrevPageToken()).isEmpty();
 
     FleetFlatResults page2 =
         searcher.expandGroup(
-            new DeviceCorpus(large, new LazyPostings(large.devices()), null),
+            largeCorpus,
             ImmutableList.of(),
             groupId,
             EXPAND_COLUMNS,
-            page1.getNextPageToken());
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.newBuilder()
+                .setPageSize(50)
+                .setPageToken(page1.getNextPageToken())
+                .build());
     assertThat(page2.getRowsCount()).isEqualTo(50);
-    assertThat(page2.getNextPageToken()).isEmpty();
+    assertThat(page2.getRangeStart()).isEqualTo(51);
+    assertThat(page2.getRangeEnd()).isEqualTo(100);
+    assertThat(page2.getRows(0).getId()).isEqualTo("device-050");
+    assertThat(page2.getRows(49).getId()).isEqualTo("device-099");
+    assertThat(page2.getNextPageToken()).isNotEmpty();
+    assertThat(page2.getPrevPageToken()).isNotEmpty();
+
+    FleetFlatResults page3 =
+        searcher.expandGroup(
+            largeCorpus,
+            ImmutableList.of(),
+            groupId,
+            EXPAND_COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.newBuilder()
+                .setPageSize(50)
+                .setPageToken(page2.getNextPageToken())
+                .build());
+    assertThat(page3.getRowsCount()).isEqualTo(50);
+    assertThat(page3.getRangeStart()).isEqualTo(101);
+    assertThat(page3.getRangeEnd()).isEqualTo(150);
+    assertThat(page3.getRows(0).getId()).isEqualTo("device-100");
+    assertThat(page3.getNextPageToken()).isEmpty();
+    assertThat(page3.getPrevPageToken()).isNotEmpty();
+
+    FleetFlatResults backToPage1 =
+        searcher.expandGroup(
+            largeCorpus,
+            ImmutableList.of(),
+            groupId,
+            EXPAND_COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.newBuilder()
+                .setPageSize(50)
+                .setPageToken(page2.getPrevPageToken())
+                .build());
+    assertThat(backToPage1.getRangeStart()).isEqualTo(1);
+    assertThat(backToPage1.getRangeEnd()).isEqualTo(50);
+    assertThat(backToPage1.getPrevPageToken()).isEmpty();
   }
 
   @Test
   public void expand_unknownGroupIdReturnsNoRows() {
     FleetFlatResults expanded =
-        searcher.expandGroup(corpus, ImmutableList.of(), "not-a-real-group-id", EXPAND_COLUMNS, "");
+        searcher.expandGroup(
+            corpus,
+            ImmutableList.of(),
+            "not-a-real-group-id",
+            EXPAND_COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
     assertThat(expanded.getRowsCount()).isEqualTo(0);
     assertThat(expanded.getColumnsCount()).isEqualTo(EXPAND_COLUMNS.size());
   }

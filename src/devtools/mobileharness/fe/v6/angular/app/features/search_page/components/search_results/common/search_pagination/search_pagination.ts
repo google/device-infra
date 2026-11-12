@@ -37,6 +37,9 @@ export class SearchPaginationComponent {
   /** Whether to render in compact height mode (e.g. for nested card pagination). */
   readonly compact = input<boolean>(false);
 
+  /** Whether pagination controls (page size selector and prev/next buttons) are disabled (e.g. while loading). */
+  readonly disabled = input<boolean>(false);
+
   /** Event emitted when user clicks the previous page button. */
   readonly prev = output<void>();
 

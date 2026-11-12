@@ -141,11 +141,12 @@ export declare interface FleetGroupHeaderView {
   page?: FleetPageRequest;
 }
 
-/** Expand one group: returns rows inside a specific group card. */
+/** Expand one group: paginated rows with columns and sort inside a specific group card. */
 export declare interface FleetGroupExpandView {
   groupId: string;
   columns?: string[];
-  pageToken?: string;
+  sort?: FleetColumnSort;
+  page?: FleetPageRequest;
 }
 
 /** Sort by a column value. */
@@ -154,7 +155,7 @@ export declare interface FleetColumnSort {
   ascending?: boolean;
 }
 
-/** Cursor-based pagination for flat and group-header views. */
+/** Cursor-based pagination for flat, group-header, and group-expand views. */
 export declare interface FleetPageRequest {
   pageSize?: number;
   pageToken?: string;
