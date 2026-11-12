@@ -19,10 +19,16 @@ import (
 //     is fine)
 //   - map[string]any, whose keys are valid names and whose values are values
 //
-// Every backend accepts exactly these types and returns records built from
-// them, so a record round-trips unchanged except for time values, which are
-// returned in UTC truncated to microseconds (see Canonical). Field names
-// follow the rules of Key.Validate.
+// Every backend accepts exactly these types, so a record round-trips
+// unchanged except for time values, which are returned in UTC truncated to
+// microseconds (see Canonical). Field names follow the rules of Key.Validate.
+//
+// A backend whose storage can hold values of other types, written by
+// something other than this package (Firestore: a null or a fractional
+// number typed in the admin tool), does not fail the read. It returns such a
+// value as a Go value outside the set above, and Validate rejects the record.
+// Callers that parse records check Validate, so the damage stays with the one
+// record instead of failing every read that touches it.
 //
 // The schema of each record kind is defined by its users, not by the store.
 type Record map[string]any

@@ -193,6 +193,47 @@ func TestDomainInvalid(t *testing.T) {
 	}
 }
 
+// TestParseRejectsValuesTheStoreDoesNotAllow checks that a value of a type
+// outside store.Record's set makes the whole record invalid, also in a field
+// the schema does not know and inside a nested map or list. Firestore can
+// hold such values, and the adapter returns them as they are.
+func TestParseRejectsValuesTheStoreDoesNotAllow(t *testing.T) {
+	valid := map[string]store.Record{
+		"domain":  Domain{}.Record(),
+		"group":   Group{Image: "repo/img", Tag: "latest", Policy: Policy{Waves: []Wave{{Value: 1}}}}.Record(),
+		"rollout": Rollout{Revision: rev1, Waves: []int64{1}}.Record(),
+		"slot":    Slot{State: SlotOpen}.Record(),
+		"member":  Member{Status: MemberActive}.Record(),
+	}
+	parse := map[string]func(store.Record) error{
+		"domain":  func(r store.Record) error { _, err := ParseDomain(r); return err },
+		"group":   func(r store.Record) error { _, err := ParseGroup(r); return err },
+		"rollout": func(r store.Record) error { _, err := ParseRollout(r); return err },
+		"slot":    func(r store.Record) error { _, err := ParseSlot(r); return err },
+		"member":  func(r store.Record) error { _, err := ParseMember(r); return err },
+	}
+	bad := map[string]any{
+		"null":           nil,
+		"float":          1.5,
+		"int":            1,
+		"bytes":          []byte("x"),
+		"nested_in_map":  map[string]any{"k": map[string]any{"n": nil}},
+		"nested_in_list": []any{"ok", 1.5},
+	}
+	for doc, r := range valid {
+		if err := parse[doc](r); err != nil {
+			t.Fatalf("%s: parsing the valid record %v failed: %v", doc, r, err)
+		}
+		for name, v := range bad {
+			withUnknown := r.Canonical()
+			withUnknown["note"] = v
+			if err := parse[doc](withUnknown); !errors.Is(err, ErrInvalid) {
+				t.Errorf("%s with %s in a field the schema does not know: parse returned error %v, want %v", doc, name, err, ErrInvalid)
+			}
+		}
+	}
+}
+
 func TestParseCanonicalizesTimes(t *testing.T) {
 	local := time.Date(2026, 11, 10, 11, 0, 0, 123456789, time.FixedZone("CST", 8*60*60))
 	r := store.Record{"status": "ACTIVE", "heartbeat_at": local}

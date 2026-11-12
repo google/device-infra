@@ -9,7 +9,9 @@
 // state, or a combination of fields that no writer produces is ErrInvalid.
 // It keeps every field it does not know, at every level of the record, so
 // that Record() can write the document back without dropping what another
-// writer, a newer binary, or a human in Firestore Studio put there.
+// writer, a newer binary, or a human in Firestore Studio put there. The one
+// thing it does not keep is a value of a type the store does not allow,
+// anywhere in the record: that is ErrInvalid too.
 package record
 
 import (
@@ -151,8 +153,17 @@ type fields struct {
 	firstErr *error
 }
 
+// newFields returns a reader of the record r. A record that the store would
+// not accept (see store.Record.Validate) is a problem whichever field holds
+// the bad value, known to the schema or not: a backend such as Firestore can
+// hold values of other types (a null or a fractional number typed in the
+// admin tool), and a document that carried one could never be written back.
 func newFields(r store.Record) *fields {
-	return &fields{m: r, firstErr: new(error)}
+	f := &fields{m: r, firstErr: new(error)}
+	if err := r.Validate(); err != nil {
+		*f.firstErr = fmt.Errorf("%w: %v", ErrInvalid, err)
+	}
+	return f
 }
 
 // has reports whether the map has the key, whatever its value.

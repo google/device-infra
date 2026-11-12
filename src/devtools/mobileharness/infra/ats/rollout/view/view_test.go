@@ -204,6 +204,77 @@ func TestReadFailsWhenAReadFails(t *testing.T) {
 	}
 }
 
+// tainted is a reader that returns one record with a value of a type the
+// store does not allow, in a field the schema does not know. The Firestore
+// adapter returns a null typed in the admin tool this way; the fake store
+// cannot hold one.
+type tainted struct {
+	store.Reader
+	key store.Key
+}
+
+func (r tainted) taint(key store.Key, rec store.Record) {
+	if key == r.key {
+		rec["note"] = nil
+	}
+}
+
+func (r tainted) Get(ctx context.Context, key store.Key) (store.Record, store.Version, error) {
+	rec, v, err := r.Reader.Get(ctx, key)
+	if err == nil {
+		r.taint(key, rec)
+	}
+	return rec, v, err
+}
+
+func (r tainted) List(ctx context.Context, parent store.Key, kind string) ([]store.Item, error) {
+	items, err := r.Reader.List(ctx, parent, kind)
+	for _, it := range items {
+		r.taint(it.Key, it.Record)
+	}
+	return items, err
+}
+
+func TestReadKeepsAValueTheStoreDoesNotAllowWithItsGroup(t *testing.T) {
+	dda := record.GroupKey(domainID, "dda")
+	rollout := record.RolloutKey(dda, 1)
+	for name, key := range map[string]store.Key{
+		"group":   dda,
+		"member":  record.MemberKey(dda, "host-a"),
+		"rollout": rollout,
+		"slot":    record.SlotKey(rollout, 0),
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := newStore(t)
+			put(t, s, dda, groupRecord(nil))
+			put(t, s, record.MemberKey(dda, "host-a"), memberRecord())
+			put(t, s, rollout, rolloutRecord(false))
+			put(t, s, record.SlotKey(rollout, 0), openSlot())
+
+			got, err := Read(context.Background(), tainted{Reader: s, key: key}, domainID)
+			if err != nil {
+				t.Fatalf("Read() failed, want the bad value to stay with its group: %v", err)
+			}
+
+			if len(got.Groups) != 2 {
+				t.Fatalf("Read() returned %d groups, want controller and dda", len(got.Groups))
+			}
+			if c := got.Groups[0]; c.Err != nil {
+				t.Errorf("group %q: Err = %v, want nil: the bad value is in another group", c.ID, c.Err)
+			}
+			if g := got.Groups[1]; !errors.Is(g.Err, record.ErrInvalid) {
+				t.Errorf("group %q: Err = %v, want it to wrap %v", g.ID, g.Err, record.ErrInvalid)
+			}
+		})
+	}
+
+	// In the domain document it stops the run, like any invalid domain.
+	s := newStore(t)
+	if _, err := Read(context.Background(), tainted{Reader: s, key: record.DomainKey(domainID)}, domainID); !errors.Is(err, record.ErrInvalid) {
+		t.Errorf("Read() with a bad value in the domain document returned error %v, want it to wrap %v", err, record.ErrInvalid)
+	}
+}
+
 func TestReadGroupValidation(t *testing.T) {
 	dda := record.GroupKey(domainID, "dda")
 	tests := []struct {
