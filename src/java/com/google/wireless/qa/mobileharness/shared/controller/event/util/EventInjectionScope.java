@@ -45,6 +45,31 @@ public class EventInjectionScope implements Scope {
     localMapping.set(null);
   }
 
+  /** Restores a thread's {@link EventInjectionScope} state saved by {@link #suspend()}. */
+  public interface Suspended extends AutoCloseable {
+    @Override
+    void close();
+  }
+
+  /**
+   * Leaves the current thread's event scope and returns a handle that restores it, including any
+   * values already cached in the scope, when {@linkplain Suspended#close() closed}.
+   */
+  public Suspended suspend() {
+    Boolean isInScope = localIsInScope.get();
+    boolean wasInScope = isInScope != null && isInScope;
+    Map<Key<?>, Object> savedMapping = wasInScope ? localMapping.get() : null;
+    exit();
+    return () -> {
+      if (wasInScope) {
+        localMapping.set(savedMapping);
+        localIsInScope.set(true);
+      } else {
+        exit();
+      }
+    };
+  }
+
   /**
    * Puts a value binding in the event scope lookup for the current thread.
    *
