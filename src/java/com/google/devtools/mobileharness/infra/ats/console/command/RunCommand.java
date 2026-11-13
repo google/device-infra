@@ -321,6 +321,9 @@ public final class RunCommand implements Callable<Integer> {
         && options.shardingMode != ShardingMode.SHARDING_MODE_UNSPECIFIED) {
       runCommand.setShardingMode(options.shardingMode);
     }
+    if (options.enableIncrementalResultReporting) {
+      runCommand.setEnableIncrementalResultReporting(true);
+    }
 
     runCommand
         .setTestPlan(options.getTestPlan())

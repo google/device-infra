@@ -25,6 +25,7 @@ import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toPro
 import static java.util.Arrays.stream;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -354,6 +355,9 @@ class RunCommandHandler {
           XtsDirUtil.getXtsLogsDir(Path.of(runCommand.getXtsRootDir()), runCommand.getXtsType())
               .resolve(timestampDirName)
               .toString());
+      if (runCommand.getEnableIncrementalResultReporting()) {
+        setIncrementalResultStoreDirIfSupported(runCommand, builder);
+      }
     }
 
     sessionInfo
@@ -365,5 +369,34 @@ class RunCommandHandler {
     deviceInfo.ifPresent(builder::setDeviceInfo);
     return sessionRequestHandlerUtil.addXtsModuleInfo(
         SessionRequestInfoUtil.buildAndValidate(builder));
+  }
+
+  /** Sets the incremental result store dir if supported, or warns otherwise. */
+  private void setIncrementalResultStoreDirIfSupported(
+      RunCommand runCommand, SessionRequestInfo.Builder builder) {
+    String xtsType = runCommand.getXtsType();
+    boolean isTfRetry =
+        SessionHandlerHelper.isRunRetry(runCommand.getTestPlan())
+            && SessionHandlerHelper.useTfRetry(
+                /* isAtsServerRequest= */ false, xtsType, /* testSuiteVersion= */ null);
+    if (!XtsConstants.INCREMENTAL_RESULT_REPORTING_XTS_TYPES.contains(Ascii.toLowerCase(xtsType))
+        || builder.getShardingMode() == ShardingMode.MODULE
+        || isTfRetry) {
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Incremental result reporting supports only CTS without MODULE sharding or"
+                  + " Tradefed retry. Ignoring it (xTS type [%s], sharding mode [%s], Tradefed"
+                  + " retry [%s]).",
+              xtsType, builder.getShardingMode(), isTfRetry);
+      return;
+    }
+    // In the session result dir, so that it outlives the Tradefed work dir.
+    builder.setIncrementalResultStoreDir(
+        XtsDirUtil.getXtsResultsDir(Path.of(runCommand.getXtsRootDir()), xtsType)
+            .resolve(timestampDirName)
+            .resolve(XtsConstants.INCREMENTAL_STORE_DIR_NAME)
+            .toString());
   }
 }

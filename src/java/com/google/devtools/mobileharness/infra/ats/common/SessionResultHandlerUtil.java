@@ -124,7 +124,9 @@ public class SessionResultHandlerUtil {
           "diffs",
           "module_reports",
           "proto",
-          "logs");
+          "logs",
+          // A retry session must not inherit the incremental result store.
+          XtsConstants.INCREMENTAL_STORE_DIR_NAME);
 
   private static final ImmutableSet<String> EXCLUDED_TF_GEN_RESULT_DIRS =
       ImmutableSet.of("module_reports");

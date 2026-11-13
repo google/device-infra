@@ -1688,7 +1688,9 @@ public final class ConsoleJobCreatorTest {
                 .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setXtsLogRootPath("/path/to/xts_logs/2026.10.09_12.00.00"));
+                .setXtsLogRootPath("/path/to/xts_logs/2026.10.09_12.00.00")
+                .setIncrementalResultStoreDir(
+                    "/path/to/xts_results/2026.10.09_12.00.00/incremental"));
     when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableList.of("mock_module"));
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -1706,6 +1708,8 @@ public final class ConsoleJobCreatorTest {
     assertThat(jobInfos).hasSize(1);
     assertThat(jobInfos.get(0).params().get("xts_log_root_path"))
         .isEqualTo("/path/to/xts_logs/2026.10.09_12.00.00");
+    assertThat(jobInfos.get(0).params().get("incremental_result_store_dir"))
+        .isEqualTo("/path/to/xts_results/2026.10.09_12.00.00/incremental");
     assertThat(jobInfos.get(0).params().get("disable_tf_result_log")).isEqualTo("true");
   }
 

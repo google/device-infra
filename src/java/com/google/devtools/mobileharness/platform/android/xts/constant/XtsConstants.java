@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.xts.constant;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import java.util.regex.Pattern;
 
 /** Constants for xTS tests. */
@@ -140,6 +141,13 @@ public class XtsConstants {
       Pattern.compile("==========> (\\w+) <==========");
 
   public static final String XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY = "xts_final_test_log_dir";
+
+  /** Name of the incremental result store dir under a session result dir. */
+  public static final String INCREMENTAL_STORE_DIR_NAME = "incremental";
+
+  /** Lowercase xTS types declaring the Tradefed incremental result reporter. */
+  public static final ImmutableSet<String> INCREMENTAL_RESULT_REPORTING_XTS_TYPES =
+      ImmutableSet.of("cts");
 
   private XtsConstants() {}
 }

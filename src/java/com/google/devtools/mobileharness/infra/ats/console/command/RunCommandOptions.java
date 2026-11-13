@@ -342,6 +342,17 @@ class RunCommandOptions {
           "Sharding mode to use for running tests. Supported values: ${COMPLETION-CANDIDATES}")
   ShardingMode shardingMode = ShardingMode.RUNNER;
 
+  @Option(
+      names = {"--enable-incremental-result-reporting"},
+      arity = "0..1",
+      paramLabel = "<enable_incremental_result_reporting>",
+      hidden = true,
+      description =
+          "Experimental. Whether Tradefed persists results module by module into the session"
+              + " result directory. CTS only, without MODULE sharding or Tradefed retry. Requires a"
+              + " CTS build with the incremental result reporter. Default is false.")
+  boolean enableIncrementalResultReporting = false;
+
   @ArgGroup(exclusive = true, multiplicity = "0..1")
   DeviceTypeOptionsGroup deviceTypeOptionsGroup;
 

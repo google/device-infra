@@ -156,6 +156,18 @@ public final class SessionResultHandlerUtilTest {
   }
 
   @Test
+  public void copyRetryFiles_skipsIncrementalResultStore() throws Exception {
+    Path oldDir = folder.newFolder("old_incremental_dir").toPath();
+    Path newDir = folder.newFolder("new_incremental_dir").toPath();
+    oldDir.resolve("incremental").toFile().mkdir();
+    oldDir.resolve("incremental").resolve("complete.pb").toFile().createNewFile();
+
+    sessionResultHandlerUtil.copyRetryFiles(oldDir.toString(), newDir.toString());
+
+    assertThat(newDir.resolve("incremental").toFile().exists()).isFalse();
+  }
+
+  @Test
   public void copyRetryFiles_mergesExistingReportLogFiles() throws Exception {
     Path oldDir = folder.newFolder("old_dir_report_log").toPath();
     Path newDir = folder.newFolder("new_dir_report_log").toPath();

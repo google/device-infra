@@ -123,4 +123,8 @@ message SessionRequestInfo {
   // Command ID associated with the xTS jobs created for this request in ATS
   // Server.
   optional string xts_command_id = 66;
+  // Root dir where Tradefed persists results module by module, in a subdir per
+  // xTS job name (e.g. "STATIC_XTS", "MCTS"). Set only for sessions supporting
+  // it. May not exist.
+  optional string incremental_result_store_dir = 67;
 }

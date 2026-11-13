@@ -73,6 +73,11 @@ public class ConsoleJobCreator extends XtsJobCreator {
     if (sessionRequestInfo.hasXtsLogRootPath()) {
       jobInfo.params().add("xts_log_root_path", sessionRequestInfo.getXtsLogRootPath());
     }
+    if (sessionRequestInfo.hasIncrementalResultStoreDir()) {
+      jobInfo
+          .params()
+          .add("incremental_result_store_dir", sessionRequestInfo.getIncrementalResultStoreDir());
+    }
     jobInfo
         .params()
         .add("disable_tf_result_log", Boolean.toString(Flags.xtsDisableTfResultLog.getNonNull()));

@@ -444,6 +444,26 @@ public final class RunCommandTest {
   }
 
   @Test
+  public void parseArgs_incrementalResultReporting_flagWithoutValueIsTrue() throws Exception {
+    when(commandHelper.getXtsType()).thenReturn("cts");
+    when(atsSessionStub.runSession(any(), any()))
+        .thenReturn(immediateFuture(AtsSessionPluginOutput.getDefaultInstance()));
+
+    commandLine.parseArgs("cts", "--enable-incremental-result-reporting");
+    var unused = runCommand.runWithCommand(ImmutableList.of("run", "cts"));
+
+    verify(atsSessionStub)
+        .runSession(
+            eq(RunCommand.RUN_COMMAND_SESSION_NAME), atsSessionPluginConfigCaptor.capture());
+    assertThat(
+            atsSessionPluginConfigCaptor
+                .getValue()
+                .getRunCommand()
+                .getEnableIncrementalResultReporting())
+        .isTrue();
+  }
+
+  @Test
   public void parseArgs_ctsSvrTestPlan() throws Exception {
     when(commandHelper.getXtsType()).thenReturn("cts");
     when(atsSessionStub.runSession(any(), any()))

@@ -102,4 +102,9 @@ message TradefedTestDriverSpec {
   optional bool disable_tf_result_log = 17 [
     (field_detail) = { help: "Whether to disable TF result logs in terminal." }
   ];
+
+  optional string incremental_result_store_dir = 18 [(field_detail) = {
+    help: "If present, TF persists results module by module into the subdir "
+          "of this dir named by the xTS job name (STATIC_XTS by default)."
+  }];
 }

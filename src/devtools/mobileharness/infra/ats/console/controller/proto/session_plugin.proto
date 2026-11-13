@@ -216,6 +216,10 @@ message RunCommand {
 
   // Optional. Sharding mode to use for running tests.
   optional mobileharness.infra.ats.common.ShardingMode sharding_mode = 43;
+
+  // Optional. Whether Tradefed persists results module by module into the
+  // session result dir. Ignored with a warning if unsupported.
+  optional bool enable_incremental_result_reporting = 44;
 }
 
 message RunCommandState {

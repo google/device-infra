@@ -491,6 +491,101 @@ public final class RunCommandHandlerTest {
   }
 
   @Test
+  public void initialize_incrementalResultReportingEnabled_setsStoreDirUnderSessionResultDir()
+      throws Exception {
+    File xtsRootDir = folder.newFolder("incremental_" + XTS_ROOT_DIR_NAME);
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setTestPlan("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setEnableIncrementalResultReporting(true)
+            .build();
+
+    runCommandHandler.initialize(command);
+
+    SessionRequestInfo sessionRequestInfo = runCommandHandler.getSessionRequestInfo();
+    Path storeDir = Path.of(sessionRequestInfo.getIncrementalResultStoreDir());
+    String timestampDirName =
+        Path.of(sessionRequestInfo.getXtsLogRootPath()).getFileName().toString();
+    assertThat(storeDir)
+        .isEqualTo(
+            xtsRootDir
+                .toPath()
+                .resolve("android-cts/results")
+                .resolve(timestampDirName)
+                .resolve("incremental"));
+  }
+
+  @Test
+  public void initialize_incrementalResultReportingDisabled_doesNotSetStoreDir() throws Exception {
+    File xtsRootDir = folder.newFolder("no_incremental_" + XTS_ROOT_DIR_NAME);
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setTestPlan("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .build();
+
+    runCommandHandler.initialize(command);
+
+    assertThat(runCommandHandler.getSessionRequestInfo().hasIncrementalResultStoreDir()).isFalse();
+  }
+
+  @Test
+  public void initialize_incrementalResultReportingWithTfRetry_doesNotSetStoreDir()
+      throws Exception {
+    flags.set("use_tf_retry", "true");
+    File xtsRootDir = folder.newFolder("incremental_tf_retry_" + XTS_ROOT_DIR_NAME);
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setTestPlan("retry")
+            .setRetrySessionIndex(0)
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setEnableIncrementalResultReporting(true)
+            .build();
+
+    runCommandHandler.initialize(command);
+
+    assertThat(runCommandHandler.getSessionRequestInfo().hasIncrementalResultStoreDir()).isFalse();
+  }
+
+  @Test
+  public void initialize_incrementalResultReportingForNonCts_doesNotSetStoreDir() throws Exception {
+    File xtsRootDir = folder.newFolder("incremental_gts_" + XTS_ROOT_DIR_NAME);
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setTestPlan("gts")
+            .setXtsType("gts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setEnableIncrementalResultReporting(true)
+            .build();
+
+    runCommandHandler.initialize(command);
+
+    assertThat(runCommandHandler.getSessionRequestInfo().hasIncrementalResultStoreDir()).isFalse();
+  }
+
+  @Test
+  public void initialize_incrementalResultReportingWithModuleSharding_doesNotSetStoreDir()
+      throws Exception {
+    File xtsRootDir = folder.newFolder("incremental_module_sharding_" + XTS_ROOT_DIR_NAME);
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setTestPlan("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setShardingMode(ShardingMode.MODULE)
+            .setEnableIncrementalResultReporting(true)
+            .build();
+
+    runCommandHandler.initialize(command);
+
+    assertThat(runCommandHandler.getSessionRequestInfo().hasIncrementalResultStoreDir()).isFalse();
+  }
+
+  @Test
   public void handleNonTradefedJobEnd_callsSessionResultHandlerUtil() throws Exception {
     JobInfo jobInfo = mock(JobInfo.class);
     doNothing().when(sessionResultHandlerUtil).handleNonTradefedJobEnd(jobInfo);

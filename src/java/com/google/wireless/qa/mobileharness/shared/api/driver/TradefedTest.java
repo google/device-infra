@@ -134,6 +134,15 @@ public class TradefedTest extends BaseDriver
 
   private static final String TF_PATH_KEY = "TF_PATH";
 
+  private static final String INCREMENTAL_RESULT_STORE_DIR_OPTION =
+      "--incremental-proto-result:store-dir";
+
+  /** Extra Tradefed args for incremental result reporting. */
+  private static final ImmutableList<String> INCREMENTAL_RESULT_REPORTING_EXTRA_TF_ARGS =
+      ImmutableList.of(
+          // Lets readers find planned modules that never finished.
+          "--record-planned-modules", "true");
+
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(4L);
 
   private static final String TF_AGENT_RESOURCE_PATH =
@@ -1013,6 +1022,9 @@ public class TradefedTest extends BaseDriver
         tradefedCommandBuilder.add("--retry-type", spec.getRetryType());
       }
     }
+    if (spec.hasIncrementalResultStoreDir()) {
+      tradefedCommandBuilder.addAll(getIncrementalResultReportingArgs(spec, testInfo));
+    }
     ImmutableList<String> tradefedCommand =
         tradefedCommandBuilder.addAll(getExtraRunCommandArgs(spec)).build();
 
@@ -1117,6 +1129,23 @@ public class TradefedTest extends BaseDriver
   private void addInvocationData(
       ImmutableList.Builder<String> tradefedRunCommand, String key, String value) {
     tradefedRunCommand.add("--invocation-data").add(String.format("%s=%s", key, value));
+  }
+
+  /** Returns the args letting Tradefed persist results into the store subdir of the xTS job. */
+  private static ImmutableList<String> getIncrementalResultReportingArgs(
+      TradefedTestDriverSpec spec, TestInfo testInfo) {
+    String xtsJobName =
+        testInfo
+            .jobInfo()
+            .properties()
+            .getOptional(XtsConstants.XTS_JOB_NAME)
+            .orElse(XtsConstants.STATIC_XTS_JOB_NAME);
+    return ImmutableList.<String>builder()
+        .add(
+            INCREMENTAL_RESULT_STORE_DIR_OPTION,
+            Path.of(spec.getIncrementalResultStoreDir()).resolve(xtsJobName).toString())
+        .addAll(INCREMENTAL_RESULT_REPORTING_EXTRA_TF_ARGS)
+        .build();
   }
 
   private static ImmutableList<String> getExtraRunCommandArgs(TradefedTestDriverSpec spec) {
