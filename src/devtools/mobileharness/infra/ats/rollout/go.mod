@@ -3,3 +3,8 @@ module github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollo
 go 1.25
 
 require github.com/google/go-cmp v0.7.0
+
+require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
+	golang.org/x/oauth2 v0.35.0
+)
