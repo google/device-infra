@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.api.devicemanager.detector.model.Detect
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidRealDeviceProxyManager;
@@ -47,6 +48,7 @@ import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidRealDevice;
+import java.time.Duration;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
@@ -264,6 +266,20 @@ public class AdbDetectorTest {
     }
 
     verify(adbInternalUtil, never()).killAdbServer();
+  }
+
+  @Test
+  public void detectDevices_ednaDeviceInCache_doesNotKillAdbServer() throws Exception {
+    when(adbInternalUtil.getDeviceSerialsAsMap()).thenReturn(ImmutableMap.of());
+    DeviceCache.getInstance().cache(DEVICE_0, "EdnaDevice", Duration.ofMinutes(10));
+    try {
+      for (int i = 0; i <= Flags.adbMaxNoDeviceDetectionRounds.getNonNull(); i++) {
+        var unused = detector.detectDevices();
+      }
+      verify(adbInternalUtil, never()).killAdbServer();
+    } finally {
+      DeviceCache.getInstance().invalidateCache(DEVICE_0);
+    }
   }
 
   @Test
