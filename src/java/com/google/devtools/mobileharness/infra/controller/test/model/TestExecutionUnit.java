@@ -86,7 +86,7 @@ public class TestExecutionUnit extends TestScheduleUnit {
     }
 
     @Override
-    public java.time.Duration remainingTimeJava() throws MobileHarnessException {
+    public Duration remainingTimeJava() throws MobileHarnessException {
       Instant now = timing().getClock().instant();
       Instant jobExpireTime = job.timer().expireTime();
       if (jobExpireTime.isBefore(now)) {
