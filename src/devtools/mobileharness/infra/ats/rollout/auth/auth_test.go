@@ -186,17 +186,17 @@ func TestFromMetadata(t *testing.T) {
 	}
 }
 
-func TestFromMetadataErrors(t *testing.T) {
+func TestFromMetadata_Errors(t *testing.T) {
 	tests := []struct {
 		name   string
 		server *fakeMetadata
 		scopes []string
 	}{
-		{name: "no scopes", server: &fakeMetadata{project: "p"}},
-		{name: "the server fails", server: &fakeMetadata{project: "p", projectStatus: http.StatusInternalServerError}, scopes: []string{ScopeDatastore}},
-		{name: "no project ID", server: &fakeMetadata{projectStatus: http.StatusNotFound}, scopes: []string{ScopeDatastore}},
-		{name: "an empty project ID", server: &fakeMetadata{project: " \n"}, scopes: []string{ScopeDatastore}},
-		{name: "not a metadata server", server: &fakeMetadata{project: "<html>", noFlavor: true}, scopes: []string{ScopeDatastore}},
+		{name: "no_scopes", server: &fakeMetadata{project: "p"}},
+		{name: "server_fails", server: &fakeMetadata{project: "p", projectStatus: http.StatusInternalServerError}, scopes: []string{ScopeDatastore}},
+		{name: "no_project_ID", server: &fakeMetadata{projectStatus: http.StatusNotFound}, scopes: []string{ScopeDatastore}},
+		{name: "empty_project_ID", server: &fakeMetadata{project: " \n"}, scopes: []string{ScopeDatastore}},
+		{name: "not_metadata_server", server: &fakeMetadata{project: "<html>", noFlavor: true}, scopes: []string{ScopeDatastore}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -208,7 +208,7 @@ func TestFromMetadataErrors(t *testing.T) {
 	}
 }
 
-func TestFromMetadataIsBoundedByItsContext(t *testing.T) {
+func TestFromMetadata_BoundedByContext(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		<-r.Context().Done()
 	}))
@@ -223,17 +223,17 @@ func TestFromMetadataIsBoundedByItsContext(t *testing.T) {
 	}
 }
 
-func TestMetadataTokenErrors(t *testing.T) {
+func TestMetadataToken_Errors(t *testing.T) {
 	tests := []struct {
 		name   string
 		server *fakeMetadata
 	}{
-		{name: "the server fails", server: &fakeMetadata{tokenStatus: http.StatusInternalServerError}},
-		{name: "no service account", server: &fakeMetadata{tokenStatus: http.StatusNotFound}},
-		{name: "not JSON", server: &fakeMetadata{tokenBody: "the-secret"}},
-		{name: "no token", server: &fakeMetadata{tokenBody: `{"expires_in": 3600}`}},
-		{name: "no lifetime", server: &fakeMetadata{tokenBody: `{"access_token": "the-secret"}`}},
-		{name: "a lifetime in the past", server: &fakeMetadata{tokenBody: `{"access_token": "the-secret", "expires_in": -1}`}},
+		{name: "server_fails", server: &fakeMetadata{tokenStatus: http.StatusInternalServerError}},
+		{name: "no_service_account", server: &fakeMetadata{tokenStatus: http.StatusNotFound}},
+		{name: "not_JSON", server: &fakeMetadata{tokenBody: "the-secret"}},
+		{name: "no_token", server: &fakeMetadata{tokenBody: `{"expires_in": 3600}`}},
+		{name: "no_lifetime", server: &fakeMetadata{tokenBody: `{"access_token": "the-secret"}`}},
+		{name: "lifetime_in_past", server: &fakeMetadata{tokenBody: `{"access_token": "the-secret", "expires_in": -1}`}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -259,7 +259,7 @@ func TestMetadataTokenErrors(t *testing.T) {
 	}
 }
 
-func TestTokenIsFetchedAgainWhenAboutToExpire(t *testing.T) {
+func TestToken_RefetchedWhenAboutToExpire(t *testing.T) {
 	creds := metadataCredentials(t, &fakeMetadata{project: "p", lifetime: shortLife})
 
 	for _, want := range []string{"token-1", "token-2"} {
@@ -270,7 +270,7 @@ func TestTokenIsFetchedAgainWhenAboutToExpire(t *testing.T) {
 	}
 }
 
-func TestConcurrentCallersShareOneFetch(t *testing.T) {
+func TestToken_ConcurrentCallersShareOneFetch(t *testing.T) {
 	f := &fakeMetadata{project: "p", lifetime: longLife, hold: newHold()}
 	creds := metadataCredentials(t, f)
 	const callers = 8
@@ -306,7 +306,7 @@ func TestConcurrentCallersShareOneFetch(t *testing.T) {
 	}
 }
 
-func TestTokenStopsWaitingWhenItsContextIsDone(t *testing.T) {
+func TestToken_StopsWaitingWhenContextDone(t *testing.T) {
 	f := &fakeMetadata{project: "p", lifetime: longLife, hold: newHold()}
 	creds := metadataCredentials(t, f)
 	ctx, cancel := context.WithTimeout(context.Background(), giveUp)
@@ -333,7 +333,7 @@ func TestTokenStopsWaitingWhenItsContextIsDone(t *testing.T) {
 	}
 }
 
-func TestTokenWithADoneContextFetchesNothing(t *testing.T) {
+func TestToken_DoneContextFetchesNothing(t *testing.T) {
 	f := &fakeMetadata{project: "p", lifetime: longLife}
 	creds := metadataCredentials(t, f)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -383,7 +383,7 @@ func (f *fakeAPI) serve(t *testing.T) string {
 	return ts.URL
 }
 
-func TestClientSendsTheTokenAsABearerToken(t *testing.T) {
+func TestClient_SendsBearerToken(t *testing.T) {
 	creds := metadataCredentials(t, &fakeMetadata{project: "p", lifetime: longLife})
 	api := &fakeAPI{status: http.StatusOK}
 	url := api.serve(t)
@@ -402,7 +402,7 @@ func TestClientSendsTheTokenAsABearerToken(t *testing.T) {
 	}
 }
 
-func TestClientLeavesTheCallersRequestAlone(t *testing.T) {
+func TestClient_LeavesRequestUnchanged(t *testing.T) {
 	creds := metadataCredentials(t, &fakeMetadata{project: "p", lifetime: longLife})
 	api := &fakeAPI{status: http.StatusOK}
 	req, err := http.NewRequest(http.MethodGet, api.serve(t), nil)
@@ -421,7 +421,7 @@ func TestClientLeavesTheCallersRequestAlone(t *testing.T) {
 	}
 }
 
-func TestClientDoesNotFollowRedirects(t *testing.T) {
+func TestClient_NoRedirects(t *testing.T) {
 	creds := metadataCredentials(t, &fakeMetadata{project: "p", lifetime: longLife})
 	elsewhere := &fakeAPI{status: http.StatusOK}
 	api := &fakeAPI{redirect: elsewhere.serve(t)}
@@ -440,7 +440,7 @@ func TestClientDoesNotFollowRedirects(t *testing.T) {
 	}
 }
 
-func TestClientRequestWaitsForATokenNoLongerThanItsContext(t *testing.T) {
+func TestClient_TokenWaitBoundedByContext(t *testing.T) {
 	creds := metadataCredentials(t, &fakeMetadata{project: "p", lifetime: longLife, hold: newHold()})
 	api := &fakeAPI{status: http.StatusOK}
 	ctx, cancel := context.WithTimeout(context.Background(), giveUp)
@@ -478,7 +478,7 @@ func (c *closeRecorder) Close() error {
 	return nil
 }
 
-func TestTransportWithoutATokenSendsNothingAndClosesTheBody(t *testing.T) {
+func TestTransport_NoTokenClosesBody(t *testing.T) {
 	creds := metadataCredentials(t, &fakeMetadata{project: "p", tokenStatus: http.StatusInternalServerError})
 	api := &fakeAPI{status: http.StatusOK}
 	body := &closeRecorder{Reader: strings.NewReader("{}")}
@@ -677,7 +677,7 @@ func TestFromServiceAccountFile(t *testing.T) {
 	}
 }
 
-func TestServiceAccountClientSendsTheTokenAsABearerToken(t *testing.T) {
+func TestFromServiceAccountFile_ClientSendsBearerToken(t *testing.T) {
 	creds := serviceAccountCredentials(t, &fakeTokenEndpoint{lifetime: longLife})
 	api := &fakeAPI{status: http.StatusOK}
 
@@ -692,7 +692,7 @@ func TestServiceAccountClientSendsTheTokenAsABearerToken(t *testing.T) {
 	}
 }
 
-func TestFromServiceAccountFileErrors(t *testing.T) {
+func TestFromServiceAccountFile_Errors(t *testing.T) {
 	without := func(field string) map[string]any {
 		key := serviceAccountKey("https://oauth2.example.com/token")
 		delete(key, field)
@@ -709,16 +709,16 @@ func TestFromServiceAccountFileErrors(t *testing.T) {
 		content any
 		scopes  []string
 	}{
-		{name: "no file", scopes: []string{ScopeDatastore}},
-		{name: "no scopes", content: serviceAccountKey("https://oauth2.example.com/token")},
-		{name: "not JSON", content: privateKey(), scopes: []string{ScopeDatastore}},
-		{name: "an empty file", content: "", scopes: []string{ScopeDatastore}},
-		{name: "no type", content: without("type"), scopes: []string{ScopeDatastore}},
-		{name: "no project ID", content: without("project_id"), scopes: []string{ScopeDatastore}},
-		{name: "an empty project ID", content: with("project_id", ""), scopes: []string{ScopeDatastore}},
+		{name: "no_file", scopes: []string{ScopeDatastore}},
+		{name: "no_scopes", content: serviceAccountKey("https://oauth2.example.com/token")},
+		{name: "not_JSON", content: privateKey(), scopes: []string{ScopeDatastore}},
+		{name: "empty_file", content: "", scopes: []string{ScopeDatastore}},
+		{name: "no_type", content: without("type"), scopes: []string{ScopeDatastore}},
+		{name: "no_project_ID", content: without("project_id"), scopes: []string{ScopeDatastore}},
+		{name: "empty_project_ID", content: with("project_id", ""), scopes: []string{ScopeDatastore}},
 		// The login that gcloud leaves in a home directory.
 		{
-			name: "a user's credentials",
+			name: "user_credentials",
 			content: map[string]any{
 				"type":          "authorized_user",
 				"client_id":     "id",
@@ -728,11 +728,11 @@ func TestFromServiceAccountFileErrors(t *testing.T) {
 			scopes: []string{ScopeDatastore},
 		},
 		// Credentials that would be fetched from a URL the file names.
-		{name: "an external account", content: with("type", "external_account"), scopes: []string{ScopeDatastore}},
-		{name: "an impersonated service account", content: with("type", "impersonated_service_account"), scopes: []string{ScopeDatastore}},
+		{name: "external_account", content: with("type", "external_account"), scopes: []string{ScopeDatastore}},
+		{name: "impersonated_service_account", content: with("type", "impersonated_service_account"), scopes: []string{ScopeDatastore}},
 		// A key of another kind of service account, which the library
 		// would load the same way.
-		{name: "a service account of another kind", content: with("type", "gdch_service_account"), scopes: []string{ScopeDatastore}},
+		{name: "service_account_of_another_kind", content: with("type", "gdch_service_account"), scopes: []string{ScopeDatastore}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -753,28 +753,28 @@ func TestFromServiceAccountFileErrors(t *testing.T) {
 	}
 }
 
-func TestServiceAccountTokenErrors(t *testing.T) {
+func TestServiceAccountToken_Errors(t *testing.T) {
 	tests := []struct {
 		name string
 		// key changes a valid key whose tokens come from the fake endpoint.
 		key      func(key map[string]any)
 		endpoint *fakeTokenEndpoint
 	}{
-		{name: "the endpoint refuses the key", endpoint: &fakeTokenEndpoint{status: http.StatusBadRequest}},
-		{name: "the endpoint fails", endpoint: &fakeTokenEndpoint{status: http.StatusInternalServerError}},
+		{name: "endpoint_refuses_key", endpoint: &fakeTokenEndpoint{status: http.StatusBadRequest}},
+		{name: "endpoint_fails", endpoint: &fakeTokenEndpoint{status: http.StatusInternalServerError}},
 		{
-			name: "a private key that is no key",
+			name: "private_key_that_is_no_key",
 			key: func(key map[string]any) {
 				key["private_key"] = "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"
 			},
 			endpoint: &fakeTokenEndpoint{lifetime: longLife},
 		},
-		{name: "no token", endpoint: &fakeTokenEndpoint{body: `{"expires_in": 3600, "token_type": "Bearer"}`}},
+		{name: "no_token", endpoint: &fakeTokenEndpoint{body: `{"expires_in": 3600, "token_type": "Bearer"}`}},
 		// A token without a lifetime is not one to keep forever.
-		{name: "no lifetime", endpoint: &fakeTokenEndpoint{body: `{"access_token": "the-secret", "token_type": "Bearer"}`}},
-		{name: "a lifetime of zero", endpoint: &fakeTokenEndpoint{body: `{"access_token": "the-secret", "expires_in": 0, "token_type": "Bearer"}`}},
-		{name: "a lifetime in the past", endpoint: &fakeTokenEndpoint{body: `{"access_token": "the-secret", "expires_in": -1, "token_type": "Bearer"}`}},
-		{name: "not JSON", endpoint: &fakeTokenEndpoint{body: "the-secret"}},
+		{name: "no_lifetime", endpoint: &fakeTokenEndpoint{body: `{"access_token": "the-secret", "token_type": "Bearer"}`}},
+		{name: "lifetime_of_zero", endpoint: &fakeTokenEndpoint{body: `{"access_token": "the-secret", "expires_in": 0, "token_type": "Bearer"}`}},
+		{name: "lifetime_in_past", endpoint: &fakeTokenEndpoint{body: `{"access_token": "the-secret", "expires_in": -1, "token_type": "Bearer"}`}},
+		{name: "not_JSON", endpoint: &fakeTokenEndpoint{body: "the-secret"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -803,11 +803,11 @@ func TestServiceAccountTokenErrors(t *testing.T) {
 	}
 }
 
-// TestKeyFileTokenIsANewExchangeEveryTime calls the fetch function of the
+// TestKeyFileToken_NewExchangeEveryTime calls the fetch function of the
 // key file directly, as the token cache does when its token is about to
 // expire by its own clock. Each call must be a request, also while the last
 // token has a long time left: nothing below the cache keeps a token.
-func TestKeyFileTokenIsANewExchangeEveryTime(t *testing.T) {
+func TestKeyFileToken_NewExchangeEveryTime(t *testing.T) {
 	f := &fakeTokenEndpoint{lifetime: longLife}
 	k, project, err := readKeyFile(writeFile(t, serviceAccountKey(f.serve(t))), []string{ScopeDatastore})
 	if err != nil {
@@ -828,12 +828,12 @@ func TestKeyFileTokenIsANewExchangeEveryTime(t *testing.T) {
 	}
 }
 
-// TestCacheKeepsTheExpiryAsWallClockTime checks the one thing about clocks
+// TestTokenCache_ExpiryIsWallClockTime checks the one thing about clocks
 // that a test can check without setting one: that the cache keeps an expiry
 // without a monotonic clock reading, so that the time a token has left is
 // measured by the wall clock. With the reading, a wall clock set forward, or
 // a machine that was suspended, would not shorten that time.
-func TestCacheKeepsTheExpiryAsWallClockTime(t *testing.T) {
+func TestTokenCache_ExpiryIsWallClockTime(t *testing.T) {
 	// A time made from time.Now has a monotonic reading.
 	expiry := time.Now().Add(longLife * time.Second)
 	c := &tokenCache{fetch: func(context.Context) (string, time.Time, error) { return "token", expiry, nil }}
@@ -854,10 +854,10 @@ func TestCacheKeepsTheExpiryAsWallClockTime(t *testing.T) {
 	}
 }
 
-// TestMetadataEndpointNeedsNoDNS checks that the metadata server is named by
+// TestMetadataEndpoint_NeedsNoDNS checks that the metadata server is named by
 // a link-local address: one that takes no DNS lookup, and that a host
 // outside Google Cloud does not route beyond its own link.
-func TestMetadataEndpointNeedsNoDNS(t *testing.T) {
+func TestMetadataEndpoint_NeedsNoDNS(t *testing.T) {
 	u, err := url.Parse(metadataEndpoint)
 	if err != nil {
 		t.Fatalf("url.Parse(%q) failed: %v", metadataEndpoint, err)
@@ -868,7 +868,7 @@ func TestMetadataEndpointNeedsNoDNS(t *testing.T) {
 	}
 }
 
-func TestServiceAccountTokenIsFetchedAgainWhenAboutToExpire(t *testing.T) {
+func TestServiceAccountToken_RefetchedWhenAboutToExpire(t *testing.T) {
 	creds := serviceAccountCredentials(t, &fakeTokenEndpoint{lifetime: shortLife})
 
 	for _, want := range []string{"sa-token-1", "sa-token-2"} {
@@ -879,7 +879,7 @@ func TestServiceAccountTokenIsFetchedAgainWhenAboutToExpire(t *testing.T) {
 	}
 }
 
-func TestServiceAccountTokenStopsWaitingWhenItsContextIsDone(t *testing.T) {
+func TestServiceAccountToken_StopsWaitingWhenContextDone(t *testing.T) {
 	f := &fakeTokenEndpoint{lifetime: longLife, hold: newHold()}
 	creds := serviceAccountCredentials(t, f)
 	ctx, cancel := context.WithTimeout(context.Background(), giveUp)

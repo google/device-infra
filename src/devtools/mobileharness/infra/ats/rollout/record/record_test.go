@@ -27,19 +27,20 @@ func TestKeyConstructors(t *testing.T) {
 	group := GroupKey("d1", "dda")
 	rollout := RolloutKey(group, 7)
 	tests := []struct {
-		name string
+		// call is the call that made got, for the failure message.
+		call string
 		got  store.Key
 		want string
 	}{
-		{name: "DomainKey(d1)", got: DomainKey("d1"), want: "domains/d1"},
-		{name: "GroupKey(d1, dda)", got: group, want: "domains/d1/groups/dda"},
-		{name: "RolloutKey(group, 7)", got: rollout, want: "domains/d1/groups/dda/rollouts/7"},
-		{name: "SlotKey(rollout, 10)", got: SlotKey(rollout, 10), want: "domains/d1/groups/dda/rollouts/7/slots/10"},
-		{name: "MemberKey(group, host.example.com)", got: MemberKey(group, "host.example.com"), want: "domains/d1/groups/dda/members/host.example.com"},
+		{call: "DomainKey(d1)", got: DomainKey("d1"), want: "domains/d1"},
+		{call: "GroupKey(d1, dda)", got: group, want: "domains/d1/groups/dda"},
+		{call: "RolloutKey(group, 7)", got: rollout, want: "domains/d1/groups/dda/rollouts/7"},
+		{call: "SlotKey(rollout, 10)", got: SlotKey(rollout, 10), want: "domains/d1/groups/dda/rollouts/7/slots/10"},
+		{call: "MemberKey(group, host.example.com)", got: MemberKey(group, "host.example.com"), want: "domains/d1/groups/dda/members/host.example.com"},
 	}
 	for _, tc := range tests {
 		if got := tc.got.String(); got != tc.want {
-			t.Errorf("%s = %q, want %q", tc.name, got, tc.want)
+			t.Errorf("%s = %q, want %q", tc.call, got, tc.want)
 		}
 	}
 }
@@ -135,7 +136,7 @@ func TestAgentID(t *testing.T) {
 	}
 }
 
-func TestRevisionEqual(t *testing.T) {
+func TestRevision_Equal(t *testing.T) {
 	withBuild := func(build string) Revision {
 		return Revision{Build: build, TenantConfigVersion: rev1.TenantConfigVersion, PoolConfigVersion: rev1.PoolConfigVersion}
 	}
@@ -165,7 +166,7 @@ func TestRevisionEqual(t *testing.T) {
 	}
 }
 
-func TestDomainRoundTrip(t *testing.T) {
+func TestDomain_RoundTrip(t *testing.T) {
 	src := store.Record{"paused": true, "note": "kept"}
 	d, err := ParseDomain(src)
 	if err != nil {
@@ -182,7 +183,7 @@ func TestDomainRoundTrip(t *testing.T) {
 	}
 }
 
-func TestDomainInvalid(t *testing.T) {
+func TestDomain_Invalid(t *testing.T) {
 	for name, r := range map[string]store.Record{
 		"paused_string": {"paused": "yes"},
 		"paused_nil":    {"paused": nil},
@@ -193,11 +194,11 @@ func TestDomainInvalid(t *testing.T) {
 	}
 }
 
-// TestParseRejectsValuesTheStoreDoesNotAllow checks that a value of a type
+// TestParse_RejectsValuesStoreDisallows checks that a value of a type
 // outside store.Record's set makes the whole record invalid, also in a field
 // the schema does not know and inside a nested map or list. Firestore can
 // hold such values, and the adapter returns them as they are.
-func TestParseRejectsValuesTheStoreDoesNotAllow(t *testing.T) {
+func TestParse_RejectsValuesStoreDisallows(t *testing.T) {
 	valid := map[string]store.Record{
 		"domain":  Domain{}.Record(),
 		"group":   Group{Image: "repo/img", Tag: "latest", Policy: Policy{Waves: []Wave{{Value: 1}}}}.Record(),
@@ -234,7 +235,7 @@ func TestParseRejectsValuesTheStoreDoesNotAllow(t *testing.T) {
 	}
 }
 
-func TestParseCanonicalizesTimes(t *testing.T) {
+func TestParse_CanonicalizesTimes(t *testing.T) {
 	local := time.Date(2026, 11, 10, 11, 0, 0, 123456789, time.FixedZone("CST", 8*60*60))
 	r := store.Record{"status": "ACTIVE", "heartbeat_at": local}
 	m, err := ParseMember(r)
@@ -300,7 +301,7 @@ func TestParseGroup(t *testing.T) {
 	}
 }
 
-func TestGroupRecordKeepsWhatItRead(t *testing.T) {
+func TestGroup_RecordKeepsWhatItRead(t *testing.T) {
 	g, err := ParseGroup(groupRecord())
 	if err != nil {
 		t.Fatalf("ParseGroup(%v) failed: %v", groupRecord(), err)
@@ -317,7 +318,7 @@ func TestGroupRecordKeepsWhatItRead(t *testing.T) {
 	}
 }
 
-func TestGroupArchive(t *testing.T) {
+func TestGroup_Archive(t *testing.T) {
 	g, err := ParseGroup(groupRecord())
 	if err != nil {
 		t.Fatalf("ParseGroup(%v) failed: %v", groupRecord(), err)
@@ -360,7 +361,7 @@ func TestGroupArchive(t *testing.T) {
 	}
 }
 
-func TestGroupRearchiveKeepsLastRolloutExtras(t *testing.T) {
+func TestGroup_RearchiveKeepsLastRolloutExtras(t *testing.T) {
 	g, err := ParseGroup(groupRecord())
 	if err != nil {
 		t.Fatalf("ParseGroup(%v) failed: %v", groupRecord(), err)
@@ -375,7 +376,7 @@ func TestGroupRearchiveKeepsLastRolloutExtras(t *testing.T) {
 	}
 }
 
-func TestGroupFromLiteral(t *testing.T) {
+func TestGroup_FromLiteral(t *testing.T) {
 	g := Group{
 		Image:  "i",
 		Tag:    "t",
@@ -400,7 +401,7 @@ func TestGroupFromLiteral(t *testing.T) {
 	}
 }
 
-func TestGroupInvalid(t *testing.T) {
+func TestGroup_Invalid(t *testing.T) {
 	withPolicy := func(policy any) store.Record {
 		return store.Record{"image": "i", "tag": "t", "policy": policy}
 	}
@@ -462,7 +463,7 @@ func TestGroupInvalid(t *testing.T) {
 	}
 }
 
-func TestRolloutRoundTrip(t *testing.T) {
+func TestRollout_RoundTrip(t *testing.T) {
 	src := store.Record{
 		"revision":      map[string]any{"build": "r@sha256:aaa", "signer": "kept"},
 		"waves":         []any{int64(1), int64(3), int64(6)},
@@ -514,10 +515,10 @@ func TestRolloutRoundTrip(t *testing.T) {
 	}
 }
 
-// TestRolloutZeroLimitsAreAbsent checks that a rollout without limits (no
+// TestRollout_ZeroLimitsAbsent checks that a rollout without limits (no
 // max_in_flight bound, max_failed 0) writes neither field, since a stored
 // max_in_flight of 0 is invalid, and reads back as the zero value.
-func TestRolloutZeroLimitsAreAbsent(t *testing.T) {
+func TestRollout_ZeroLimitsAbsent(t *testing.T) {
 	ro := Rollout{Revision: rev1, Waves: []int64{1}, CreatedAt: t0}
 	got := ro.Record()
 	for _, key := range []string{"max_in_flight", "max_failed"} {
@@ -534,7 +535,7 @@ func TestRolloutZeroLimitsAreAbsent(t *testing.T) {
 	}
 }
 
-func TestRolloutEmptySummaryIsAbsent(t *testing.T) {
+func TestRollout_EmptySummaryAbsent(t *testing.T) {
 	r := store.Record{
 		"revision":    map[string]any{"build": "r@sha256:aaa"},
 		"waves":       []any{int64(1)},
@@ -555,7 +556,7 @@ func TestRolloutEmptySummaryIsAbsent(t *testing.T) {
 	}
 }
 
-func TestRolloutInvalid(t *testing.T) {
+func TestRollout_Invalid(t *testing.T) {
 	// with returns a valid rollout with two waves and one field changed; a nil
 	// value removes the field.
 	with := func(key string, value any) store.Record {
@@ -611,7 +612,7 @@ func TestRolloutInvalid(t *testing.T) {
 	}
 }
 
-func TestSlotRoundTrip(t *testing.T) {
+func TestSlot_RoundTrip(t *testing.T) {
 	src := store.Record{"state": "OPEN", "extra": "kept"}
 	s, err := ParseSlot(src)
 	if err != nil {
@@ -651,7 +652,7 @@ func TestSlotRoundTrip(t *testing.T) {
 	}
 }
 
-func TestSlotInvalid(t *testing.T) {
+func TestSlot_Invalid(t *testing.T) {
 	// claimed returns a valid claimed slot with one field changed; a nil value
 	// removes the field.
 	claimed := func(key string, value any) store.Record {
@@ -695,7 +696,7 @@ func TestSlotInvalid(t *testing.T) {
 	}
 }
 
-func TestSlotPredicates(t *testing.T) {
+func TestSlot_Predicates(t *testing.T) {
 	now := t0.Add(time.Hour)
 	fresh := now.Add(-LeaseTimeout + time.Second)
 	old := now.Add(-LeaseTimeout)
@@ -741,7 +742,7 @@ func TestSlotPredicates(t *testing.T) {
 	}
 }
 
-func TestMemberPredicates(t *testing.T) {
+func TestMember_Predicates(t *testing.T) {
 	now := t0.Add(time.Hour)
 	fresh := now.Add(-HeartbeatTimeout + time.Second)
 	old := now.Add(-HeartbeatTimeout)
@@ -775,7 +776,7 @@ func TestMemberPredicates(t *testing.T) {
 	}
 }
 
-func TestMemberRoundTrip(t *testing.T) {
+func TestMember_RoundTrip(t *testing.T) {
 	src := store.Record{
 		"status":           "OPTED_OUT",
 		"heartbeat_at":     t0,
@@ -830,7 +831,7 @@ func TestMemberRoundTrip(t *testing.T) {
 	}
 }
 
-func TestMemberInvalid(t *testing.T) {
+func TestMember_Invalid(t *testing.T) {
 	tests := map[string]store.Record{
 		"missing_status":      {},
 		"empty_status":        {"status": ""},
@@ -853,7 +854,7 @@ func TestMemberInvalid(t *testing.T) {
 	}
 }
 
-func TestMemberStatusEligible(t *testing.T) {
+func TestMemberStatus_Eligible(t *testing.T) {
 	tests := []struct {
 		status MemberStatus
 		want   bool
@@ -871,9 +872,9 @@ func TestMemberStatusEligible(t *testing.T) {
 	}
 }
 
-// TestRecordIsValidForTheStore checks that documents built as literals, with
+// TestRecord_ValidForStore checks that documents built as literals, with
 // every field set, give records that the store accepts.
-func TestRecordIsValidForTheStore(t *testing.T) {
+func TestRecord_ValidForStore(t *testing.T) {
 	summary := map[string]SummaryEntry{"h1": SummaryEntry(TaskDone)}
 	records := map[string]store.Record{
 		"Domain": Domain{Paused: true}.Record(),
@@ -939,7 +940,7 @@ func TestRecordIsValidForTheStore(t *testing.T) {
 	}
 }
 
-func TestParseCopiesTheRecord(t *testing.T) {
+func TestParse_CopiesRecord(t *testing.T) {
 	src := store.Record{"status": "ACTIVE", "extra": map[string]any{"k": "v"}}
 	m, err := ParseMember(src)
 	if err != nil {

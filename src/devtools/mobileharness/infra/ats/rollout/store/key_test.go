@@ -36,7 +36,7 @@ func TestKey(t *testing.T) {
 	}
 }
 
-func TestKeyComparable(t *testing.T) {
+func TestKey_Comparable(t *testing.T) {
 	a := NewKey("domains", "d1").Child("groups", "a")
 	same := NewKey("domains", "d1").Child("groups", "a")
 	parent := a.Parent()
@@ -52,7 +52,7 @@ func TestKeyComparable(t *testing.T) {
 	}
 }
 
-func TestKeyValidate(t *testing.T) {
+func TestKey_Validate(t *testing.T) {
 	for _, id := range []string{"", "a/b", ".", "..", "__x__", "____", "\xff", strings.Repeat("x", maxNameBytes+1)} {
 		if err := NewKey("domains", id).Validate(); !errors.Is(err, ErrInvalidArgument) {
 			t.Errorf("NewKey(domains, %q).Validate() = %v, want %v", id, err, ErrInvalidArgument)

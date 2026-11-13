@@ -66,9 +66,9 @@ func TestContractOnFirestore(t *testing.T) {
 	})
 }
 
-// TestNestedKeepsTheContract checks the wrapper that TestContractOnFirestore
+// TestNested_KeepsContract checks the wrapper that TestContractOnFirestore
 // depends on, against the fake store.
-func TestNestedKeepsTheContract(t *testing.T) {
+func TestNested_KeepsContract(t *testing.T) {
 	storetest.Run(t, func(t *testing.T) store.Store {
 		s := fake.New()
 		return nested{Store: s, reader: reader{Reader: s, root: store.NewKey("storetest_runs", "r1")}}

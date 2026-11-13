@@ -122,7 +122,7 @@ func TestDigest(t *testing.T) {
 	}
 }
 
-func TestDigestAcceptsEveryCharacterATagMayHave(t *testing.T) {
+func TestDigest_TagCharacters(t *testing.T) {
 	f := &fakeRegistry{status: http.StatusOK, digest: digestA}
 	c, host := newClient(t, f, &tokens{})
 	// The longest tag there is: 128 characters.
@@ -138,7 +138,7 @@ func TestDigestAcceptsEveryCharacterATagMayHave(t *testing.T) {
 	}
 }
 
-func TestDigestAcceptsEverySeparatorARepositoryMayHave(t *testing.T) {
+func TestDigest_RepositorySeparators(t *testing.T) {
 	f := &fakeRegistry{status: http.StatusOK, digest: digestA}
 	c, host := newClient(t, f, &tokens{})
 	// A domain-scoped project, and each separator a path segment may have.
@@ -154,7 +154,7 @@ func TestDigestAcceptsEverySeparatorARepositoryMayHave(t *testing.T) {
 	}
 }
 
-func TestDigestOfAPinnedTagMakesNoRequest(t *testing.T) {
+func TestDigest_PinnedTagMakesNoRequest(t *testing.T) {
 	f := &fakeRegistry{status: http.StatusOK, digest: digestA}
 	tok := &tokens{}
 	c, host := newClient(t, f, tok)
@@ -172,7 +172,7 @@ func TestDigestOfAPinnedTagMakesNoRequest(t *testing.T) {
 	}
 }
 
-func TestDigestErrors(t *testing.T) {
+func TestDigest_Errors(t *testing.T) {
 	tests := []struct {
 		name string
 		// status and digest are the registry's answer; an empty digest means
@@ -182,15 +182,15 @@ func TestDigestErrors(t *testing.T) {
 		// wantNotFound is whether the error is ErrNotFound.
 		wantNotFound bool
 	}{
-		{name: "no such image or tag", status: http.StatusNotFound, wantNotFound: true},
-		{name: "not authenticated", status: http.StatusUnauthorized},
-		{name: "not allowed", status: http.StatusForbidden},
-		{name: "registry error", status: http.StatusInternalServerError},
-		{name: "an unexpected success status", status: http.StatusNoContent, digest: digestA},
-		{name: "no digest header", status: http.StatusOK},
-		{name: "a digest that is not sha256", status: http.StatusOK, digest: "sha512:" + strings.Repeat("a", 128)},
-		{name: "a short digest", status: http.StatusOK, digest: "sha256:abc"},
-		{name: "a digest in upper case", status: http.StatusOK, digest: "sha256:" + strings.Repeat("A", 64)},
+		{name: "no_such_image_or_tag", status: http.StatusNotFound, wantNotFound: true},
+		{name: "not_authenticated", status: http.StatusUnauthorized},
+		{name: "not_allowed", status: http.StatusForbidden},
+		{name: "registry_error", status: http.StatusInternalServerError},
+		{name: "unexpected_success_status", status: http.StatusNoContent, digest: digestA},
+		{name: "no_digest_header", status: http.StatusOK},
+		{name: "digest_not_sha256", status: http.StatusOK, digest: "sha512:" + strings.Repeat("a", 128)},
+		{name: "short_digest", status: http.StatusOK, digest: "sha256:abc"},
+		{name: "upper_case_digest", status: http.StatusOK, digest: "sha256:" + strings.Repeat("A", 64)},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -208,49 +208,50 @@ func TestDigestErrors(t *testing.T) {
 	}
 }
 
-func TestDigestRejectsWithoutARequest(t *testing.T) {
+func TestDigest_RejectsWithoutRequest(t *testing.T) {
 	tests := []struct {
 		name string
 		// image is appended to the registry's host.
 		image string
 		tag   string
 	}{
-		{name: "no repository", image: "", tag: "latest"},
-		{name: "an empty repository", image: "/", tag: "latest"},
-		{name: "an empty path segment", image: "/project//img", tag: "latest"},
-		{name: "a parent path segment", image: "/project/../img", tag: "latest"},
-		{name: "an image with a tag", image: "/project/img:latest", tag: "latest"},
-		{name: "an image with a digest", image: "/project/img@" + digestA, tag: "latest"},
-		{name: "a repository that ends with a slash", image: "/project/img/", tag: "latest"},
-		{name: "a repository in upper case", image: "/Project/img", tag: "latest"},
-		{name: "a repository with a space", image: "/project/my img", tag: "latest"},
-		{name: "a repository with a query", image: "/project/img?a=b", tag: "latest"},
-		{name: "a repository with a fragment", image: "/project/img#a", tag: "latest"},
-		{name: "a repository with an escape", image: "/project%2Fimg", tag: "latest"},
-		{name: "a repository with a colon before the last segment", image: "/pro:ject/img", tag: "latest"},
-		{name: "a repository segment that starts with a separator", image: "/project/-img", tag: "latest"},
-		{name: "an empty tag", image: "/project/img", tag: ""},
-		{name: "a tag with a slash", image: "/project/img", tag: "a/b"},
+		{name: "no_repository", image: "", tag: "latest"},
+		{name: "empty_repository", image: "/", tag: "latest"},
+		{name: "empty_path_segment", image: "/project//img", tag: "latest"},
+		{name: "parent_path_segment", image: "/project/../img", tag: "latest"},
+		{name: "image_with_tag", image: "/project/img:latest", tag: "latest"},
+		{name: "image_with_digest", image: "/project/img@" + digestA, tag: "latest"},
+		{name: "repository_trailing_slash", image: "/project/img/", tag: "latest"},
+		{name: "repository_upper_case", image: "/Project/img", tag: "latest"},
+		{name: "repository_with_space", image: "/project/my img", tag: "latest"},
+		{name: "repository_with_query", image: "/project/img?a=b", tag: "latest"},
+		{name: "repository_with_fragment", image: "/project/img#a", tag: "latest"},
+		{name: "repository_with_escape", image: "/project%2Fimg", tag: "latest"},
+		// A repository with a colon before the last segment.
+		{name: "repository_colon_before_last_segment", image: "/pro:ject/img", tag: "latest"},
+		{name: "repository_segment_starts_with_separator", image: "/project/-img", tag: "latest"},
+		{name: "empty_tag", image: "/project/img", tag: ""},
+		{name: "tag_with_slash", image: "/project/img", tag: "a/b"},
 		// A URL would resolve these two to another path.
-		{name: "a tag that is one dot", image: "/project/img", tag: "."},
-		{name: "a tag that is two dots", image: "/project/img", tag: ".."},
-		{name: "a tag that starts with a dot", image: "/project/img", tag: ".a"},
-		{name: "a tag that starts with a hyphen", image: "/project/img", tag: "-a"},
-		{name: "a tag with a space", image: "/project/img", tag: "a b"},
-		{name: "a tag with a query", image: "/project/img", tag: "a?b=c"},
-		{name: "a tag with a fragment", image: "/project/img", tag: "a#b"},
-		{name: "a tag with a colon", image: "/project/img", tag: "a:b"},
-		{name: "a tag of 129 characters", image: "/project/img", tag: strings.Repeat("x", 129)},
-		{name: "a pinned tag that is not a digest", image: "/project/img", tag: "@latest"},
-		{name: "a pinned digest that is not sha256", image: "/project/img", tag: "@sha512:" + strings.Repeat("a", 128)},
+		{name: "tag_one_dot", image: "/project/img", tag: "."},
+		{name: "tag_two_dots", image: "/project/img", tag: ".."},
+		{name: "tag_that_starts_with_dot", image: "/project/img", tag: ".a"},
+		{name: "tag_that_starts_with_hyphen", image: "/project/img", tag: "-a"},
+		{name: "tag_with_space", image: "/project/img", tag: "a b"},
+		{name: "tag_with_query", image: "/project/img", tag: "a?b=c"},
+		{name: "tag_with_fragment", image: "/project/img", tag: "a#b"},
+		{name: "tag_with_colon", image: "/project/img", tag: "a:b"},
+		{name: "tag_129_characters", image: "/project/img", tag: strings.Repeat("x", 129)},
+		{name: "pinned_tag_not_digest", image: "/project/img", tag: "@latest"},
+		{name: "pinned_digest_not_sha256", image: "/project/img", tag: "@sha512:" + strings.Repeat("a", 128)},
 		// A pinned tag takes no request, and the image is checked all the
 		// same: the caller builds "image@digest" from the result.
-		{name: "pinned, no repository", image: "", tag: "@" + digestA},
-		{name: "pinned, an empty path segment", image: "/project//img", tag: "@" + digestA},
-		{name: "pinned, a parent path segment", image: "/project/../img", tag: "@" + digestA},
-		{name: "pinned, an image with a tag", image: "/project/img:latest", tag: "@" + digestA},
-		{name: "pinned, an image with a digest", image: "/project/img@" + digestB, tag: "@" + digestA},
-		{name: "pinned, a repository with a space", image: "/project/my img", tag: "@" + digestA},
+		{name: "pinned_no_repository", image: "", tag: "@" + digestA},
+		{name: "pinned_empty_path_segment", image: "/project//img", tag: "@" + digestA},
+		{name: "pinned_parent_path_segment", image: "/project/../img", tag: "@" + digestA},
+		{name: "pinned_image_with_tag", image: "/project/img:latest", tag: "@" + digestA},
+		{name: "pinned_image_with_digest", image: "/project/img@" + digestB, tag: "@" + digestA},
+		{name: "pinned_repository_with_space", image: "/project/my img", tag: "@" + digestA},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -270,7 +271,7 @@ func TestDigestRejectsWithoutARequest(t *testing.T) {
 	}
 }
 
-func TestDigestWithoutATokenSendsNothing(t *testing.T) {
+func TestDigest_NoTokenSendsNothing(t *testing.T) {
 	f := &fakeRegistry{status: http.StatusOK, digest: digestA}
 	c, host := newClient(t, f, &tokens{err: errToken})
 
@@ -284,7 +285,7 @@ func TestDigestWithoutATokenSendsNothing(t *testing.T) {
 	}
 }
 
-func TestDigestCarriesTheCallersDeadline(t *testing.T) {
+func TestDigest_CallerDeadline(t *testing.T) {
 	c, host := newClient(t, &fakeRegistry{wait: true}, &tokens{})
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
@@ -296,10 +297,10 @@ func TestDigestCarriesTheCallersDeadline(t *testing.T) {
 	}
 }
 
-// TestDigestSendsTheTokenToGoogleRegistriesOnly uses a client as New returns
+// TestDigest_TokenToGoogleRegistriesOnly uses a client as New returns
 // it. The transport fails every request, so the test shows which hosts the
 // client would have contacted: only for those does it ask for a token.
-func TestDigestSendsTheTokenToGoogleRegistriesOnly(t *testing.T) {
+func TestDigest_TokenToGoogleRegistriesOnly(t *testing.T) {
 	tests := []struct {
 		host        string
 		wantAllowed bool

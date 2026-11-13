@@ -215,7 +215,7 @@ func slotDelete(n int) write {
 	return write{Op: "delete", Key: slotKey(n).String()}
 }
 
-func TestDecideRows(t *testing.T) {
+func TestDecide_Rows(t *testing.T) {
 	tests := []struct {
 		name    string
 		paused  bool
@@ -232,7 +232,8 @@ func TestDecideRows(t *testing.T) {
 		wantAnomaly string
 	}{
 		{
-			name:    "row 0: the slots of a CONCLUDED rollout are deleted as cleanup, and nothing else is evaluated",
+			// Row 0: the slots of a CONCLUDED rollout are deleted as cleanup, and nothing else is evaluated.
+			name:    "row0_concluded_slots_deleted",
 			rollout: rollout([]int64{2}, stop(record.StopCancelled), concluded(record.OutcomeCancelled, earlier, nil)),
 			slots: map[int]record.Slot{
 				0: closedSlot(),
@@ -244,7 +245,8 @@ func TestDecideRows(t *testing.T) {
 			wantCleanup: []write{slotDelete(0), slotDelete(1), slotDelete(3)},
 		},
 		{
-			name:    "row 0: a CONCLUDED rollout without slots is finished",
+			// Row 0: a CONCLUDED rollout without slots is finished.
+			name:    "row0_concluded_without_slots_finished",
 			rollout: rollout([]int64{2}, concluded(record.OutcomeSucceeded, earlier, summary{"host-a": done})),
 			members: map[string]record.Member{"host-a": member(record.MemberActive, fresh)},
 			wantRow: RowCleanup,
@@ -253,13 +255,15 @@ func TestDecideRows(t *testing.T) {
 			},
 		},
 		{
-			name:    "a FINISHED rollout is left to the manager",
+			// A FINISHED rollout is left to the manager.
+			name:    "finished_left_to_manager",
 			rollout: rollout([]int64{2}, concluded(record.OutcomeSucceeded, earlier, nil), finished()),
 			members: map[string]record.Member{"host-a": member(record.MemberActive, stale)},
 			wantRow: RowFinished,
 		},
 		{
-			name:    "row 1: an expired task is marked LOST and a DONE task whose host is down is recorded",
+			// Row 1: an expired task is marked LOST and a DONE task whose host is down is recorded.
+			name:    "row1_expired_lost_and_done_host_down",
 			rollout: rollout([]int64{5}, maxFailed(2)),
 			slots: map[int]record.Slot{
 				0: task("host-a", record.TaskRunning, stale),             // expired
@@ -284,7 +288,8 @@ func TestDecideRows(t *testing.T) {
 			},
 		},
 		{
-			name:    "row 2: a stop request closes every OPEN slot, also while paused",
+			// Row 2: a stop request closes every OPEN slot, also while paused.
+			name:    "row2_stop_request_closes_open_slots",
 			paused:  true,
 			rollout: rollout([]int64{5}, stop(record.StopCancelled)),
 			slots: map[int]record.Slot{
@@ -301,7 +306,8 @@ func TestDecideRows(t *testing.T) {
 			wantWrites: []write{slotUpdate(0, closedSlot()), slotUpdate(2, closedSlot())},
 		},
 		{
-			name:    "row 2: a stopped rollout waits for the task in flight",
+			// Row 2: a stopped rollout waits for the task in flight.
+			name:    "row2_stopped_waits_for_in_flight",
 			rollout: rollout([]int64{5}, stop(record.StopSuperseded)),
 			slots: map[int]record.Slot{
 				0: closedSlot(),
@@ -311,7 +317,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow: RowStop,
 		},
 		{
-			name:    "row 2: an expired task is in flight until its LOST mark has landed",
+			// Row 2: an expired task is in flight until its LOST mark has landed.
+			name:    "row2_expired_task_still_in_flight",
 			rollout: rollout([]int64{5}, stop(record.StopSuperseded)),
 			slots:   map[int]record.Slot{0: task("host-a", record.TaskRunning, 2*stale)},
 			members: map[string]record.Member{"host-a": member(record.MemberActive, 2*stale)},
@@ -321,7 +328,8 @@ func TestDecideRows(t *testing.T) {
 			},
 		},
 		{
-			name:    "row 2: with no OPEN slot and no task in flight the outcome and the summary are written",
+			// Row 2: with no OPEN slot and no task in flight the outcome and the summary are written.
+			name:    "row2_outcome_and_summary_written",
 			rollout: rollout([]int64{20}, stop(record.StopCancelled)),
 			slots: map[int]record.Slot{
 				0: task("done", record.TaskDone, fresh),
@@ -370,7 +378,8 @@ func TestDecideRows(t *testing.T) {
 			wantMarks: []write{slotUpdate(2, downAfterDone("down", now))},
 		},
 		{
-			name:    "row 2: more failures than max_failed close every OPEN slot",
+			// Row 2: more failures than max_failed close every OPEN slot.
+			name:    "row2_max_failed_closes_open_slots",
 			rollout: rollout([]int64{5}),
 			slots: map[int]record.Slot{
 				0: task("host-a", record.TaskFailed, fresh),
@@ -384,7 +393,8 @@ func TestDecideRows(t *testing.T) {
 			wantWrites: []write{slotUpdate(1, closedSlot())},
 		},
 		{
-			name:    "row 2: more failures than max_failed conclude FAILED",
+			// Row 2: more failures than max_failed conclude FAILED.
+			name:    "row2_max_failed_concludes_failed",
 			rollout: rollout([]int64{5}, maxFailed(1)),
 			slots: map[int]record.Slot{
 				0: task("host-a", record.TaskFailed, fresh),
@@ -406,7 +416,8 @@ func TestDecideRows(t *testing.T) {
 			wantMarks: []write{slotUpdate(1, downAfterDone("host-b", now))},
 		},
 		{
-			name:    "row 2 does not apply while failures are within max_failed",
+			// Row 2 does not apply while failures are within max_failed.
+			name:    "row2_not_within_max_failed",
 			rollout: rollout([]int64{5}, maxFailed(1)),
 			slots:   map[int]record.Slot{0: task("host-a", record.TaskFailed, fresh)},
 			members: map[string]record.Member{
@@ -417,7 +428,8 @@ func TestDecideRows(t *testing.T) {
 			wantWrites: []write{slotCreate(1)},
 		},
 		{
-			name:    "row 3: every online agent has a result, so the leftover OPEN slot is closed",
+			// Row 3: every online agent has a result, so the leftover OPEN slot is closed.
+			name:    "row3_all_reported_closes_leftover_slot",
 			rollout: rollout([]int64{5}),
 			slots: map[int]record.Slot{
 				0: task("host-a", record.TaskDone, fresh),
@@ -431,7 +443,8 @@ func TestDecideRows(t *testing.T) {
 			wantWrites: []write{slotUpdate(1, closedSlot())},
 		},
 		{
-			name:    "row 3: the running task of an agent that opted out is waited for",
+			// Row 3: the running task of an agent that opted out is waited for.
+			name:    "row3_waits_for_opted_out_running_task",
 			rollout: rollout([]int64{5}),
 			slots: map[int]record.Slot{
 				0: task("host-a", record.TaskDone, fresh),
@@ -444,7 +457,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow: RowComplete,
 		},
 		{
-			name:    "row 3: SUCCEEDED when every agent attempted the upgrade and reported a result, a failure within max_failed included",
+			// Row 3: SUCCEEDED when every agent attempted the upgrade and reported a result, a failure within max_failed included.
+			name:    "row3_succeeded_all_attempted",
 			rollout: rollout([]int64{5}, maxFailed(1)),
 			slots: map[int]record.Slot{
 				0: task("host-a", record.TaskDone, fresh),
@@ -465,7 +479,8 @@ func TestDecideRows(t *testing.T) {
 			},
 		},
 		{
-			name:    "row 3: INCOMPLETE when an agent is offline",
+			// Row 3: INCOMPLETE when an agent is offline.
+			name:    "row3_incomplete_agent_offline",
 			rollout: rollout([]int64{5}),
 			slots:   map[int]record.Slot{0: task("host-a", record.TaskDone, fresh)},
 			members: map[string]record.Member{
@@ -478,7 +493,8 @@ func TestDecideRows(t *testing.T) {
 			},
 		},
 		{
-			name:    "row 3: INCOMPLETE when an agent lost its lease and did not come back",
+			// Row 3: INCOMPLETE when an agent lost its lease and did not come back.
+			name:    "row3_incomplete_agent_lost",
 			rollout: rollout([]int64{5}),
 			slots: map[int]record.Slot{
 				0: task("host-a", record.TaskDone, fresh),
@@ -494,7 +510,8 @@ func TestDecideRows(t *testing.T) {
 			},
 		},
 		{
-			name:    "row 3: INCOMPLETE when an agent skipped because its core service was not running",
+			// Row 3: INCOMPLETE when an agent skipped because its core service was not running.
+			name:    "row3_incomplete_agent_skipped",
 			rollout: rollout([]int64{1}),
 			slots:   map[int]record.Slot{0: task("host-a", record.TaskSkipped, fresh)},
 			members: map[string]record.Member{"host-a": member(record.MemberDown, fresh)},
@@ -504,7 +521,8 @@ func TestDecideRows(t *testing.T) {
 			},
 		},
 		{
-			name:    "row 3 does not apply with no agent online: the rollout does not conclude",
+			// Row 3 does not apply with no agent online: the rollout does not conclude.
+			name:    "row3_not_with_nobody_online",
 			rollout: rollout([]int64{5}),
 			slots:   map[int]record.Slot{0: task("host-a", record.TaskDone, fresh)},
 			members: map[string]record.Member{
@@ -514,7 +532,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow: RowOpen,
 		},
 		{
-			name:    "row 3a: while paused every OPEN slot is closed and the wave does not advance",
+			// Row 3a: while paused every OPEN slot is closed and the wave does not advance.
+			name:    "row3a_paused_closes_open_slots",
 			paused:  true,
 			rollout: rollout([]int64{1, 5}),
 			slots: map[int]record.Slot{
@@ -531,7 +550,8 @@ func TestDecideRows(t *testing.T) {
 			wantWrites: []write{slotUpdate(1, closedSlot())},
 		},
 		{
-			name:    "row 4: the wave advances on the results agents reported, and no slot is opened in the same run",
+			// Row 4: the wave advances on the results agents reported, and no slot is opened in the same run.
+			name:    "row4_wave_advances_opens_nothing",
 			rollout: rollout([]int64{2, 5}),
 			slots: map[int]record.Slot{
 				0: task("host-a", record.TaskDone, fresh),
@@ -549,7 +569,8 @@ func TestDecideRows(t *testing.T) {
 			wantWrites: []write{rolloutUpdate(rollout([]int64{2, 5}, wave(1)))},
 		},
 		{
-			name:    "row 5: a LOST task does not advance the wave, and its agent gets a new slot",
+			// Row 5: a LOST task does not advance the wave, and its agent gets a new slot.
+			name:    "row5_lost_task_gets_new_slot",
 			rollout: rollout([]int64{2, 5}),
 			slots: map[int]record.Slot{
 				0: task("host-a", record.TaskDone, fresh),
@@ -565,7 +586,8 @@ func TestDecideRows(t *testing.T) {
 			wantWrites: []write{slotCreate(2)},
 		},
 		{
-			name:    "row 5: the first wave opens its slots from index 0",
+			// Row 5: the first wave opens its slots from index 0.
+			name:    "row5_first_wave_from_index_0",
 			rollout: rollout([]int64{2, 3}),
 			members: map[string]record.Member{
 				"host-a": member(record.MemberActive, fresh),
@@ -577,7 +599,8 @@ func TestDecideRows(t *testing.T) {
 			wantWrites: []write{slotCreate(0), slotCreate(1)},
 		},
 		{
-			name:    "row 5: new slots follow the highest index, within max_in_flight",
+			// Row 5: new slots follow the highest index, within max_in_flight.
+			name:    "row5_new_slots_after_highest_index",
 			rollout: rollout([]int64{10}, maxInFlight(3)),
 			slots: map[int]record.Slot{
 				0: closedSlot(),
@@ -596,14 +619,16 @@ func TestDecideRows(t *testing.T) {
 			wantWrites: []write{slotCreate(8)},
 		},
 		{
-			name:    "row 5 never closes a slot, even with more OPEN slots than the target",
+			// Row 5 never closes a slot, even with more OPEN slots than the target.
+			name:    "row5_never_closes_slot",
 			rollout: rollout([]int64{10}, maxInFlight(1)),
 			slots:   map[int]record.Slot{0: openSlot(), 1: openSlot()},
 			members: map[string]record.Member{"host-a": member(record.MemberActive, fresh)},
 			wantRow: RowOpen,
 		},
 		{
-			name:    "anomaly: a slot claimed by an agent without a member row, even a LOST one, stops every write",
+			// Anomaly: a slot claimed by an agent without a member row, even a LOST one, stops every write.
+			name:    "anomaly_claimant_without_member",
 			rollout: rollout([]int64{5}, stop(record.StopCancelled)),
 			slots: map[int]record.Slot{
 				0: task("ghost", record.TaskLost, 2*stale),
@@ -615,7 +640,8 @@ func TestDecideRows(t *testing.T) {
 			wantAnomaly: `slot 0 is claimed by agent "ghost", which has no member row`,
 		},
 		{
-			name:    "anomaly: an agent with two slots that are not LOST stops every write",
+			// Anomaly: an agent with two slots that are not LOST stops every write.
+			name:    "anomaly_agent_with_two_slots",
 			rollout: rollout([]int64{5}),
 			slots: map[int]record.Slot{
 				0: task("host-a", record.TaskDone, fresh),
@@ -658,17 +684,17 @@ func TestDecideRows(t *testing.T) {
 	}
 }
 
-// TestDecideWritesExpectTheVersionsRead checks that every update and delete
+// TestDecide_WritesExpectVersionsRead checks that every update and delete
 // carries the version of the record as it was read, by applying a decision
 // after every record changed: every write must be refused.
-func TestDecideWritesExpectTheVersionsRead(t *testing.T) {
+func TestDecide_WritesExpectVersionsRead(t *testing.T) {
 	tests := []struct {
 		name       string
 		scenario   scenario
 		wantWrites int
 	}{
 		{
-			name: "close and LOST mark",
+			name: "close_and_lost_mark",
 			scenario: scenario{
 				rollout: rollout([]int64{5}, stop(record.StopCancelled)),
 				slots: map[int]record.Slot{
@@ -680,7 +706,7 @@ func TestDecideWritesExpectTheVersionsRead(t *testing.T) {
 			wantWrites: 2,
 		},
 		{
-			name: "conclude and down_after_done_at mark",
+			name: "conclude_and_down_after_done_mark",
 			scenario: scenario{
 				rollout: rollout([]int64{5}),
 				slots:   map[int]record.Slot{0: task("host-a", record.TaskDone, fresh)},
@@ -689,7 +715,7 @@ func TestDecideWritesExpectTheVersionsRead(t *testing.T) {
 			wantWrites: 2,
 		},
 		{
-			name: "wave advance",
+			name: "wave_advance",
 			scenario: scenario{
 				rollout: rollout([]int64{1, 5}),
 				slots:   map[int]record.Slot{0: task("host-a", record.TaskDone, fresh)},
@@ -743,10 +769,10 @@ func TestDecideWritesExpectTheVersionsRead(t *testing.T) {
 	}
 }
 
-// TestDecideNumbersNewSlotsAfterTheHighestIndex checks that a view built
+// TestDecide_NewSlotsAfterHighestIndex checks that a view built
 // without Views, whose slots are in no particular order, still gets new slots
 // that follow the highest index.
-func TestDecideNumbersNewSlotsAfterTheHighestIndex(t *testing.T) {
+func TestDecide_NewSlotsAfterHighestIndex(t *testing.T) {
 	_, rv := viewOf(t, scenario{
 		rollout: rollout([]int64{10}),
 		slots: map[int]record.Slot{
@@ -779,67 +805,72 @@ func TestTargetOpen(t *testing.T) {
 		want    int64
 	}{
 		{
-			name:    "the wave bounds finished tasks plus tasks in flight",
+			// The wave bounds finished tasks plus tasks in flight.
+			name:    "wave_bounds_finished_plus_in_flight",
 			rollout: rollout([]int64{3, 10}),
 			tally:   tally{agentFinished: 1, inFlight: 1, unclaimed: 5},
 			want:    1,
 		},
 		{
-			name:    "a full wave opens nothing",
+			name:    "full_wave_opens_nothing",
 			rollout: rollout([]int64{3, 10}),
 			tally:   tally{agentFinished: 2, inFlight: 1, unclaimed: 5},
 			want:    0,
 		},
 		{
-			name:    "an overfull wave opens nothing",
+			name:    "overfull_wave_opens_nothing",
 			rollout: rollout([]int64{3, 10}),
 			tally:   tally{agentFinished: 1, inFlight: 3, unclaimed: 5},
 			want:    0,
 		},
 		{
-			name:    "the last wave has no bound",
+			name:    "last_wave_has_no_bound",
 			rollout: rollout([]int64{3, 10}, wave(1)),
 			tally:   tally{agentFinished: 10, inFlight: 2, unclaimed: 4},
 			want:    4,
 		},
 		{
-			name:    "max_in_flight bounds tasks in flight",
+			// Max_in_flight bounds tasks in flight.
+			name:    "max_in_flight_bounds_in_flight",
 			rollout: rollout([]int64{10}, maxInFlight(3)),
 			tally:   tally{inFlight: 1, unclaimed: 5},
 			want:    2,
 		},
 		{
-			name:    "max_in_flight reached opens nothing",
+			name:    "max_in_flight_reached",
 			rollout: rollout([]int64{10}, maxInFlight(3)),
 			tally:   tally{inFlight: 3, unclaimed: 5},
 			want:    0,
 		},
 		{
-			name:    "max_in_flight exceeded opens nothing",
+			name:    "max_in_flight_exceeded",
 			rollout: rollout([]int64{10}, maxInFlight(3)),
 			tally:   tally{inFlight: 4, unclaimed: 5},
 			want:    0,
 		},
 		{
-			name:    "the smallest bound wins: the wave",
+			// The smallest bound wins: the wave.
+			name:    "smallest_bound_wave",
 			rollout: rollout([]int64{2, 10}, maxInFlight(5)),
 			tally:   tally{unclaimed: 8},
 			want:    2,
 		},
 		{
-			name:    "the smallest bound wins: unclaimed agents",
+			// The smallest bound wins: unclaimed agents.
+			name:    "smallest_bound_unclaimed",
 			rollout: rollout([]int64{3, 10}, maxInFlight(5)),
 			tally:   tally{unclaimed: 1},
 			want:    1,
 		},
 		{
-			name:    "nobody unclaimed opens nothing",
+			name:    "nobody_unclaimed",
 			rollout: rollout([]int64{10}),
 			tally:   tally{agentFinished: 3},
 			want:    0,
 		},
 		{
-			name:    "one wave and no limit: a slot for every unclaimed agent",
+			// One wave and no limit: a slot for every unclaimed agent.
+			name:    "one_wave_no_limit",
 			rollout: rollout([]int64{10}),
 			tally:   tally{agentFinished: 3, inFlight: 20, unclaimed: 1000},
 			want:    1000,
@@ -912,7 +943,8 @@ var reconcilerCases = []struct {
 	check func(t *testing.T, d view.Domain)
 }{
 	{
-		name: "stop: close and mark, conclude, clean up, finish",
+		// Stop: close and mark, conclude, clean up, finish.
+		name: "stop_to_finish",
 		groups: map[string]scenario{pool: {
 			rollout: rollout([]int64{2, 6}, stop(record.StopCancelled)),
 			slots: map[int]record.Slot{
@@ -946,7 +978,8 @@ var reconcilerCases = []struct {
 		},
 	},
 	{
-		name: "two groups: one opens slots while the other cleans up",
+		// Two groups: one opens slots while the other cleans up.
+		name: "two_groups",
 		groups: map[string]scenario{
 			pool: {
 				rollout: rollout([]int64{3}),
@@ -985,7 +1018,8 @@ var reconcilerCases = []struct {
 		},
 	},
 	{
-		name: "wave: advance, then open the next wave's slots",
+		// Wave: advance, then open the next wave's slots.
+		name: "wave_advance_then_open",
 		groups: map[string]scenario{pool: {
 			rollout: rollout([]int64{1, 3, 6}),
 			slots:   map[int]record.Slot{0: task("host-a", record.TaskDone, fresh)},
@@ -1016,7 +1050,8 @@ var reconcilerCases = []struct {
 		},
 	},
 	{
-		name: "complete: close the leftover slot, conclude INCOMPLETE, clean up, finish",
+		// Complete: close the leftover slot, conclude INCOMPLETE, clean up, finish.
+		name: "complete_incomplete_to_finish",
 		groups: map[string]scenario{pool: {
 			rollout: rollout([]int64{1, 4}, wave(1)),
 			slots: map[int]record.Slot{
@@ -1054,7 +1089,7 @@ func seedOf(t *testing.T, groups map[string]scenario) *fake.Store {
 	return s
 }
 
-func TestDecideRunsToFixpoint(t *testing.T) {
+func TestDecide_RunsToFixpoint(t *testing.T) {
 	for _, tc := range reconcilerCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -1076,7 +1111,7 @@ func TestDecideRunsToFixpoint(t *testing.T) {
 	}
 }
 
-func TestDecideSurvivesCrashes(t *testing.T) {
+func TestDecide_SurvivesCrashes(t *testing.T) {
 	for _, tc := range reconcilerCases {
 		t.Run(tc.name, func(t *testing.T) {
 			seed := func() *fake.Store { return seedOf(t, tc.groups) }

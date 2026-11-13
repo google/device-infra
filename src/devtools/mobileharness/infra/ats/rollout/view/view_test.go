@@ -147,14 +147,14 @@ func TestRead(t *testing.T) {
 	}
 }
 
-func TestReadDomainErrors(t *testing.T) {
+func TestRead_DomainErrors(t *testing.T) {
 	tests := []struct {
 		name   string
 		domain store.Record // nil: no domain document
 		want   error
 	}{
-		{name: "missing domain", want: store.ErrNotFound},
-		{name: "malformed paused", domain: store.Record{"paused": "no"}, want: record.ErrInvalid},
+		{name: "missing_domain", want: store.ErrNotFound},
+		{name: "malformed_paused", domain: store.Record{"paused": "no"}, want: record.ErrInvalid},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -188,7 +188,7 @@ func (r failingReader) List(ctx context.Context, parent store.Key, kind string) 
 	return r.Reader.List(ctx, parent, kind)
 }
 
-func TestReadFailsWhenAReadFails(t *testing.T) {
+func TestRead_ReadFailure(t *testing.T) {
 	for _, kind := range []string{record.KindGroup, record.KindMember, record.KindRollout, record.KindSlot} {
 		t.Run(kind, func(t *testing.T) {
 			s := newStore(t)
@@ -235,7 +235,7 @@ func (r tainted) List(ctx context.Context, parent store.Key, kind string) ([]sto
 	return items, err
 }
 
-func TestReadKeepsAValueTheStoreDoesNotAllowWithItsGroup(t *testing.T) {
+func TestRead_DisallowedValueStaysWithGroup(t *testing.T) {
 	dda := record.GroupKey(domainID, "dda")
 	rollout := record.RolloutKey(dda, 1)
 	for name, key := range map[string]store.Key{
@@ -275,7 +275,7 @@ func TestReadKeepsAValueTheStoreDoesNotAllowWithItsGroup(t *testing.T) {
 	}
 }
 
-func TestReadGroupValidation(t *testing.T) {
+func TestRead_GroupValidation(t *testing.T) {
 	dda := record.GroupKey(domainID, "dda")
 	tests := []struct {
 		name string
@@ -286,12 +286,12 @@ func TestReadGroupValidation(t *testing.T) {
 		wantValid bool
 	}{
 		{
-			name:      "group without a rollout",
+			name:      "group_without_rollout",
 			records:   map[store.Key]store.Record{dda: groupRecord(lastRollout(3))},
 			wantValid: true,
 		},
 		{
-			name: "first rollout",
+			name: "first_rollout",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(nil),
 				record.RolloutKey(dda, 1): rolloutRecord(false),
@@ -299,7 +299,7 @@ func TestReadGroupValidation(t *testing.T) {
 			wantValid: true,
 		},
 		{
-			name: "rollout after the last one",
+			name: "rollout_after_last_one",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(lastRollout(3)),
 				record.RolloutKey(dda, 4): rolloutRecord(false),
@@ -307,7 +307,8 @@ func TestReadGroupValidation(t *testing.T) {
 			wantValid: true,
 		},
 		{
-			name: "archive crash window: finished rollout already recorded as last",
+			// Archive crash window: finished rollout already recorded as last.
+			name: "archive_crash_window",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(lastRollout(3)),
 				record.RolloutKey(dda, 3): rolloutRecord(true),
@@ -315,32 +316,32 @@ func TestReadGroupValidation(t *testing.T) {
 			wantValid: true,
 		},
 		{
-			name:    "group document without an image",
+			name:    "group_without_image",
 			records: map[store.Key]store.Record{dda: {"tag": "latest"}},
 		},
 		{
-			name: "member without a status",
+			name: "member_without_status",
 			records: map[store.Key]store.Record{
 				dda:                             groupRecord(nil),
 				record.MemberKey(dda, "host-a"): {"heartbeat_at": now},
 			},
 		},
 		{
-			name: "rollout document without waves",
+			name: "rollout_without_waves",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(nil),
 				record.RolloutKey(dda, 1): record.Rollout{Revision: revA}.Record(),
 			},
 		},
 		{
-			name: "rollout key with padding",
+			name: "rollout_key_with_padding",
 			records: map[store.Key]store.Record{
 				dda:                                 groupRecord(nil),
 				dda.Child(record.KindRollout, "01"): rolloutRecord(false),
 			},
 		},
 		{
-			name: "two rollout documents",
+			name: "two_rollout_documents",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(lastRollout(1)),
 				record.RolloutKey(dda, 1): rolloutRecord(true),
@@ -348,7 +349,7 @@ func TestReadGroupValidation(t *testing.T) {
 			},
 		},
 		{
-			name: "slot with task fields but not claimed",
+			name: "slot_with_task_fields_not_claimed",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(nil),
 				record.RolloutKey(dda, 1): rolloutRecord(false),
@@ -356,7 +357,7 @@ func TestReadGroupValidation(t *testing.T) {
 			},
 		},
 		{
-			name: "slot key that is not a number",
+			name: "slot_key_not_a_number",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(nil),
 				record.RolloutKey(dda, 1): rolloutRecord(false),
@@ -364,7 +365,7 @@ func TestReadGroupValidation(t *testing.T) {
 			},
 		},
 		{
-			name: "finished rollout that still has a slot",
+			name: "finished_rollout_with_slot",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(nil),
 				record.RolloutKey(dda, 1): rolloutRecord(true),
@@ -372,28 +373,32 @@ func TestReadGroupValidation(t *testing.T) {
 			},
 		},
 		{
-			name: "first rollout with a sequence number other than 1",
+			// First rollout with a sequence number other than 1.
+			name: "first_rollout_seq_not_1",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(nil),
 				record.RolloutKey(dda, 2): rolloutRecord(false),
 			},
 		},
 		{
-			name: "rollout that skips a sequence number",
+			// Rollout that skips a sequence number.
+			name: "rollout_skips_seq",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(lastRollout(3)),
 				record.RolloutKey(dda, 5): rolloutRecord(false),
 			},
 		},
 		{
-			name: "unfinished rollout at last_rollout.seq",
+			// Unfinished rollout at last_rollout.seq.
+			name: "unfinished_rollout_at_last_seq",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(lastRollout(3)),
 				record.RolloutKey(dda, 3): rolloutRecord(false),
 			},
 		},
 		{
-			name: "rollout below last_rollout.seq",
+			// Rollout below last_rollout.seq.
+			name: "rollout_below_last_seq",
 			records: map[store.Key]store.Record{
 				dda:                       groupRecord(lastRollout(3)),
 				record.RolloutKey(dda, 2): rolloutRecord(true),
@@ -439,16 +444,16 @@ func TestReadGroupValidation(t *testing.T) {
 	}
 }
 
-func TestGroupResolved(t *testing.T) {
+func TestGroup_Resolved(t *testing.T) {
 	tests := []struct {
 		name  string
 		group Group
 		want  bool
 	}{
-		{name: "upstream set", group: Group{Upstream: revA}, want: true},
-		{name: "nothing set", group: Group{}, want: false},
+		{name: "upstream_set", group: Group{Upstream: revA}, want: true},
+		{name: "nothing_set", group: Group{}, want: false},
 		{name: "error", group: Group{UpstreamErr: errRead}, want: false},
-		{name: "partial result with an error", group: Group{Upstream: revA, UpstreamErr: errRead}, want: false},
+		{name: "partial_result_with_error", group: Group{Upstream: revA, UpstreamErr: errRead}, want: false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -459,7 +464,7 @@ func TestGroupResolved(t *testing.T) {
 	}
 }
 
-func TestGroupOnline(t *testing.T) {
+func TestGroup_Online(t *testing.T) {
 	member := func(status record.MemberStatus, age time.Duration) Member {
 		return Member{Record: record.Member{Status: status, HeartbeatAt: now.Add(-age)}}
 	}

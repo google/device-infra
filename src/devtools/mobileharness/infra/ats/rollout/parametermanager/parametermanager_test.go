@@ -118,7 +118,7 @@ func TestVersion(t *testing.T) {
 	}
 }
 
-func TestVersionAddsNoCredentialsOfItsOwn(t *testing.T) {
+func TestVersion_AddsNoCredentials(t *testing.T) {
 	f := &fakeAPI{status: http.StatusOK, body: rendered}
 	ts := httptest.NewServer(f)
 	t.Cleanup(ts.Close)
@@ -136,10 +136,10 @@ func TestVersionAddsNoCredentialsOfItsOwn(t *testing.T) {
 	}
 }
 
-// TestVersionEscapesColons uses a domain-scoped project ID and a parameter
+// TestVersion_EscapesColons uses a domain-scoped project ID and a parameter
 // whose ID ends in the name of the custom method. Unescaped, the API would
 // take ":render" off the wrong place.
-func TestVersionEscapesColons(t *testing.T) {
+func TestVersion_EscapesColons(t *testing.T) {
 	f := &fakeAPI{status: http.StatusOK, body: rendered}
 	c := newClient(t, f, "example.com:p")
 
@@ -154,28 +154,30 @@ func TestVersionEscapesColons(t *testing.T) {
 	}
 }
 
-func TestVersionReadsTheNameOfTheResolvedVersion(t *testing.T) {
+func TestVersion_ResolvedVersionName(t *testing.T) {
 	tests := []struct {
 		name string
 		body string
 		// want is the version ID; empty means an error.
 		want string
 	}{
-		{name: "a full resource name", body: `{"parameterVersion": "` + versionName + `"}`, want: "20260917_163105"},
-		{name: "a response with the config", body: rendered, want: "20260917_163105"},
-		{name: "a name with slashes around it", body: `{"parameterVersion": "/` + versionName + `/"}`, want: "20260917_163105"},
-		{name: "a bare version ID", body: `{"parameterVersion": "20260917_163105"}`, want: "20260917_163105"},
-		{name: "a name without a versions segment", body: `{"parameterVersion": "parameters/tenant_config/v7"}`, want: "v7"},
-		{name: "an ID that contains the word versions", body: `{"parameterVersion": "a/versions/b/versions/c"}`, want: "c"},
-		{name: "no name", body: `{"renderedPayload": "U0VDUkVU"}`},
-		{name: "an empty name", body: `{"parameterVersion": ""}`},
-		{name: "a name that is a slash only", body: `{"parameterVersion": "/"}`},
-		{name: "the alias, not a version", body: `{"parameterVersion": "projects/p/locations/global/parameters/tenant_config/versions/latest"}`},
-		{name: "the bare alias", body: `{"parameterVersion": "latest"}`},
-		{name: "a name of another type", body: `{"parameterVersion": 7}`},
-		{name: "not JSON", body: `<html>SECRET</html>`},
-		{name: "truncated JSON", body: `{"renderedPayload": "SECRET", "parameterVersion": "proj`},
-		{name: "an empty body", body: ``},
+		{name: "full_resource_name", body: `{"parameterVersion": "` + versionName + `"}`, want: "20260917_163105"},
+		{name: "response_with_config", body: rendered, want: "20260917_163105"},
+		{name: "name_wrapped_in_slashes", body: `{"parameterVersion": "/` + versionName + `/"}`, want: "20260917_163105"},
+		{name: "bare_version_ID", body: `{"parameterVersion": "20260917_163105"}`, want: "20260917_163105"},
+		{name: "name_without_versions_segment", body: `{"parameterVersion": "parameters/tenant_config/v7"}`, want: "v7"},
+		// An ID that contains the word versions.
+		{name: "ID_containing_versions", body: `{"parameterVersion": "a/versions/b/versions/c"}`, want: "c"},
+		{name: "no_name", body: `{"renderedPayload": "U0VDUkVU"}`},
+		{name: "empty_name", body: `{"parameterVersion": ""}`},
+		{name: "name_is_slash_only", body: `{"parameterVersion": "/"}`},
+		// The alias, not a version.
+		{name: "alias_not_version", body: `{"parameterVersion": "projects/p/locations/global/parameters/tenant_config/versions/latest"}`},
+		{name: "bare_alias", body: `{"parameterVersion": "latest"}`},
+		{name: "name_of_another_type", body: `{"parameterVersion": 7}`},
+		{name: "not_JSON", body: `<html>SECRET</html>`},
+		{name: "truncated_JSON", body: `{"renderedPayload": "SECRET", "parameterVersion": "proj`},
+		{name: "empty_body", body: ``},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -196,7 +198,7 @@ func TestVersionReadsTheNameOfTheResolvedVersion(t *testing.T) {
 	}
 }
 
-func TestVersionErrors(t *testing.T) {
+func TestVersion_Errors(t *testing.T) {
 	apiError := func(code int, status string) string {
 		return fmt.Sprintf(`{"error": {"code": %d, "message": "from the test", "status": %q}}`, code, status)
 	}
@@ -210,14 +212,17 @@ func TestVersionErrors(t *testing.T) {
 		wantNotFound bool
 	}{
 		// A missing parameter and a parameter without versions both get 404.
-		{name: "no such parameter or version", status: http.StatusNotFound, body: apiError(404, "NOT_FOUND"), wantIn: "from the test", wantNotFound: true},
-		{name: "404 that is not from the API", status: http.StatusNotFound, body: "<html>SECRET</html>", wantIn: "404", wantNotFound: true},
-		{name: "not allowed", status: http.StatusForbidden, body: apiError(403, "PERMISSION_DENIED"), wantIn: "PERMISSION_DENIED"},
-		{name: "not authenticated", status: http.StatusUnauthorized, body: apiError(401, "UNAUTHENTICATED"), wantIn: "UNAUTHENTICATED"},
+		{name: "no_such_parameter_or_version", status: http.StatusNotFound, body: apiError(404, "NOT_FOUND"), wantIn: "from the test", wantNotFound: true},
+		// 404 that is not from the API.
+		{name: "non_API_404", status: http.StatusNotFound, body: "<html>SECRET</html>", wantIn: "404", wantNotFound: true},
+		{name: "not_allowed", status: http.StatusForbidden, body: apiError(403, "PERMISSION_DENIED"), wantIn: "PERMISSION_DENIED"},
+		{name: "not_authenticated", status: http.StatusUnauthorized, body: apiError(401, "UNAUTHENTICATED"), wantIn: "UNAUTHENTICATED"},
 		{name: "unavailable", status: http.StatusServiceUnavailable, body: apiError(503, "UNAVAILABLE"), wantIn: "from the test"},
-		{name: "an error that is not from the API", status: http.StatusBadGateway, body: "<html>SECRET</html>", wantIn: "502"},
-		{name: "a failure with a rendered body", status: http.StatusInternalServerError, body: `{"renderedPayload": "SECRET"}`, wantIn: "500"},
-		{name: "a success status other than 200", status: http.StatusNoContent, body: "", wantIn: "204"},
+		// An error that is not from the API.
+		{name: "non_API_error", status: http.StatusBadGateway, body: "<html>SECRET</html>", wantIn: "502"},
+		{name: "failure_with_rendered_body", status: http.StatusInternalServerError, body: `{"renderedPayload": "SECRET"}`, wantIn: "500"},
+		// A success status other than 200.
+		{name: "non_200_success", status: http.StatusNoContent, body: "", wantIn: "204"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -241,7 +246,7 @@ func TestVersionErrors(t *testing.T) {
 	}
 }
 
-func TestVersionCutsALongErrorMessageShort(t *testing.T) {
+func TestVersion_LongErrorMessageCut(t *testing.T) {
 	body := fmt.Sprintf(`{"error": {"code": 400, "message": %q, "status": "INVALID_ARGUMENT"}}`, strings.Repeat("x", 5000))
 	c := newClient(t, &fakeAPI{status: http.StatusBadRequest, body: body}, "p")
 
@@ -252,14 +257,14 @@ func TestVersionCutsALongErrorMessageShort(t *testing.T) {
 	}
 }
 
-func TestVersionRejectsWithoutARequest(t *testing.T) {
+func TestVersion_RejectsWithoutRequest(t *testing.T) {
 	for name, parameter := range map[string]string{
-		"an empty parameter ID":         "",
-		"a parameter ID with a slash":   "a/b",
-		"a parameter ID that is a path": "../tenant_config",
+		"empty_parameter_ID":        "",
+		"parameter_ID_with_slash":   "a/b",
+		"parameter_ID_that_is_path": "../tenant_config",
 		// A URL would resolve these two to another path.
-		"a parameter ID that is one dot":  ".",
-		"a parameter ID that is two dots": "..",
+		"parameter_ID_that_is_one_dot":  ".",
+		"parameter_ID_that_is_two_dots": "..",
 	} {
 		t.Run(name, func(t *testing.T) {
 			f := &fakeAPI{status: http.StatusOK, body: rendered}
@@ -277,7 +282,7 @@ func TestVersionRejectsWithoutARequest(t *testing.T) {
 	}
 }
 
-func TestVersionCarriesTheCallersDeadline(t *testing.T) {
+func TestVersion_CallerDeadline(t *testing.T) {
 	c := newClient(t, &fakeAPI{wait: true}, "p")
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
@@ -295,21 +300,23 @@ func TestNew(t *testing.T) {
 		t.Errorf("New(%+v) failed: %v", valid, err)
 	}
 	for name, change := range map[string]func(*Config){
-		"no client":  func(c *Config) { c.Client = nil },
-		"no project": func(c *Config) { c.Project = "" },
+		"no_client":  func(c *Config) { c.Client = nil },
+		"no_project": func(c *Config) { c.Project = "" },
 		// A resource name where an ID belongs.
-		"a project with a slash": func(c *Config) { c.Project = "projects/p" },
-		"a project of two dots":  func(c *Config) { c.Project = ".." },
+		"project_with_slash":  func(c *Config) { c.Project = "projects/p" },
+		"project_of_two_dots": func(c *Config) { c.Project = ".." },
 	} {
-		cfg := valid
-		change(&cfg)
-		if _, err := New(cfg); err == nil {
-			t.Errorf("New() with %s returned no error, want one", name)
-		}
+		t.Run(name, func(t *testing.T) {
+			cfg := valid
+			change(&cfg)
+			if _, err := New(cfg); err == nil {
+				t.Errorf("New(%+v) returned no error, want one", cfg)
+			}
+		})
 	}
 }
 
-func TestNewIgnoresATrailingSlashOfTheEndpoint(t *testing.T) {
+func TestNew_EndpointTrailingSlash(t *testing.T) {
 	f := &fakeAPI{status: http.StatusOK, body: rendered}
 	ts := httptest.NewServer(f)
 	t.Cleanup(ts.Close)

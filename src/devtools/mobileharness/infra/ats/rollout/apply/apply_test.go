@@ -53,7 +53,7 @@ func (r *recorder) Delete(ctx context.Context, k store.Key, _ store.Version) err
 	return r.do(ctx, k)
 }
 
-func TestApplyOrderAndErrors(t *testing.T) {
+func TestApply_OrderAndErrors(t *testing.T) {
 	tests := []struct {
 		name          string
 		decisions     []Decision
@@ -63,10 +63,11 @@ func TestApplyOrderAndErrors(t *testing.T) {
 		wantErrTarget error
 	}{
 		{
-			name: "no decisions",
+			name: "no_decisions",
 		},
 		{
-			name: "row sequences round-robin across decisions, before any bookkeeping",
+			// Row sequences round-robin across decisions, before any bookkeeping.
+			name: "rows_round_robin_before_bookkeeping",
 			decisions: []Decision{
 				{Row: []Sequence{{create("a-close1")}, {create("a-close2")}}, Bookkeeping: []Sequence{{create("a-mark1")}}},
 				{Row: []Sequence{{create("b-stop")}}},
@@ -74,7 +75,8 @@ func TestApplyOrderAndErrors(t *testing.T) {
 			wantIDs: []string{"a-close1", "b-stop", "a-close2", "a-mark1"},
 		},
 		{
-			name: "a failed row sequence does not stop the row's other sequences",
+			// A failed row sequence does not stop the row's other sequences.
+			name: "failed_row_sequence_stops_only_itself",
 			decisions: []Decision{
 				{Row: []Sequence{{create("close1")}, {create("close2")}, {create("close3")}}},
 			},
@@ -84,7 +86,8 @@ func TestApplyOrderAndErrors(t *testing.T) {
 			wantErrTarget: store.ErrVersionMismatch,
 		},
 		{
-			name: "rows first, then bookkeeping round-robin across decisions",
+			// Rows first, then bookkeeping round-robin across decisions.
+			name: "bookkeeping_round_robin_after_rows",
 			decisions: []Decision{
 				{Row: []Sequence{{create("a-row1"), create("a-row2")}}, Bookkeeping: []Sequence{{create("a-mark1")}, {create("a-mark2")}, {create("a-mark3")}}},
 				{Bookkeeping: []Sequence{{create("b-mark1")}}},
@@ -93,7 +96,8 @@ func TestApplyOrderAndErrors(t *testing.T) {
 			wantIDs: []string{"a-row1", "a-row2", "c-row1", "a-mark1", "b-mark1", "c-mark1", "a-mark2", "c-mark2", "a-mark3"},
 		},
 		{
-			name: "cleanup last, round-robin across decisions",
+			// Cleanup last, round-robin across decisions.
+			name: "cleanup_round_robin_last",
 			decisions: []Decision{
 				{Cleanup: []Sequence{{create("a-delete1")}, {create("a-delete2")}, {create("a-delete3")}}},
 				{Row: []Sequence{{create("b-row1")}}, Bookkeeping: []Sequence{{create("b-mark1")}, {create("b-mark2")}}, Cleanup: []Sequence{{create("b-delete1")}}},
@@ -102,7 +106,8 @@ func TestApplyOrderAndErrors(t *testing.T) {
 			wantIDs: []string{"b-row1", "c-row1", "b-mark1", "b-mark2", "a-delete1", "b-delete1", "a-delete2", "a-delete3"},
 		},
 		{
-			name: "a failed cleanup write does not stop the other cleanup writes",
+			// A failed cleanup write does not stop the other cleanup writes.
+			name: "failed_cleanup_stops_only_itself",
 			decisions: []Decision{
 				{Cleanup: []Sequence{{create("delete1")}, {create("delete2")}}},
 			},
@@ -112,7 +117,7 @@ func TestApplyOrderAndErrors(t *testing.T) {
 			wantErrTarget: errWrite,
 		},
 		{
-			name: "an error stops its own sequence only",
+			name: "error_stops_its_own_sequence_only",
 			decisions: []Decision{
 				{Row: []Sequence{{create("a-row1"), create("a-row2")}}, Bookkeeping: []Sequence{{create("a-mark1")}}},
 				{Row: []Sequence{{create("b-row1")}}},
@@ -123,7 +128,7 @@ func TestApplyOrderAndErrors(t *testing.T) {
 			wantErrTarget: errWrite,
 		},
 		{
-			name: "a failed mark does not stop the next mark",
+			name: "failed_mark_does_not_stop_next_mark",
 			decisions: []Decision{
 				{Bookkeeping: []Sequence{{create("mark1")}, {create("mark2")}}},
 			},
@@ -133,7 +138,8 @@ func TestApplyOrderAndErrors(t *testing.T) {
 			wantErrTarget: store.ErrVersionMismatch,
 		},
 		{
-			name: "a create that finds the record counts as done",
+			// A create that finds the record counts as done.
+			name: "create_existing_counts_as_done",
 			decisions: []Decision{
 				{Row: []Sequence{{create("row1"), create("row2")}}},
 			},
@@ -141,7 +147,8 @@ func TestApplyOrderAndErrors(t *testing.T) {
 			wantIDs: []string{"row1", "row2"},
 		},
 		{
-			name: "an update that finds the record is an error",
+			// An update that finds the record is an error.
+			name: "update_existing_is_error",
 			decisions: []Decision{
 				{Row: []Sequence{{{Op: Update, Key: key("row1")}, create("row2")}}},
 			},
@@ -176,7 +183,7 @@ func TestApplyOrderAndErrors(t *testing.T) {
 	}
 }
 
-func TestApplyUnknownOp(t *testing.T) {
+func TestApply_UnknownOp(t *testing.T) {
 	rec := &recorder{}
 	decisions := []Decision{
 		{Row: []Sequence{{{Key: key("bad")}, create("after-bad")}}},
@@ -193,19 +200,19 @@ func TestApplyUnknownOp(t *testing.T) {
 	}
 }
 
-func TestApplyStopsAtDeadline(t *testing.T) {
+func TestApply_StopsAtDeadline(t *testing.T) {
 	tests := []struct {
 		name string
 		ctx  func() (context.Context, context.CancelFunc)
 		opts Options
 	}{
 		{
-			name: "deadline passed",
+			name: "deadline_passed",
 			ctx:  func() (context.Context, context.CancelFunc) { return context.WithCancel(context.Background()) },
 			opts: Options{Deadline: time.Now().Add(-time.Second)},
 		},
 		{
-			name: "context cancelled",
+			name: "context_cancelled",
 			ctx: func() (context.Context, context.CancelFunc) {
 				ctx, cancel := context.WithCancel(context.Background())
 				cancel()
@@ -232,7 +239,7 @@ func TestApplyStopsAtDeadline(t *testing.T) {
 	}
 }
 
-func TestApplyDeadlineCancelsWriteInProgress(t *testing.T) {
+func TestApply_DeadlineCancelsWriteInProgress(t *testing.T) {
 	rec := &recorder{block: map[string]bool{"slow": true}}
 	decisions := []Decision{
 		{Row: []Sequence{{create("slow"), create("after-slow")}}},
@@ -252,7 +259,7 @@ func TestApplyDeadlineCancelsWriteInProgress(t *testing.T) {
 	}
 }
 
-func TestApplyWriteTimeout(t *testing.T) {
+func TestApply_WriteTimeout(t *testing.T) {
 	rec := &recorder{block: map[string]bool{"slow": true}}
 	decisions := []Decision{
 		{Row: []Sequence{{create("slow"), create("after-slow")}}},
@@ -273,9 +280,9 @@ func TestApplyWriteTimeout(t *testing.T) {
 	}
 }
 
-// TestApplyOnStore checks each operation against a real store: the write
+// TestApply_OnStore checks each operation against a real store: the write
 // lands when the version matches, and is refused when it does not.
-func TestApplyOnStore(t *testing.T) {
+func TestApply_OnStore(t *testing.T) {
 	ctx := context.Background()
 	s := fake.New()
 	seed := func(id string) store.Version {

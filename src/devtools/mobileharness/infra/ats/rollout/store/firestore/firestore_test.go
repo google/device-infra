@@ -154,13 +154,13 @@ func TestRequests(t *testing.T) {
 			want:  exchange{Method: "GET", URL: docs + "/domains/d1"},
 		},
 		{
-			name:  "Get escapes each kind and ID",
+			name:  "Get_escapes_kind_and_ID",
 			call:  func(s *Store) error { _, _, err := s.Get(ctx, odd); return err },
 			reply: ok(docJSON),
 			want:  exchange{Method: "GET", URL: docs + "/domains/mtt.example.com/groups/a%20b%3F%23%25&+"},
 		},
 		{
-			name:  "List of top-level records",
+			name:  "List_top_level",
 			call:  func(s *Store) error { _, err := s.List(ctx, store.Key{}, "domains"); return err },
 			reply: ok(`[]`),
 			want: exchange{
@@ -170,7 +170,7 @@ func TestRequests(t *testing.T) {
 			},
 		},
 		{
-			name:  "List of children",
+			name:  "List_children",
 			call:  func(s *Store) error { _, err := s.List(ctx, odd, "slots"); return err },
 			reply: ok(`[]`),
 			want: exchange{
@@ -196,13 +196,15 @@ func TestRequests(t *testing.T) {
 			},
 		},
 		{
-			name:  "Get escapes a colon in a kind and in an ID",
+			// Get escapes a colon in a kind and in an ID.
+			name:  "Get_escapes_colon",
 			call:  func(s *Store) error { _, _, err := s.Get(ctx, colon); return err },
 			reply: ok(docJSON),
 			want:  exchange{Method: "GET", URL: docs + "/x%3ArunQuery/d%3A1/y%3Arollback/e%3ArunQuery"},
 		},
 		{
-			name:  "List under a parent with colons: only the custom method keeps its colon",
+			// List under a parent with colons: only the custom method keeps its colon.
+			name:  "List_under_parent_with_colons",
 			call:  func(s *Store) error { _, err := s.List(ctx, colon, "z:runQuery"); return err },
 			reply: ok(`[]`),
 			want: exchange{
@@ -212,13 +214,15 @@ func TestRequests(t *testing.T) {
 			},
 		},
 		{
-			name:  "Create in a top-level collection with a colon",
+			// Create in a top-level collection with a colon.
+			name:  "Create_top_level_with_colon",
 			call:  func(s *Store) error { _, err := s.Create(ctx, colonTop, record); return err },
 			reply: ok(docJSON),
 			want:  exchange{Method: "POST", URL: docs + "/x%3ArunQuery?documentId=d%3A1", Body: parse(t, fields)},
 		},
 		{
-			name:  "Create of a child in a collection with a colon",
+			// Create of a child in a collection with a colon.
+			name:  "Create_child_with_colon",
 			call:  func(s *Store) error { _, err := s.Create(ctx, colon, record); return err },
 			reply: ok(docJSON),
 			want: exchange{
@@ -228,7 +232,7 @@ func TestRequests(t *testing.T) {
 			},
 		},
 		{
-			name:  "Update escapes a colon",
+			name:  "Update_escapes_colon",
 			call:  func(s *Store) error { _, err := s.Update(ctx, colon, record, version); return err },
 			reply: ok(docJSON),
 			want: exchange{
@@ -238,7 +242,7 @@ func TestRequests(t *testing.T) {
 			},
 		},
 		{
-			name:  "Delete escapes a colon",
+			name:  "Delete_escapes_colon",
 			call:  func(s *Store) error { return s.Delete(ctx, colon, version) },
 			reply: ok(`{}`),
 			want: exchange{
@@ -247,13 +251,14 @@ func TestRequests(t *testing.T) {
 			},
 		},
 		{
-			name:  "Create of a top-level record",
+			name:  "Create_top_level",
 			call:  func(s *Store) error { _, err := s.Create(ctx, d1, record); return err },
 			reply: ok(docJSON),
 			want:  exchange{Method: "POST", URL: docs + "/domains?documentId=d1", Body: parse(t, fields)},
 		},
 		{
-			name:  "Create of a child escapes the ID as a query value",
+			// Create of a child escapes the ID as a query value.
+			name:  "Create_child_escapes_ID",
 			call:  func(s *Store) error { _, err := s.Create(ctx, odd, record); return err },
 			reply: ok(docJSON),
 			want: exchange{
@@ -263,7 +268,8 @@ func TestRequests(t *testing.T) {
 			},
 		},
 		{
-			name:  "Update replaces the document under a precondition",
+			// Update replaces the document under a precondition.
+			name:  "Update_with_precondition",
 			call:  func(s *Store) error { _, err := s.Update(ctx, d1, record, version); return err },
 			reply: ok(docJSON),
 			want: exchange{
@@ -273,7 +279,7 @@ func TestRequests(t *testing.T) {
 			},
 		},
 		{
-			name:  "Delete under a precondition",
+			name:  "Delete_with_precondition",
 			call:  func(s *Store) error { return s.Delete(ctx, d1, version) },
 			reply: ok(`{}`),
 			want:  exchange{Method: "DELETE", URL: docs + "/domains/d1?currentDocument.updateTime=" + escapedUpdateTime},
@@ -362,7 +368,7 @@ func TestKeysWithColons(t *testing.T) {
 	}
 }
 
-func TestWritesReturnTheUpdateTimeAsVersion(t *testing.T) {
+func TestWrite_VersionIsUpdateTime(t *testing.T) {
 	ctx := context.Background()
 	s, _ := newScripted(t, ok(docJSON), ok(docJSON), ok(docJSON))
 
@@ -386,7 +392,7 @@ func TestWritesReturnTheUpdateTimeAsVersion(t *testing.T) {
 	}
 }
 
-func TestEncodesEveryValueType(t *testing.T) {
+func TestEncode_EveryValueType(t *testing.T) {
 	at := time.Date(2026, 11, 5, 19, 0, 0, 123456789, time.FixedZone("CST", 8*60*60))
 	record := store.Record{
 		"s":          "x",
@@ -433,7 +439,7 @@ func TestEncodesEveryValueType(t *testing.T) {
 	}
 }
 
-func TestDecodesEveryValueType(t *testing.T) {
+func TestDecode_EveryValueType(t *testing.T) {
 	const doc = `{
 		"name": "projects/p/databases/d/documents/domains/d1",
 		"fields": {
@@ -584,37 +590,37 @@ func TestErrorMapping(t *testing.T) {
 		replies []reply
 		want    error
 	}{
-		{name: "Get NOT_FOUND", call: get, replies: []reply{notFound}, want: store.ErrNotFound},
-		{name: "Get INVALID_ARGUMENT", call: get, replies: []reply{invalidArg}, want: store.ErrInvalidArgument},
-		{name: "Get UNAVAILABLE", call: get, replies: []reply{unavailable}, want: errTransient},
-		{name: "Get PERMISSION_DENIED", call: get, replies: []reply{denied}, want: errTransient},
-		{name: "Get unrecognized error", call: get, replies: []reply{gateway}, want: errTransient},
+		{name: "Get_NOT_FOUND", call: get, replies: []reply{notFound}, want: store.ErrNotFound},
+		{name: "Get_INVALID_ARGUMENT", call: get, replies: []reply{invalidArg}, want: store.ErrInvalidArgument},
+		{name: "Get_UNAVAILABLE", call: get, replies: []reply{unavailable}, want: errTransient},
+		{name: "Get_PERMISSION_DENIED", call: get, replies: []reply{denied}, want: errTransient},
+		{name: "Get_unrecognized_error", call: get, replies: []reply{gateway}, want: errTransient},
 
-		{name: "List INVALID_ARGUMENT", call: list, replies: []reply{invalidArg}, want: store.ErrInvalidArgument},
+		{name: "List_INVALID_ARGUMENT", call: list, replies: []reply{invalidArg}, want: store.ErrInvalidArgument},
 		// A parent that does not exist is not an error for a query, so this
 		// status means something else; so does a missing index.
-		{name: "List NOT_FOUND", call: list, replies: []reply{notFound}, want: errTransient},
-		{name: "Query FAILED_PRECONDITION", call: query, replies: []reply{precondition}, want: errTransient},
-		{name: "Query UNAVAILABLE", call: query, replies: []reply{unavailable}, want: errTransient},
+		{name: "List_NOT_FOUND", call: list, replies: []reply{notFound}, want: errTransient},
+		{name: "Query_FAILED_PRECONDITION", call: query, replies: []reply{precondition}, want: errTransient},
+		{name: "Query_UNAVAILABLE", call: query, replies: []reply{unavailable}, want: errTransient},
 
-		{name: "Create ALREADY_EXISTS", call: create, replies: []reply{exists}, want: store.ErrAlreadyExists},
+		{name: "Create_ALREADY_EXISTS", call: create, replies: []reply{exists}, want: store.ErrAlreadyExists},
 		// ABORTED has the HTTP code of ALREADY_EXISTS.
-		{name: "Create ABORTED", call: create, replies: []reply{aborted}, want: errTransient},
-		{name: "Create INVALID_ARGUMENT", call: create, replies: []reply{invalidArg}, want: store.ErrInvalidArgument},
+		{name: "Create_ABORTED", call: create, replies: []reply{aborted}, want: errTransient},
+		{name: "Create_INVALID_ARGUMENT", call: create, replies: []reply{invalidArg}, want: store.ErrInvalidArgument},
 
-		{name: "Update FAILED_PRECONDITION", call: update, replies: []reply{precondition}, want: store.ErrVersionMismatch},
-		{name: "Update NOT_FOUND", call: update, replies: []reply{notFound}, want: store.ErrVersionMismatch},
-		{name: "Update ABORTED", call: update, replies: []reply{aborted}, want: errTransient},
-		{name: "Update INVALID_ARGUMENT", call: update, replies: []reply{invalidArg}, want: store.ErrInvalidArgument},
+		{name: "Update_FAILED_PRECONDITION", call: update, replies: []reply{precondition}, want: store.ErrVersionMismatch},
+		{name: "Update_NOT_FOUND", call: update, replies: []reply{notFound}, want: store.ErrVersionMismatch},
+		{name: "Update_ABORTED", call: update, replies: []reply{aborted}, want: errTransient},
+		{name: "Update_INVALID_ARGUMENT", call: update, replies: []reply{invalidArg}, want: store.ErrInvalidArgument},
 
-		{name: "Delete NOT_FOUND", call: remove, replies: []reply{notFound}, want: nil},
-		{name: "Delete FAILED_PRECONDITION, then the document is missing", call: remove, replies: []reply{precondition, notFound}, want: nil},
-		{name: "Delete FAILED_PRECONDITION, then the document exists", call: remove, replies: []reply{precondition, ok(docJSON)}, want: store.ErrVersionMismatch},
-		{name: "Delete FAILED_PRECONDITION, then the check fails", call: remove, replies: []reply{precondition, unavailable}, want: errTransient},
-		{name: "Delete ABORTED", call: remove, replies: []reply{aborted}, want: errTransient},
-		{name: "Delete INVALID_ARGUMENT", call: remove, replies: []reply{invalidArg}, want: store.ErrInvalidArgument},
+		{name: "Delete_NOT_FOUND", call: remove, replies: []reply{notFound}, want: nil},
+		{name: "Delete_FAILED_PRECONDITION_document_missing", call: remove, replies: []reply{precondition, notFound}, want: nil},
+		{name: "Delete_FAILED_PRECONDITION_document_exists", call: remove, replies: []reply{precondition, ok(docJSON)}, want: store.ErrVersionMismatch},
+		{name: "Delete_FAILED_PRECONDITION_check_fails", call: remove, replies: []reply{precondition, unavailable}, want: errTransient},
+		{name: "Delete_ABORTED", call: remove, replies: []reply{aborted}, want: errTransient},
+		{name: "Delete_INVALID_ARGUMENT", call: remove, replies: []reply{invalidArg}, want: store.ErrInvalidArgument},
 
-		{name: "beginTransaction UNAVAILABLE", call: firstSnapshotRead, replies: []reply{unavailable}, want: errTransient},
+		{name: "beginTransaction_UNAVAILABLE", call: firstSnapshotRead, replies: []reply{unavailable}, want: errTransient},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -630,7 +636,7 @@ func TestErrorMapping(t *testing.T) {
 	}
 }
 
-func TestDeleteChecksTheDocumentWithoutATransaction(t *testing.T) {
+func TestDelete_ChecksDocumentWithoutTransaction(t *testing.T) {
 	s, sc := newScripted(t, status(http.StatusBadRequest, "FAILED_PRECONDITION"), status(http.StatusNotFound, "NOT_FOUND"))
 
 	if err := s.Delete(context.Background(), d1, version); err != nil {
@@ -668,42 +674,47 @@ func TestRunQueryResponses(t *testing.T) {
 				{Key: b, Record: store.Record{}, Version: store.NewVersion("2026-11-12T10:00:00.000002Z")},
 			},
 		},
-		{name: "an empty result is one element with only a read time", reply: ok(`[` + readTime + `]`)},
-		{name: "an empty list", reply: ok(`[]`)},
+		// An empty result is one element with only a read time.
+		{name: "empty_result_read_time_only", reply: ok(`[` + readTime + `]`)},
+		{name: "empty_list", reply: ok(`[]`)},
 		{
-			name:  "elements without a document are skipped",
+			name:  "elements_without_document_skipped",
 			reply: ok(`[` + readTime + `, ` + slotA + `, {"skippedResults": 0}]`),
 			want:  []store.Item{{Key: a, Record: store.Record{"state": "OPEN"}, Version: store.NewVersion("2026-11-12T10:00:00.000001Z")}},
 		},
 		{
-			name:    "an error element under HTTP 200 fails the whole call",
+			// An error element under HTTP 200 fails the whole call.
+			name:    "error_element_under_200",
 			reply:   ok(`[` + slotA + `, {"error": {"code": 503, "message": "from the test", "status": "UNAVAILABLE"}}]`),
 			wantErr: errTransient,
 		},
 		{
-			name:    "an error element is translated like any error",
+			// An error element is translated like any error.
+			name:    "error_element_translated",
 			reply:   ok(`[{"error": {"code": 400, "message": "from the test", "status": "INVALID_ARGUMENT"}}]`),
 			wantErr: store.ErrInvalidArgument,
 		},
 		{
-			name:    "a failed call reports its error as an element",
+			// A failed call reports its error as an element.
+			name:    "failed_call_reports_error_element",
 			reply:   reply{code: http.StatusBadRequest, body: `[{"error": {"code": 400, "message": "from the test", "status": "INVALID_ARGUMENT"}}]`},
 			wantErr: store.ErrInvalidArgument,
 		},
-		{name: "a truncated response", reply: ok(`[` + slotA + `, {"document": {"name": "projects/p`), wantErr: errTransient},
-		{name: "a response that is not a list", reply: ok(slotA), wantErr: errTransient},
+		{name: "truncated_response", reply: ok(`[` + slotA + `, {"document": {"name": "projects/p`), wantErr: errTransient},
+		{name: "response_not_a_list", reply: ok(slotA), wantErr: errTransient},
 		{
-			name:    "a document of another collection",
+			name:    "document_of_another_collection",
 			reply:   ok(`[{"document": {"name": "projects/p/databases/d/documents/domains/d1/members/a", "updateTime": "2026-11-12T10:00:00Z"}}]`),
 			wantErr: errTransient,
 		},
 		{
-			name:    "a document deeper than a direct child",
+			// A document deeper than a direct child.
+			name:    "document_deeper_than_child",
 			reply:   ok(`[{"document": {"name": "projects/p/databases/d/documents/domains/d1/slots/a/slots/b", "updateTime": "2026-11-12T10:00:00Z"}}]`),
 			wantErr: errTransient,
 		},
 		{
-			name:    "a document of another database",
+			name:    "document_of_another_database",
 			reply:   ok(`[{"document": {"name": "projects/p/databases/other/documents/domains/d1/slots/a", "updateTime": "2026-11-12T10:00:00Z"}}]`),
 			wantErr: errTransient,
 		},
@@ -725,20 +736,20 @@ func TestRunQueryResponses(t *testing.T) {
 
 func TestMalformedDocuments(t *testing.T) {
 	tests := map[string]string{
-		"not JSON":                `<html>`,
-		"no updateTime":           `{"name": "n", "fields": {}}`,
-		"a value of no type":      `{"fields": {"f": {}}, "updateTime": "` + updateTime + `"}`,
-		"a value of two types":    `{"fields": {"f": {"stringValue": "a", "integerValue": "1"}}, "updateTime": "` + updateTime + `"}`,
-		"a value that is a bare":  `{"fields": {"f": "a"}, "updateTime": "` + updateTime + `"}`,
-		"an integer of letters":   `{"fields": {"f": {"integerValue": "one"}}, "updateTime": "` + updateTime + `"}`,
-		"an integer too large":    `{"fields": {"f": {"integerValue": "9223372036854775808"}}, "updateTime": "` + updateTime + `"}`,
-		"a fractional integer":    `{"fields": {"f": {"integerValue": 1.5}}, "updateTime": "` + updateTime + `"}`,
-		"a timestamp of letters":  `{"fields": {"f": {"timestampValue": "yesterday"}}, "updateTime": "` + updateTime + `"}`,
-		"a string that is a list": `{"fields": {"f": {"stringValue": ["a"]}}, "updateTime": "` + updateTime + `"}`,
-		"a boolean of letters":    `{"fields": {"f": {"booleanValue": "yes"}}, "updateTime": "` + updateTime + `"}`,
-		"a double of letters":     `{"fields": {"f": {"doubleValue": "big"}}, "updateTime": "` + updateTime + `"}`,
-		"a bad value in a list":   `{"fields": {"f": {"arrayValue": {"values": [{}]}}}, "updateTime": "` + updateTime + `"}`,
-		"a bad value in a map":    `{"fields": {"f": {"mapValue": {"fields": {"g": {}}}}}, "updateTime": "` + updateTime + `"}`,
+		"not_JSON":             `<html>`,
+		"no_updateTime":        `{"name": "n", "fields": {}}`,
+		"value_of_no_type":     `{"fields": {"f": {}}, "updateTime": "` + updateTime + `"}`,
+		"value_of_two_types":   `{"fields": {"f": {"stringValue": "a", "integerValue": "1"}}, "updateTime": "` + updateTime + `"}`,
+		"value_that_is_bare":   `{"fields": {"f": "a"}, "updateTime": "` + updateTime + `"}`,
+		"integer_of_letters":   `{"fields": {"f": {"integerValue": "one"}}, "updateTime": "` + updateTime + `"}`,
+		"integer_too_large":    `{"fields": {"f": {"integerValue": "9223372036854775808"}}, "updateTime": "` + updateTime + `"}`,
+		"fractional_integer":   `{"fields": {"f": {"integerValue": 1.5}}, "updateTime": "` + updateTime + `"}`,
+		"timestamp_of_letters": `{"fields": {"f": {"timestampValue": "yesterday"}}, "updateTime": "` + updateTime + `"}`,
+		"string_that_is_list":  `{"fields": {"f": {"stringValue": ["a"]}}, "updateTime": "` + updateTime + `"}`,
+		"boolean_of_letters":   `{"fields": {"f": {"booleanValue": "yes"}}, "updateTime": "` + updateTime + `"}`,
+		"double_of_letters":    `{"fields": {"f": {"doubleValue": "big"}}, "updateTime": "` + updateTime + `"}`,
+		"bad_value_in_list":    `{"fields": {"f": {"arrayValue": {"values": [{}]}}}, "updateTime": "` + updateTime + `"}`,
+		"bad_value_in_map":     `{"fields": {"f": {"mapValue": {"fields": {"g": {}}}}}, "updateTime": "` + updateTime + `"}`,
 	}
 	for name, body := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -754,7 +765,7 @@ func TestMalformedDocuments(t *testing.T) {
 	}
 }
 
-func TestSnapshotRequests(t *testing.T) {
+func TestSnapshot_Requests(t *testing.T) {
 	ctx := context.Background()
 	// A transaction ID with characters that must be escaped in a URL.
 	const (
@@ -823,7 +834,7 @@ func TestSnapshotRequests(t *testing.T) {
 	}
 }
 
-func TestSnapshotNeverReadSendsNothing(t *testing.T) {
+func TestSnapshot_NeverReadSendsNothing(t *testing.T) {
 	ctx := context.Background()
 	s, sc := newScripted(t)
 
@@ -840,7 +851,7 @@ func TestSnapshotNeverReadSendsNothing(t *testing.T) {
 	}
 }
 
-func TestSnapshotBeginsAgainAfterAFailedBegin(t *testing.T) {
+func TestSnapshot_BeginsAgainAfterFailedBegin(t *testing.T) {
 	ctx := context.Background()
 	s, sc := newScripted(t, status(http.StatusServiceUnavailable, "UNAVAILABLE"), ok(`{"transaction": "dHhu"}`), ok(docJSON))
 	snap, err := s.Snapshot(ctx)
@@ -858,7 +869,7 @@ func TestSnapshotBeginsAgainAfterAFailedBegin(t *testing.T) {
 	}
 }
 
-func TestSnapshotIsClosedEvenIfTheRollbackFails(t *testing.T) {
+func TestSnapshot_ClosedEvenIfRollbackFails(t *testing.T) {
 	ctx := context.Background()
 	s, sc := newScripted(t, ok(`{"transaction": "dHhu"}`), ok(docJSON), status(http.StatusServiceUnavailable, "UNAVAILABLE"))
 	snap, err := s.Snapshot(ctx)
@@ -883,7 +894,7 @@ func TestSnapshotIsClosedEvenIfTheRollbackFails(t *testing.T) {
 	}
 }
 
-func TestRequestCarriesTheCallersDeadline(t *testing.T) {
+func TestRequest_CallerDeadline(t *testing.T) {
 	// The server answers only when the client gives up.
 	blocked := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		<-r.Context().Done()
@@ -905,18 +916,20 @@ func TestNew(t *testing.T) {
 		t.Errorf("New(%+v) failed: %v", valid, err)
 	}
 	for name, change := range map[string]func(*Config){
-		"no client":   func(c *Config) { c.Client = nil },
-		"no project":  func(c *Config) { c.Project = "" },
-		"no database": func(c *Config) { c.Database = "" },
+		"no_client":   func(c *Config) { c.Client = nil },
+		"no_project":  func(c *Config) { c.Project = "" },
+		"no_database": func(c *Config) { c.Database = "" },
 		// A resource name where an ID belongs.
-		"a project with a slash":  func(c *Config) { c.Project = "projects/p" },
-		"a database with a slash": func(c *Config) { c.Database = "projects/p/databases/d" },
+		"project_with_slash":  func(c *Config) { c.Project = "projects/p" },
+		"database_with_slash": func(c *Config) { c.Database = "projects/p/databases/d" },
 	} {
-		cfg := valid
-		change(&cfg)
-		if _, err := New(cfg); err == nil {
-			t.Errorf("New() with %s returned no error, want one", name)
-		}
+		t.Run(name, func(t *testing.T) {
+			cfg := valid
+			change(&cfg)
+			if _, err := New(cfg); err == nil {
+				t.Errorf("New(%+v) returned no error, want one", cfg)
+			}
+		})
 	}
 }
 
@@ -935,7 +948,7 @@ func newConfigured(t *testing.T, change func(*Config), replies ...reply) (*Store
 	return s, sc
 }
 
-func TestNewIgnoresATrailingSlashOfTheEndpoint(t *testing.T) {
+func TestNew_EndpointTrailingSlash(t *testing.T) {
 	s, sc := newConfigured(t, func(c *Config) { c.Endpoint += "//" }, ok(docJSON))
 
 	if _, _, err := s.Get(context.Background(), d1); err != nil {
@@ -948,10 +961,10 @@ func TestNewIgnoresATrailingSlashOfTheEndpoint(t *testing.T) {
 	}
 }
 
-// TestNewEscapesTheProjectAndTheDatabase uses a domain-scoped project ID,
+// TestNew_EscapesProjectAndDatabase uses a domain-scoped project ID,
 // which has a colon, and the default database, whose ID has parentheses. They
 // are escaped in the URL and appear as they are in document names.
-func TestNewEscapesTheProjectAndTheDatabase(t *testing.T) {
+func TestNew_EscapesProjectAndDatabase(t *testing.T) {
 	const element = `[{"document": {"name": "projects/example.com:p/databases/(default)/documents/domains/d1", "updateTime": "` + updateTime + `"}}]`
 	s, sc := newConfigured(t, func(c *Config) { c.Project, c.Database = "example.com:p", "(default)" }, ok(element))
 

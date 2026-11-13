@@ -169,7 +169,7 @@ func TestFailAfter(t *testing.T) {
 	}
 }
 
-func TestFailAfterNegative(t *testing.T) {
+func TestFailAfter_Negative(t *testing.T) {
 	ctx := context.Background()
 	s := fake.New()
 	f := FailAfter(s, -1)
@@ -207,17 +207,17 @@ func TestRunToFixpoint(t *testing.T) {
 	}
 }
 
-func TestRunToFixpointReportsNoFixpoint(t *testing.T) {
+func TestRunToFixpoint_NoFixpoint(t *testing.T) {
 	tests := []struct {
 		name    string
 		step    Step
 		maxRuns int
 		want    string
 	}{
-		{name: "never converges", step: endlessStep, maxRuns: 5, want: "no fixpoint within 5 runs"},
-		{name: "needs more runs than allowed", step: ensureStep, maxRuns: 1, want: "no fixpoint within 1 runs"},
+		{name: "never_converges", step: endlessStep, maxRuns: 5, want: "no fixpoint within 5 runs"},
+		{name: "needs_more_runs_than_allowed", step: ensureStep, maxRuns: 1, want: "no fixpoint within 1 runs"},
 		{
-			name: "step fails",
+			name: "step_fails",
 			step: func(context.Context, store.Store) ([]apply.Decision, error) {
 				return nil, errors.New("cannot read")
 			},
@@ -244,7 +244,7 @@ func TestCheckCrashes(t *testing.T) {
 	CheckCrashes(context.Background(), t, func() *fake.Store { return seedStore(t) }, ensureStep, 3)
 }
 
-func TestCheckCrashesReportsDifferentFixpoint(t *testing.T) {
+func TestCheckCrashes_DifferentFixpoint(t *testing.T) {
 	got := failuresOf(t, func(tb testing.TB) {
 		CheckCrashes(context.Background(), tb, fake.New, doStep, 3)
 	})
@@ -256,7 +256,7 @@ func TestCheckCrashesReportsDifferentFixpoint(t *testing.T) {
 	}
 }
 
-func TestCheckCrashesReportsWriteErrorBeforeCrash(t *testing.T) {
+func TestCheckCrashes_WriteErrorBeforeCrash(t *testing.T) {
 	// The step follows the contract until the harness starts the run that it
 	// will crash after one write. In that run the step's first write carries
 	// a version that the store refuses, so the write fails before the crash

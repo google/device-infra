@@ -158,7 +158,7 @@ func writesOf(seq apply.Sequence) []write {
 	return ws
 }
 
-func TestDecideRows(t *testing.T) {
+func TestDecide_Rows(t *testing.T) {
 	tests := []struct {
 		name string
 		// group is the ID of the group whose decision is checked; pool if
@@ -175,7 +175,8 @@ func TestDecideRows(t *testing.T) {
 		wantAnomaly string
 	}{
 		{
-			name: "row 0: stale ACTIVE and DOWN members are marked OFFLINE, others are left alone",
+			// Row 0: stale ACTIVE and DOWN members are marked OFFLINE, others are left alone.
+			name: "row0_stale_members_marked_offline",
 			setup: func(f *fixture) {
 				f.group(poolKey, groupDoc(lastDoc(1, revA, record.OutcomeSucceeded)))
 				f.member(poolKey, "host-a", record.MemberActive, fresh)
@@ -193,7 +194,8 @@ func TestDecideRows(t *testing.T) {
 			},
 		},
 		{
-			name: "row 1: a FINISHED rollout is archived and the requests are cleared",
+			// Row 1: a FINISHED rollout is archived and the requests are cleared.
+			name: "row1_finished_rollout_archived",
 			setup: func(f *fixture) {
 				g := groupDoc(lastDoc(1, revA, record.OutcomeSucceeded))
 				g.Rerun, g.Cancel = true, true
@@ -216,7 +218,8 @@ func TestDecideRows(t *testing.T) {
 			},
 		},
 		{
-			name: "row 1: the group write is skipped when the group already records the rollout, keeping a rerun",
+			// Row 1: the group write is skipped when the group already records the rollout, keeping a rerun.
+			name: "row1_group_write_skipped_after_crash",
 			setup: func(f *fixture) {
 				g := groupDoc(lastDoc(2, revB, record.OutcomeIncomplete))
 				g.Rerun = true
@@ -228,7 +231,7 @@ func TestDecideRows(t *testing.T) {
 			wantSeq:   []write{{Op: "delete", Key: record.RolloutKey(poolKey, 2).String()}},
 		},
 		{
-			name: "row 1 needs no upstream",
+			name: "row1_needs_no_upstream",
 			setup: func(f *fixture) {
 				f.group(poolKey, groupDoc(nil))
 				f.rollout(poolKey, 1, concluded(rolloutDoc(revA), record.OutcomeSucceeded, true))
@@ -246,7 +249,8 @@ func TestDecideRows(t *testing.T) {
 			},
 		},
 		{
-			name: "row 1a: a CONCLUDED rollout is left to the orchestrator",
+			// Row 1a: a CONCLUDED rollout is left to the orchestrator.
+			name: "row1a_concluded_left_to_orchestrator",
 			setup: func(f *fixture) {
 				g := groupDoc(nil)
 				g.Cancel = true
@@ -257,7 +261,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowConcluded,
 		},
 		{
-			name: "row 2: a rollout that is stopping is not stopped again",
+			// Row 2: a rollout that is stopping is not stopped again.
+			name: "row2_stopping_not_stopped_again",
 			setup: func(f *fixture) {
 				g := groupDoc(nil)
 				g.Cancel = true
@@ -270,7 +275,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowStopping,
 		},
 		{
-			name: "row 3: a rollout of an old revision is superseded, before a cancel is looked at",
+			// Row 3: a rollout of an old revision is superseded, before a cancel is looked at.
+			name: "row3_superseded_before_cancel",
 			setup: func(f *fixture) {
 				g := groupDoc(nil)
 				g.Cancel = true
@@ -286,7 +292,8 @@ func TestDecideRows(t *testing.T) {
 			}())},
 		},
 		{
-			name:   "row 3 does not apply while the domain is paused",
+			// Row 3 does not apply while the domain is paused.
+			name:   "row3_not_while_paused",
 			paused: true,
 			setup: func(f *fixture) {
 				f.group(poolKey, groupDoc(nil))
@@ -296,7 +303,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowRollingOut,
 		},
 		{
-			name: "row 3 does not apply while the upstream is unresolved",
+			// Row 3 does not apply while the upstream is unresolved.
+			name: "row3_not_while_unresolved",
 			setup: func(f *fixture) {
 				f.group(poolKey, groupDoc(nil))
 				f.rollout(poolKey, 1, rolloutDoc(revA))
@@ -304,7 +312,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow: RowRollingOut,
 		},
 		{
-			name:   "row 4: a cancel stops the rollout, also while paused and with the upstream moved",
+			// Row 4: a cancel stops the rollout, also while paused and with the upstream moved.
+			name:   "row4_cancel_stops_rollout",
 			paused: true,
 			setup: func(f *fixture) {
 				g := groupDoc(nil)
@@ -321,7 +330,7 @@ func TestDecideRows(t *testing.T) {
 			}())},
 		},
 		{
-			name: "row 4 needs no upstream",
+			name: "row4_needs_no_upstream",
 			setup: func(f *fixture) {
 				g := groupDoc(nil)
 				g.Cancel = true
@@ -336,7 +345,8 @@ func TestDecideRows(t *testing.T) {
 			}())},
 		},
 		{
-			name: "row 5: a rollout of the current upstream is left alone",
+			// Row 5: a rollout of the current upstream is left alone.
+			name: "row5_current_upstream_left_alone",
 			setup: func(f *fixture) {
 				g := groupDoc(nil)
 				g.Rerun = true
@@ -347,7 +357,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowRollingOut,
 		},
 		{
-			name:   "row 5a: a cancel without a rollout is cleared, also while paused",
+			// Row 5a: a cancel without a rollout is cleared, also while paused.
+			name:   "row5a_cancel_without_rollout_cleared",
 			paused: true,
 			setup: func(f *fixture) {
 				g := groupDoc(lastDoc(1, revA, record.OutcomeSucceeded))
@@ -364,7 +375,8 @@ func TestDecideRows(t *testing.T) {
 			}())},
 		},
 		{
-			name:   "row 5b: no new rollout while the domain is paused",
+			// Row 5b: no new rollout while the domain is paused.
+			name:   "row5b_paused_starts_nothing",
 			paused: true,
 			setup: func(f *fixture) {
 				f.group(poolKey, groupDoc(nil))
@@ -374,7 +386,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowPaused,
 		},
 		{
-			name: "row 6: an unresolved upstream starts nothing and is not an anomaly",
+			// Row 6: an unresolved upstream starts nothing and is not an anomaly.
+			name: "row6_unresolved_starts_nothing",
 			setup: func(f *fixture) {
 				f.group(poolKey, groupDoc(nil))
 				f.member(poolKey, "host-a", record.MemberActive, fresh)
@@ -382,7 +395,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow: RowUnresolved,
 		},
 		{
-			name: "row 7: the upstream was rolled out last, whatever the outcome",
+			// Row 7: the upstream was rolled out last, whatever the outcome.
+			name: "row7_upstream_already_rolled_out",
 			setup: func(f *fixture) {
 				f.group(poolKey, groupDoc(lastDoc(1, revA, record.OutcomeFailed)))
 				f.member(poolKey, "host-a", record.MemberActive, fresh)
@@ -393,7 +407,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowUpToDate,
 		},
 		{
-			name: "row 8: a pool waits while the controller is rolling out",
+			// Row 8: a pool waits while the controller is rolling out.
+			name: "row8_pool_waits_controller_rolling_out",
 			setup: func(f *fixture) {
 				f.group(controllerKey, groupDoc(lastDoc(1, ctrlRevA, record.OutcomeSucceeded)))
 				f.rollout(controllerKey, 2, rolloutDoc(ctrlRevB))
@@ -404,7 +419,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowWaiting,
 		},
 		{
-			name: "row 8: a pool waits for a controller that has a new revision pending",
+			// Row 8: a pool waits for a controller that has a new revision pending.
+			name: "row8_pool_waits_controller_pending",
 			setup: func(f *fixture) {
 				f.group(controllerKey, groupDoc(lastDoc(1, ctrlRevA, record.OutcomeSucceeded)))
 				f.group(poolKey, groupDoc(nil))
@@ -414,7 +430,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowWaiting,
 		},
 		{
-			name: "row 8: a pool waits for a controller that never rolled out",
+			// Row 8: a pool waits for a controller that never rolled out.
+			name: "row8_pool_waits_controller_never_rolled_out",
 			setup: func(f *fixture) {
 				f.group(controllerKey, groupDoc(nil))
 				f.group(poolKey, groupDoc(nil))
@@ -424,7 +441,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowWaiting,
 		},
 		{
-			name: "row 8: a pool waits while the controller's upstream is unresolved",
+			// Row 8: a pool waits while the controller's upstream is unresolved.
+			name: "row8_pool_waits_controller_unresolved",
 			setup: func(f *fixture) {
 				f.group(controllerKey, groupDoc(lastDoc(1, ctrlRevA, record.OutcomeSucceeded)))
 				f.group(poolKey, groupDoc(nil))
@@ -434,7 +452,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowWaiting,
 		},
 		{
-			name: "row 8: a controller rollout that did not succeed is stuck, which is an anomaly",
+			// Row 8: a controller rollout that did not succeed is stuck, which is an anomaly.
+			name: "row8_failed_controller_is_stuck",
 			setup: func(f *fixture) {
 				f.group(controllerKey, groupDoc(lastDoc(1, ctrlRevA, record.OutcomeIncomplete)))
 				f.group(poolKey, groupDoc(nil))
@@ -445,7 +464,8 @@ func TestDecideRows(t *testing.T) {
 			wantAnomaly: `waits for group "controller", which is stuck: its rollout 1 of the current revision ended INCOMPLETE`,
 		},
 		{
-			name: "row 8: a failed controller with rerun set is not stuck",
+			// Row 8: a failed controller with rerun set is not stuck.
+			name: "row8_failed_controller_with_rerun_not_stuck",
 			setup: func(f *fixture) {
 				g := groupDoc(lastDoc(1, ctrlRevA, record.OutcomeFailed))
 				g.Rerun = true
@@ -457,7 +477,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowWaiting,
 		},
 		{
-			name: "row 8: an invalid controller is stuck",
+			// Row 8: an invalid controller is stuck.
+			name: "row8_invalid_controller_is_stuck",
 			setup: func(f *fixture) {
 				f.put(controllerKey, store.Record{"tag": "latest"})
 				f.group(poolKey, groupDoc(nil))
@@ -468,7 +489,8 @@ func TestDecideRows(t *testing.T) {
 			wantAnomaly: `waits for group "controller", which is stuck: its records are invalid`,
 		},
 		{
-			name:  "row 8: the controller waits while a pool has a rollout",
+			// Row 8: the controller waits while a pool has a rollout.
+			name:  "row8_controller_waits_pool_has_rollout",
 			group: controller,
 			setup: func(f *fixture) {
 				f.group(controllerKey, groupDoc(lastDoc(1, ctrlRevA, record.OutcomeSucceeded)))
@@ -480,7 +502,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowWaiting,
 		},
 		{
-			name:  "row 8: the controller waits while a pool is invalid",
+			// Row 8: the controller waits while a pool is invalid.
+			name:  "row8_controller_waits_pool_invalid",
 			group: controller,
 			setup: func(f *fixture) {
 				f.group(controllerKey, groupDoc(nil))
@@ -491,7 +514,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow:   RowWaiting,
 		},
 		{
-			name: "row 8a: a group with nobody online starts no rollout",
+			// Row 8a: a group with nobody online starts no rollout.
+			name: "row8a_nobody_online_starts_nothing",
 			setup: func(f *fixture) {
 				f.group(poolKey, groupDoc(nil))
 				f.member(poolKey, "host-a", record.MemberActive, stale)
@@ -502,7 +526,8 @@ func TestDecideRows(t *testing.T) {
 			wantRow0:  []write{update(record.MemberKey(poolKey, "host-a"), memberDoc(record.MemberOffline, stale).Record())},
 		},
 		{
-			name: "row 9: the first rollout, in a domain without a controller group",
+			// Row 9: the first rollout, in a domain without a controller group.
+			name: "row9_first_rollout_no_controller_group",
 			setup: func(f *fixture) {
 				f.group(poolKey, groupDoc(nil))
 				f.member(poolKey, "host-a", record.MemberActive, fresh)
@@ -522,7 +547,8 @@ func TestDecideRows(t *testing.T) {
 			}},
 		},
 		{
-			name: "row 9: a pool starts once the controller is settled",
+			// Row 9: a pool starts once the controller is settled.
+			name: "row9_pool_starts_controller_settled",
 			setup: func(f *fixture) {
 				f.group(controllerKey, groupDoc(lastDoc(4, ctrlRevB, record.OutcomeSucceeded)))
 				f.group(poolKey, groupDoc(lastDoc(7, revA, record.OutcomeSucceeded)))
@@ -537,7 +563,8 @@ func TestDecideRows(t *testing.T) {
 			}},
 		},
 		{
-			name: "row 9: rerun rolls out the last revision again",
+			// Row 9: rerun rolls out the last revision again.
+			name: "row9_rerun_last_revision",
 			setup: func(f *fixture) {
 				g := groupDoc(lastDoc(1, revA, record.OutcomeFailed))
 				g.Rerun = true
@@ -553,7 +580,8 @@ func TestDecideRows(t *testing.T) {
 			}},
 		},
 		{
-			name:  "row 9: the controller starts when no pool has a rollout",
+			// Row 9: the controller starts when no pool has a rollout.
+			name:  "row9_controller_starts_no_pool_rollout",
 			group: controller,
 			setup: func(f *fixture) {
 				f.group(controllerKey, groupDoc(lastDoc(1, ctrlRevA, record.OutcomeSucceeded)))
@@ -569,7 +597,8 @@ func TestDecideRows(t *testing.T) {
 			}},
 		},
 		{
-			name: "invalid group: nothing is written, not even OFFLINE marks",
+			// Invalid group: nothing is written, not even OFFLINE marks.
+			name: "invalid_group_nothing_written",
 			setup: func(f *fixture) {
 				g := groupDoc(nil)
 				g.Cancel = true
@@ -642,10 +671,10 @@ func TestDecideRows(t *testing.T) {
 	}
 }
 
-// TestDecideWritesExpectTheVersionsRead checks that every conditional write
+// TestDecide_WritesExpectVersionsRead checks that every conditional write
 // carries the version of the record as it was read, by applying a decision
 // after the records changed: every write must be refused.
-func TestDecideWritesExpectTheVersionsRead(t *testing.T) {
+func TestDecide_WritesExpectVersionsRead(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(t, false)
 	g := groupDoc(lastDoc(1, revA, record.OutcomeSucceeded))
@@ -703,49 +732,51 @@ func TestResolveWaves(t *testing.T) {
 		want  []int64
 	}{
 		{
-			name:  "the example of the concepts brief",
+			name:  "concepts_brief_example",
 			waves: []record.Wave{count(1), count(3), percent(5), percent(15), percent(50), percent(100)},
 			n:     40,
 			want:  []int64{1, 3, 6, 20, 40},
 		},
 		{
-			name:  "no gating",
+			name:  "no_gating",
 			waves: []record.Wave{percent(100)},
 			n:     7,
 			want:  []int64{7},
 		},
 		{
-			name:  "a percentage rounds up",
+			name:  "percentage_rounds_up",
 			waves: []record.Wave{percent(1), percent(34), percent(100)},
 			n:     3,
 			want:  []int64{1, 2, 3},
 		},
 		{
-			name:  "a small pool skips redundant waves",
+			name:  "small_pool_skips_redundant_waves",
 			waves: []record.Wave{count(1), count(3), percent(5), percent(15), percent(50), percent(100)},
 			n:     1,
 			want:  []int64{1, 3},
 		},
 		{
-			name:  "a count larger than the group stays as it is",
+			// A count larger than the group stays as it is.
+			name:  "count_larger_than_group_kept",
 			waves: []record.Wave{count(1), count(3), count(10)},
 			n:     2,
 			want:  []int64{1, 3, 10},
 		},
 		{
-			name:  "an entry below the one before it is raised to it and dropped",
+			// An entry below the one before it is raised to it and dropped.
+			name:  "entry_below_previous_raised_and_dropped",
 			waves: []record.Wave{count(5), count(2), percent(100)},
 			n:     8,
 			want:  []int64{5, 8},
 		},
 		{
-			name:  "equal entries are dropped",
+			name:  "equal_entries_are_dropped",
 			waves: []record.Wave{count(2), count(2), percent(100), percent(100)},
 			n:     2,
 			want:  []int64{2},
 		},
 		{
-			name:  "a large group",
+			name:  "large_group",
 			waves: []record.Wave{percent(1), percent(100)},
 			n:     1000,
 			want:  []int64{10, 1000},
@@ -788,7 +819,7 @@ var reconcilerCases = []struct {
 	check func(t *testing.T, d view.Domain)
 }{
 	{
-		name: "archive, then the next rollout",
+		name: "archive_then_next_rollout",
 		setup: func(f *fixture) {
 			g := groupDoc(lastDoc(1, ctrlRevA, record.OutcomeSucceeded))
 			g.Rerun, g.Cancel = true, true
@@ -825,7 +856,8 @@ var reconcilerCases = []struct {
 		},
 	},
 	{
-		name: "archive interrupted between its steps, with a rerun requested since",
+		// Archive interrupted between its steps, with a rerun requested since.
+		name: "archive_interrupted_with_rerun",
 		setup: func(f *fixture) {
 			g := groupDoc(lastDoc(2, revA, record.OutcomeFailed))
 			g.Rerun = true
@@ -842,7 +874,8 @@ var reconcilerCases = []struct {
 		},
 	},
 	{
-		name: "supersede, and a cancel that is cleared in another group",
+		// Supersede, and a cancel that is cleared in another group.
+		name: "supersede_and_cancel_cleared_elsewhere",
 		setup: func(f *fixture) {
 			f.group(poolKey, groupDoc(nil))
 			f.rollout(poolKey, 1, rolloutDoc(revA))
@@ -864,7 +897,7 @@ var reconcilerCases = []struct {
 	},
 }
 
-func TestDecideRunsToFixpoint(t *testing.T) {
+func TestDecide_RunsToFixpoint(t *testing.T) {
 	for _, tc := range reconcilerCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -887,7 +920,7 @@ func TestDecideRunsToFixpoint(t *testing.T) {
 	}
 }
 
-func TestDecideSurvivesCrashes(t *testing.T) {
+func TestDecide_SurvivesCrashes(t *testing.T) {
 	for _, tc := range reconcilerCases {
 		t.Run(tc.name, func(t *testing.T) {
 			seed := func() *fake.Store {

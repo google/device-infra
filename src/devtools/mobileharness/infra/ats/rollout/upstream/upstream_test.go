@@ -165,11 +165,12 @@ func TestResolve(t *testing.T) {
 		wantCalls map[string]int
 	}{
 		{
-			name:    "no groups",
+			name:    "no_groups",
 			answers: answers{},
 		},
 		{
-			name:   "the controller's upstream is the build alone, a pool's has both config versions",
+			// The controller's upstream is the build alone, a pool's has both config versions.
+			name:   "controller_build_only_pools_with_configs",
 			groups: []view.Group{group(controller, "latest"), group("dda", "latest"), group("public_testing", "latest")},
 			answers: answers{
 				digests:  map[string]any{latest: digestA},
@@ -185,14 +186,16 @@ func TestResolve(t *testing.T) {
 			wantCalls: map[string]int{latest: 1, "tenant_config": 1, "dda_pool_config": 1, "public_testing_pool_config": 1},
 		},
 		{
-			name:      "a domain with only a controller reads no parameter",
+			// A domain with only a controller reads no parameter.
+			name:      "controller_only_reads_no_parameter",
 			groups:    []view.Group{group(controller, "latest")},
 			answers:   answers{digests: map[string]any{latest: digestA}},
 			want:      map[string]record.Revision{controller: {Build: image + "@" + digestA}},
 			wantCalls: map[string]int{latest: 1},
 		},
 		{
-			name:   "groups that follow different tags are resolved separately",
+			// Groups that follow different tags are resolved separately.
+			name:   "different_tags_resolved_separately",
 			groups: []view.Group{group(controller, "stable"), group("dda", "latest")},
 			answers: answers{
 				digests:  map[string]any{image + ":stable": digestA, latest: digestB},
@@ -205,7 +208,8 @@ func TestResolve(t *testing.T) {
 			wantCalls: map[string]int{image + ":stable": 1, latest: 1, "tenant_config": 1, "dda_pool_config": 1},
 		},
 		{
-			name:   "a failed digest lookup leaves unresolved the groups that follow that tag, and no other",
+			// A failed digest lookup leaves unresolved the groups that follow that tag, and no other.
+			name:   "digest_lookup_fails",
 			groups: []view.Group{group(controller, "stable"), group("dda", "latest"), group("public_testing", "stable")},
 			answers: answers{
 				digests:  map[string]any{image + ":stable": errRegistry, latest: digestB},
@@ -216,7 +220,8 @@ func TestResolve(t *testing.T) {
 			wantCalls: map[string]int{image + ":stable": 1, latest: 1, "tenant_config": 1, "dda_pool_config": 1, "public_testing_pool_config": 1},
 		},
 		{
-			name:   "a failed tenant config lookup leaves every pool unresolved, not the controller",
+			// A failed tenant config lookup leaves every pool unresolved, not the controller.
+			name:   "tenant_config_lookup_fails",
 			groups: []view.Group{group(controller, "latest"), group("dda", "latest"), group("public_testing", "latest")},
 			answers: answers{
 				digests:  map[string]any{latest: digestA},
@@ -227,7 +232,8 @@ func TestResolve(t *testing.T) {
 			wantCalls: map[string]int{latest: 1, "tenant_config": 1, "dda_pool_config": 1, "public_testing_pool_config": 1},
 		},
 		{
-			name:   "a failed pool config lookup leaves that pool unresolved: no upstream in part",
+			// A failed pool config lookup leaves that pool unresolved: no upstream in part.
+			name:   "pool_config_lookup_fails",
 			groups: []view.Group{group("dda", "latest"), group("public_testing", "latest")},
 			answers: answers{
 				digests:  map[string]any{latest: digestA},
@@ -238,7 +244,8 @@ func TestResolve(t *testing.T) {
 			wantCalls: map[string]int{latest: 1, "tenant_config": 1, "dda_pool_config": 1, "public_testing_pool_config": 1},
 		},
 		{
-			name:   "a lookup that returns nothing is a failure",
+			// A lookup that returns nothing is a failure.
+			name:   "empty_lookup_result_is_failure",
 			groups: []view.Group{group(controller, "stable"), group("dda", "latest"), group("public_testing", "latest")},
 			answers: answers{
 				digests:  map[string]any{image + ":stable": "", latest: digestA},
@@ -249,7 +256,8 @@ func TestResolve(t *testing.T) {
 			wantCalls: map[string]int{image + ":stable": 1, latest: 1, "tenant_config": 1, "dda_pool_config": 1, "public_testing_pool_config": 1},
 		},
 		{
-			name:   "a group with invalid records is left alone, and nothing is looked up for it",
+			// A group with invalid records is left alone, and nothing is looked up for it.
+			name:   "invalid_group_left_alone",
 			groups: []view.Group{invalidGroup(controller), group("dda", "latest"), invalidGroup("public_testing")},
 			answers: answers{
 				digests:  map[string]any{latest: digestA},
@@ -274,10 +282,10 @@ func TestResolve(t *testing.T) {
 	}
 }
 
-// TestResolveReplacesWhatAGroupHeldBefore resolves a domain whose groups
+// TestResolve_ReplacesStaleUpstream resolves a domain whose groups
 // already hold an upstream or an error: a valid group keeps neither, whatever
 // its lookups return.
-func TestResolveReplacesWhatAGroupHeldBefore(t *testing.T) {
+func TestResolve_ReplacesStaleUpstream(t *testing.T) {
 	stale := record.Revision{Build: image + "@" + digestB, TenantConfigVersion: "t0", PoolConfigVersion: "p0"}
 	failsNow := group(controller, "stable")
 	failsNow.Upstream = stale
@@ -301,7 +309,7 @@ func TestResolveReplacesWhatAGroupHeldBefore(t *testing.T) {
 		map[string]error{controller: errRegistry})
 }
 
-func TestResolveMakesEveryLookupAtTheSameTime(t *testing.T) {
+func TestResolve_LookupsRunConcurrently(t *testing.T) {
 	// Two digests, the tenant config, and two pool configs. Every lookup
 	// waits until all five have started, so a resolver that made them one
 	// after another would never finish.
@@ -337,7 +345,7 @@ func TestResolveMakesEveryLookupAtTheSameTime(t *testing.T) {
 	}, nil)
 }
 
-func TestResolveTimeoutBoundsTheWholeCall(t *testing.T) {
+func TestResolve_TimeoutBoundsWholeCall(t *testing.T) {
 	// No lookup ever returns on its own.
 	c := &calls{started: make(chan string, 16), release: make(chan struct{})}
 	r := newResolver(&answers{calls: c})
@@ -353,7 +361,7 @@ func TestResolveTimeoutBoundsTheWholeCall(t *testing.T) {
 	checkUpstreams(t, d, nil, map[string]error{controller: context.DeadlineExceeded, "dda": context.DeadlineExceeded})
 }
 
-func TestResolveWithADoneContext(t *testing.T) {
+func TestResolve_DoneContext(t *testing.T) {
 	c := &calls{started: make(chan string, 16), release: make(chan struct{})}
 	r := newResolver(&answers{calls: c})
 	d := domain(group(controller, "latest"), group("dda", "latest"))
