@@ -21,6 +21,7 @@ import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.connectivity.AndroidConnectivityUtil;
 import com.google.devtools.mobileharness.platform.android.connectivity.ConnectToWifiArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
@@ -90,7 +91,41 @@ public class NetworkConnector {
   public boolean connectToWifi(
       Device device, WifiConnectArgs connectArgs, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
-    String deviceId = device.getDeviceId();
+    return connectToWifi(
+        device.info(),
+        connectArgs,
+        log,
+        installArgs -> apkInstaller.installApkIfNotExist(device, installArgs, log));
+  }
+
+  /**
+   * Connects device to a WiFi network using {@link DeviceInfo}.
+   *
+   * @param deviceInfo the device info of the device that connects to given wifi
+   * @param connectArgs argument wrapper for connecting wifi
+   * @return {@code true} if device connects to given wifi successfully, or {@code false} if failed
+   *     connecting device to given wifi, or it's not a MH managed device
+   * @throws MobileHarnessException if logFailuresOnly is {@code false} and it failed connecting to
+   *     wifi, or failed to get wifiutil apk path, or failed to install wifiutil on device
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  @CanIgnoreReturnValue
+  public boolean connectToWifi(DeviceInfo deviceInfo, WifiConnectArgs connectArgs)
+      throws MobileHarnessException, InterruptedException {
+    return connectToWifi(
+        deviceInfo,
+        connectArgs,
+        /* log= */ null,
+        installArgs -> apkInstaller.installApkIfNotExist(deviceInfo, installArgs));
+  }
+
+  private boolean connectToWifi(
+      DeviceInfo deviceInfo,
+      WifiConnectArgs connectArgs,
+      @Nullable LogCollector<?> log,
+      WifiUtilInstaller wifiUtilInstaller)
+      throws MobileHarnessException, InterruptedException {
+    String deviceId = deviceInfo.deviceId().controlId();
     if (Flags.disableWifiUtilFunc.getNonNull()) {
       SharedLogUtil.logMsg(
           logger,
@@ -147,10 +182,8 @@ public class NetworkConnector {
     String wifiUtilApkPath;
     try {
       wifiUtilApkPath = wifiUtil.getWifiUtilApkPath();
-      apkInstaller.installApkIfNotExist(
-          device,
-          ApkInstallArgs.builder().setApkPath(wifiUtilApkPath).setGrantPermissions(true).build(),
-          log);
+      wifiUtilInstaller.install(
+          ApkInstallArgs.builder().addApkPaths(wifiUtilApkPath).setGrantPermissions(true).build());
     } catch (MobileHarnessException e) {
       String msg =
           String.format("Failed installing WifiUtil on device %s:%n%s", deviceId, e.getMessage());
@@ -200,7 +233,7 @@ public class NetworkConnector {
       }
       if (retryNum > 0) {
         try {
-          connectivityUtil.reEnableWifi(device.getDeviceId(), log);
+          connectivityUtil.reEnableWifi(deviceId, log);
         } catch (MobileHarnessException e) {
           connectWifiException = e;
         }
@@ -219,5 +252,10 @@ public class NetworkConnector {
       }
     }
     return false;
+  }
+
+  @FunctionalInterface
+  private interface WifiUtilInstaller {
+    void install(ApkInstallArgs installArgs) throws MobileHarnessException, InterruptedException;
   }
 }
