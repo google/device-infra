@@ -23,6 +23,13 @@
   overflow: hidden;
   background: #fff;
   flex-shrink: 0;
+  transition: border-color 0.2s cubic-bezier(0.2, 0, 0, 1);
+
+  &.focused {
+    border-color: #0b57d0;
+    outline: 2px solid rgba(11, 87, 208, 0.24);
+    outline-offset: -2px;
+  }
 }
 
 .rt-group-row {
@@ -53,7 +60,7 @@
   gap: 12px;
   flex: 1;
   min-width: 0;
-  min-height: 56px;
+  min-height: 52px;
   padding: 8px 16px;
   border: none;
   cursor: pointer;
@@ -245,7 +252,7 @@
 .rt-group-body {
   padding: 0;
   background: #fff;
-  max-height: 40vh;
+  max-height: 46vh;
   display: flex;
   flex-direction: column;
 }
@@ -344,6 +351,8 @@
 
   tbody tr {
     height: 32px;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 36px;
   }
 
   tbody td {
@@ -396,6 +405,11 @@
   padding: 16px;
   font-size: 0.875rem;
   color: #5f6368;
+}
+
+.rt-group-loading {
+  min-height: 40vh;
+  box-sizing: border-box;
 }
 
 .rt-group-error-msg {

@@ -1,4 +1,4 @@
-<section class="rt-group">
+<section class="rt-group" [class.focused]="isFocused()">
   @let isGroupOpen = isOpen();
   @let currentEntity = store.entity();
   @let groupData = group();
@@ -9,7 +9,7 @@
       type="button"
       class="rt-group-head"
       [attr.aria-expanded]="isGroupOpen"
-      (click)="store.toggleGroup(groupData.groupId)"
+      (click)="onToggleGroup()"
     >
       <mat-icon class="material-symbols-outlined rt-caret-icon">
         {{ isGroupOpen ? 'expand_more' : 'chevron_right' }}

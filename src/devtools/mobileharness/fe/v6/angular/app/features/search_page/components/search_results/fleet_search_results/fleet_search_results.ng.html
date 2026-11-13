@@ -419,17 +419,32 @@
   <!-- Shared Utilization Legend Fragment -->
   <ng-template #utilizationLegend>
     <div class="rt-util-key">
-      <span class="rt-util-key-item">
+      <span
+        class="rt-util-key-item"
+        tabindex="0"
+        [appKeyDescriptionTooltip]="utilizationBusyTooltip"
+        [attr.aria-label]="utilizationBusyTooltip"
+      >
         <span class="legend-dot color-busy"></span>
         <span class="rt-legend-label-full">In Service (BUSY)</span>
         <span class="rt-legend-label-short">Busy</span>
       </span>
-      <span class="rt-util-key-item">
+      <span
+        class="rt-util-key-item"
+        tabindex="0"
+        [appKeyDescriptionTooltip]="utilizationIdleTooltip"
+        [attr.aria-label]="utilizationIdleTooltip"
+      >
         <span class="legend-dot color-idle"></span>
         <span class="rt-legend-label-full">In Service (IDLE)</span>
         <span class="rt-legend-label-short">Idle</span>
       </span>
-      <span class="rt-util-key-item">
+      <span
+        class="rt-util-key-item"
+        tabindex="0"
+        [appKeyDescriptionTooltip]="utilizationOthersTooltip"
+        [attr.aria-label]="utilizationOthersTooltip"
+      >
         <span class="legend-dot color-others"></span>
         <span class="rt-legend-label-full">Others</span>
         <span class="rt-legend-label-short">Others</span>
