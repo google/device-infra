@@ -352,6 +352,13 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     if (logcatEvents.isEmpty()) {
       return;
     }
+    int maxEntries =
+        spec != null && spec.hasMaxDropboxEntries()
+            ? spec.getMaxDropboxEntries()
+            : DropboxExtractor.DEFAULT_MAX_ENTRIES;
+    if (maxEntries <= 0) {
+      return;
+    }
     var tagsBuilder = ImmutableSet.<DropboxTag>builder();
     var packagesToScanBuilder = ImmutableSet.<String>builder();
     for (var event : logcatEvents) {
@@ -381,7 +388,8 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
         packagesToScan,
         tags,
         deviceTimeOnStart,
-        getDecoratorOutputsDir(testInfo));
+        getDecoratorOutputsDir(testInfo),
+        maxEntries);
   }
 
   private void checkForCrashDialog(TestInfo testInfo, boolean throwOnCrashDialogDetected)

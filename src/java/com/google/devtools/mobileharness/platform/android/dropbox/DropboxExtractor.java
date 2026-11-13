@@ -27,11 +27,13 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import javax.inject.Inject;
 
 /** Class to extract dropbox entries from the device. */
 public class DropboxExtractor {
+  public static final int DEFAULT_MAX_ENTRIES = 10;
   private static final Duration DUMPSYS_COMMAND_TIMEOUT = Duration.ofSeconds(30);
 
   private final Adb adb;
@@ -44,29 +46,38 @@ public class DropboxExtractor {
   }
 
   /**
-   * Extract dropbox entries generated on the device.
+   * Extract up to {@code maxEntries} dropbox entries generated on the device.
    *
    * @param deviceId UDID of the device
    * @param packagestoMonitor list of packages which generated dropbox entries
    * @param tags list of dropbox tags to scan for
+   * @param minimumTimestamp look for entries generated at or after this time
    * @param outputDir directory on the host to write the dropbox entries
-   * @param minimumTimestamp look for entries generated only after this time.
+   * @param maxEntries maximum number of matching dropbox entries to write
    */
   public void extract(
       String deviceId,
       ImmutableSet<String> packagestoMonitor,
       ImmutableSet<DropboxTag> tags,
       LocalDateTime minimumTimestamp,
-      Path outputDir)
+      Path outputDir,
+      int maxEntries)
       throws InterruptedException, MobileHarnessException {
+    if (maxEntries <= 0 || packagestoMonitor.isEmpty()) {
+      return;
+    }
+    // Dropbox entry headers only carry second-level precision (yyyy-MM-dd HH:mm:ss), so truncate
+    // `minimumTimestamp` to whole seconds to avoid dropping crashes from the starting second.
+    LocalDateTime minimumTimestampSeconds = minimumTimestamp.truncatedTo(ChronoUnit.SECONDS);
     var entriesBuilder = ImmutableList.<DropboxEntry>builder();
     for (var tag : tags) {
       entriesBuilder.addAll(extractForTag(deviceId, tag));
     }
     var filteredEntries =
         entriesBuilder.build().stream()
-            .filter(entry -> entry.timestamp().isAfter(minimumTimestamp))
+            .filter(entry -> !entry.timestamp().isBefore(minimumTimestampSeconds))
             .filter(entry -> packagestoMonitor.contains(entry.packageName()))
+            .limit(maxEntries)
             .collect(toImmutableList());
 
     for (var i = 0; i < filteredEntries.size(); i++) {

@@ -20,6 +20,7 @@ import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
@@ -266,7 +267,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
                 DropboxTag.DATA_APP_CRASH,
                 DropboxTag.SYSTEM_APP_CRASH),
             LocalDateTime.of(2025, 1, 1, 10, 0, 0),
-            decoratorOutputDir);
+            decoratorOutputDir,
+            DropboxExtractor.DEFAULT_MAX_ENTRIES);
   }
 
   @Test
@@ -1083,6 +1085,87 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     Path reportPath = decoratorOutputDir.resolve("logcat_monitoring_report.proto");
     assertThat(Files.exists(reportPath)).isFalse();
+  }
+
+  @Test
+  public void run_zeroMaxDropboxEntries_skipsDropboxExtraction() throws Exception {
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app",
+                        1,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "crash")));
+    when(jobInfo.combinedSpec(any()))
+        .thenReturn(
+            AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+                .addReportAsFailurePackages("com.test.app")
+                .setMaxDropboxEntries(0)
+                .build());
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    verify(dropboxExtractor, never()).extract(any(), any(), any(), any(), any(), anyInt());
+  }
+
+  @Test
+  public void run_customPositiveMaxDropboxEntries_forwardsConfiguredLimit() throws Exception {
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app",
+                        1,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "crash")));
+    when(jobInfo.combinedSpec(any()))
+        .thenReturn(
+            AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+                .addReportAsFailurePackages("com.test.app")
+                .setMaxDropboxEntries(3)
+                .build());
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    verify(dropboxExtractor)
+        .extract(
+            "deviceId",
+            ImmutableSet.of("com.test.app"),
+            ImmutableSet.of(DropboxTag.DATA_APP_CRASH, DropboxTag.SYSTEM_APP_CRASH),
+            LocalDateTime.of(2025, 1, 30, 10, 15, 20),
+            decoratorOutputDir,
+            3);
   }
 
   private static void assertTestIssueFinding(
