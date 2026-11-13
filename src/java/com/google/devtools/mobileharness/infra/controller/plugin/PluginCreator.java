@@ -19,10 +19,20 @@ package com.google.devtools.mobileharness.infra.controller.plugin;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheStats;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hashing;
+import com.google.common.io.MoreFiles;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.plugin.loader.PluginInstantiator;
@@ -51,14 +61,25 @@ import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -86,6 +107,27 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class PluginCreator implements AutoCloseable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final int MAX_CACHED_JARS = 512;
+
+  private static final Cache<FileStatKey, Optional<HashCode>> FILE_HASH_CACHE =
+      CacheBuilder.newBuilder().maximumSize(MAX_CACHED_JARS).build();
+
+  private static final Cache<JarContentKey, ScannedJar> SCANNED_JAR_CACHE =
+      CacheBuilder.newBuilder().maximumSize(MAX_CACHED_JARS).recordStats().build();
+
+  private record FileStatKey(
+      Object fileKeyOrPath, long size, FileTime lastModifiedTime, FileTime creationTime) {}
+
+  private record JarContentKey(long size, HashCode sha256) {}
+
+  private record JarClasses(
+      ImmutableList<String> pluginModuleClassNames, ImmutableList<String> pluginClassNames) {}
+
+  private record ScannedJar(
+      JarClasses primaryJarClasses,
+      ImmutableMap<URI, JarClasses> classesByElementUri,
+      boolean cacheable) {}
 
   /** The factory to create instance. */
   public interface Factory {
@@ -143,7 +185,7 @@ public class PluginCreator implements AutoCloseable {
   /** The scan result of the plugin jars. */
   @GuardedBy("lock")
   @Nullable
-  private ScanResult scanResult;
+  private Map<URI, JarClasses> scanResult;
 
   /**
    * Creates a plugin loader.
@@ -198,14 +240,7 @@ public class PluginCreator implements AutoCloseable {
       isLoaded = true;
       List<URL> jarUrls = new ArrayList<>();
       for (URI uri : jarUris) {
-        try {
-          jarUrls.add(uri.toURL());
-        } catch (MalformedURLException e) {
-          throw new MobileHarnessException(
-              BasicErrorId.PLUGIN_LOADER_FAILED_TO_GET_JAR_URL,
-              String.format("Failed to get URL of JAR [%s]", uri),
-              e);
-        }
+        jarUrls.add(toJarUrl(uri));
       }
 
       logInfo("Loading plugins from jars %s", jarUrls);
@@ -214,10 +249,7 @@ public class PluginCreator implements AutoCloseable {
               jarUrls, getClass().getClassLoader(), forceLoadFromJarClassRegex);
       Set<Class<? extends Module>> moduleClasses = getPluginModuleClasses(jarUrls);
       Set<Class<?>> classes = getPluginClasses(jarUrls);
-      if (scanResult != null) { // Close the ScanResult immediately to save memory.
-        scanResult.close();
-        scanResult = null;
-      }
+      scanResult = null;
       if (classes.isEmpty()) {
         logInfo("No plugin is loaded");
         return false;
@@ -254,10 +286,7 @@ public class PluginCreator implements AutoCloseable {
   public void close() {
     synchronized (lock) {
       isClosed = true;
-      if (scanResult != null) {
-        scanResult.close();
-        scanResult = null;
-      }
+      scanResult = null;
       if (classLoader != null) {
         clearEventBusSubscriberCache(classLoader);
         try {
@@ -327,23 +356,204 @@ public class PluginCreator implements AutoCloseable {
         logInfo("Plugin creator has already scanned all jars: [%s]", jarUrls);
         return;
       }
-      try {
-        scanResult =
-            new ClassGraph()
-                .overrideClassLoaders(classLoader)
-                .ignoreParentClassLoaders()
-                .rejectPackages("com.google.protos")
-                .enableAnnotationInfo() // module scanning is enabled by default
-                .ignoreClassVisibility()
-                .scan();
-      } catch (Exception e) {
-        close();
-        throw new MobileHarnessException(
-            BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
-            String.format("Error scanning class graph in plugin jar [%s]", jarUrls),
-            e);
+      Map<URI, JarClasses> scannedByJar = new LinkedHashMap<>();
+      Set<String> seenModuleClasses = new HashSet<>();
+      Set<String> seenPluginClasses = new HashSet<>();
+      for (URI jarUri : jarUris.stream().distinct().collect(toImmutableList())) {
+        ScannedJar scanned = getOrScanJar(jarUri, jarUrls);
+        Map<URI, JarClasses> rawEntries =
+            scanned.cacheable()
+                ? ImmutableMap.of(jarUri, scanned.primaryJarClasses())
+                : scanned.classesByElementUri();
+        // Mask duplicate @PluginModule and @Plugin classes across JARs so annotated classes
+        // shadowed by an earlier JAR do not trigger per-JAR fallback in later JARs. Unannotated
+        // shadowing classes in earlier JARs are still resolved by Class.forName via classLoader and
+        // skipped by AnnotatedPluginClassProvider when the annotation is absent.
+        for (var entry : rawEntries.entrySet()) {
+          JarClasses jarClasses = entry.getValue();
+          scannedByJar.merge(
+              entry.getKey(),
+              new JarClasses(
+                  jarClasses.pluginModuleClassNames().stream()
+                      .filter(seenModuleClasses::add)
+                      .collect(toImmutableList()),
+                  jarClasses.pluginClassNames().stream()
+                      .filter(seenPluginClasses::add)
+                      .collect(toImmutableList())),
+              (existing, added) ->
+                  new JarClasses(
+                      ImmutableList.<String>builder()
+                          .addAll(existing.pluginModuleClassNames())
+                          .addAll(added.pluginModuleClassNames())
+                          .build(),
+                      ImmutableList.<String>builder()
+                          .addAll(existing.pluginClassNames())
+                          .addAll(added.pluginClassNames())
+                          .build()));
+        }
       }
+      scanResult = scannedByJar;
     }
+  }
+
+  private ScannedJar getOrScanJar(URI jarUri, List<URL> jarUrls) throws MobileHarnessException {
+    Optional<JarContentKey> contentKey = getJarContentKey(jarUri);
+    try {
+      if (contentKey.isEmpty()) {
+        return scanSingleJar(jarUri, /* hasContentKey= */ false);
+      }
+      JarContentKey key = contentKey.get();
+      boolean[] ranOnCurrentThread = {false};
+      ScannedJar scanned;
+      try {
+        scanned =
+            SCANNED_JAR_CACHE.get(
+                key,
+                () -> {
+                  ranOnCurrentThread[0] = true;
+                  return scanSingleJar(jarUri, /* hasContentKey= */ true);
+                });
+      } catch (ExecutionException | UncheckedExecutionException e) {
+        if (!ranOnCurrentThread[0] && !Thread.currentThread().isInterrupted()) {
+          scanned = scanSingleJar(jarUri, /* hasContentKey= */ true);
+          if (scanned.cacheable()) {
+            SCANNED_JAR_CACHE.put(key, scanned);
+          }
+          return scanned;
+        }
+        throw e;
+      }
+      if (!scanned.cacheable()) {
+        SCANNED_JAR_CACHE.asMap().remove(key, scanned);
+        if (!ranOnCurrentThread[0]) {
+          if (Thread.currentThread().isInterrupted()) {
+            throw new InterruptedException("Plugin jar scan was interrupted");
+          }
+          scanned = scanSingleJar(jarUri, /* hasContentKey= */ true);
+          if (scanned.cacheable()) {
+            SCANNED_JAR_CACHE.put(key, scanned);
+          }
+        }
+      }
+      return scanned;
+    } catch (Exception e) {
+      close();
+      Throwable cause =
+          (e instanceof ExecutionException || e instanceof UncheckedExecutionException)
+                  && e.getCause() != null
+              ? e.getCause()
+              : e;
+      throw new MobileHarnessException(
+          BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
+          String.format("Error scanning class graph in plugin jar [%s]", jarUrls),
+          cause);
+    }
+  }
+
+  private static ScannedJar scanSingleJar(URI jarUri, boolean hasContentKey) {
+    try (ScanResult result =
+        new ClassGraph()
+            .overrideClasspath(jarUri)
+            .ignoreParentClassLoaders()
+            .disableNestedJarScanning()
+            .rejectPackages("com.google.protos")
+            .enableAnnotationInfo() // module scanning is enabled by default
+            .ignoreClassVisibility()
+            .scan()) {
+      boolean cacheable =
+          hasContentKey
+              && result.getClasspathURIs().stream()
+                      .filter(uri -> !uri.toString().contains("!/"))
+                      .count()
+                  == 1;
+      JarClasses primaryJarClasses =
+          new JarClasses(
+              ImmutableList.copyOf(
+                  result.getClassesWithAnnotation(PluginModule.class).directOnly().getNames()),
+              ImmutableList.copyOf(
+                  result.getClassesWithAnnotation(Plugin.class).directOnly().getNames()));
+      if (cacheable) {
+        return new ScannedJar(primaryJarClasses, ImmutableMap.of(), /* cacheable= */ true);
+      }
+      Map<URI, ImmutableList<String>> modulesByUri =
+          result.getClassesWithAnnotation(PluginModule.class).directOnly().stream()
+              .collect(
+                  groupingBy(
+                      ClassInfo::getClasspathElementURI,
+                      LinkedHashMap::new,
+                      mapping(ClassInfo::getName, toImmutableList())));
+      Map<URI, ImmutableList<String>> pluginsByUri =
+          result.getClassesWithAnnotation(Plugin.class).directOnly().stream()
+              .collect(
+                  groupingBy(
+                      ClassInfo::getClasspathElementURI,
+                      LinkedHashMap::new,
+                      mapping(ClassInfo::getName, toImmutableList())));
+      Set<URI> elementUris = new LinkedHashSet<>(modulesByUri.keySet());
+      elementUris.addAll(pluginsByUri.keySet());
+      ImmutableMap.Builder<URI, JarClasses> byUriBuilder = ImmutableMap.builder();
+      for (URI elementUri : elementUris) {
+        byUriBuilder.put(
+            elementUri,
+            new JarClasses(
+                modulesByUri.getOrDefault(elementUri, ImmutableList.of()),
+                pluginsByUri.getOrDefault(elementUri, ImmutableList.of())));
+      }
+      return new ScannedJar(primaryJarClasses, byUriBuilder.buildOrThrow(), /* cacheable= */ false);
+    }
+  }
+
+  private static boolean hasManifestClassPath(Path jarPath) throws IOException {
+    try (JarFile jarFile = new JarFile(jarPath.toFile(), /* verify= */ false)) {
+      Manifest manifest = jarFile.getManifest();
+      return manifest != null
+          && manifest.getMainAttributes().getValue(Attributes.Name.CLASS_PATH) != null;
+    }
+  }
+
+  private static Optional<JarContentKey> getJarContentKey(URI jarUri) {
+    if (!Ascii.equalsIgnoreCase("file", jarUri.getScheme())) {
+      return Optional.empty();
+    }
+    try {
+      Path path = Path.of(jarUri);
+      BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class);
+      if (!attributes.isRegularFile()) {
+        return Optional.empty();
+      }
+      Object fileKey = attributes.fileKey();
+      FileStatKey statKey =
+          new FileStatKey(
+              fileKey != null ? fileKey : path,
+              attributes.size(),
+              attributes.lastModifiedTime(),
+              attributes.creationTime());
+      Optional<HashCode> sha256 =
+          FILE_HASH_CACHE.get(
+              statKey,
+              () ->
+                  hasManifestClassPath(path)
+                      ? Optional.empty()
+                      : Optional.of(MoreFiles.asByteSource(path).hash(Hashing.sha256())));
+      return sha256.map(hash -> new JarContentKey(attributes.size(), hash));
+    } catch (IOException
+        | IllegalArgumentException
+        | ExecutionException
+        | UncheckedExecutionException e) {
+      logger.atWarning().withCause(e).log("Failed to fingerprint plugin jar [%s]", jarUri);
+      return Optional.empty();
+    }
+  }
+
+  @VisibleForTesting
+  static CacheStats getScannedJarCacheStats() {
+    return SCANNED_JAR_CACHE.stats();
+  }
+
+  @VisibleForTesting
+  static void invalidateScannedJarCache() {
+    FILE_HASH_CACHE.invalidateAll();
+    SCANNED_JAR_CACHE.invalidateAll();
   }
 
   /**
@@ -364,21 +574,24 @@ public class PluginCreator implements AutoCloseable {
           logInfo("Failed to scan the jars: [%s]", jarUrls);
           return moduleClasses;
         }
-        // Group class metadata from ScanResult by their originating JAR URL
-        Map<URL, List<ClassInfo>> classesByJar =
-            scanResult.getClassesWithAnnotation(PluginModule.class).stream()
-                .collect(groupingBy(ClassInfo::getClasspathElementURL));
         // Evaluate the fallback rules independently for each JAR.
-        for (var entry : classesByJar.entrySet()) {
-          final URL jarUrl = entry.getKey();
+        for (var entry : scanResult.entrySet()) {
+          final ImmutableList<String> candidateNames = entry.getValue().pluginModuleClassNames();
+          if (candidateNames.isEmpty()) {
+            continue;
+          }
+          final URL jarUrl = toJarUrl(entry.getKey());
           logInfo("Searching plugin module classes in jar [%s]", jarUrl);
-          final List<ClassInfo> classInfos = entry.getValue();
           PluginModuleClassProvider moduleClassProvider =
               new RetryPluginModuleClassProvider(
                   new AnnotatedPluginModuleClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
+                      candidateNames, classLoader, log, /* warnUnmatchedTypes= */ true, pluginType),
                   new AnnotatedPluginModuleClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
+                      candidateNames,
+                      classLoader,
+                      log,
+                      /* warnUnmatchedTypes= */ false,
+                      PluginType.UNSPECIFIED));
           Set<Class<? extends Module>> newModuleClasses;
           try {
             newModuleClasses = moduleClassProvider.getPluginModuleClasses();
@@ -420,21 +633,24 @@ public class PluginCreator implements AutoCloseable {
           logInfo("Failed to scan the jars: [%s]", jarUrls);
           return classes;
         }
-        // Group class metadata from ScanResult by their originating JAR URL
-        Map<URL, List<ClassInfo>> classesByJar =
-            scanResult.getClassesWithAnnotation(Plugin.class).stream()
-                .collect(groupingBy(ClassInfo::getClasspathElementURL));
         // Evaluate the fallback rules independently for each JAR.
-        for (var entry : classesByJar.entrySet()) {
-          final URL jarUrl = entry.getKey();
+        for (var entry : scanResult.entrySet()) {
+          final ImmutableList<String> candidateNames = entry.getValue().pluginClassNames();
+          if (candidateNames.isEmpty()) {
+            continue;
+          }
+          final URL jarUrl = toJarUrl(entry.getKey());
           logInfo("Searching plugin classes in jar [%s]", jarUrl);
-          final List<ClassInfo> classInfos = entry.getValue();
           PluginClassProvider classProvider =
               new RetryPluginClassProvider(
                   new AnnotatedPluginClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
+                      candidateNames, classLoader, log, /* warnUnmatchedTypes= */ true, pluginType),
                   new AnnotatedPluginClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
+                      candidateNames,
+                      classLoader,
+                      log,
+                      /* warnUnmatchedTypes= */ false,
+                      PluginType.UNSPECIFIED));
           Set<Class<?>> newClasses;
           try {
             newClasses = classProvider.getPluginClasses();
@@ -460,6 +676,17 @@ public class PluginCreator implements AutoCloseable {
         logInfo("Get plugin classes %s", classes);
       }
       return classes;
+    }
+  }
+
+  private static URL toJarUrl(URI uri) throws MobileHarnessException {
+    try {
+      return uri.toURL();
+    } catch (MalformedURLException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.PLUGIN_LOADER_FAILED_TO_GET_JAR_URL,
+          String.format("Failed to get URL of JAR [%s]", uri),
+          e);
     }
   }
 

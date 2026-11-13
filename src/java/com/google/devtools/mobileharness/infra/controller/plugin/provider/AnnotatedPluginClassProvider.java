@@ -16,8 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.controller.plugin.provider;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -26,7 +24,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
-import io.github.classgraph.ClassInfo;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -38,7 +35,8 @@ public class AnnotatedPluginClassProvider implements PluginClassProvider {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final ImmutableList<ClassInfo> classInfos;
+  private final ImmutableList<String> classNames;
+  private final ClassLoader classLoader;
   @Nullable private final LogCollector<?> log;
   private final boolean warnUnmatchedTypes;
   private final ImmutableSet<PluginType> pluginTypes;
@@ -47,11 +45,13 @@ public class AnnotatedPluginClassProvider implements PluginClassProvider {
    * @param pluginTypes The types of plugin to allow.
    */
   public AnnotatedPluginClassProvider(
-      List<ClassInfo> classInfos,
+      List<String> classNames,
+      ClassLoader classLoader,
       @Nullable LogCollector<?> log,
       boolean warnUnmatchedTypes,
       PluginType... pluginTypes) {
-    this.classInfos = ImmutableList.copyOf(classInfos);
+    this.classNames = ImmutableList.copyOf(classNames);
+    this.classLoader = classLoader;
     this.log = log;
     this.warnUnmatchedTypes = warnUnmatchedTypes;
     this.pluginTypes = ImmutableSet.copyOf(pluginTypes);
@@ -59,20 +59,32 @@ public class AnnotatedPluginClassProvider implements PluginClassProvider {
 
   @Override
   public Set<Class<?>> getPluginClasses() throws MobileHarnessException {
+    ImmutableSet.Builder<Class<?>> result = ImmutableSet.builder();
+    for (String className : classNames) {
+      Class<?> aClass =
+          loadClass(className, classLoader, BasicErrorId.PLUGIN_LOADER_FAILED_TO_LOAD_PLUGIN_CLASS);
+      if (checkPluginType(
+          aClass,
+          clazz -> {
+            Plugin plugin = clazz.getDeclaredAnnotation(Plugin.class);
+            return plugin == null ? null : plugin.type();
+          },
+          log,
+          warnUnmatchedTypes,
+          pluginTypes)) {
+        result.add(aClass);
+      }
+    }
+    return result.build();
+  }
+
+  static Class<?> loadClass(String className, ClassLoader classLoader, BasicErrorId errorId)
+      throws MobileHarnessException {
     try {
-      return classInfos.stream()
-          .map(classInfo -> classInfo.loadClass(/* ignoreExceptions= */ false))
-          .filter(aClass ->
-              checkPluginType(
-                  aClass,
-                  clazz -> clazz.getDeclaredAnnotation(Plugin.class).type(),
-                  log,
-                  warnUnmatchedTypes,
-                  pluginTypes))
-          .collect(toImmutableSet());
-    } catch (IllegalArgumentException e) {
+      return Class.forName(className, /* initialize= */ false, classLoader);
+    } catch (ClassNotFoundException | LinkageError e) {
       throw new MobileHarnessException(
-          BasicErrorId.PLUGIN_LOADER_FAILED_TO_LOAD_PLUGIN_CLASS, "Fail to load plugin class.", e);
+          errorId, String.format("Failed to load class [%s].", className), e);
     }
   }
 
@@ -83,6 +95,9 @@ public class AnnotatedPluginClassProvider implements PluginClassProvider {
       boolean warnUnmatchedTypes,
       ImmutableSet<PluginType> pluginTypes) {
     PluginType pluginType = pluginTypeGetter.apply(aClass);
+    if (pluginType == null) {
+      return false;
+    }
     if (pluginTypes.contains(pluginType)) {
       return true;
     } else {
