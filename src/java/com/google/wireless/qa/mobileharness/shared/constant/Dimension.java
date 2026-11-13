@@ -492,6 +492,12 @@ public final class Dimension {
     /** Dimension value prefix which indicates it is a regular express. */
     public static final String PREFIX_REGEX = "regex:";
 
+    /**
+     * Dimension value prefix which indicates it is a regular expression that the device dimension
+     * value must not fully match.
+     */
+    public static final String PREFIX_NOT_REGEX = "not_regex:";
+
     /** Dimension value all for device dimension. */
     public static final String ALL_VALUE_FOR_DEVICE = "*";
 

@@ -104,7 +104,8 @@ public final class DeviceFilter {
    *
    * <ol>
    *   <li>If the value is "<code>*</code>", return "<code>.*</code>";
-   *   <li>Omit the value "<code>exclude</code>" because it is not supported by device query API;
+   *   <li>Omit the value "<code>exclude</code>" and "<code>not_regex:</code>" values because they
+   *       are not supported by device query API;
    *   <li>Remove the "<code>regex:</code>" prefix.
    * </ol>
    */
@@ -119,6 +120,8 @@ public final class DeviceFilter {
       default -> {
         if (jobDimensionValue.startsWith(Value.PREFIX_REGEX)) {
           return Optional.of(jobDimensionValue.substring(Value.PREFIX_REGEX.length()));
+        } else if (jobDimensionValue.startsWith(Value.PREFIX_NOT_REGEX)) {
+          return Optional.empty();
         } else {
           return Optional.of(jobDimensionValue);
         }

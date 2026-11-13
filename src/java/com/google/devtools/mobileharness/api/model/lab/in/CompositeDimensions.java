@@ -118,6 +118,9 @@ public class CompositeDimensions {
             || (jobDimensionValue.startsWith(Dimension.Value.PREFIX_REGEX)
                 && deviceDimensionValue.matches(
                     jobDimensionValue.substring(Dimension.Value.PREFIX_REGEX.length())))
+            || (jobDimensionValue.startsWith(Dimension.Value.PREFIX_NOT_REGEX)
+                && !deviceDimensionValue.matches(
+                    jobDimensionValue.substring(Dimension.Value.PREFIX_NOT_REGEX.length())))
             || ((jobDimensionValue.startsWith(ValueComparator.PREFIX_INT_COMPARISON)
                     || jobDimensionValue.startsWith(ValueComparator.PREFIX_STR_COMPARISON))
                 && ValueComparator.match(jobDimensionValue, deviceDimensionValue))) {
@@ -160,6 +163,9 @@ public class CompositeDimensions {
                 || (jobDimensionValue.startsWith(Dimension.Value.PREFIX_REGEX)
                     && deviceDimensionValue.matches(
                         jobDimensionValue.substring(Dimension.Value.PREFIX_REGEX.length())))
+                || (jobDimensionValue.startsWith(Dimension.Value.PREFIX_NOT_REGEX)
+                    && !deviceDimensionValue.matches(
+                        jobDimensionValue.substring(Dimension.Value.PREFIX_NOT_REGEX.length())))
                 || ((jobDimensionValue.startsWith(ValueComparator.PREFIX_INT_COMPARISON)
                         || jobDimensionValue.startsWith(ValueComparator.PREFIX_STR_COMPARISON))
                     && ValueComparator.match(jobDimensionValue, deviceDimensionValue));

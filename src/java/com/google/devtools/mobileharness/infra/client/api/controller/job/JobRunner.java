@@ -1532,7 +1532,8 @@ public class JobRunner implements Runnable {
     return jobInfo.dimensions().getAll().entrySet().stream()
         .filter(dimension ->
             dimension.getValue().matches(".*[*\\[\\]|].*")
-                && !dimension.getValue().startsWith("regex:"))
+                && !dimension.getValue().startsWith(Value.PREFIX_REGEX)
+                && !dimension.getValue().startsWith(Value.PREFIX_NOT_REGEX))
         .map(dimension ->
             String.format(
                 "Dimension %s's value %s may be a regex. If it's a regex,"
