@@ -167,9 +167,10 @@ public class AndroidDesktopOtaUpdateDecoratorTest {
     verify(androidAdbUtil).setProperty("device_id", OTA_DOWNGRADE_PROP, "1");
 
     // Verify cleanup commands were run
-    verify(adb).runShell("device_id", "update_engine_client --cancel");
-    verify(adb).runShell("device_id", "snapshotctl unmap-snapshots");
-    verify(adb).runShell("device_id", "snapshotctl delete-snapshots");
+    verify(adb).runShell("device_id", "su 0 update_engine_client --cancel");
+    verify(adb).runShell("device_id", "su 0 update_engine_client --reset_status");
+    verify(adb).runShell("device_id", "su 0 snapshotctl unmap-snapshots");
+    verify(adb).runShell("device_id", "su 0 snapshotctl delete-snapshots");
 
     // Verify OTA update command
     ArgumentCaptor<Command> cmdCaptor = ArgumentCaptor.forClass(Command.class);
@@ -213,9 +214,10 @@ public class AndroidDesktopOtaUpdateDecoratorTest {
     verify(androidAdbUtil).setProperty("device_id", OTA_DOWNGRADE_PROP, "1");
 
     // Verify cleanup commands were run
-    verify(adb).runShell("device_id", "update_engine_client --cancel");
-    verify(adb).runShell("device_id", "snapshotctl unmap-snapshots");
-    verify(adb).runShell("device_id", "snapshotctl delete-snapshots");
+    verify(adb).runShell("device_id", "su 0 update_engine_client --cancel");
+    verify(adb).runShell("device_id", "su 0 update_engine_client --reset_status");
+    verify(adb).runShell("device_id", "su 0 snapshotctl unmap-snapshots");
+    verify(adb).runShell("device_id", "su 0 snapshotctl delete-snapshots");
 
     // Verify OTA update command
     ArgumentCaptor<Command> cmdCaptor = ArgumentCaptor.forClass(Command.class);
@@ -281,9 +283,10 @@ public class AndroidDesktopOtaUpdateDecoratorTest {
     verify(androidAdbUtil).setProperty("device_id", OTA_DOWNGRADE_PROP, "1");
 
     // Verify cleanup commands were run
-    verify(adb).runShell("device_id", "update_engine_client --cancel");
-    verify(adb).runShell("device_id", "snapshotctl unmap-snapshots");
-    verify(adb).runShell("device_id", "snapshotctl delete-snapshots");
+    verify(adb).runShell("device_id", "su 0 update_engine_client --cancel");
+    verify(adb).runShell("device_id", "su 0 update_engine_client --reset_status");
+    verify(adb).runShell("device_id", "su 0 snapshotctl unmap-snapshots");
+    verify(adb).runShell("device_id", "su 0 snapshotctl delete-snapshots");
 
     // Verify OTA update command
     ArgumentCaptor<Command> cmdCaptor = ArgumentCaptor.forClass(Command.class);
@@ -473,6 +476,82 @@ public class AndroidDesktopOtaUpdateDecoratorTest {
 
     assertThat(e.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_DECORATOR_OTA_UPDATE_ERROR);
+    verify(adb, times(2)).runShell("device_id", "su 0 update_engine_client --reset_status");
+    verify(properties).add("needs_provision_repair", "true");
+    verify(decoratedDriver, never()).run(testInfo);
+  }
+
+  @Test
+  public void run_otaUpdateSuccessViaLogcatFallback() throws Exception {
+    mockSpec(
+        getDefaultTestSpecBuilder()
+            .setWipeUserData(true)
+            .setOtaTools(otaToolsZip.getAbsolutePath())
+            .setOtaPackage(otaPackage.getAbsolutePath())
+            .build());
+    when(cmdExecutor.run(any(Command.class))).thenReturn("INFO:root:Update took 201.981 seconds\n");
+    when(adb.runShell("device_id", "su 0 logcat -d -s update_engine:I update_engine_client:I"))
+        .thenReturn(
+            "10-30 10:11:11.000 I update_engine: Attempting to reset state from"
+                + " UPDATE_STATUS_IDLE to UpdateStatus::IDLE\n"
+                + "10-30 10:14:33.923 I update_engine: [INFO:update_attempter_android.cc(886)]"
+                + " Update successfully applied, waiting to reboot.\n");
+
+    decorator.run(testInfo);
+
+    verify(adb).runShell("device_id", "su 0 update_engine_client --reset_status");
+    verify(adb).runShell("device_id", "su 0 logcat -d -s update_engine:I update_engine_client:I");
+    verify(androidSystemStateUtil).reboot("device_id");
+    verify(decoratedDriver).run(testInfo);
+  }
+
+  @Test
+  public void run_otaUpdateFailsWhenLogcatMissingResetMarker_resetsStatus() throws Exception {
+    mockSpec(
+        getDefaultTestSpecBuilder()
+            .setWipeUserData(true)
+            .setOtaTools(otaToolsZip.getAbsolutePath())
+            .setOtaPackage(otaPackage.getAbsolutePath())
+            .build());
+    when(cmdExecutor.run(any(Command.class))).thenReturn("INFO:root:Update took 201.981 seconds\n");
+    when(adb.runShell("device_id", "su 0 logcat -d -s update_engine:I update_engine_client:I"))
+        .thenReturn(
+            "10-30 09:00:00.000 I update_engine: [INFO:update_attempter_android.cc(886)]"
+                + " Update successfully applied, waiting to reboot.\n");
+
+    MobileHarnessException e =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+
+    assertThat(e.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_DECORATOR_OTA_UPDATE_ERROR);
+    verify(adb).runShell("device_id", "su 0 logcat -d -s update_engine:I update_engine_client:I");
+    verify(adb, times(2)).runShell("device_id", "su 0 update_engine_client --reset_status");
+    verify(properties).add("needs_provision_repair", "true");
+    verify(decoratedDriver, never()).run(testInfo);
+  }
+
+  @Test
+  public void run_otaUpdateFailsWhenUpdateEngineClientErrorInStdout_resetsStatus()
+      throws Exception {
+    mockSpec(
+        getDefaultTestSpecBuilder()
+            .setWipeUserData(true)
+            .setOtaTools(otaToolsZip.getAbsolutePath())
+            .setOtaPackage(otaPackage.getAbsolutePath())
+            .build());
+    when(cmdExecutor.run(any(Command.class)))
+        .thenReturn(
+            "[ERROR:update_engine_client_android.cc(338)] Status(-8, EX_SERVICE_SPECIFIC): '66: An"
+                + " update already applied, waiting for reboot'\n");
+
+    MobileHarnessException e =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+
+    assertThat(e.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_DECORATOR_OTA_UPDATE_ERROR);
+    verify(adb, never())
+        .runShell("device_id", "su 0 logcat -d -s update_engine:I update_engine_client:I");
+    verify(adb, times(2)).runShell("device_id", "su 0 update_engine_client --reset_status");
     verify(properties).add("needs_provision_repair", "true");
     verify(decoratedDriver, never()).run(testInfo);
   }
@@ -491,9 +570,10 @@ public class AndroidDesktopOtaUpdateDecoratorTest {
     decorator.run(testInfo);
 
     // Verify cleanup commands were attempted
-    verify(adb).runShell("device_id", "update_engine_client --cancel");
-    verify(adb).runShell("device_id", "snapshotctl unmap-snapshots");
-    verify(adb).runShell("device_id", "snapshotctl delete-snapshots");
+    verify(adb).runShell("device_id", "su 0 update_engine_client --cancel");
+    verify(adb).runShell("device_id", "su 0 update_engine_client --reset_status");
+    verify(adb).runShell("device_id", "su 0 snapshotctl unmap-snapshots");
+    verify(adb).runShell("device_id", "su 0 snapshotctl delete-snapshots");
 
     // Verify OTA update command still ran
     verify(cmdExecutor).run(any(Command.class));

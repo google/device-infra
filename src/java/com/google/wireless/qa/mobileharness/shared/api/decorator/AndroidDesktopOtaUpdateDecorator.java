@@ -70,6 +70,10 @@ public class AndroidDesktopOtaUpdateDecorator extends SetupOnlyDecorator
       String.join(File.separator, "bin", "update_device");
   private static final String UPDATE_SUCCESS_OUTPUT =
       "onPayloadApplicationComplete(ErrorCode::kSuccess (0)";
+  private static final String UPDATE_ENGINE_SUCCESS_LOG =
+      "Update successfully applied, waiting to reboot";
+  private static final String UPDATE_ENGINE_ERROR_PREFIX = "ERROR:update_engine_client";
+  private static final String UPDATE_ENGINE_RESET_LOG = "Attempting to reset state";
   private static final Duration APPLY_OTA_PACKAGE_TIMEOUT = Duration.ofMinutes(25);
   private static final Duration WAIT_FOR_DEVICE_TIMEOUT = Duration.ofMinutes(10);
   private static final Duration CACHE_EXPIRATION_TIME = Duration.ofMinutes(15);
@@ -214,9 +218,10 @@ public class AndroidDesktopOtaUpdateDecorator extends SetupOnlyDecorator
     // Allow OTA downgrade since it can't be assumed that incoming builds are always newer
     androidAdbUtil.setProperty(device.getDeviceId(), OTA_DOWNGRADE_PROP, "1");
 
-    // cancel any in-progress update and unmap/delete snapshots
+    // Cancel any in-progress update, reset any pending UPDATED_NEED_REBOOT state, and
+    // unmap/delete snapshots before starting a new OTA update.
     try {
-      var unused = adb.runShell(device.getDeviceId(), "update_engine_client --cancel");
+      var unused = adb.runShell(device.getDeviceId(), "su 0 update_engine_client --cancel");
     } catch (MobileHarnessException e) {
       testInfo
           .log()
@@ -224,14 +229,15 @@ public class AndroidDesktopOtaUpdateDecorator extends SetupOnlyDecorator
           .alsoTo(logger)
           .log("Failed to cancel in-progress update: %s", e.getMessage());
     }
+    resetUpdateEngineStatus(testInfo, device.getDeviceId());
     // in case there are precreated snapshots
     try {
-      var unused = adb.runShell(device.getDeviceId(), "snapshotctl unmap-snapshots");
+      var unused = adb.runShell(device.getDeviceId(), "su 0 snapshotctl unmap-snapshots");
     } catch (MobileHarnessException e) {
       testInfo.log().atInfo().alsoTo(logger).log("Failed to unmap snapshots: %s", e.getMessage());
     }
     try {
-      var unused = adb.runShell(device.getDeviceId(), "snapshotctl delete-snapshots");
+      var unused = adb.runShell(device.getDeviceId(), "su 0 snapshotctl delete-snapshots");
     } catch (MobileHarnessException e) {
       testInfo.log().atInfo().alsoTo(logger).log("Failed to delete snapshots: %s", e.getMessage());
     }
@@ -260,18 +266,70 @@ public class AndroidDesktopOtaUpdateDecorator extends SetupOnlyDecorator
                   .redirectStderr(true)
                   .onStdout(does(logger.atInfo()::log)));
 
-      // Verify OTA update success
-      if (!cmdOut.contains(UPDATE_SUCCESS_OUTPUT)) {
+      // Verify OTA update success (with logcat fallback when update_engine_client does not emit
+      // INFO logs to stderr, e.g. b/582760113).
+      if (!cmdOut.contains(UPDATE_SUCCESS_OUTPUT)
+          && !isOtaAppliedInLogcat(testInfo, device.getDeviceId(), cmdOut)) {
+        resetUpdateEngineStatus(testInfo, device.getDeviceId());
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_DECORATOR_OTA_UPDATE_ERROR,
             "Failed to apply OTA update to Android Device.");
       }
     } catch (CommandException otaUpdateException) {
+      resetUpdateEngineStatus(testInfo, device.getDeviceId());
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_DECORATOR_OTA_UPDATE_ERROR,
           "Failed to apply OTA update to Android Device.",
           otaUpdateException);
     }
+  }
+
+  private void resetUpdateEngineStatus(TestInfo testInfo, String deviceId)
+      throws InterruptedException {
+    try {
+      var unused = adb.runShell(deviceId, "su 0 update_engine_client --reset_status");
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Failed to reset update_engine status: %s", e.getMessage());
+    }
+  }
+
+  private boolean isOtaAppliedInLogcat(TestInfo testInfo, String deviceId, String cmdOut)
+      throws InterruptedException {
+    if (cmdOut.contains(UPDATE_ENGINE_ERROR_PREFIX)) {
+      return false;
+    }
+    try {
+      String logcatOut =
+          adb.runShell(deviceId, "su 0 logcat -d -s update_engine:I update_engine_client:I");
+      if (logcatOut == null) {
+        return false;
+      }
+      int lastResetIdx = logcatOut.lastIndexOf(UPDATE_ENGINE_RESET_LOG);
+      if (lastResetIdx < 0) {
+        return false;
+      }
+      String currentAttemptLog = logcatOut.substring(lastResetIdx);
+      if (currentAttemptLog.contains(UPDATE_SUCCESS_OUTPUT)
+          || currentAttemptLog.contains(UPDATE_ENGINE_SUCCESS_LOG)) {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("Verified OTA update completion via device logcat fallback.");
+        return true;
+      }
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Failed to query logcat for OTA completion fallback: %s", e.getMessage());
+    }
+    return false;
   }
 
   /**
