@@ -59,10 +59,8 @@ public class Log implements LogCollector<Api> {
                   .map(c ->
                       data.getWithCauseStack()
                           ? Throwables.getStackTraceAsString(c)
-                          : (c instanceof MobileHarnessException
-                              ? ((MobileHarnessException) c).getErrorId().name()
-                                  + ": "
-                                  + c.getMessage()
+                          : (c instanceof MobileHarnessException mhe
+                              ? mhe.getErrorId().name() + ": " + c.getMessage()
                               : c.getClass().getSimpleName()
                                   + (c.getMessage() == null ? "" : ": " + c.getMessage())))
                   .orElse("")

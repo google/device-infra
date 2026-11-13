@@ -296,8 +296,8 @@ public final class JobConfigBuilder {
                 "Failed to cast value %s to message type %s.", value, messageType.getName()),
             e);
       }
-    } else if (javaType == JavaType.ENUM && value instanceof ProtocolMessageEnum) {
-      value = ((ProtocolMessageEnum) originalValue).getValueDescriptor();
+    } else if (javaType == JavaType.ENUM && value instanceof ProtocolMessageEnum enumValue) {
+      value = enumValue.getValueDescriptor();
     }
     return value;
   }

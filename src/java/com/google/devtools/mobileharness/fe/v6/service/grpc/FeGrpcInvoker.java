@@ -175,8 +175,8 @@ public final class FeGrpcInvoker {
   private static FeServiceException findFeServiceException(Throwable t) {
     Throwable current = t;
     while (current != null) {
-      if (current instanceof FeServiceException) {
-        return (FeServiceException) current;
+      if (current instanceof FeServiceException feServiceException) {
+        return feServiceException;
       }
       current = current.getCause();
     }

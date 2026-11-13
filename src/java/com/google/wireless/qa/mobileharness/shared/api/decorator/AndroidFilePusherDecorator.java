@@ -212,10 +212,8 @@ public class AndroidFilePusherDecorator extends SetupOnlyDecorator
 
   private boolean isPushFailedWithTimeout(MobileHarnessException e) {
     Throwable cause = e;
-    while (cause instanceof MobileHarnessException) {
-      if (Objects.equals(
-          ((MobileHarnessException) cause).getErrorId(),
-          AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_TIMEOUT)) {
+    while (cause instanceof MobileHarnessException mhe) {
+      if (Objects.equals(mhe.getErrorId(), AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_TIMEOUT)) {
         return true;
       }
       cause = cause.getCause();
