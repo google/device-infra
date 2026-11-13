@@ -140,7 +140,7 @@ public class AndroidPerfettoDecorator extends LifecycleDecorator {
   }
 
   private void tearDownInAfterTestMode(final TestInfo testInfo, File outputFile, String deviceId)
-      throws MobileHarnessException, InterruptedException {
+      throws InterruptedException {
     testInfo.log().atInfo().alsoTo(logger).log("Starting sync perfetto");
     try {
       String consoleOutput =
@@ -184,7 +184,7 @@ public class AndroidPerfettoDecorator extends LifecycleDecorator {
                 .findings()
                 .addAndLog(
                     Severity.WARNING,
-                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                    new MobileHarnessException(
                         AndroidErrorId.ANDROID_PERFETTO_DECORATOR_ASYNC_EXIT_WITH_ERRORS,
                         commandResult.toString()),
                     logger);

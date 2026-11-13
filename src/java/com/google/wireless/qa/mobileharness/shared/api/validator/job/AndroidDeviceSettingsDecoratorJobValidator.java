@@ -43,8 +43,7 @@ public class AndroidDeviceSettingsDecoratorJobValidator
               subDeviceSpec ->
                   subDeviceSpec.decorators().getAll().contains("AndroidDeviceSettingsDecorator"));
     } catch (MobileHarnessException e) {
-      errors.add(e.getMessage());
-      return errors.build();
+      return errors.add(e.getMessage()).build();
     }
 
     for (AndroidDeviceSettingsDecoratorSpec spec : specs) {
@@ -79,10 +78,10 @@ public class AndroidDeviceSettingsDecoratorJobValidator
 
   /** Validates {@code spec}. Throws exceptions if it contains any error. */
   public static void validateSpec(AndroidDeviceSettingsDecoratorSpec spec)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws MobileHarnessException {
     if (spec.hasScreenBrightness()
         && !(spec.hasScreenAdaptiveBrightness() && !spec.getScreenAdaptiveBrightness())) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_SETTINGS_CONFLICT,
           "screen_adaptive_brightness must be set to false explicitly while screen_brightness "
               + "is set.");
@@ -90,7 +89,7 @@ public class AndroidDeviceSettingsDecoratorJobValidator
     if (spec.hasScreenAlwaysOn()
         && spec.hasScreenTimeoutSec()
         && (spec.getScreenAlwaysOn() && spec.getScreenTimeoutSec() > 0)) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_SETTINGS_CONFLICT,
           "screen_always_on with value true and screen_timeout_sec cannot be set at the same"
               + " time.");

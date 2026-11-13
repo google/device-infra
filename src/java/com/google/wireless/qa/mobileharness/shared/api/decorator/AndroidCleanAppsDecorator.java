@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
@@ -294,9 +296,9 @@ public class AndroidCleanAppsDecorator extends SetupOnlyDecorator implements And
       final Pattern pattern = Pattern.compile(filteredPackageNameRegex);
       return packageNames.stream()
           .filter(packageName -> pattern.matcher(packageName).find())
-          .collect(ImmutableSet.toImmutableSet());
+          .collect(toImmutableSet());
     } catch (PatternSyntaxException e) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           AndroidErrorId.ANDROID_CLEAN_APPS_DECORATOR_INVALID_PARAM_VALUE,
           String.format(
               "Failed to compile the regex %s%n%s", filteredPackageNameRegex, e.getMessage()),
@@ -313,7 +315,7 @@ public class AndroidCleanAppsDecorator extends SetupOnlyDecorator implements And
   private void removeFirstPartyApps(List<String> packagesToUninstall, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     if (!((AndroidDevice) getDevice()).isRooted()) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           AndroidErrorId.ANDROID_CLEAN_APPS_DECORATOR_CANNOT_REMOVE_1P_APP_IN_NONROOT_DEVICE,
           "Cannot remove system apps from an unrooted device. Consider adding \"rooted\": \"true\""
               + " to the device dimensions.");

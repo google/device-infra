@@ -152,8 +152,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
         // 2. The result from job params.
         // 3. PASS.
         Test.TestResult testResultFromMessage = this.testResultFromMessage;
-        com.google.devtools.mobileharness.api.model.error.MobileHarnessException
-            testResultCauseFromMessage = this.testResultCauseFromMessage;
+        MobileHarnessException testResultCauseFromMessage = this.testResultCauseFromMessage;
         if (testResultFromMessage == null) {
           if (spec.hasTestResult()) {
             if (spec.getTestResult() == TestResult.PASS) {
@@ -163,7 +162,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
                   .resultWithCause()
                   .setNonPassing(
                       Test.TestResult.valueOf(spec.getTestResult().name()),
-                      new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                      new MobileHarnessException(
                           ExtErrorId.NO_OP_DRIVER_NON_PASSING_RESULT_SET_BY_PARAM,
                           String.format(
                               "NoOpDriver non-passing result set by param \"test_result\""

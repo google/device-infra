@@ -241,7 +241,7 @@ public class MasterSyncerForJob implements Runnable {
   private boolean isJobDisableMasterSyncing(String jobId) {
     try {
       return jobManager.isJobDisableMasterSyncing(jobId);
-    } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
           "Job manager failed to get disableMasterSyncing for job id %s", jobId);
       return false;

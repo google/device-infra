@@ -102,10 +102,10 @@ public class PerfettoStep {
   private final Perfetto perfetto;
 
   /** Default buffer size for perfetto capture. */
-  private int defaultBufferSize;
+  private final int defaultBufferSize;
 
   /** Default tags for perfetto capture. */
-  private String defaultTags;
+  private final String defaultTags;
 
   @Inject
   @VisibleForTesting
@@ -300,7 +300,7 @@ public class PerfettoStep {
       testInfo
           .warnings()
           .addAndLog(
-              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+              new MobileHarnessException(
                   AndroidErrorId.ANDROID_PERFETTO_DECORATOR_ASYNC_EXCEED_TIMEOUT_LIMIT,
                   "Timeout waiting for Perfetto script to shutdown"),
               logger);
