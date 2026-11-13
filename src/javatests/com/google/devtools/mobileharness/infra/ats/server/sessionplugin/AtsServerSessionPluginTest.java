@@ -82,6 +82,7 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedTestModuleResultsMessage;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults.ModuleInfo;
@@ -90,6 +91,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -725,7 +727,14 @@ public final class AtsServerSessionPluginTest {
     plugin.onTestStarting(
         new TestStartingEvent(testInfo, allocation, DeviceInfo.getDefaultInstance()));
 
-    verify(testMessageUtil).sendProtoMessageToTest(eq(testInfo), any());
+    verify(testMessageUtil)
+        .sendProtoMessageToTest(
+            eq(testInfo),
+            eq(
+                XtsTradefedRunCancellation.newBuilder()
+                    .setKillTradefedSignal(KillSignal.SIGTERM.value())
+                    .setCancelReason("User cancelled the test request")
+                    .build()));
   }
 
   @Test
@@ -764,7 +773,14 @@ public final class AtsServerSessionPluginTest {
             SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
             TextFormat.printer()));
 
-    verify(testMessageUtil).sendProtoMessageToTest(eq(testInfo), any());
+    verify(testMessageUtil)
+        .sendProtoMessageToTest(
+            eq(testInfo),
+            eq(
+                XtsTradefedRunCancellation.newBuilder()
+                    .setKillTradefedSignal(KillSignal.SIGTERM.value())
+                    .setCancelReason("User cancelled the test request")
+                    .build()));
 
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 

@@ -72,6 +72,7 @@ import com.google.devtools.mobileharness.platform.android.xts.message.proto.Test
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.Any;
 import com.google.protobuf.ExtensionRegistry;
@@ -108,7 +109,9 @@ final class AtsServerSessionPlugin {
   private static final String SESSION_PLUGIN_LABEL = "AtsServerSessionPlugin";
 
   private static final String CANCELLATION_REASON = "User cancelled the test request";
-  private static final int KILL_TRADEFED_SIGNAL = 2;
+  // Tradefed Console only registers shutdown handlers for SIGTSTP and SIGTERM; SIGTERM triggers
+  // CommandScheduler.shutdownHard() so ClusterCommandLauncher also terminates its inner subprocess.
+  private static final int KILL_TRADEFED_SIGNAL = KillSignal.SIGTERM.value();
   private static final String DEFAULT_RETRY_COMMAND_LINE = "retry --retry 0";
 
   private final Object sessionLock = new Object();
