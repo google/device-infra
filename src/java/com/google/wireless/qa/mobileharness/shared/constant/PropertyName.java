@@ -300,6 +300,13 @@ public interface PropertyName {
      */
     NO_OP_DEVICE_POST_RUN_TEST_CALLED,
 
+    /**
+     * Whether the test ended with no {@code TestEndedEvent} known to have been posted, as when the
+     * process running it died. A plugin closes on {@code JobEndEvent} any per-test record for that
+     * started run that has not been closed since. Value type is boolean.
+     */
+    NO_TEST_ENDED_EVENT,
+
     /** The time it takes to fetch the artifact from the Android Build. */
     OXYGEN_CF_FETCH_ARTIFACT_TIME_MS,
 
