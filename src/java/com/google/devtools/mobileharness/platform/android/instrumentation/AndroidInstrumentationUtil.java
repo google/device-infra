@@ -93,6 +93,7 @@ import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -645,7 +646,7 @@ public class AndroidInstrumentationUtil {
             TEST_ARG_GEN_FILE_DIR_RELATIVE_PATH,
             PathUtil.makeRelative(
                 testInfo.jobInfo().setting().getGenFileDir(), testInfo.getGenFileDir()))
-        .buildOrThrow();
+        .buildKeepingLast();
   }
 
   /**
@@ -799,6 +800,21 @@ public class AndroidInstrumentationUtil {
         getEntryDelimiter(testInfo.jobInfo()),
         StrUtil.DEFAULT_KEY_VALUE_DELIMITER,
         true);
+  }
+
+  /** Adds test specific test arg into test properties. */
+  public static void addTestSpecificTestArgs(TestInfo testInfo, String key, String value) {
+    String existing = testInfo.properties().get(AndroidInstrumentation.TEST_SPECIFIC_TEST_ARGS);
+    Map<String, String> map = new LinkedHashMap<>();
+    if (existing != null) {
+      map.putAll(StrUtil.toMap(existing, true));
+    }
+    map.put(key, value);
+    testInfo
+        .properties()
+        .add(
+            AndroidInstrumentation.TEST_SPECIFIC_TEST_ARGS,
+            Joiner.on(",").withKeyValueSeparator("=").join(map));
   }
 
   /**
