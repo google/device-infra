@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.proto.AndroidDeviceSpec.Abi;
 import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -72,6 +73,10 @@ public class Aapt {
   private static final String FILE_FLAG = "--file";
   private static final String ANDROID_MANIFEST = "AndroidManifest.xml";
   private static final Splitter LINE_SPLITTER = Splitters.LINE_SPLITTER;
+
+  // Android SDKs ship the legacy AAPT binary in the same directory as AAPT2.
+  private static final String AAPT2_FILE_NAME = "aapt2";
+  private static final String LEGACY_AAPT_FILE_NAME = "aapt";
 
   private static final Pattern XMLTREE_CATEGORY_LAUNCHER_PATTERN =
       Pattern.compile(
@@ -189,7 +194,7 @@ public class Aapt {
    * @return the ABI of the given APK file
    */
   public String getApkAbi(String apkPath) throws MobileHarnessException, InterruptedException {
-    String output = run(ArrayUtil.join(AAPT_ARGS_DUMP_BADGING, apkPath));
+    String output = dumpBadging(apkPath);
     List<String> allAbis = parseNativeCode(output);
     if (!allAbis.isEmpty()) {
       return allAbis.get(0);
@@ -207,7 +212,7 @@ public class Aapt {
    */
   public List<String> listApkAbi(String apkPath)
       throws MobileHarnessException, InterruptedException {
-    return parseNativeCode(run(ArrayUtil.join(AAPT_ARGS_DUMP_BADGING, apkPath)));
+    return parseNativeCode(dumpBadging(apkPath));
   }
 
   /** Gets the instrumentation target package of the given test apk. */
@@ -258,7 +263,7 @@ public class Aapt {
 
   /** Gets the version code of the given apk. */
   public int getApkVersionCode(String apkPath) throws MobileHarnessException, InterruptedException {
-    String output = run(ArrayUtil.join(AAPT_ARGS_DUMP_BADGING, apkPath));
+    String output = dumpBadging(apkPath);
     // Example output:
     // package: name='com.google.android.apps....' versionCode='1000' versionName='1.0.0' ...
     Matcher matcher = Pattern.compile(" versionCode='(\\d+)' versionName=").matcher(output);
@@ -281,7 +286,7 @@ public class Aapt {
   /** Gets the version name of the given apk. */
   public String getApkVersionName(String apkPath)
       throws MobileHarnessException, InterruptedException {
-    String output = run(ArrayUtil.join(AAPT_ARGS_DUMP_BADGING, apkPath));
+    String output = dumpBadging(apkPath);
     // Example output:
     // package: name='com.google.android.apps....' versionCode='1000' versionName='1.0.0' ...
     Matcher matcher = Pattern.compile(" versionName='([^']+)'").matcher(output);
@@ -301,8 +306,9 @@ public class Aapt {
    */
   public int getApkMinSdkVersion(String apkPath)
       throws MobileHarnessException, InterruptedException {
-    String output = run(ArrayUtil.join(AAPT_ARGS_DUMP_BADGING, apkPath));
-    Matcher matcher = Pattern.compile("\\nminSdkVersion:'([^']+)'").matcher(output);
+    String output = dumpBadging(apkPath);
+    // AAPT2 prints "minSdkVersion:'...'", while the legacy AAPT prints "sdkVersion:'...'".
+    Matcher matcher = Pattern.compile("\\n(?:minSdkVersion|sdkVersion):'([^']+)'").matcher(output);
     if (matcher.find()) {
       String version = matcher.group(1);
       try {
@@ -325,21 +331,13 @@ public class Aapt {
    */
   public String getApkPackageName(String apkPath)
       throws MobileHarnessException, InterruptedException {
-    String output = run(ArrayUtil.join(AAPT_ARGS_DUMP_BADGING, apkPath));
-    String prefix = "package: name='";
-    int startIdx = prefix.length();
-    for (String line : LINE_SPLITTER.split(output)) {
-      if (!line.startsWith(prefix)) {
-        continue;
-      }
-      int endIdx = line.indexOf('\'', startIdx);
-      if (endIdx > startIdx) {
-        return line.substring(startIdx, endIdx);
-      }
-    }
-    throw new MobileHarnessException(
-        AndroidErrorId.ANDROID_AAPT_GET_APK_PACKAGE_NAME_ERROR,
-        "Fail to find the package name of " + apkPath + ": " + output);
+    String output = dumpBadging(apkPath);
+    return parsePackageName(output)
+        .orElseThrow(
+            () ->
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_AAPT_GET_APK_PACKAGE_NAME_ERROR,
+                    "Fail to find the package name of " + apkPath + ": " + output));
   }
 
   /**
@@ -380,7 +378,7 @@ public class Aapt {
   /** Gets launchable activity with command 'dump badging'. */
   private Optional<String> getApkLaunchableActivityNameWithBadging(String apkPath)
       throws MobileHarnessException, InterruptedException {
-    String output = run(ArrayUtil.join(AAPT_ARGS_DUMP_BADGING, apkPath));
+    String output = dumpBadging(apkPath);
     // The output is like:
     // ...
     // launchable-activity: name='package.name.activity.name'  label='...' icon='...'
@@ -468,6 +466,56 @@ public class Aapt {
   }
 
   /**
+   * Runs {@code dump badging} on the given APK.
+   *
+   * <p>If the AAPT2 output has no package info, retries with the legacy AAPT binary in the same
+   * directory, if any. Some AAPT2 versions reject APKs whose resource names were obfuscated to
+   * "(name removed)", while the legacy AAPT can still read them.
+   *
+   * @return the AAPT2 output, or the legacy AAPT output if only the latter has the package info
+   */
+  private String dumpBadging(String apkPath) throws MobileHarnessException, InterruptedException {
+    String[] args = ArrayUtil.join(AAPT_ARGS_DUMP_BADGING, apkPath);
+    String output = run(args);
+    if (parsePackageName(output).isPresent()) {
+      return output;
+    }
+    Optional<String> legacyAaptPath = getLegacyAaptPath();
+    if (legacyAaptPath.isEmpty()) {
+      return output;
+    }
+    String legacyOutput;
+    try {
+      legacyOutput = run(legacyAaptPath.get(), args);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to run %s", legacyAaptPath.get());
+      return output;
+    }
+    if (parsePackageName(legacyOutput).isEmpty()) {
+      return output;
+    }
+    logger.atWarning().log(
+        "AAPT2 failed to dump badging of %s, using the output of %s instead. AAPT2 output: %s",
+        apkPath, legacyAaptPath.get(), output.trim());
+    return legacyOutput;
+  }
+
+  /**
+   * Returns the path of the legacy AAPT binary in the same directory as the AAPT2 binary, or empty
+   * if the AAPT binary in use is not AAPT2 or there is no legacy AAPT binary next to it.
+   */
+  private Optional<String> getLegacyAaptPath() {
+    Path aaptPath = Path.of(getAaptPath());
+    if (!aaptPath.endsWith(AAPT2_FILE_NAME) || aaptPath.getParent() == null) {
+      return Optional.empty();
+    }
+    Path legacyAaptPath = aaptPath.resolveSibling(LEGACY_AAPT_FILE_NAME);
+    return new LocalFileUtil().isFileExist(legacyAaptPath)
+        ? Optional.of(legacyAaptPath.toString())
+        : Optional.empty();
+  }
+
+  /**
    * Runs AAPT command line tools.
    *
    * @param args AAPT command line arguments
@@ -477,9 +525,15 @@ public class Aapt {
    */
   private String run(String[] args) throws MobileHarnessException, InterruptedException {
     checkAapt();
+    return run(getAaptPath(), args);
+  }
+
+  /** Runs the given AAPT binary. See {@link #run(String[])}. */
+  private String run(String aaptPath, String[] args)
+      throws MobileHarnessException, InterruptedException {
     StringBuilder output = new StringBuilder();
     Command command =
-        Command.of(ArrayUtil.join(getAaptPath(), args))
+        Command.of(ArrayUtil.join(aaptPath, args))
             .onStdout(does(line -> output.append(line).append('\n')));
     String commandStr = command.toString();
     if (enableAaptOutputCache && aaptOutputCache.containsKey(commandStr)) {
@@ -521,6 +575,22 @@ public class Aapt {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_AAPT_PATH_NOT_SET, pathSupplier.get().errorMsg());
     }
+  }
+
+  /** Parses the package name from the output of {@code dump badging}, if any. */
+  private static Optional<String> parsePackageName(String badgingOutput) {
+    String prefix = "package: name='";
+    int startIdx = prefix.length();
+    for (String line : LINE_SPLITTER.split(badgingOutput)) {
+      if (!line.startsWith(prefix)) {
+        continue;
+      }
+      int endIdx = line.indexOf('\'', startIdx);
+      if (endIdx > startIdx) {
+        return Optional.of(line.substring(startIdx, endIdx));
+      }
+    }
+    return Optional.empty();
   }
 
   /**
