@@ -369,6 +369,12 @@ public interface PropertyName {
     /** Root invocation ID of the ResultDB root invocation. */
     RESULTDB_ROOT_INVOCATION_ID,
 
+    /** Root work unit ID of the ResultDB root invocation. */
+    RESULTDB_ROOT_WORK_UNIT_ID,
+
+    /** Update token of the ResultDB root invocation and root work unit. */
+    RESULTDB_ROOT_UPDATE_TOKEN,
+
     /** Work unit ID of the ResultDB work unit. */
     RESULTDB_WORK_UNIT_ID,
 
