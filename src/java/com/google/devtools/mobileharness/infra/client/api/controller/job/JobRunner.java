@@ -567,6 +567,9 @@ public class JobRunner implements Runnable {
           });
     } catch (MobileHarnessException e) {
       jobError = e;
+      if (!jobInfo.properties().has(PropertyName.Job.ALLOCATION_FAIL_AFTER_START_TIMEOUT)) {
+        jobInfo.properties().add(PropertyName.Job._HAS_JOB_LEVEL_ERROR, "true");
+      }
       jobInfo.findings().addAndLog(Severity.SEVERE, e, logger);
     } catch (InterruptedException e) {
       jobError = e;
@@ -581,6 +584,9 @@ public class JobRunner implements Runnable {
     } catch (Throwable t) {
       // For safety, catches all unknown error.
       jobError = t;
+      if (!jobInfo.properties().has(PropertyName.Job.ALLOCATION_FAIL_AFTER_START_TIMEOUT)) {
+        jobInfo.properties().add(PropertyName.Job._HAS_JOB_LEVEL_ERROR, "true");
+      }
       logger.atSevere().withCause(t).log("FATAL JOB ERROR");
       jobInfo
           .findings()
@@ -1420,11 +1426,12 @@ public class JobRunner implements Runnable {
               break;
             case ERROR:
             case TIMEOUT:
+            case ABORT:
             case UNKNOWN:
               hasErrorTests = true;
               testIdForDisplayMhfeLink = testInfo.locator().getId();
               break;
-            default:
+            case UNRECOGNIZED:
               throw createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_TEST_HAS_UNKNOWN_RESULT,
                   "Unknown test result " + testInfo.resultWithCause().get().type());
