@@ -25,9 +25,14 @@ import static org.mockito.Mockito.when;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import io.grpc.stub.StreamObserver;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -68,5 +73,53 @@ public final class HostServiceGrpcImplTest {
     service.updatePassThroughFlags(request, responseObserver);
 
     verify(logic).updatePassThroughFlags(eq(request));
+  }
+
+  @Test
+  public void batchPreflightLabServerRelease_callsLogic() {
+    BatchPreflightLabServerReleaseRequest request =
+        BatchPreflightLabServerReleaseRequest.getDefaultInstance();
+    StreamObserver<BatchPreflightLabServerReleaseResponse> responseObserver =
+        new StreamObserver<BatchPreflightLabServerReleaseResponse>() {
+          @Override
+          public void onNext(BatchPreflightLabServerReleaseResponse response) {}
+
+          @Override
+          public void onError(Throwable t) {}
+
+          @Override
+          public void onCompleted() {}
+        };
+
+    when(logic.batchPreflightLabServerRelease(any(), any()))
+        .thenReturn(
+            Futures.immediateFuture(BatchPreflightLabServerReleaseResponse.getDefaultInstance()));
+
+    service.batchPreflightLabServerRelease(request, responseObserver);
+
+    verify(logic).batchPreflightLabServerRelease(eq(request), eq(Optional.empty()));
+  }
+
+  @Test
+  public void batchReleaseLabServers_callsLogic() {
+    BatchReleaseLabServersRequest request = BatchReleaseLabServersRequest.getDefaultInstance();
+    StreamObserver<BatchReleaseLabServersResponse> responseObserver =
+        new StreamObserver<BatchReleaseLabServersResponse>() {
+          @Override
+          public void onNext(BatchReleaseLabServersResponse response) {}
+
+          @Override
+          public void onError(Throwable t) {}
+
+          @Override
+          public void onCompleted() {}
+        };
+
+    when(logic.batchReleaseLabServers(any(), any()))
+        .thenReturn(Futures.immediateFuture(BatchReleaseLabServersResponse.getDefaultInstance()));
+
+    service.batchReleaseLabServers(request, responseObserver);
+
+    verify(logic).batchReleaseLabServers(eq(request), eq(Optional.empty()));
   }
 }
