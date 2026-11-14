@@ -336,7 +336,7 @@ public class AndroidVideoDecorator extends LifecycleDecorator
   private static VideoOutput.ContainerFormat getContainerFormat(VideoOutput.VideoType videoType) {
     return switch (videoType) {
       case EMULATOR_CONSOLE -> VideoOutput.ContainerFormat.WEBM;
-      case STITCHED_SCREENSHOTS -> VideoOutput.ContainerFormat.PNG;
+      case STITCHED_SCREENSHOTS -> VideoOutput.ContainerFormat.JPEG;
       case SCREENRECORD -> VideoOutput.ContainerFormat.MP4;
       default -> VideoOutput.ContainerFormat.CONTAINER_FORMAT_UNSPECIFIED;
     };
