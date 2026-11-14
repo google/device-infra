@@ -8,12 +8,21 @@ import {
 import {MAT_DIALOG_DATA} from '@angular/material/dialog';
 import {tap} from 'rxjs/operators';
 
+import {DeviceConfigUiStatus} from '../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
 import {DeviceConfigStateService} from '../../../../core/services/config/device_config_state_service';
+import {Environment} from '../../../../core/services/environment';
 
 import {DeviceEmpty} from './device_empty/device_empty';
 import {DeviceSettings} from './device_settings/device_settings';
 import {HostManaged} from './host_managed/host_managed';
+
+const ATS_DEVICE_CONFIG_UI_STATUS: DeviceConfigUiStatus = {
+  permissions: {visible: false, editability: {editable: false}},
+  wifi: {visible: false, editability: {editable: false}},
+  dimensions: {visible: true, editability: {editable: true}},
+  settings: {visible: false, editability: {editable: false}},
+};
 
 /**
  * Component for displaying the device configuration dialog.
@@ -37,6 +46,11 @@ export class DeviceConfig implements OnInit {
   }>(MAT_DIALOG_DATA);
   private readonly configService = inject(CONFIG_SERVICE);
   private readonly deviceConfigStateService = inject(DeviceConfigStateService);
+  private readonly environment = inject(Environment);
+
+  get isAts(): boolean {
+    return !this.environment.isGoogleInternal();
+  }
 
   readonly configResult$ = this.configService
     .getDeviceConfig(this.data.deviceId, this.data.hostName)
@@ -46,6 +60,11 @@ export class DeviceConfig implements OnInit {
           this.deviceConfigStateService.setUiStatus(
             this.data.deviceId,
             result.uiStatus,
+          );
+        } else if (result && this.isAts) {
+          this.deviceConfigStateService.setUiStatus(
+            this.data.deviceId,
+            ATS_DEVICE_CONFIG_UI_STATUS,
           );
         }
       }),
