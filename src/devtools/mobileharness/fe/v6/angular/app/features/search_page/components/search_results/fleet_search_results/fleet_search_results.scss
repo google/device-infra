@@ -17,6 +17,25 @@
     text-align: center;
     vertical-align: middle;
   }
+
+  // --- Windowed (virtual scroll) spacer rows ---
+  // The single spacer cell is sized by the TableWindowDirective to cover the
+  // rows hidden above/below the rendered window; it must add no padding or
+  // border of its own and never look like a hoverable data row.
+  .results-table tr.vs-spacer-row {
+    pointer-events: none;
+
+    &:hover {
+      background-color: transparent;
+    }
+
+    td.vs-spacer-cell {
+      padding: 0;
+      border-bottom: 0;
+      min-width: 0;
+      max-width: none;
+    }
+  }
 }
 
 // --- Grouped Accordion Container Styles ---

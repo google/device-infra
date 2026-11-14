@@ -44,6 +44,13 @@ public final class FleetFlatSearcher {
   /** Page size used when the request leaves it unset (or non-positive). */
   private static final int DEFAULT_PAGE_SIZE = 25;
 
+  /**
+   * Largest page size served for one request. Larger requested sizes are clamped rather than
+   * rejected so a client asking for "everything" still gets a well-formed first page plus a cursor.
+   * Matches the largest "Rows per page" option offered by the UI.
+   */
+  static final int MAX_PAGE_SIZE = 5000;
+
   /** Prefix stamped into the opaque page token so a foreign token decodes to the first page. */
   private static final String TOKEN_PREFIX = "o:";
 
@@ -64,7 +71,8 @@ public final class FleetFlatSearcher {
    * @param columnKeys the column keys to include in each row, in display order
    * @param sort the sort order; when null or with an empty key, sorts by the corpus identifier key
    *     ascending
-   * @param page the page request; when null or with a non-positive size, uses the default size
+   * @param page the page request; when null or with a non-positive size, uses the default size;
+   *     sizes above {@link #MAX_PAGE_SIZE} are clamped to it
    */
   public FleetFlatResults searchFlat(
       SearchCorpus corpus,
@@ -221,7 +229,7 @@ public final class FleetFlatSearcher {
     if (page == null || page.getPageSize() <= 0) {
       return DEFAULT_PAGE_SIZE;
     }
-    return page.getPageSize();
+    return Math.min(page.getPageSize(), MAX_PAGE_SIZE);
   }
 
   private static int clamp(int offset, int total) {

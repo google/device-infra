@@ -38,6 +38,7 @@ import {EnvUniverseService} from '../../../core/services/env_universe_service';
 import {SEARCH_SERVICE} from '../../../core/services/search/search_service';
 import {
   createInitialValuePickerState,
+  DEFAULT_PAGE_SIZE,
   EntityType,
   FilterChip,
   FilterKeyMetadata,
@@ -265,7 +266,7 @@ export abstract class SearchPageStore {
   });
 
   /** Number of rows displayed per page. */
-  readonly pageSize = signal<number>(25);
+  readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
 
   /** Updates the page size and resets page navigation cursor and index. */
   setPageSize(newSize: number) {

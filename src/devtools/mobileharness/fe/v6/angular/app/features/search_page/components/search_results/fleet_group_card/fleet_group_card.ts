@@ -14,12 +14,18 @@ import {Column, FleetGroup} from '../../../../../core/models/search';
 import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {
   DEFAULT_GROUP_EXPAND_PAGE_SIZE,
+  GROUP_ROW_HEIGHT_ESTIMATE,
   GroupPageState,
+  PAGE_SIZE_OPTIONS,
 } from '../../../models';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
 import {formatPaginationRange, getDeviceTargetKey} from '../../../utils';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
 import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
+import {
+  isTableWindowSpacer,
+  TableWindowDirective,
+} from '../common/table_window/table_window';
 
 /** Standalone component representing a single expandable group card in grouped results view. */
 @Component({
@@ -36,6 +42,7 @@ import {SearchPaginationComponent} from '../common/search_pagination/search_pagi
     KeyDescriptionTooltipDirective,
     SearchCellComponent,
     SearchPaginationComponent,
+    TableWindowDirective,
   ],
 })
 export class FleetGroupCardComponent {
@@ -46,6 +53,15 @@ export class FleetGroupCardComponent {
 
   /** Default page size for expanded group inner table. */
   protected readonly defaultPageSize = DEFAULT_GROUP_EXPAND_PAGE_SIZE;
+
+  /** Rows-per-page choices of the inner table footer (10 … 5000). */
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+
+  /** Initial row-height estimate for the windowed inner table; the directive measures the real height. */
+  protected readonly rowHeightEstimate = GROUP_ROW_HEIGHT_ESTIMATE;
+
+  /** Separates the windowing spacer rows from real row items in the template. */
+  protected readonly isSpacer = isTableWindowSpacer;
 
   /** Whether this group card accordion is currently open/expanded. */
   readonly isOpen = computed<boolean>(() =>
