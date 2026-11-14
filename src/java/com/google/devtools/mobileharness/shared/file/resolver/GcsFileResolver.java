@@ -107,6 +107,17 @@ public class GcsFileResolver extends AbstractFileResolver {
     String bucket = parseResult.gcsKey().bucket();
     String filePath = parseResult.objectPath();
     String localPath = PathUtil.join(resolveSource.targetDir(), bucket, filePath);
+    Path targetDirPath = Path.of(resolveSource.targetDir()).toAbsolutePath().normalize();
+    Path bucketDirPath = targetDirPath.resolve(bucket).normalize();
+    if (!bucketDirPath.startsWith(targetDirPath)
+        || bucketDirPath.equals(targetDirPath)
+        || !Path.of(localPath).toAbsolutePath().normalize().startsWith(bucketDirPath)) {
+      throw new MobileHarnessException(
+          BasicErrorId.GCS_ILLEGAL_PATH_ERROR,
+          String.format(
+              "Illegal GCS file path %s: resolved path escapes target directory",
+              resolveSource.path()));
+    }
     String gcsPath = String.format("gs://%s/%s", bucket, filePath);
     GcsUtil gcsUtil = getGcsUtil(parseResult.gcsKey());
 
