@@ -35,7 +35,7 @@ mat-card.results-area.grouped-mode,
     background: transparent;
     border-radius: 0;
     margin-bottom: 12px;
-    padding: 8px 0;
+    padding: 0;
     flex-shrink: 0;
     flex-wrap: nowrap;
     overflow: hidden;
@@ -44,7 +44,7 @@ mat-card.results-area.grouped-mode,
       background: #c2e7ff;
       border-bottom: none;
       border-radius: 12px;
-      padding: 8px 16px;
+      padding: 0 16px;
     }
   }
 }
@@ -86,6 +86,7 @@ mat-card.results-area.grouped-mode,
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  cursor: help;
 }
 
 .rt-legend-label-short {

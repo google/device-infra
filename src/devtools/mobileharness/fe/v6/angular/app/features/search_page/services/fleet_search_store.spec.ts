@@ -1507,6 +1507,177 @@ describe('FleetSearchStore', () => {
       expect(store.openGroupIds().size).toBe(1);
       expect(store.expandedGroupPages().size).toBe(1);
     });
+
+    it('automatically clears selectedItems when filters, groupBy, or fleet scope change', async () => {
+      const store = await createStoreAt({});
+      const statusChip = {
+        key: 'device_field::status',
+        pillKey: 'Status',
+        pillCondition: 'IDLE',
+        rawValues: ['IDLE'],
+        fleetFilter: {
+          key: 'device_field::status',
+          simple: {values: [{value: 'IDLE'}]},
+        },
+      };
+
+      // 1. Adding a filter chip clears selection
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.addFilterChip(statusChip);
+      expect(store.selectedItems().size).toBe(0);
+
+      // 2. Updating an existing filter chip clears selection
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.addFilterChip({
+        ...statusChip,
+        pillCondition: 'BUSY',
+        rawValues: ['BUSY'],
+        fleetFilter: {
+          key: 'device_field::status',
+          simple: {values: [{value: 'BUSY'}]},
+        },
+      });
+      expect(store.selectedItems().size).toBe(0);
+
+      // 3. Removing a filter chip clears selection
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.removeFilterChip(statusChip);
+      expect(store.selectedItems().size).toBe(0);
+
+      // 4. Clearing filter chips clears selection
+      store.addFilterChip(statusChip);
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.clearFilterChips();
+      expect(store.selectedItems().size).toBe(0);
+
+      // 5. Adding / toggling group-by clears selection
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.toggleGroupBy('dimension::model', 'Model');
+      expect(store.selectedItems().size).toBe(0);
+
+      // 6. Clearing group-by chips clears selection
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.clearGroupByChips();
+      expect(store.selectedItems().size).toBe(0);
+
+      // 7. Switching fleet scope clears selection
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.setFleet('ats');
+      expect(store.selectedItems().size).toBe(0);
+
+      // 8. Flat table sorting (direction flip or column switch) clears selection
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.toggleSort('id');
+      expect(store.selectedItems().size).toBe(0);
+
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.toggleSort('status');
+      expect(store.selectedItems().size).toBe(0);
+
+      // 9. Group header sorting clears selection
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.setGroupSort('count:asc');
+      expect(store.selectedItems().size).toBe(0);
+
+      // 10. Pagination (nextPage / prevPage) clears selection
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          flat: {
+            rows: [{id: 'dev-1'}],
+            nextPageToken: 'tok-next',
+            prevPageToken: 'tok-prev',
+          },
+        }),
+      );
+      store.browseAll.set(true);
+      await flushAsync();
+
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.nextPage();
+      expect(store.selectedItems().size).toBe(0);
+
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      expect(store.selectedItems().size).toBe(1);
+      store.prevPage();
+      expect(store.selectedItems().size).toBe(0);
+    });
+
+    it('deselects group rows when an expanded group is sorted, paginated, resized, or collapsed', async () => {
+      const store = await createStoreAt({'gb': 'dimension::model'});
+
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          flat: {
+            rows: [{id: 'dev-g1'}, {id: 'dev-g1-b'}],
+            nextPageToken: 'g1-p2',
+          },
+        }),
+      );
+      store.toggleGroup('group-1');
+      await flushAsync();
+
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          flat: {
+            rows: [{id: 'dev-g2'}],
+          },
+        }),
+      );
+      store.toggleGroup('group-2');
+      await flushAsync();
+
+      // Return group-1's rows for subsequent group-1 reload calls
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          flat: {
+            rows: [{id: 'dev-g1'}, {id: 'dev-g1-b'}],
+            nextPageToken: 'g1-p2',
+          },
+        }),
+      );
+
+      // Select rows in both group-1 and group-2; inner-group sort in group-1 only deselects group-1 rows
+      store.toggleSelectRows([{id: 'dev-g1'}, {id: 'dev-g2'}]);
+      expect(store.selectedItems().size).toBe(2);
+      store.toggleGroupRowSort('group-1', 'id');
+      await flushAsync();
+      expect(Array.from(store.selectedItems().keys())).toEqual(['dev-g2']);
+
+      // Inner-group pagination in group-1 deselects group-1 rows
+      store.toggleSelectRows([{id: 'dev-g1'}]);
+      expect(store.selectedItems().size).toBe(2);
+      store.onLoadGroupRows('group-1', 'g1-p2');
+      await flushAsync();
+      expect(Array.from(store.selectedItems().keys())).toEqual(['dev-g2']);
+
+      // Inner-group pageSize change in group-1 deselects group-1 rows
+      store.toggleSelectRows([{id: 'dev-g1'}]);
+      expect(store.selectedItems().size).toBe(2);
+      store.setGroupPageSize('group-1', 50);
+      await flushAsync();
+      expect(Array.from(store.selectedItems().keys())).toEqual(['dev-g2']);
+
+      // Collapsing group-1 deselects group-1 rows while keeping open group-2's selection
+      store.toggleSelectRows([{id: 'dev-g1'}]);
+      expect(store.selectedItems().size).toBe(2);
+      store.toggleGroup('group-1');
+      expect(Array.from(store.selectedItems().keys())).toEqual(['dev-g2']);
+
+      // Collapsing group-2 deselects group-2's remaining row
+      store.toggleGroup('group-2');
+      expect(store.selectedItems().size).toBe(0);
+    });
   });
 
   it('applies advanced matching filter and updates correctly when value is changed', async () => {
@@ -2208,12 +2379,21 @@ describe('FleetSearchStore', () => {
       );
 
       // 4. Collapsing and re-opening a group with cached data does not re-fetch; collapsing while
-      //    a load is in flight aborts the subscription.
+      //    a load is in flight aborts the subscription. focusedGroupId tracks the most recently
+      //    expanded group.
       mockSearchService.searchFleet.calls.reset();
+      expect(store.focusedGroupId()).toBe('dimension::model=pixel 8');
+      store.toggleGroup('dimension::model=pixel 9');
+      expect(store.focusedGroupId()).toBe('dimension::model=pixel 9');
       store.toggleGroup('dimension::model=pixel 8');
       expect(store.openGroupIds().has('dimension::model=pixel 8')).toBeFalse();
+      expect(store.focusedGroupId()).toBe('dimension::model=pixel 9');
+      store.toggleGroup('dimension::model=pixel 9');
+      expect(store.openGroupIds().has('dimension::model=pixel 9')).toBeFalse();
+      mockSearchService.searchFleet.calls.reset();
       store.toggleGroup('dimension::model=pixel 8');
       expect(store.openGroupIds().has('dimension::model=pixel 8')).toBeTrue();
+      expect(store.focusedGroupId()).toBe('dimension::model=pixel 8');
       expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
 
       const pendingExpand = new Subject<FleetSearchResults>();

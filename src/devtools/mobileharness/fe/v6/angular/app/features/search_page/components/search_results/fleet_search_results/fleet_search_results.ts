@@ -75,12 +75,19 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
 export class FleetSearchResultsComponent {
   readonly store = inject(FleetSearchStore);
   readonly bulkConfig = useBulkConfigActions();
-  readonly DimensionList = DimensionList;
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   private readonly doc = inject(DOCUMENT);
   private readonly snackBarService = inject(SnackBarService);
   private readonly copyToClipboard = useCopyToClipboard();
+
+  readonly DimensionList = DimensionList;
+  readonly utilizationBusyTooltip =
+    'In Service (BUSY): Devices with BUSY status and a healthy device type actively running tests.';
+  readonly utilizationIdleTooltip =
+    'In Service (IDLE): Devices with IDLE status that are not quarantined and have a healthy device type ready to run tests.';
+  readonly utilizationOthersTooltip =
+    'Others (Out of service): Devices with non-IDLE/BUSY status, quarantined IDLE devices, or IDLE/BUSY devices with missing or abnormal types (FAILED, ABNORMAL, DISCONNECTED, OFFLINE, UNAUTHORIZED, FASTBOOT).';
 
   /** Whether export is disabled because the number of selected items exceeds MAX_EXPORT_ROWS (5,000). */
   readonly isExportDisabled = computed<boolean>(
