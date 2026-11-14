@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
@@ -145,5 +146,31 @@ public final class GetHostDefaultDeviceConfigHandlerTest {
         getHostDefaultDeviceConfigHandler.getHostDefaultDeviceConfig(request, SELF_UNIVERSE).get();
 
     assertThat(response.getDeviceConfig()).isEqualTo(DeviceConfig.getDefaultInstance());
+  }
+
+  @Test
+  @SuppressWarnings("deprecation") // Verifies LabConfig.wifi_config overrides legacy default_wifi.
+  public void getHostDefaultDeviceConfig_wifiConfigOverridesDefaultDeviceWifi() throws Exception {
+    LabConfig labConfig =
+        LabConfig.newBuilder()
+            .setHostName("host")
+            .setDefaultDeviceConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setDefaultWifi(WifiConfig.newBuilder().setSsid("legacy-ssid").build())
+                    .build())
+            .setWifiConfig(WifiConfig.newBuilder().setSsid("host-wifi").setPsk("host-psk").build())
+            .build();
+    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
+
+    GetHostDefaultDeviceConfigResponse response =
+        getHostDefaultDeviceConfigHandler
+            .getHostDefaultDeviceConfig(
+                GetHostDefaultDeviceConfigRequest.newBuilder().setHostName("host").build(),
+                SELF_UNIVERSE)
+            .get();
+
+    assertThat(response.getDeviceConfig().getWifi().getSsid()).isEqualTo("host-wifi");
+    assertThat(response.getDeviceConfig().getWifi().getPsk()).isEqualTo("host-psk");
   }
 }
