@@ -185,6 +185,9 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
   private static final Pattern UNABLE_TO_STOP_SERVICE_MSG_PATTERN =
       Pattern.compile("Unable to stop service (?<service>\\S+)\\s+See dmesg for error reason");
 
+  /** Default Android animation scale restored after tests. */
+  private static final float DEFAULT_ANIMATION_SCALE = 1.0f;
+
   /** A List of commands. */
   private static class Commands {
 
@@ -681,17 +684,17 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
 
     // animator_duration_scale
     if (spec.hasAnimatorDurationScale()) {
-      settings.global.add("animator_duration_scale", spec.getAnimatorDurationScale());
+      setAnimationScale("animator_duration_scale", spec.getAnimatorDurationScale());
     }
 
     // transition_animation_scale
     if (spec.hasTransitionAnimationScale()) {
-      settings.global.add("transition_animation_scale", spec.getTransitionAnimationScale());
+      setAnimationScale("transition_animation_scale", spec.getTransitionAnimationScale());
     }
 
     // window_animation_scale
     if (spec.hasWindowAnimationScale()) {
-      settings.global.add("window_animation_scale", spec.getWindowAnimationScale());
+      setAnimationScale("window_animation_scale", spec.getWindowAnimationScale());
     }
 
     // bluetooth_on
@@ -1026,6 +1029,11 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
       addCommandsForGpuSettings(testInfo);
       setNeedRebootForSetting(testInfo, "Device needs reboot before locking GPU frequencies.");
     }
+  }
+
+  private void setAnimationScale(String settingName, float scale) {
+    settings.global.add(settingName, scale);
+    commandsOnTestEnd.add("settings", "put", "global", settingName, DEFAULT_ANIMATION_SCALE);
   }
 
   private static Map<Long, Long> getAllCpuRuntimeFreqsSpecified(
@@ -1704,9 +1712,9 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
   protected void tearDown(TeardownContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
-    // After the test we need to enable the apps that were disabled, otherwise there could be a
-    // situation when the device can't be properly started after reboot because crucial
-    // first-party apps were disabled (for example, com.google.android.googlequicksearchbox).
+    // Restore device state after the test: re-enable disabled apps so first-party apps (for
+    // example, com.google.android.googlequicksearchbox) start properly after reboot, and reset
+    // modified animation scales for satellite lab devices that skip post-test resets.
     try {
       runCommands(testInfo, commandsOnTestEnd);
     } catch (MobileHarnessException e) {
