@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link AndroidDesktopOtaUpdateDecorator}
-// Next tag: 5
+// Next tag: 6
 message AndroidDesktopOtaUpdateDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidDesktopOtaUpdateDecoratorSpec ext = 1009;
@@ -60,6 +60,15 @@ message AndroidDesktopOtaUpdateDecoratorSpec {
     default = false,
     (field_detail) = {
       help: "If true, force OTA update even if the device is already up to date."
+    }
+  ];
+
+  optional int64 wait_for_device_timeout_sec = 5 [
+    default = 1200,
+    (field_detail) = {
+      help: "Timeout in seconds to wait for the device to be online and "
+            "ready after OTA update reboot. Default is 20 minutes (1200 "
+            "seconds)."
     }
   ];
 }
