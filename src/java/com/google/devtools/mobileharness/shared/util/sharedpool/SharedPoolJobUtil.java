@@ -26,10 +26,12 @@ import com.google.devtools.mobileharness.api.model.job.in.Dimensions;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
+import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 /** Utils for MH shared pool */
 public final class SharedPoolJobUtil {
@@ -64,10 +66,7 @@ public final class SharedPoolJobUtil {
 
   /** Returns whether a gateway {@code jobConfig} is using shared pool. */
   public static boolean isUsingSharedPool(Setting.JobConfig jobConfig) {
-    return jobConfig.getDimensionList().stream()
-        .anyMatch(dimension ->
-            dimension.getName().equals(Ascii.toLowerCase(Name.POOL.toString()))
-                && dimension.getValue().equals(Value.POOL_SHARED));
+    return hasDimension(jobConfig, Name.POOL, value -> value.equals(Value.POOL_SHARED));
   }
 
   /** Returns whether {@code job} is using performance pool. */
@@ -99,10 +98,34 @@ public final class SharedPoolJobUtil {
 
   /** Returns whether a gateway {@code jobConfig} is using default performance pool. */
   public static boolean isUsingDefaultPerformancePool(Setting.JobConfig jobConfig) {
-    return jobConfig.getDimensionList().stream()
-        .anyMatch(dimension ->
-            dimension.getName().equals(Ascii.toLowerCase(Name.PERFORMANCE_POOL.toString()))
-                && dimension.getValue().equals(Value.DEFAULT_PERFORMANCE_POOL_SHARED));
+    return hasDimension(
+        jobConfig,
+        Name.PERFORMANCE_POOL,
+        value -> value.equals(Value.DEFAULT_PERFORMANCE_POOL_SHARED));
+  }
+
+  /**
+   * Returns whether {@code jobConfig} has {@code dimensionName} matching {@code valuePredicate}.
+   *
+   * <p>A top-level dimension applies to every sub-device and overrides per-device {@code
+   * sub_device_spec} dimensions, with the last repeated entry winning.
+   */
+  private static boolean hasDimension(
+      Setting.JobConfig jobConfig, Name dimensionName, Predicate<String> valuePredicate) {
+    String key = Ascii.toLowerCase(dimensionName.toString());
+    String topLevelValue = null;
+    for (StrPair dimension : jobConfig.getDimensionList()) {
+      if (dimension.getName().equals(key)) {
+        topLevelValue = dimension.getValue();
+      }
+    }
+    if (topLevelValue != null) {
+      return valuePredicate.test(topLevelValue);
+    }
+    return jobConfig.getSubDeviceSpecList().stream()
+        .map(spec -> spec.getDimensions().getContentMap().get(key))
+        .filter(Objects::nonNull)
+        .anyMatch(valuePredicate);
   }
 
   /** Returns whether {@code job} is user performance pool in shared pool. */
@@ -147,21 +170,31 @@ public final class SharedPoolJobUtil {
     if (!isUsingSharedPool(jobConfig)) {
       return timeout;
     }
-    return maybeExtendStartTimeout(timeout);
+    return extendAndLogStartTimeout(timeout);
   }
 
   /**
    * Extends start timeout if necessary. The same as {@link #maybeExtendStartTimeout(Timeout,
-   * JobConfig)}.
+   * JobConfig)}, without logging when called repeatedly from polling loops.
    */
   public static Timeout maybeExtendStartTimeout(Timeout timeout, Setting.JobConfig jobConfig) {
     if (!isUsingSharedPool(jobConfig)) {
       return timeout;
     }
-    return maybeExtendStartTimeout(timeout);
+    return extendStartTimeout(timeout);
   }
 
-  private static Timeout maybeExtendStartTimeout(Timeout timeout) {
+  private static Timeout extendAndLogStartTimeout(Timeout timeout) {
+    Timeout extended = extendStartTimeout(timeout);
+    if (extended.getStartTimeoutMs() != timeout.getStartTimeoutMs()) {
+      logger.atInfo().log(
+          "Changing start timeout from %s ms to %s ms",
+          timeout.getStartTimeoutMs(), extended.getStartTimeoutMs());
+    }
+    return extended;
+  }
+
+  private static Timeout extendStartTimeout(Timeout timeout) {
     long startTimeoutMs = timeout.getStartTimeoutMs();
 
     long timeoutGapMs = timeout.getJobTimeoutMs() - timeout.getTestTimeoutMs();
@@ -173,8 +206,6 @@ public final class SharedPoolJobUtil {
     }
 
     if (finalizedStartTimeoutMs != startTimeoutMs) {
-      logger.atInfo().log(
-          "Changing start timeout from %s ms to %s ms", startTimeoutMs, finalizedStartTimeoutMs);
       return timeout.toBuilder().setStartTimeoutMs(finalizedStartTimeoutMs).build();
     }
     return timeout;
