@@ -61,6 +61,7 @@ import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefe
 import com.google.devtools.mobileharness.platform.androiddesktop.device.AndroidDesktopDeviceHelper;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutionException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
@@ -112,6 +113,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
@@ -144,6 +146,12 @@ public class TradefedTest extends BaseDriver
           "--record-planned-modules", "true");
 
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(4L);
+
+  /** Time for Tradefed to exit by itself after being killed, before its subprocesses are killed. */
+  private static final Duration KILL_TF_SUBPROCESSES_DELAY = Duration.ofSeconds(10L);
+
+  /** Time for Tradefed to exit after its subprocesses are killed, before it is killed forcibly. */
+  private static final Duration KILL_TF_FORCIBLY_DELAY = Duration.ofMinutes(1L);
 
   private static final String TF_AGENT_RESOURCE_PATH =
       "/com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar";
@@ -684,7 +692,7 @@ public class TradefedTest extends BaseDriver
       }
       periodicModuleResultsChecker.cancel(/* mayInterruptIfRunning= */ false);
       if (process != null && process.isAlive()) {
-        process.killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
+        killTradefedProcess(process);
       }
     }
 
@@ -740,6 +748,55 @@ public class TradefedTest extends BaseDriver
     } catch (RuntimeException | Error e) {
       logger.atWarning().withCause(e).log(
           "Failed to kill TF process after invocation start timeout");
+    }
+  }
+
+  /**
+   * Kills the Tradefed process together with the subprocesses it has spawned.
+   *
+   * <p>In ATS server, Tradefed runs the tests in another Tradefed subprocess. When being killed,
+   * Tradefed bundled in older xTS packages neither kills that subprocess reliably nor exits before
+   * the subprocess ends. Killing only the Tradefed process forcibly would orphan the subprocess,
+   * which then keeps running tests on the devices.
+   */
+  private static void killTradefedProcess(CommandProcess process) throws InterruptedException {
+    // Snapshots the subprocesses before killing Tradefed since they are re-parented once their
+    // parents exit.
+    ImmutableList<ProcessHandle> subprocesses =
+        ProcessHandle.of(process.getPid())
+            .map(tradefed -> tradefed.descendants().collect(toImmutableList()))
+            .orElse(ImmutableList.of());
+    process.kill();
+    try {
+      // Lets Tradefed stop its subprocesses and exit by itself first.
+      if (!awaitExit(process, KILL_TF_SUBPROCESSES_DELAY)) {
+        logger.atInfo().log(
+            "Tradefed is still alive %s after being killed, killing its %d subprocess(es)",
+            KILL_TF_SUBPROCESSES_DELAY, subprocesses.size());
+        subprocesses.forEach(ProcessHandle::destroyForcibly);
+        if (!awaitExit(process, KILL_TF_FORCIBLY_DELAY)) {
+          process.killForcibly();
+        }
+      }
+    } catch (InterruptedException | RuntimeException | Error e) {
+      process.killForcibly();
+      throw e;
+    } finally {
+      // Also kills the subprocesses left behind by a Tradefed process which has exited.
+      subprocesses.forEach(ProcessHandle::destroyForcibly);
+    }
+  }
+
+  /** Waits for the process to exit and returns whether it exits within the timeout. */
+  private static boolean awaitExit(CommandProcess process, Duration timeout)
+      throws InterruptedException {
+    try {
+      CommandResult unused = process.await(timeout);
+      return true;
+    } catch (CommandExecutionException e) {
+      return true;
+    } catch (TimeoutException e) {
+      return false;
     }
   }
 
