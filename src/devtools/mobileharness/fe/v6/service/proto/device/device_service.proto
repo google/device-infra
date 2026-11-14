@@ -137,6 +137,15 @@ service DeviceService {
       get: "/v6/devices/{id}/test-history"
     };
   }
+
+  // Retrieves the unified historical events for a device (status, build, host,
+  // recovery records, and inventory records).
+  rpc GetDeviceEvents(GetDeviceEventsRequest)
+      returns (GetDeviceEventsResponse) {
+    option (google.api.http) = {
+      get: "/v6/devices/{id}/events"
+    };
+  }
 }
 
 // Request message for GetTestbedConfig.
@@ -377,4 +386,88 @@ message GetDeviceTestHistoryResponse {
   // Cursor for the next page. Empty when this is the last page. There is no
   // total count (MOSS does not provide one).
   string next_page_token = 3;
+}
+
+// Request for GetDeviceEvents.
+message GetDeviceEventsRequest {
+  // The device ID whose historical events are listed.
+  string id = 1;
+
+  // The universe the device belongs to.
+  string universe = 2;
+
+  // Optional host name. When set, restricts the device events to this host,
+  // disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 3;
+
+  // Optional lookback window in days (defaults to 90 when unset or <= 0).
+  int32 window_days = 4;
+}
+
+// A single field transition captured from device monitoring snapshots.
+message DeviceChangeRecord {
+  // Timestamp when the field transition occurred.
+  google.protobuf.Timestamp change_time = 1;
+
+  // Field that changed: "status", "build", "api", or "host".
+  string field = 2;
+
+  // Value before the transition.
+  string from_value = 3;
+
+  // Value after the transition.
+  string to_value = 4;
+
+  // Additional metadata (for example, "Needs manual repair" on status changes
+  // or "API 36 to 37" on build changes).
+  string meta = 5;
+}
+
+// A manual repair record logged by a lab technician in Arsenal.
+message DeviceRecoveryRecord {
+  // Timestamp when the recovery record was created.
+  google.protobuf.Timestamp create_time = 1;
+
+  // LDAP of the technician who logged the repair.
+  string author = 2;
+
+  // Action taken to recover the device (for example, "Flashed Device").
+  string recovery_action = 3;
+
+  // Offline reason recorded for the failure (for example, "Stuck In Fastboot").
+  string offline_reason = 4;
+
+  // Optional free-text repair note.
+  string note = 5;
+}
+
+// An asset lifecycle or location record from the inventory system.
+message DeviceInventoryRecord {
+  // Timestamp when the inventory event was recorded.
+  google.protobuf.Timestamp event_time = 1;
+
+  // Author or automation account that recorded the note.
+  string author = 2;
+
+  // Inventory event subject (for example, "Create Unit" or "Moved").
+  string subject = 3;
+
+  // Inventory note body (for example, "Deployed to <host>").
+  string body = 4;
+}
+
+// Response for GetDeviceEvents.
+message GetDeviceEventsResponse {
+  // System field transitions (status, build, API level, host).
+  repeated DeviceChangeRecord changes = 1;
+
+  // Manual recovery records from Arsenal.
+  repeated DeviceRecoveryRecord recovery_records = 2;
+
+  // Asset lifecycle and location records from inventory.
+  repeated DeviceInventoryRecord inventory_records = 3;
+
+  // Whether events older than the requested window exist for this device.
+  bool has_older_events = 4;
 }
