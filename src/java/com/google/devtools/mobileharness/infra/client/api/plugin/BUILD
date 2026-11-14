@@ -77,6 +77,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/strategy:flaky_test_retry_constants",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/strategy:retry",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/strategy:retry_evaluator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/result:client_alloc_error_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",

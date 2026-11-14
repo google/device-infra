@@ -48,12 +48,38 @@ java_library(
 )
 
 java_library(
+    name = "retry_evaluator",
+    srcs = [
+        "RetryEvaluator.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/strategy:__pkg__",
+    ],
+    deps = [
+        ":flaky_test_retry_constants",
+        ":retry_strategy",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/devtools/mobileharness/infra/container/proto:mode_setting_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/converter",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/result:client_alloc_error_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "flaky_test_retry_strategy",
     srcs = [
         "FlakyTestRetryStrategy.java",
     ],
     deps = [
         ":flaky_test_retry_constants",
+        ":retry_evaluator",
         ":retry_strategy",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -69,17 +95,20 @@ java_library(
     srcs = [
         "DefaultRetryStrategy.java",
     ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/strategy:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
+    ],
     exports = [
         ":flaky_test_retry_strategy",
         ":retry_strategy",
     ],
     deps = [
+        ":retry_evaluator",
         ":retry_strategy",
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
-        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:mode_setting_java_proto",
-        "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",

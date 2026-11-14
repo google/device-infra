@@ -27,7 +27,9 @@ java_library(
     name = "client_alloc_error_util",
     srcs = ["ClientAllocErrorUtil.java"],
     deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/util:error_id_comparator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],

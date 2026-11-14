@@ -16,11 +16,14 @@
 
 package com.google.devtools.mobileharness.infra.client.api.util.result;
 
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
+import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import java.util.Optional;
 
 /** Checks whether a test/job has alloc error/failure based on the error code. */
 public final class ClientAllocErrorUtil {
@@ -52,11 +55,35 @@ public final class ClientAllocErrorUtil {
     return false;
   }
 
+  /**
+   * Checks whether a test result and cause indicate a client-side allocation infra error, matching
+   * {@link #isTestAllocError(TestInfo)} without requiring a {@link TestInfo}.
+   */
+  public static boolean isTestAllocError(Test.TestResult result, Optional<ExceptionDetail> cause) {
+    if (result == Test.TestResult.ERROR && cause.isPresent()) {
+      var errorId = cause.get().getSummary().getErrorId();
+      return ErrorIdComparator.equal(errorId, InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR);
+    }
+    return false;
+  }
+
   public static boolean isTestAllocFail(TestInfo testInfo) {
     if (testInfo.resultWithCause().get().type() == Test.TestResult.ERROR
         && testInfo.resultWithCause().get().causeException().isPresent()) {
       ErrorId errorId = testInfo.resultWithCause().get().causeException().get().getErrorId();
       return errorId.equals(InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR);
+    }
+    return false;
+  }
+
+  /**
+   * Checks whether a test result and cause indicate a client-side allocation user config failure,
+   * matching {@link #isTestAllocFail(TestInfo)} without requiring a {@link TestInfo}.
+   */
+  public static boolean isTestAllocFail(Test.TestResult result, Optional<ExceptionDetail> cause) {
+    if (result == Test.TestResult.ERROR && cause.isPresent()) {
+      return ErrorIdComparator.equal(
+          cause.get().getSummary().getErrorId(), InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR);
     }
     return false;
   }

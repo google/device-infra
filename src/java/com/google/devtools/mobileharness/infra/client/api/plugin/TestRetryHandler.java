@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.client.api.plugin;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -30,6 +29,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.DefaultRetryStrategy;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.FlakyTestRetryConstants;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.FlakyTestRetryStrategy;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.RetryEvaluator;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.RetryStrategy;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.RetryStrategy.RetryInfo;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
@@ -48,15 +48,6 @@ public class TestRetryHandler {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String PROPERTY_REPEAT_INDEX = Ascii.toLowerCase(Test.REPEAT_INDEX.name());
-
-  private static final ImmutableSet<String> INHERITED_TEST_PROPERTIES =
-      ImmutableSet.of(
-          Ascii.toLowerCase(Test.SHARD_COUNT.name()),
-          Ascii.toLowerCase(Test.SHARD_INDEX.name()),
-          Ascii.toLowerCase(
-              Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES.name()),
-          Ascii.toLowerCase(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS.name()),
-          PROPERTY_REPEAT_INDEX);
 
   private final DeviceAllocator deviceAllocator;
   private final RetryStrategy defaultRetryStrategy;
@@ -242,7 +233,7 @@ public class TestRetryHandler {
     String testName = currentTestInfo.locator().getName();
     TestInfo newTestInfo = jobInfo.tests().add(testName);
     for (Map.Entry<String, String> property : currentTestInfo.properties().getAll().entrySet()) {
-      if (INHERITED_TEST_PROPERTIES.contains(property.getKey())) {
+      if (RetryEvaluator.inheritedTestProperties().contains(property.getKey())) {
         newTestInfo.properties().add(property.getKey(), property.getValue());
       }
     }
