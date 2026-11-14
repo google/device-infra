@@ -53,14 +53,12 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupOperation;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Order.DeviceOrder;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Order.LabOrder;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
-import com.google.devtools.mobileharness.shared.util.filter.MaskUtils;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.time.Instant;
 import java.util.Collection;
@@ -80,18 +78,9 @@ public class LabQueryUtils {
   static final String DEVICE_SORT_KEY_PATH = "device_locator.id";
 
   public static LabQueryResult createNewLabQueryResult(
-      LabQuery query, LabInfoProvider labInfoProvider, boolean useProjectionPushdown)
-      throws MobileHarnessException {
+      LabQuery query, LabInfoProvider labInfoProvider) throws MobileHarnessException {
     LabQueryResult.Builder result =
         LabQueryResult.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
-
-    if (!useProjectionPushdown) {
-      LabView rawLabView = labInfoProvider.getLabInfos(query.getFilter());
-      setViewAndSort(result, rawLabView, query);
-      groupDevice(result, query.getDeviceViewRequest());
-      applyMask(result, query.getMask());
-      return result.build();
-    }
 
     Projection projection = Projection.of(query);
 
@@ -563,11 +552,6 @@ public class LabQueryUtils {
         compositeDimension.getRequiredDimensionList().stream()
             .filter(dimension -> dimension.getName().equals(dimensionName))
             .map(DeviceDimension::getValue));
-  }
-
-  /** Applies the given {@link Mask} to the {@link LabQueryResult}. */
-  private static void applyMask(LabQueryResult.Builder result, Mask mask) {
-    MaskUtils.trimLabQueryResult(result, mask);
   }
 
   /** Gets a page of the result. */
