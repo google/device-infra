@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Comparator.naturalOrder;
+import static java.util.Comparator.reverseOrder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -145,6 +147,11 @@ public final class FleetGroupSearcher {
       return result.build();
     }
 
+    FleetSortComparator[] keyComparators = new FleetSortComparator[keys.size()];
+    for (int i = 0; i < keys.size(); i++) {
+      keyComparators[i] = FleetSortComparator.forKey(corpus, keys.get(i));
+    }
+
     List<GroupHolder> groups = new ArrayList<>();
     int totalItems = 0;
     for (Map.Entry<ImmutableList<ImmutableList<String>>, List<Integer>> entry :
@@ -155,12 +162,13 @@ public final class FleetGroupSearcher {
       groups.add(
           new GroupHolder(
               encodeGroupId(keys, combo),
-              displayValues(index, keys, combo),
+              combo,
+              displayValues(index, keys, keyComparators, combo),
               members.size(),
               corpus.utilization(members)));
     }
 
-    sortGroups(groups, keys, sort);
+    sortGroups(groups, keys, keyComparators, sort);
 
     int totalGroups = groups.size();
     int pageSize = pageSize(page);
@@ -257,59 +265,96 @@ public final class FleetGroupSearcher {
 
   /**
    * Orders the groups by the requested sort, breaking ties by the group's value tuple so equal
-   * groups keep a stable order. A descending sort reverses the whole comparison, tie-break
-   * included, matching the prototype. The default, used when no sort is set, is item count
+   * groups keep a stable order. Group-key sorts order non-empty values via each key's precomputed
+   * {@link FleetSortComparator} and keep {@code (no value)} buckets last in both ascending and
+   * descending directions. Item-count sorts break equal counts with ascending group-key order (with
+   * {@code (no value)} after present values). The default, used when no sort is set, is item count
    * descending.
    */
   private static void sortGroups(
-      List<GroupHolder> groups, ImmutableList<String> keys, FleetGroupSort sort) {
-    Comparator<GroupHolder> primary;
-    boolean ascending;
+      List<GroupHolder> groups,
+      ImmutableList<String> keys,
+      FleetSortComparator[] keyComparators,
+      FleetGroupSort sort) {
     FleetGroupSortField field =
         sort == null ? FleetGroupSortField.getDefaultInstance() : sort.getField();
-    switch (field.getKindCase()) {
-      case GROUP_KEY -> {
-        int index = keys.indexOf(field.getGroupKey());
-        if (index >= 0) {
-          primary = Comparator.comparing(group -> group.displayValues().get(index));
-          ascending = sort.getAscending();
-        } else {
-          primary = Comparator.comparingInt(GroupHolder::itemCount);
-          ascending = false;
-        }
-      }
-      case ITEM_COUNT -> {
-        primary = Comparator.comparingInt(GroupHolder::itemCount);
-        ascending = sort.getAscending();
-      }
-      default -> {
-        primary = Comparator.comparingInt(GroupHolder::itemCount);
-        ascending = false;
+    if (field.getKindCase() == FleetGroupSortField.KindCase.GROUP_KEY) {
+      int index = keys.indexOf(field.getGroupKey());
+      if (index >= 0) {
+        groups.sort(groupKeyComparator(keyComparators, index, sort.getAscending()));
+        return;
       }
     }
-    Comparator<GroupHolder> comparator = primary.thenComparing(GroupHolder::sortName);
+    boolean ascending =
+        field.getKindCase() == FleetGroupSortField.KindCase.ITEM_COUNT && sort.getAscending();
+    Comparator<GroupHolder> countOrder = Comparator.comparingInt(GroupHolder::itemCount);
     if (!ascending) {
-      comparator = comparator.reversed();
+      countOrder = countOrder.reversed();
     }
-    groups.sort(comparator);
+    groups.sort(countOrder.thenComparing(groupKeyComparator(keyComparators, 0, true)));
+  }
+
+  private static Comparator<GroupHolder> groupKeyComparator(
+      FleetSortComparator[] keyComparators, int primaryIndex, boolean ascending) {
+    Comparator<GroupHolder> comparator = slotComparator(keyComparators, primaryIndex, ascending);
+    int keyCount = keyComparators.length;
+    for (int i = 0; i < keyCount; i++) {
+      if (i != primaryIndex) {
+        comparator = comparator.thenComparing(slotComparator(keyComparators, i, ascending));
+      }
+    }
+    Comparator<String> nameOrder = ascending ? naturalOrder() : reverseOrder();
+    return comparator.thenComparing(GroupHolder::sortName, nameOrder);
+  }
+
+  private static Comparator<GroupHolder> slotComparator(
+      FleetSortComparator[] keyComparators, int index, boolean ascending) {
+    return (a, b) -> compareGroupSlot(keyComparators, a, b, index, ascending);
+  }
+
+  private static int compareGroupSlot(
+      FleetSortComparator[] keyComparators,
+      GroupHolder a,
+      GroupHolder b,
+      int index,
+      boolean ascending) {
+    boolean hasValueA = !a.isNoValue(index);
+    boolean hasValueB = !b.isNoValue(index);
+    if (hasValueA != hasValueB) {
+      return hasValueA ? -1 : 1;
+    }
+    if (!hasValueA) {
+      return 0;
+    }
+    int cmp =
+        keyComparators[index].compareNonEmpty(
+            a.displayValues().get(index), b.displayValues().get(index));
+    return ascending ? cmp : -cmp;
   }
 
   /**
    * One header display string per group-by key, joining that key's whole display-cased value set.
    */
   private static ImmutableList<String> displayValues(
-      FleetIndex index, ImmutableList<String> keys, ImmutableList<ImmutableList<String>> combo) {
+      FleetIndex index,
+      ImmutableList<String> keys,
+      FleetSortComparator[] keyComparators,
+      ImmutableList<ImmutableList<String>> combo) {
     ImmutableList.Builder<String> shown = ImmutableList.builder();
     for (int i = 0; i < keys.size(); i++) {
+      String keyId = keys.get(i);
       ImmutableList<String> values = combo.get(i);
       if (values.isEmpty()) {
         shown.add(NO_VALUE_DISPLAY);
         continue;
       }
-      ImmutableMap<String, String> displays = index.valueDisplays(keys.get(i));
-      List<String> parts = new ArrayList<>();
+      ImmutableMap<String, String> displays = index.valueDisplays(keyId);
+      List<String> parts = new ArrayList<>(values.size());
       for (String value : values) {
         parts.add(displays.getOrDefault(value, value));
+      }
+      if (keyComparators[i] != FleetSortComparator.LEXICOGRAPHICAL && parts.size() > 1) {
+        parts.sort(keyComparators[i]);
       }
       shown.add(String.join(", ", parts));
     }
@@ -490,9 +535,14 @@ public final class FleetGroupSearcher {
   /** One group's header data, held while the page of groups is sorted and sliced. */
   private record GroupHolder(
       String groupId,
+      ImmutableList<ImmutableList<String>> combo,
       ImmutableList<String> displayValues,
       int itemCount,
       Optional<FleetUtilization> utilization) {
+
+    boolean isNoValue(int index) {
+      return combo.get(index).isEmpty();
+    }
 
     /** Stable tie-break key: the group's display value tuple joined with a delimiter. */
     String sortName() {

@@ -53,6 +53,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_key_priority",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_promoted_keys_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_search_config_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_sort_comparator",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_value_lister",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:host_column_cataloger",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:host_corpus",

@@ -259,8 +259,191 @@ public final class FleetGroupSearcherTest {
                 .build(),
             FleetPageRequest.getDefaultInstance());
 
-    // Ascending count: the two size-1 groups first, tie-broken by name ascending, then android (3).
-    assertThat(groupValues(results)).containsExactly("(no value)", "ios", "android").inOrder();
+    // Ascending count: the two size-1 groups first (present value "ios" before "(no value)"), then
+    // android (3).
+    assertThat(groupValues(results)).containsExactly("ios", "(no value)", "android").inOrder();
+  }
+
+  @Test
+  public void sortByItemCount_breaksEqualCountTiesInNumericOrderWithNoValueLast() {
+    LabQueryResult tempFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithTemp("dev-0", "9"),
+                            deviceWithTemp("dev-1", "38"),
+                            deviceWithTemp("dev-2", "-1"),
+                            deviceWithTemp("dev-3", ""),
+                            deviceWithTemp("dev-4", "19"),
+                            deviceWithTemp("dev-5", "19"))))
+            .build();
+    FleetSnapshot tempSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(tempFleet, BUILD_TIME);
+    DeviceCorpus tempCorpus =
+        new DeviceCorpus(tempSnapshot, new LazyPostings(tempSnapshot.devices()), null);
+
+    FleetGroupedResults countDesc =
+        searcher.searchGrouped(
+            tempCorpus,
+            ImmutableList.of(),
+            ImmutableList.of("dimension::battery_temperature"),
+            FleetGroupSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(groupValues(countDesc))
+        .containsExactly("19", "-1", "9", "38", "(no value)")
+        .inOrder();
+
+    FleetGroupedResults countAsc =
+        searcher.searchGrouped(
+            tempCorpus,
+            ImmutableList.of(),
+            ImmutableList.of("dimension::battery_temperature"),
+            FleetGroupSort.newBuilder()
+                .setField(
+                    FleetGroupSortField.newBuilder()
+                        .setItemCount(FleetItemCountSort.getDefaultInstance()))
+                .setAscending(true)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(groupValues(countAsc))
+        .containsExactly("-1", "9", "38", "(no value)", "19")
+        .inOrder();
+  }
+
+  @Test
+  public void multiValueNumericGroup_formatsAndSortsPartsNumericallyAndExpands() {
+    LabQueryResult sdkFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithDimensions("dev-multi", "sdk_version", "100", "9"),
+                            deviceWithDimensions("dev-eight", "sdk_version", "8"),
+                            deviceWithDimensions("dev-twelve", "sdk_version", "12"))))
+            .build();
+    FleetSnapshot sdkSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(sdkFleet, BUILD_TIME);
+    DeviceCorpus sdkCorpus =
+        new DeviceCorpus(sdkSnapshot, new LazyPostings(sdkSnapshot.devices()), null);
+
+    FleetGroupedResults grouped =
+        searcher.searchGrouped(
+            sdkCorpus,
+            ImmutableList.of(),
+            ImmutableList.of("dimension::sdk_version"),
+            FleetGroupSort.newBuilder()
+                .setField(FleetGroupSortField.newBuilder().setGroupKey("dimension::sdk_version"))
+                .setAscending(true)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(groupValues(grouped)).containsExactly("8", "9, 100", "12").inOrder();
+
+    FleetGroup multiGroup = groupByFirstValue(grouped, "9, 100");
+    FleetFlatResults expanded =
+        searcher.expandGroup(
+            sdkCorpus,
+            ImmutableList.of(),
+            multiGroup.getGroupId(),
+            EXPAND_COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(expanded)).containsExactly("dev-multi");
+  }
+
+  @Test
+  public void multiValueVersionGroup_ordersHeadersByVersionSegments() {
+    LabQueryResult versionFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithDimensions("dev-0", "software_version", "18.0", "17.10"),
+                            deviceWithDimensions("dev-1", "software_version", "17.5"),
+                            deviceWithDimensions("dev-2", "software_version", "18.0", "17.4"))))
+            .build();
+    FleetSnapshot versionSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(versionFleet, BUILD_TIME);
+    DeviceCorpus versionCorpus =
+        new DeviceCorpus(versionSnapshot, new LazyPostings(versionSnapshot.devices()), null);
+
+    FleetGroupedResults grouped =
+        searcher.searchGrouped(
+            versionCorpus,
+            ImmutableList.of(),
+            ImmutableList.of("dimension::software_version"),
+            FleetGroupSort.newBuilder()
+                .setField(
+                    FleetGroupSortField.newBuilder().setGroupKey("dimension::software_version"))
+                .setAscending(true)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(groupValues(grouped)).containsExactly("17.4, 18.0", "17.5", "17.10, 18.0").inOrder();
+  }
+
+  @Test
+  public void sortByGroupKey_ordersNumericGroupsNumericallyWithNoValueLast() {
+    LabQueryResult tempFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithTemp("dev-0", "9"),
+                            deviceWithTemp("dev-1", "38"),
+                            deviceWithTemp("dev-2", "-1"),
+                            deviceWithTemp("dev-3", ""),
+                            deviceWithTemp("dev-4", "25"))))
+            .build();
+    FleetSnapshot tempSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(tempFleet, BUILD_TIME);
+    DeviceCorpus tempCorpus =
+        new DeviceCorpus(tempSnapshot, new LazyPostings(tempSnapshot.devices()), null);
+
+    FleetGroupedResults ascending =
+        searcher.searchGrouped(
+            tempCorpus,
+            ImmutableList.of(),
+            ImmutableList.of("dimension::battery_temperature"),
+            FleetGroupSort.newBuilder()
+                .setField(
+                    FleetGroupSortField.newBuilder().setGroupKey("dimension::battery_temperature"))
+                .setAscending(true)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(groupValues(ascending))
+        .containsExactly("-1", "9", "25", "38", "(no value)")
+        .inOrder();
+
+    FleetGroupedResults descending =
+        searcher.searchGrouped(
+            tempCorpus,
+            ImmutableList.of(),
+            ImmutableList.of("dimension::battery_temperature"),
+            FleetGroupSort.newBuilder()
+                .setField(
+                    FleetGroupSortField.newBuilder().setGroupKey("dimension::battery_temperature"))
+                .setAscending(false)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(groupValues(descending))
+        .containsExactly("38", "25", "9", "-1", "(no value)")
+        .inOrder();
   }
 
   @Test
@@ -648,5 +831,24 @@ public final class FleetGroupSearcherTest {
 
   private static DeviceDimension dimension(String name, String value) {
     return DeviceDimension.newBuilder().setName(name).setValue(value).build();
+  }
+
+  private static DeviceInfo deviceWithTemp(String id, String temp) {
+    return temp.isEmpty()
+        ? deviceWithDimensions(id, "battery_temperature")
+        : deviceWithDimensions(id, "battery_temperature", temp);
+  }
+
+  private static DeviceInfo deviceWithDimensions(String id, String name, String... values) {
+    DeviceCompositeDimension.Builder dims = DeviceCompositeDimension.newBuilder();
+    for (String value : values) {
+      dims.addSupportedDimension(dimension(name, value));
+    }
+    return DeviceInfo.newBuilder()
+        .setDeviceLocator(DeviceLocator.newBuilder().setId(id))
+        .setDeviceStatus(DeviceStatus.IDLE)
+        .setDeviceFeature(
+            DeviceFeature.newBuilder().addType("AndroidRealDevice").setCompositeDimension(dims))
+        .build();
   }
 }
