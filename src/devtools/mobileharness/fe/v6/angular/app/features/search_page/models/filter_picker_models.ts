@@ -34,8 +34,7 @@ export const INT_COMPARISON_OPERATORS: ReadonlyArray<{
     id: 'gte',
     symbol: '\u2265',
     title: 'At least (\u2265)',
-    proto:
-      IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+    proto: IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
   },
   {
     id: 'lt',
@@ -137,6 +136,8 @@ export interface FilterSortOptions {
   readonly selectedValues?: ReadonlySet<string>;
   /** Whether the candidate items are plain values without count columns. */
   readonly isPlain?: boolean;
+  /** Optional filter key identifier used to select version vs decimal comparison. */
+  readonly key?: string;
   /** Loading flag indicating whether backend values are currently fetching. */
   readonly isLoading?: boolean;
 }

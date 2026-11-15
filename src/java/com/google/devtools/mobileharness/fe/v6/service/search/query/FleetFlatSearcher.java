@@ -35,9 +35,10 @@ import javax.inject.Inject;
  * <p>This is the Java port of the search prototype's flat branch of {@code search_devices}. It runs
  * entirely over an in-memory {@link SearchCorpus}: {@link FleetFilterEngine} resolves the filters
  * to matching record indices, a bounded max-heap selects the top {@code offset + pageSize} records
- * ordered by the requested sort column's lowercased first value (breaking ties by record id), the
- * requested page slice is extracted with an opaque offset cursor, and the corpus turns the slice
- * into columns and rows.
+ * ordered by the requested sort column's first value (lexicographically for identifier keys and via
+ * {@link FleetSortComparator} for all other keys) with missing values last and ties broken by
+ * record id, the requested page slice is extracted with an opaque offset cursor, and the corpus
+ * turns the slice into columns and rows.
  */
 public final class FleetFlatSearcher {
 
@@ -121,6 +122,7 @@ public final class FleetFlatSearcher {
     String sortKey =
         (sort == null || sort.getKey().isEmpty()) ? corpus.identifierKey() : sort.getKey();
     boolean ascending = sort == null || sort.getKey().isEmpty() || sort.getAscending();
+    FleetSortComparator comparator = FleetSortComparator.forKey(corpus, sortKey);
 
     int[] heapIndices = new int[end];
     String[] heapKeys = new String[end];
@@ -131,12 +133,12 @@ public final class FleetFlatSearcher {
       if (heapSize < end) {
         heapIndices[heapSize] = i;
         heapKeys[heapSize] = key;
-        siftUp(heapIndices, heapKeys, heapSize, corpus, ascending);
+        siftUp(heapIndices, heapKeys, heapSize, corpus, ascending, comparator);
         heapSize++;
-      } else if (isBefore(i, key, heapIndices[0], heapKeys[0], corpus, ascending)) {
+      } else if (isBefore(i, key, heapIndices[0], heapKeys[0], corpus, ascending, comparator)) {
         heapIndices[0] = i;
         heapKeys[0] = key;
-        siftDown(heapIndices, heapKeys, end, corpus, ascending);
+        siftDown(heapIndices, heapKeys, end, corpus, ascending, comparator);
       }
     }
 
@@ -146,19 +148,25 @@ public final class FleetFlatSearcher {
       heapSize--;
       heapIndices[0] = heapIndices[heapSize];
       heapKeys[0] = heapKeys[heapSize];
-      siftDown(heapIndices, heapKeys, heapSize, corpus, ascending);
+      siftDown(heapIndices, heapKeys, heapSize, corpus, ascending, comparator);
     }
     pageIndices[0] = heapIndices[0];
     return pageIndices;
   }
 
   private static void siftUp(
-      int[] heapIndices, String[] heapKeys, int child, SearchCorpus corpus, boolean ascending) {
+      int[] heapIndices,
+      String[] heapKeys,
+      int child,
+      SearchCorpus corpus,
+      boolean ascending,
+      FleetSortComparator comparator) {
     int index = heapIndices[child];
     String key = heapKeys[child];
     while (child > 0) {
       int parent = (child - 1) >>> 1;
-      if (!isBefore(heapIndices[parent], heapKeys[parent], index, key, corpus, ascending)) {
+      if (!isBefore(
+          heapIndices[parent], heapKeys[parent], index, key, corpus, ascending, comparator)) {
         break;
       }
       heapIndices[child] = heapIndices[parent];
@@ -170,7 +178,12 @@ public final class FleetFlatSearcher {
   }
 
   private static void siftDown(
-      int[] heapIndices, String[] heapKeys, int heapSize, SearchCorpus corpus, boolean ascending) {
+      int[] heapIndices,
+      String[] heapKeys,
+      int heapSize,
+      SearchCorpus corpus,
+      boolean ascending,
+      FleetSortComparator comparator) {
     int parent = 0;
     int index = heapIndices[0];
     String key = heapKeys[0];
@@ -185,10 +198,12 @@ public final class FleetFlatSearcher {
               heapIndices[right],
               heapKeys[right],
               corpus,
-              ascending)) {
+              ascending,
+              comparator)) {
         child = right;
       }
-      if (!isBefore(index, key, heapIndices[child], heapKeys[child], corpus, ascending)) {
+      if (!isBefore(
+          index, key, heapIndices[child], heapKeys[child], corpus, ascending, comparator)) {
         break;
       }
       heapIndices[parent] = heapIndices[child];
@@ -201,13 +216,24 @@ public final class FleetFlatSearcher {
 
   /**
    * Returns true if record {@code indexA} strictly precedes {@code indexB} in the requested sort
-   * order. Ties on {@code key} break by {@link SearchCorpus#recordId}; descending reverses the
-   * comparison on {@code (key, recordId)}, and remaining ties (duplicate record ids) break by
-   * encounter index ({@code indexA < indexB}).
+   * order. Records missing a value for the sort column ({@code ""}) always sort after records
+   * carrying a value in both ascending and descending directions. Non-empty keys are ordered via
+   * {@code comparator}; ties on {@code key} break by {@link SearchCorpus#recordId}; descending
+   * reverses the comparison on non-empty {@code key} and on {@code recordId}, and remaining ties
+   * (duplicate record ids) break by encounter index ({@code indexA < indexB}).
    */
   private static boolean isBefore(
-      int indexA, String keyA, int indexB, String keyB, SearchCorpus corpus, boolean ascending) {
-    int cmp = keyA.compareTo(keyB);
+      int indexA,
+      String keyA,
+      int indexB,
+      String keyB,
+      SearchCorpus corpus,
+      boolean ascending,
+      FleetSortComparator comparator) {
+    if (keyA.isEmpty() != keyB.isEmpty()) {
+      return keyB.isEmpty();
+    }
+    int cmp = keyA.isEmpty() ? 0 : comparator.compareNonEmpty(keyA, keyB);
     if (cmp == 0) {
       cmp = corpus.recordId(indexA).compareTo(corpus.recordId(indexB));
     }

@@ -194,6 +194,226 @@ describe('value_picker_utils', () => {
       });
       expect(result.length).toBe(150);
     });
+
+    it('should sort signed numeric, unit-suffixed, and version values in numeric and natural order', () => {
+      const tempItems: PickerValueItem[] = [
+        {value: '9', displayLabel: '9', filtered: 1, total: 1},
+        {value: '38', displayLabel: '38', filtered: 1, total: 1},
+        {value: '-1', displayLabel: '-1', filtered: 1, total: 1},
+        {value: '100', displayLabel: '100', filtered: 1, total: 1},
+        {value: '25', displayLabel: '25', filtered: 1, total: 1},
+      ];
+
+      const asc = computeFilteredAndSortedValues({
+        items: tempItems,
+        query: '',
+        sortBy: 'value',
+        sortAsc: true,
+      });
+      expect(asc.map((i) => i.value)).toEqual(['-1', '9', '25', '38', '100']);
+
+      const desc = computeFilteredAndSortedValues({
+        items: tempItems,
+        query: '',
+        sortBy: 'value',
+        sortAsc: false,
+      });
+      expect(desc.map((i) => i.value)).toEqual(['100', '38', '25', '9', '-1']);
+
+      const tiedCountSort = computeFilteredAndSortedValues({
+        items: tempItems,
+        query: '',
+        sortBy: 'filtered',
+        sortAsc: false,
+      });
+      expect(tiedCountSort.map((i) => i.value)).toEqual([
+        '-1',
+        '9',
+        '25',
+        '38',
+        '100',
+      ]);
+
+      const storageItems: PickerValueItem[] = [
+        {value: '18.3GB', displayLabel: '18.3GB', filtered: 1, total: 1},
+        {value: '2.76GB', displayLabel: '2.76GB', filtered: 1, total: 1},
+        {value: '18.25GB', displayLabel: '18.25GB', filtered: 1, total: 1},
+        {value: '2GB', displayLabel: '2GB', filtered: 1, total: 1},
+        {value: '107GB', displayLabel: '107GB', filtered: 1, total: 1},
+      ];
+      expect(
+        computeFilteredAndSortedValues({
+          items: storageItems,
+          query: '',
+          sortBy: 'value',
+          sortAsc: true,
+        }).map((i) => i.value),
+      ).toEqual(['2GB', '2.76GB', '18.25GB', '18.3GB', '107GB']);
+
+      const decimalItems: PickerValueItem[] = [
+        {value: '18.3', displayLabel: '18.3', filtered: 1, total: 1},
+        {value: '0.2', displayLabel: '0.2', filtered: 1, total: 1},
+        {value: '1.5', displayLabel: '1.5', filtered: 1, total: 1},
+        {value: '+1.5', displayLabel: '+1.5', filtered: 1, total: 1},
+        {value: '0.15', displayLabel: '0.15', filtered: 1, total: 1},
+        {value: '1.25', displayLabel: '1.25', filtered: 1, total: 1},
+        {value: '+1.25', displayLabel: '+1.25', filtered: 1, total: 1},
+        {value: '18.25', displayLabel: '18.25', filtered: 1, total: 1},
+        {value: '-1.25', displayLabel: '-1.25', filtered: 1, total: 1},
+        {value: '-1.5', displayLabel: '-1.5', filtered: 1, total: 1},
+      ];
+      expect(
+        computeFilteredAndSortedValues({
+          items: decimalItems,
+          query: '',
+          sortBy: 'value',
+          sortAsc: true,
+        }).map((i) => i.value),
+      ).toEqual([
+        '-1.5',
+        '-1.25',
+        '0.15',
+        '0.2',
+        '+1.25',
+        '1.25',
+        '+1.5',
+        '1.5',
+        '18.25',
+        '18.3',
+      ]);
+
+      const versionItems: PickerValueItem[] = [
+        {value: '17.10a', displayLabel: '17.10a', filtered: 1, total: 1},
+        {value: '17.10', displayLabel: '17.10', filtered: 1, total: 1},
+        {value: '0.10', displayLabel: '0.10', filtered: 1, total: 1},
+        {value: '17.4', displayLabel: '17.4', filtered: 1, total: 1},
+        {value: '17.9a', displayLabel: '17.9a', filtered: 1, total: 1},
+        {value: '0.9', displayLabel: '0.9', filtered: 1, total: 1},
+        {value: '1.10', displayLabel: '1.10', filtered: 1, total: 1},
+        {value: '1.9', displayLabel: '1.9', filtered: 1, total: 1},
+      ];
+      expect(
+        computeFilteredAndSortedValues({
+          items: versionItems,
+          query: '',
+          sortBy: 'value',
+          sortAsc: true,
+          key: 'dimension::software_version',
+        }).map((i) => i.value),
+      ).toEqual([
+        '0.9',
+        '0.10',
+        '1.9',
+        '1.10',
+        '17.4',
+        '17.9a',
+        '17.10',
+        '17.10a',
+      ]);
+
+      const kernelVersionItems: PickerValueItem[] = [
+        {
+          value: '5.10-android12',
+          displayLabel: '5.10-android12',
+          filtered: 1,
+          total: 1,
+        },
+        {
+          value: '5.15.104-android13',
+          displayLabel: '5.15.104-android13',
+          filtered: 1,
+          total: 1,
+        },
+        {
+          value: '5.4-android11',
+          displayLabel: '5.4-android11',
+          filtered: 1,
+          total: 1,
+        },
+      ];
+      expect(
+        computeFilteredAndSortedValues({
+          items: kernelVersionItems,
+          query: '',
+          sortBy: 'value',
+          sortAsc: true,
+        }).map((i) => i.value),
+      ).toEqual(['5.4-android11', '5.10-android12', '5.15.104-android13']);
+
+      const plainHexItems: PickerValueItem[] = [
+        {value: '1a:bb:cc', displayLabel: '1a:bb:cc'},
+        {value: '09:bb:cc', displayLabel: '09:bb:cc'},
+        {value: '10:bb:cc', displayLabel: '10:bb:cc'},
+        {value: '0a:bb:cc', displayLabel: '0a:bb:cc'},
+      ];
+      expect(
+        computeFilteredAndSortedValues({
+          items: plainHexItems,
+          query: '',
+          sortBy: 'value',
+          sortAsc: true,
+          isPlain: true,
+        }).map((i) => i.value),
+      ).toEqual(['09:bb:cc', '0a:bb:cc', '10:bb:cc', '1a:bb:cc']);
+    });
+
+    it('should keep isNoValue items after regular items and ahead of disabled items across sort modes', () => {
+      const itemsWithNoValue: PickerValueItem[] = [
+        {value: '9', displayLabel: '9', filtered: 2, total: 2},
+        {
+          value: EMPTY_FILTER_VALUE,
+          displayLabel: '(no value)',
+          filtered: 50,
+          total: 50,
+          isNoValue: true,
+        },
+        {value: '-1', displayLabel: '-1', filtered: 1, total: 1},
+        {value: '38', displayLabel: '38', filtered: 5, total: 5},
+        {
+          value: 'stale',
+          displayLabel: 'Stale',
+          filtered: 0,
+          total: 0,
+          disabled: true,
+        },
+      ];
+
+      expect(
+        computeFilteredAndSortedValues({
+          items: itemsWithNoValue,
+          query: '',
+          sortBy: 'value',
+          sortAsc: true,
+        }).map((i) => i.value),
+      ).toEqual(['-1', '9', '38', EMPTY_FILTER_VALUE, 'stale']);
+
+      expect(
+        computeFilteredAndSortedValues({
+          items: itemsWithNoValue,
+          query: '',
+          sortBy: 'value',
+          sortAsc: false,
+        }).map((i) => i.value),
+      ).toEqual(['38', '9', '-1', EMPTY_FILTER_VALUE, 'stale']);
+
+      expect(
+        computeFilteredAndSortedValues({
+          items: itemsWithNoValue,
+          query: '',
+          sortBy: 'filtered',
+          sortAsc: false,
+        }).map((i) => i.value),
+      ).toEqual(['38', '9', '-1', EMPTY_FILTER_VALUE, 'stale']);
+
+      expect(
+        computeFilteredAndSortedValues({
+          items: itemsWithNoValue,
+          query: '',
+          sortBy: 'filtered',
+          sortAsc: true,
+        }).map((i) => i.value),
+      ).toEqual(['-1', '9', '38', EMPTY_FILTER_VALUE, 'stale']);
+    });
   });
 
   describe('computePinnedValues', () => {
@@ -203,17 +423,65 @@ describe('value_picker_utils', () => {
       expect(result).toEqual([]);
     });
 
-    it('should return sorted pinned items if count exceeds threshold and has selections', () => {
-      const largeList: PickerValueItem[] = Array.from(
-        {length: 25},
-        (_, idx) => ({
-          value: `item_${idx}`,
-          displayLabel: `Label ${idx.toString().padStart(2, '0')}`,
-        }),
-      );
-      const selected = new Set(['item_5', 'item_2']);
+    it('should return sorted pinned items with isNoValue and disabled items last when count exceeds threshold', () => {
+      const largeList: PickerValueItem[] = [
+        {
+          value: 'stale',
+          displayLabel: 'Stale',
+          disabled: true,
+        },
+        ...Array.from({length: 25}, (_, idx) => ({
+          value: `${idx}`,
+          displayLabel: `${idx}`,
+        })),
+        {
+          value: EMPTY_FILTER_VALUE,
+          displayLabel: '(no value)',
+          isNoValue: true,
+        },
+      ];
+      const selected = new Set(['stale', '19', EMPTY_FILTER_VALUE, '9', '2']);
       const result = computePinnedValues(largeList, selected, '', false, 20);
-      expect(result.map((i) => i.value)).toEqual(['item_2', 'item_5']);
+      expect(result.map((i) => i.value)).toEqual([
+        '2',
+        '9',
+        '19',
+        EMPTY_FILTER_VALUE,
+        'stale',
+      ]);
+    });
+
+    it('should preserve lexicographical hex order for pinned items when isPlain is true', () => {
+      const plainLargeList: PickerValueItem[] = [
+        {value: '1a:bb:cc', displayLabel: '1a:bb:cc'},
+        {value: '09:bb:cc', displayLabel: '09:bb:cc'},
+        {value: '10:bb:cc', displayLabel: '10:bb:cc'},
+        {value: '0a:bb:cc', displayLabel: '0a:bb:cc'},
+        ...Array.from({length: 20}, (_, idx) => ({
+          value: `ff:${idx}`,
+          displayLabel: `ff:${idx}`,
+        })),
+      ];
+      const selected = new Set([
+        '1a:bb:cc',
+        '09:bb:cc',
+        '10:bb:cc',
+        '0a:bb:cc',
+      ]);
+      const result = computePinnedValues(
+        plainLargeList,
+        selected,
+        '',
+        false,
+        20,
+        true,
+      );
+      expect(result.map((i) => i.value)).toEqual([
+        '09:bb:cc',
+        '0a:bb:cc',
+        '10:bb:cc',
+        '1a:bb:cc',
+      ]);
     });
 
     it('should return empty if query is active or loading', () => {

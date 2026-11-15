@@ -399,8 +399,8 @@ public final class FleetFlatSearcherTest {
             OverlayView.bind(snapshot, ImmutableMap.of(overlayKey, overlay)));
     ImmutableList<String> columns = ImmutableList.of("device_field::uuid", overlayKey);
 
-    // Missing value ("") sorts first on ascending, and "Verizon" lowercases to "verizon" after
-    // "att" despite 'V' < 'a' in ASCII.
+    // Non-empty values precede missing ("") in both directions, and "Verizon" lowercases to
+    // "verizon" after "att" despite 'V' < 'a' in ASCII.
     FleetFlatResults ascending =
         searcher.searchFlat(
             overlayCorpus,
@@ -408,8 +408,8 @@ public final class FleetFlatSearcherTest {
             columns,
             FleetColumnSort.newBuilder().setKey(overlayKey).setAscending(true).build(),
             FleetPageRequest.getDefaultInstance());
-    assertThat(rowIds(ascending)).containsExactly("device-2", "device-1", "device-0").inOrder();
-    assertThat(ascending.getRows(2).getCells(1).getText().getValue()).isEqualTo("Verizon");
+    assertThat(rowIds(ascending)).containsExactly("device-1", "device-0", "device-2").inOrder();
+    assertThat(ascending.getRows(1).getCells(1).getText().getValue()).isEqualTo("Verizon");
 
     FleetFlatResults descending =
         searcher.searchFlat(
@@ -419,6 +419,178 @@ public final class FleetFlatSearcherTest {
             FleetColumnSort.newBuilder().setKey(overlayKey).setAscending(false).build(),
             FleetPageRequest.getDefaultInstance());
     assertThat(rowIds(descending)).containsExactly("device-0", "device-1", "device-2").inOrder();
+  }
+
+  @Test
+  public void sortByBatteryTemperature_ordersSignedNumbersNumericallyWithMissingLast() {
+    LabQueryResult tempFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithDimension("dev-9", "battery_temperature", "9"),
+                            deviceWithDimension("dev-38", "battery_temperature", "38"),
+                            deviceWithDimension("dev-neg1", "battery_temperature", "-1"),
+                            deviceWithDimension("dev-missing", "battery_temperature", ""),
+                            deviceWithDimension("dev-100", "battery_temperature", "100"),
+                            deviceWithDimension("dev-25", "battery_temperature", "25"))))
+            .build();
+    FleetSnapshot tempSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(tempFleet, BUILD_TIME);
+    DeviceCorpus tempCorpus =
+        new DeviceCorpus(tempSnapshot, new LazyPostings(tempSnapshot.devices()), null);
+    ImmutableList<String> columns =
+        ImmutableList.of("device_field::uuid", "dimension::battery_temperature");
+
+    FleetFlatResults ascending =
+        searcher.searchFlat(
+            tempCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder()
+                .setKey("dimension::battery_temperature")
+                .setAscending(true)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(ascending))
+        .containsExactly("dev-neg1", "dev-9", "dev-25", "dev-38", "dev-100", "dev-missing")
+        .inOrder();
+
+    FleetFlatResults descending =
+        searcher.searchFlat(
+            tempCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder()
+                .setKey("dimension::battery_temperature")
+                .setAscending(false)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(descending))
+        .containsExactly("dev-100", "dev-38", "dev-25", "dev-9", "dev-neg1", "dev-missing")
+        .inOrder();
+  }
+
+  @Test
+  public void sortByHexIdentifierKeys_preservesLexicographicalHexOrder() {
+    LabQueryResult hexFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithDimension("1aef0001", "mac_address", "1a:11:22:33:44:55"),
+                            deviceWithDimension("09ef0001", "mac_address", "09:11:22:33:44:55"),
+                            deviceWithDimension("0aef0001", "mac_address", "0a:11:22:33:44:55"),
+                            deviceWithDimension("10ef0001", "mac_address", "10:11:22:33:44:55"),
+                            deviceWithDimension("ffef0001", "mac_address", ""))))
+            .build();
+    FleetSnapshot hexSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(hexFleet, BUILD_TIME);
+    DeviceCorpus hexCorpus =
+        new DeviceCorpus(hexSnapshot, new LazyPostings(hexSnapshot.devices()), null);
+    ImmutableList<String> columns =
+        ImmutableList.of("device_field::uuid", "dimension::mac_address");
+
+    // Default UUID sort orders fixed-width hex identifiers lexicographically ("09" < "0a" < "10" <
+    // "1a" < "ff").
+    FleetFlatResults byUuidAsc =
+        searcher.searchFlat(
+            hexCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(byUuidAsc))
+        .containsExactly("09ef0001", "0aef0001", "10ef0001", "1aef0001", "ffef0001")
+        .inOrder();
+
+    // Explicit MAC address sort preserves fixed-width hex order with missing values last.
+    FleetFlatResults byMacAsc =
+        searcher.searchFlat(
+            hexCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder()
+                .setKey("dimension::mac_address")
+                .setAscending(true)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(byMacAsc))
+        .containsExactly("09ef0001", "0aef0001", "10ef0001", "1aef0001", "ffef0001")
+        .inOrder();
+
+    FleetFlatResults byMacDesc =
+        searcher.searchFlat(
+            hexCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder()
+                .setKey("dimension::mac_address")
+                .setAscending(false)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(byMacDesc))
+        .containsExactly("1aef0001", "10ef0001", "0aef0001", "09ef0001", "ffef0001")
+        .inOrder();
+  }
+
+  @Test
+  public void sortByVersionVsDecimalColumns_selectsMatchingModePerColumn() {
+    LabQueryResult mixedFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithTwoDimensions(
+                                "dev-a", "software_version", "17.10", "voltage", "1.5"),
+                            deviceWithTwoDimensions(
+                                "dev-b", "software_version", "17.4", "voltage", "1.25"),
+                            deviceWithTwoDimensions(
+                                "dev-c", "software_version", "0.10", "voltage", "-1.25"),
+                            deviceWithTwoDimensions(
+                                "dev-d", "software_version", "0.9", "voltage", "-1.5"))))
+            .build();
+    FleetSnapshot mixedSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(mixedFleet, BUILD_TIME);
+    DeviceCorpus mixedCorpus =
+        new DeviceCorpus(mixedSnapshot, new LazyPostings(mixedSnapshot.devices()), null);
+    ImmutableList<String> columns =
+        ImmutableList.of("device_field::uuid", "dimension::software_version", "dimension::voltage");
+
+    // software_version uses VERSION mode: 0.9 < 0.10 < 17.4 < 17.10.
+    FleetFlatResults byVersion =
+        searcher.searchFlat(
+            mixedCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder()
+                .setKey("dimension::software_version")
+                .setAscending(true)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(byVersion)).containsExactly("dev-d", "dev-c", "dev-b", "dev-a").inOrder();
+
+    // voltage uses DECIMAL mode: -1.5 < -1.25 < 1.25 < 1.5.
+    FleetFlatResults byVoltage =
+        searcher.searchFlat(
+            mixedCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder().setKey("dimension::voltage").setAscending(true).build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(byVoltage)).containsExactly("dev-d", "dev-c", "dev-b", "dev-a").inOrder();
   }
 
   @Test
@@ -458,7 +630,7 @@ public final class FleetFlatSearcherTest {
             columns,
             ascSort,
             FleetPageRequest.newBuilder().setPageSize(3).build());
-    assertThat(rowIds(ascPage1)).containsExactly("dev-3", "dev-2", "dev-5").inOrder();
+    assertThat(rowIds(ascPage1)).containsExactly("dev-2", "dev-5", "dev-4").inOrder();
     assertThat(ascPage1.getRangeStart()).isEqualTo(1);
     assertThat(ascPage1.getRangeEnd()).isEqualTo(3);
 
@@ -472,7 +644,7 @@ public final class FleetFlatSearcherTest {
                 .setPageSize(3)
                 .setPageToken(ascPage1.getNextPageToken())
                 .build());
-    assertThat(rowIds(ascPage2)).containsExactly("dev-4", "dev-6", "dev-7").inOrder();
+    assertThat(rowIds(ascPage2)).containsExactly("dev-6", "dev-7", "dev-1").inOrder();
     assertThat(ascPage2.getRangeStart()).isEqualTo(4);
     assertThat(ascPage2.getRangeEnd()).isEqualTo(6);
 
@@ -486,7 +658,7 @@ public final class FleetFlatSearcherTest {
                 .setPageSize(3)
                 .setPageToken(ascPage2.getNextPageToken())
                 .build());
-    assertThat(rowIds(ascPage3)).containsExactly("dev-1", "dev-0").inOrder();
+    assertThat(rowIds(ascPage3)).containsExactly("dev-0", "dev-3").inOrder();
     assertThat(ascPage3.getRangeStart()).isEqualTo(7);
     assertThat(ascPage3.getRangeEnd()).isEqualTo(8);
     assertThat(ascPage3.getNextPageToken()).isEmpty();
@@ -499,7 +671,7 @@ public final class FleetFlatSearcherTest {
             columns,
             ascSort,
             FleetPageRequest.newBuilder().setPageSize(4).build());
-    assertThat(rowIds(ascFour)).containsExactly("dev-3", "dev-2", "dev-5", "dev-4").inOrder();
+    assertThat(rowIds(ascFour)).containsExactly("dev-2", "dev-5", "dev-4", "dev-6").inOrder();
 
     // Exercise right-child selection at root 0 in siftDown (pageSize = 3: heap = [7, 2, 3] when 1
     // replaces 7) and even-child parent indexing in siftUp at child = 6 (pageSize = 7: true parent
@@ -867,10 +1039,22 @@ public final class FleetFlatSearcherTest {
   }
 
   private static DeviceInfo deviceWithModel(String id, String model) {
+    return deviceWithDimension(id, "model", model);
+  }
+
+  private static DeviceInfo deviceWithDimension(String id, String dimName, String dimValue) {
+    return deviceWithTwoDimensions(id, dimName, dimValue, "", "");
+  }
+
+  private static DeviceInfo deviceWithTwoDimensions(
+      String id, String dimNameA, String dimValueA, String dimNameB, String dimValueB) {
     DeviceCompositeDimension.Builder dims =
         DeviceCompositeDimension.newBuilder().addSupportedDimension(dimension("os", "android"));
-    if (!model.isEmpty()) {
-      dims.addSupportedDimension(dimension("model", model));
+    if (!dimNameA.isEmpty() && !dimValueA.isEmpty()) {
+      dims.addSupportedDimension(dimension(dimNameA, dimValueA));
+    }
+    if (!dimNameB.isEmpty() && !dimValueB.isEmpty()) {
+      dims.addSupportedDimension(dimension(dimNameB, dimValueB));
     }
     return DeviceInfo.newBuilder()
         .setDeviceLocator(DeviceLocator.newBuilder().setId(id))
