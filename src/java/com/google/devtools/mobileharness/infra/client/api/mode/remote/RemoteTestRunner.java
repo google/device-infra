@@ -856,6 +856,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         resp = execTestStub.getTestStatus(builder.build(), impersonationUser);
         consecutiveNonFatalRpcErrorStartingTime = null; // Resets it after a successful call.
       } catch (RpcExceptionWithErrorId e) {
+        // E.g., a gRPC stub reports an interrupted call as an RPC error.
+        rethrowIfInterrupted(e.getUnderlyingRpcException());
         // While test running, the job of this test may be expired due to some reasons, such as
         // b/14494422. In this case, throws Exception and cancels the job. Otherwise, just alerts
         // Exception message.
@@ -901,6 +903,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
           }
         }
         continue;
+      } catch (RuntimeException e) {
+        rethrowIfInterrupted(e);
+        throw e;
       }
 
       // Update root testInfo.
@@ -913,6 +918,23 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       }
     }
     logger.atWarning().log("Timeout on device(s) %s!", deviceLocators);
+  }
+
+  /**
+   * Throws the {@link InterruptedException} that caused {@code e}, if any.
+   *
+   * <p>A blocking RPC that is interrupted (e.g., because the test is killed) may fail with an
+   * exception caused by the {@link InterruptedException} (e.g., the gRPC {@code
+   * StatusRuntimeException} of a cancelled call), instead of the {@link InterruptedException}
+   * itself. Rethrowing it lets the test be handled like any other interrupted test rather than as a
+   * test runner fatal error or a test without a result. Like a directly thrown {@link
+   * InterruptedException}, it clears the interrupted status that the RPC set.
+   */
+  private static void rethrowIfInterrupted(@Nullable Throwable e) throws InterruptedException {
+    if (e != null && e.getCause() instanceof InterruptedException interruptedException) {
+      Thread.interrupted();
+      throw interruptedException;
+    }
   }
 
   /**
