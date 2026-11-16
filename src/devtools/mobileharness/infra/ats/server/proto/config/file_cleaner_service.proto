@@ -1,0 +1,174 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.ats.server.config;
+
+import "google/api/annotations.proto";
+import "src/devtools/mobileharness/infra/ats/server/proto/config/common.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.ats.server.proto.config";
+option java_multiple_files = true;
+option java_outer_classname = "FileCleanerServiceProto";
+
+// Service for managing the file cleaner settings of an ATS server.
+service FileCleanerService {
+  // Gets the file cleaner settings. Returns the default settings if no settings
+  // have been stored.
+  rpc GetFileCleanerSettings(GetFileCleanerSettingsRequest)
+      returns (FileCleanerSettings) {
+    option (google.api.http) = {
+      get: "/_ah/api/mtt/v1/file_cleaner/settings"
+    };
+  }
+
+  // Replaces the file cleaner settings and returns the stored settings.
+  rpc UpdateFileCleanerSettings(UpdateFileCleanerSettingsRequest)
+      returns (FileCleanerSettings) {
+    option (google.api.http) = {
+      put: "/_ah/api/mtt/v1/file_cleaner/settings"
+      body: "settings"
+    };
+  }
+
+  // Resets the file cleaner settings to the default ones and returns the
+  // settings as they were before the reset.
+  rpc ResetFileCleanerSettings(ResetFileCleanerSettingsRequest)
+      returns (FileCleanerSettings) {
+    option (google.api.http) = {
+      delete: "/_ah/api/mtt/v1/file_cleaner/settings"
+    };
+  }
+}
+
+// File cleaner operation.
+message FileCleanerOperation {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+
+    // Archives the target into a zip file next to it. Parameters:
+    //
+    // *   remove_file: whether to remove the target after archiving it, for
+    //     example "True" or "False". Defaults to "True".
+    ARCHIVE = 1;
+
+    // Deletes the target. It has no parameters.
+    DELETE = 2;
+  }
+
+  // Required.
+  optional Type type = 1;
+
+  // Optional parameters of the operation. The parameters which apply and their
+  // default values depend on the type. For example, an ARCHIVE operation which
+  // keeps the archived target:
+  //
+  //     params { name: "remove_file" value: "False" }
+  repeated NameValuePair params = 2;
+}
+
+// File cleaner criterion.
+message FileCleanerCriterion {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+
+    // Selects a target which has not been accessed for some time. Parameters:
+    //
+    // *   ttl: the time since the last access, for example "7 days" or
+    //     "12 hours". Defaults to "7 days".
+    LAST_ACCESS_TIME = 1;
+
+    // Selects a target which has not been modified for some time. Parameters:
+    //
+    // *   ttl: the time since the last modification, for example "7 days" or
+    //     "12 hours". Defaults to "7 days".
+    LAST_MODIFIED_TIME = 2;
+
+    // Selects a target whose path matches a regular expression. Parameters:
+    //
+    // *   pattern: the regular expression, which may match any part of the
+    //     path, for example "[.]zip$". By default, no target is selected.
+    NAME_MATCH = 3;
+
+    // Selects a target when the disk which holds it is running out of space.
+    // Parameters:
+    //
+    // *   threshold: the available disk space below which targets are
+    //     selected, for example "20GB" or "500MB". Defaults to "20GB".
+    SYSTEM_AVAILABLE_SPACE = 4;
+  }
+
+  // Required.
+  optional Type type = 1;
+
+  // Optional parameters of the criterion. The parameters which apply and their
+  // default values depend on the type. For example, a LAST_MODIFIED_TIME
+  // criterion for targets not modified in the last three days:
+  //
+  //     params { name: "ttl" value: "3 days" }
+  repeated NameValuePair params = 2;
+}
+
+// File cleaner policy, which combines one operation and several criteria.
+message FileCleanerPolicy {
+  enum Target {
+    TARGET_UNSPECIFIED = 0;
+    FILE = 1;
+    DIRECTORY = 2;
+  }
+
+  // Required. Should be unique.
+  optional string name = 1;
+
+  optional Target target = 2;
+
+  // Required. The operation to apply to targets.
+  optional FileCleanerOperation operation = 3;
+
+  // Criteria to select targets. A target is selected if it meets all of them.
+  repeated FileCleanerCriterion criteria = 4;
+}
+
+// File cleaner config, which applies policies to directories.
+message FileCleanerConfig {
+  // Required.
+  optional string name = 1;
+
+  optional string description = 2;
+
+  // Directories to apply the policies to.
+  repeated string directories = 3;
+
+  // Names of the policies to use.
+  repeated string policy_names = 4;
+}
+
+// File cleaner settings, which combine cleanup policies and configs.
+message FileCleanerSettings {
+  repeated FileCleanerPolicy policies = 1;
+
+  repeated FileCleanerConfig configs = 2;
+}
+
+message GetFileCleanerSettingsRequest {}
+
+message UpdateFileCleanerSettingsRequest {
+  // Required. The new settings.
+  optional FileCleanerSettings settings = 1;
+}
+
+message ResetFileCleanerSettingsRequest {}
