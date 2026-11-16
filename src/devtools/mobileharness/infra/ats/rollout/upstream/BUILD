@@ -25,6 +25,7 @@ go_library(
     srcs = ["upstream.go"],
     importpath = "github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/upstream",
     deps = [
+        "//src/devtools/mobileharness/infra/ats/rollout/imageref",
         "//src/devtools/mobileharness/infra/ats/rollout/record",
         "//src/devtools/mobileharness/infra/ats/rollout/view",
     ],

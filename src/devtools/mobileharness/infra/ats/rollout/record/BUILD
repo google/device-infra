@@ -28,7 +28,10 @@ go_library(
         "states.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/record",
-    deps = ["//src/devtools/mobileharness/infra/ats/rollout/store"],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/rollout/imageref",
+        "//src/devtools/mobileharness/infra/ats/rollout/store",
+    ],
 )
 
 go_test(

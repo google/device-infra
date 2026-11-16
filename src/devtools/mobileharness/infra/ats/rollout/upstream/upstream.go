@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/imageref"
 	"github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/record"
 	"github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/view"
 )
@@ -127,7 +128,7 @@ func revisionOf(g *view.Group, digests map[imageTag]*lookup, versions map[string
 	if err != nil {
 		return record.Revision{}, fmt.Errorf("resolving tag %q of image %q: %w", tag, image, err)
 	}
-	rev := record.Revision{Build: image + "@" + digest}
+	rev := record.Revision{Build: imageref.Build(image, digest)}
 	if g.ID == record.GroupController {
 		return rev, nil
 	}

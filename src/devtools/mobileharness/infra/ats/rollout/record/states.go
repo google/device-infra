@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/imageref"
 )
 
 // Protocol constants. The agent polls at a fixed interval, writing its
@@ -36,10 +38,7 @@ type Revision struct {
 // its own digest. Builds are compared by digest so that repository spelling
 // cannot cause a false mismatch.
 func (r Revision) Digest() string {
-	if _, digest, ok := strings.Cut(r.Build, "@"); ok && digest != "" {
-		return digest
-	}
-	return r.Build
+	return imageref.Digest(r.Build)
 }
 
 // Equal reports whether two revisions name the same build (by digest) and

@@ -14,6 +14,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/imageref"
 )
 
 // ErrNotFound means the registry has no such image, or the image has no such
@@ -33,22 +35,10 @@ var accept = strings.Join([]string{
 	"application/vnd.docker.distribution.manifest.v2+json",
 }, ", ")
 
-var (
-	// digestForm is the form of the digests this package returns.
-	digestForm = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
-	// tagForm is the grammar of a tag in the OCI distribution specification.
-	// A tag in this form needs no escaping in a URL path and is never "." or
-	// "..", which a URL would resolve to another path.
-	tagForm = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}$`)
-	// repositoryForm is the grammar of a repository name in the same
-	// specification: lower-case path segments, none of them empty, "." or
-	// "..", and nothing that needs escaping in a URL path.
-	repositoryForm = regexp.MustCompile(`^[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(/[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*)*$`)
-	// googleRegistry matches the hosts of Artifact Registry and Container
-	// Registry, such as "asia-docker.pkg.dev" and "gcr.io": lower case, no
-	// port.
-	googleRegistry = regexp.MustCompile(`^([a-z0-9-]+\.)*(pkg\.dev|gcr\.io)$`)
-)
+// tagForm is the grammar of a tag in the OCI distribution specification. A
+// tag in this form needs no escaping in a URL path and is never "." or "..",
+// which a URL would resolve to another path.
+var tagForm = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}$`)
 
 // Client resolves tags on Google's container registries. It is safe for
 // concurrent use.
@@ -59,13 +49,13 @@ var (
 // token to that host, and every host of the group later logs in to it with
 // its own credentials to pull the build. Without the check, whoever can
 // write a group record could have those credentials sent to a host of their
-// choosing.
+// choosing. Package imageref has the rule, which the agent applies as well.
 type Client struct {
 	http  *http.Client
 	token func(context.Context) (string, error)
 	// allowed reports whether a host is a registry that credentials may be
-	// sent to. It is googleRegistry's match except in tests, which serve a
-	// registry locally.
+	// sent to. It is imageref.IsGoogleRegistry except in tests, which serve
+	// a registry locally.
 	allowed func(host string) bool
 }
 
@@ -79,7 +69,7 @@ func New(c *http.Client, token func(context.Context) (string, error)) (*Client, 
 	case token == nil:
 		return nil, errors.New("registry: the token function is nil")
 	}
-	return &Client{http: c, token: token, allowed: googleRegistry.MatchString}, nil
+	return &Client{http: c, token: token, allowed: imageref.IsGoogleRegistry}, nil
 }
 
 // Digest returns the digest, in the form "sha256:<64 hex digits>", that tag
@@ -95,12 +85,15 @@ func New(c *http.Client, token func(context.Context) (string, error)) (*Client, 
 // through an image on another host, one that already carries a tag or a
 // digest, or one that is no valid repository name.
 func (c *Client) Digest(ctx context.Context, image, tag string) (string, error) {
-	host, repository, err := c.splitImage(image)
+	host, repository, err := imageref.SplitImage(image)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("registry: %w", err)
+	}
+	if !c.allowed(host) {
+		return "", fmt.Errorf("registry: image %q is on host %q, want a Google registry host such as \"asia-docker.pkg.dev\" or \"gcr.io\"", image, host)
 	}
 	if pinned, ok := strings.CutPrefix(tag, "@"); ok {
-		if !digestForm.MatchString(pinned) {
+		if !imageref.IsDigest(pinned) {
 			return "", fmt.Errorf("registry: tag %q of image %q starts with \"@\" but is not a sha256 digest", tag, image)
 		}
 		return pinned, nil
@@ -133,29 +126,8 @@ func (c *Client) Digest(ctx context.Context, image, tag string) (string, error) 
 		return "", fmt.Errorf("registry: resolving %s:%s: the registry answered %s", image, tag, resp.Status)
 	}
 	digest := resp.Header.Get("Docker-Content-Digest")
-	if !digestForm.MatchString(digest) {
+	if !imageref.IsDigest(digest) {
 		return "", fmt.Errorf("registry: resolving %s:%s: the response has Docker-Content-Digest %q, want a sha256 digest", image, tag, digest)
 	}
 	return digest, nil
-}
-
-// splitImage returns the registry host and the repository path of image. It
-// returns an error unless the host is one that credentials may be sent to and
-// the image is a repository alone: in the form host/repository, without a tag
-// or a digest, the repository a valid name.
-func (c *Client) splitImage(image string) (host, repository string, err error) {
-	host, repository, ok := strings.Cut(image, "/")
-	switch {
-	case !ok || host == "" || repository == "":
-		return "", "", fmt.Errorf("registry: image %q is not in the form host/repository", image)
-	case !c.allowed(host):
-		return "", "", fmt.Errorf("registry: image %q is on host %q, want a Google registry host such as \"asia-docker.pkg.dev\" or \"gcr.io\"", image, host)
-	case strings.Contains(repository, "@"):
-		return "", "", fmt.Errorf("registry: image %q carries a digest, want the repository alone", image)
-	case strings.Contains(repository[strings.LastIndex(repository, "/")+1:], ":"):
-		return "", "", fmt.Errorf("registry: image %q carries a tag, want the repository alone", image)
-	case !repositoryForm.MatchString(repository):
-		return "", "", fmt.Errorf("registry: image %q has repository %q, which is not a valid repository name", image, repository)
-	}
-	return host, repository, nil
 }

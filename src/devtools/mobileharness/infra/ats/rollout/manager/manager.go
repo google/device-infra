@@ -67,7 +67,8 @@ func Decide(d view.Domain, now time.Time) []Decision {
 }
 
 // decideGroup evaluates the decision table for g; the first matching row
-// wins.
+// wins. The table has two halves: the rows for a group that has a current
+// rollout, and the rows for a group that has none.
 func decideGroup(d view.Domain, g *view.Group, now time.Time) Decision {
 	dec := Decision{GroupID: g.ID}
 	if g.Err != nil {
@@ -80,42 +81,59 @@ func decideGroup(d view.Domain, g *view.Group, now time.Time) Decision {
 	// Every row of this table writes at most one sequence: its writes, if
 	// more than one, must happen in order.
 	var row apply.Sequence
-	ro, last := g.Rollout, g.Record.LastRollout
-	switch {
-	case ro != nil && ro.Record.Finished:
-		dec.Row, row = RowArchive, archive(g)
-	case ro != nil && ro.Record.Outcome != "":
-		dec.Row = RowConcluded
-	case ro != nil && ro.Record.StopRequest != "":
-		dec.Row = RowStopping
-	case ro != nil && g.Resolved() && !g.Upstream.Equal(ro.Record.Revision) && !d.Paused:
-		dec.Row, row = RowSupersede, stop(ro, record.StopSuperseded)
-	case ro != nil && g.Record.Cancel:
-		dec.Row, row = RowCancel, stop(ro, record.StopCancelled)
-	case ro != nil:
-		dec.Row = RowRollingOut
-	case g.Record.Cancel:
-		dec.Row, row = RowClearCancel, clearCancel(g)
-	case d.Paused:
-		dec.Row = RowPaused
-	case !g.Resolved():
-		dec.Row = RowUnresolved
-	case last != nil && g.Upstream.Equal(last.Revision) && !g.Record.Rerun:
-		dec.Row = RowUpToDate
-	case blocked(d, g):
-		dec.Row = RowWaiting
-		if dep := dependency(d, g); dep != nil && stuck(dep) {
-			dec.Anomalies = []string{fmt.Sprintf("group %q waits for group %q, which is stuck: %s", g.ID, dep.ID, whyStuck(dep))}
-		}
-	case g.Online(now) == 0:
-		dec.Row = RowNoMember
-	default:
-		dec.Row, row = RowCreateRollout, createRollout(g, now)
+	if g.Rollout != nil {
+		dec.Row, row = decideCurrent(d, g)
+	} else {
+		dec.Row, row, dec.Anomalies = decideNext(d, g, now)
 	}
 	if row != nil {
 		dec.Writes.Row = []apply.Sequence{row}
 	}
 	return dec
+}
+
+// decideCurrent returns the row that a group with a current rollout
+// matches, and the row's writes: whether to archive the rollout, stop it, or
+// leave it alone.
+func decideCurrent(d view.Domain, g *view.Group) (Row, apply.Sequence) {
+	ro := g.Rollout
+	switch {
+	case ro.Record.Finished:
+		return RowArchive, archive(g)
+	case ro.Record.Outcome != "":
+		return RowConcluded, nil
+	case ro.Record.StopRequest != "":
+		return RowStopping, nil
+	case g.Resolved() && !g.Upstream.Equal(ro.Record.Revision) && !d.Paused:
+		return RowSupersede, stop(ro, record.StopSuperseded)
+	case g.Record.Cancel:
+		return RowCancel, stop(ro, record.StopCancelled)
+	}
+	return RowRollingOut, nil
+}
+
+// decideNext returns the row that a group without a current rollout
+// matches, with the row's writes and anomalies: whether to start a rollout.
+func decideNext(d view.Domain, g *view.Group, now time.Time) (Row, apply.Sequence, []string) {
+	last := g.Record.LastRollout
+	switch {
+	case g.Record.Cancel:
+		return RowClearCancel, clearCancel(g), nil
+	case d.Paused:
+		return RowPaused, nil, nil
+	case !g.Resolved():
+		return RowUnresolved, nil, nil
+	case last != nil && g.Upstream.Equal(last.Revision) && !g.Record.Rerun:
+		return RowUpToDate, nil, nil
+	case blocked(d, g):
+		if dep := dependency(d, g); dep != nil && stuck(dep) {
+			return RowWaiting, nil, []string{fmt.Sprintf("group %q waits for group %q, which is stuck: %s", g.ID, dep.ID, whyStuck(dep))}
+		}
+		return RowWaiting, nil, nil
+	case g.Online(now) == 0:
+		return RowNoMember, nil, nil
+	}
+	return RowCreateRollout, createRollout(g, now), nil
 }
 
 // markOffline returns one sequence per stale member (row 0). OPTED_OUT and
@@ -280,11 +298,14 @@ func stuck(dep *view.Group) bool {
 		last != nil && last.Revision.Equal(dep.Upstream) && last.Outcome != record.OutcomeSucceeded
 }
 
-// whyStuck describes a stuck dependency for the anomaly message.
+// whyStuck describes a stuck dependency for the anomaly message, and what
+// unblocks it. A rerun alone ends the same way while the cause is still
+// there. The message names the two causes that a rerun cannot cure, as
+// examples: a rollout that ended FAILED or CANCELLED may have neither.
 func whyStuck(dep *view.Group) string {
 	if dep.Err != nil {
 		return "its records are invalid"
 	}
 	last := dep.Record.LastRollout
-	return fmt.Sprintf("its rollout %d of the current revision ended %s; set rerun on it or push a new build", last.Seq, last.Outcome)
+	return fmt.Sprintf("its rollout %d of the current revision ended %s; fix what its summary shows (for example: start the core service of a SKIPPED host, remove the member row of an OFFLINE host that is gone), then set rerun on it, or push a new build", last.Seq, last.Outcome)
 }

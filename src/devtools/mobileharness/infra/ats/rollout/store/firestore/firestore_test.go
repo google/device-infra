@@ -922,6 +922,9 @@ func TestNew(t *testing.T) {
 		// A resource name where an ID belongs.
 		"project_with_slash":  func(c *Config) { c.Project = "projects/p" },
 		"database_with_slash": func(c *Config) { c.Database = "projects/p/databases/d" },
+		// A segment that a URL would resolve to another path.
+		"project_of_two_dots": func(c *Config) { c.Project = ".." },
+		"database_of_one_dot": func(c *Config) { c.Database = "." },
 	} {
 		t.Run(name, func(t *testing.T) {
 			cfg := valid

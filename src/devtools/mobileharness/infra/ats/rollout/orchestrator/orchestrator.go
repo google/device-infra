@@ -121,14 +121,12 @@ func Decide(rv RolloutView, now time.Time) Decision {
 	switch {
 	case ro.StopRequest != "" || t.failed > ro.MaxFailed:
 		dec.Row = RowStop
-		dec.Writes.Row = windDown(rv, t, now, func(map[string]record.SummaryEntry) record.Outcome {
-			return stopOutcome(ro.StopRequest)
-		})
+		dec.Writes.Row = windDown(rv, t, now, RowStop)
 	case t.online > 0 && t.waiting == 0:
 		// Without the first clause, a lab partition that takes every agent
 		// offline would conclude the rollout with no work done.
 		dec.Row = RowComplete
-		dec.Writes.Row = windDown(rv, t, now, completeOutcome)
+		dec.Writes.Row = windDown(rv, t, now, RowComplete)
 	case rv.Paused:
 		// Agents never read the paused flag, so an OPEN slot would be claimed
 		// and start an upgrade.
@@ -260,7 +258,12 @@ func bookkeeping(rv RolloutView, t tally, now time.Time) []apply.Sequence {
 // flight, record the outcome. Waiting for that snapshot is what keeps an
 // agent from claiming a slot after the outcome is decided: a claim that
 // races a close either fails or makes the slot a task in flight.
-func windDown(rv RolloutView, t tally, now time.Time, outcomeOf func(map[string]record.SummaryEntry) record.Outcome) []apply.Sequence {
+//
+// row is the row that ends the rollout, RowStop or RowComplete, and so says
+// what its outcome is: row 2 (a stop request, or too many failures) names
+// the outcome itself; row 3 (every online agent has a result) reads it off
+// the summary.
+func windDown(rv RolloutView, t tally, now time.Time, row Row) []apply.Sequence {
 	switch {
 	case t.open > 0:
 		return closeSlots(rv)
@@ -269,7 +272,11 @@ func windDown(rv RolloutView, t tally, now time.Time, outcomeOf func(map[string]
 	}
 	doc := rv.Rollout.Record
 	doc.Summary = summarize(rv, t, now)
-	doc.Outcome = outcomeOf(doc.Summary)
+	if row == RowStop {
+		doc.Outcome = stopOutcome(doc.StopRequest)
+	} else {
+		doc.Outcome = completeOutcome(doc.Summary)
+	}
 	doc.FinishedAt = now
 	return []apply.Sequence{update(rv.Rollout.Key, doc.Record(), rv.Rollout.Version)}
 }

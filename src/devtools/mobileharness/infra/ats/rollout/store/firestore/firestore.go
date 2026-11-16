@@ -77,12 +77,12 @@ func New(cfg Config) (*Store, error) {
 		return nil, errors.New("firestore: Config.Project is empty")
 	case cfg.Database == "":
 		return nil, errors.New("firestore: Config.Database is empty")
-	case strings.Contains(cfg.Project, "/"):
+	case !isID(cfg.Project):
 		// An ID, not a resource name such as "projects/p": the URL and the
 		// document names are both built from it and would disagree.
-		return nil, fmt.Errorf("firestore: Config.Project %q contains \"/\", want a project ID", cfg.Project)
-	case strings.Contains(cfg.Database, "/"):
-		return nil, fmt.Errorf("firestore: Config.Database %q contains \"/\", want a database ID", cfg.Database)
+		return nil, fmt.Errorf("firestore: Config.Project %q is not a project ID", cfg.Project)
+	case !isID(cfg.Database):
+		return nil, fmt.Errorf("firestore: Config.Database %q is not a database ID", cfg.Database)
 	}
 	endpoint := strings.TrimRight(cfg.Endpoint, "/")
 	if endpoint == "" {
@@ -112,6 +112,13 @@ var (
 	}
 	deleteStatuses = map[string]error{"INVALID_ARGUMENT": store.ErrInvalidArgument}
 )
+
+// isID reports whether id can be one segment of a resource path: it is not
+// empty, has no "/", and is not "." or "..", which a URL would resolve to
+// another path.
+func isID(id string) bool {
+	return id != "" && id != "." && id != ".." && !strings.Contains(id, "/")
+}
 
 // apiError is an error that Firestore reported.
 type apiError struct {
