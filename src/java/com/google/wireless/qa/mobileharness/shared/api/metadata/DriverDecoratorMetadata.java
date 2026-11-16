@@ -133,6 +133,7 @@ public final class DriverDecoratorMetadata {
     builder.put("AndroidMinSdkVersionCheckDecorator", "AndroidMinSdkVersionCheckDecoratorSpec");
     builder.put(
         "AndroidNetworkActivityLoggingDecorator", "AndroidNetworkActivityLoggingDecoratorSpec");
+    builder.put("AndroidReverseUsbTetheringDecorator", "AndroidReverseUsbTetheringDecoratorSpec");
     builder.put("AndroidRuntimeStatsDecorator", "AndroidRuntimeStatsDecoratorSpec");
     builder.put("AndroidSetWifiDecorator", "AndroidSetWifiDecoratorSpec");
     builder.put(

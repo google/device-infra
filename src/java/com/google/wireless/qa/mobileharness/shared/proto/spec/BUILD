@@ -46,6 +46,7 @@ proto_library(
         ":android_mainline_modules_check_decorator_spec_proto",
         ":android_min_sdk_version_check_decorator_spec_proto",
         ":android_network_activity_logging_decorator_spec_proto",
+        ":android_reverse_usb_tethering_decorator_spec_proto",
         ":android_robo_test_spec_proto",
         ":android_runtime_stats_decorator_spec_proto",
         ":android_set_wifi_decorator_spec_proto",
@@ -316,6 +317,19 @@ proto_library(
 java_proto_library(
     name = "android_network_activity_logging_decorator_spec_java_proto",
     deps = [":android_network_activity_logging_decorator_spec_proto"],
+)
+
+proto_library(
+    name = "android_reverse_usb_tethering_decorator_spec_proto",
+    srcs = ["decorator/android_reverse_usb_tethering_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "android_reverse_usb_tethering_decorator_spec_java_proto",
+    deps = [":android_reverse_usb_tethering_decorator_spec_proto"],
 )
 
 proto_library(

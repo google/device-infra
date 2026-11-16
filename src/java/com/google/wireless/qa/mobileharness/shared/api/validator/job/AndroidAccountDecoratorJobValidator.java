@@ -100,13 +100,17 @@ public class AndroidAccountDecoratorJobValidator implements JobValidator {
         // Step One: Checks future internet existence since add account needs internet connection.
         List<String> decoratorList = job.type().getDecoratorList();
         String setWifiDecorator = "AndroidSetWifiDecorator";
+        String reverseUsbTetheringDecorator = "AndroidReverseUsbTetheringDecorator";
         String accountDecorator = "AndroidAccountDecorator";
-        // Jobs may set Wi-Fi itself and do not require internet dimension as true.
+        // Jobs may set Wi-Fi or USB reverse tethering itself and do not require internet dimension
+        // as true.
         // Only exercise this logic if accountDecorator will be invoked from outside of
         // any decorator adapter. The non-presence of AndroidAccountDecorator in the main decorator
         // list means that we got here through one of the decorator adapters.
         if (decoratorList.contains(accountDecorator) && !hasSpecifiedDevice(job)) {
-          if (!decoratorList.contains(setWifiDecorator)) {
+          boolean hasSetWifi = decoratorList.contains(setWifiDecorator);
+          boolean hasReverseUsbTethering = decoratorList.contains(reverseUsbTetheringDecorator);
+          if (!hasSetWifi && !hasReverseUsbTethering) {
             // Checks whether internet dimension is set as true.
             // AutoEmulator and LocalEmulator should keep adding dimension internet as true.
             if (Strings.isNullOrEmpty(internetDimension)) {
@@ -115,9 +119,20 @@ public class AndroidAccountDecoratorJobValidator implements JobValidator {
             } else if (!Boolean.toString(true).equals(internetDimension)) {
               errors.add("Please set dimension internet as true for using AndroidAccountDecorator");
             }
-          } else if (decoratorList.indexOf(setWifiDecorator)
-              < decoratorList.indexOf(accountDecorator)) {
-            errors.add("AndroidSetWifiDecorator must be put in front of AndroidAccountDecorator.");
+          } else {
+            if (hasSetWifi
+                && decoratorList.indexOf(setWifiDecorator)
+                    < decoratorList.indexOf(accountDecorator)) {
+              errors.add(
+                  "AndroidSetWifiDecorator must be put in front of AndroidAccountDecorator.");
+            }
+            if (hasReverseUsbTethering
+                && decoratorList.indexOf(reverseUsbTetheringDecorator)
+                    < decoratorList.indexOf(accountDecorator)) {
+              errors.add(
+                  "AndroidReverseUsbTetheringDecorator must be put in front of"
+                      + " AndroidAccountDecorator.");
+            }
           }
         }
       } else {
