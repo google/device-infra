@@ -19,9 +19,13 @@ package com.google.wireless.qa.mobileharness.shared.model.job.in.spec;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Files.FileInfo;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Message;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
@@ -36,7 +40,13 @@ public class ProtoJobSpec implements JobSpecWrapper {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** JobSpec to wrapper. */
-  private JobSpec jobSpec;
+  private volatile JobSpec jobSpec;
+
+  /**
+   * Transient in-memory metadata of resolved files in {@link #jobSpec}, keyed by {@link
+   * FileInfo#path()}. Omitted from serialization and retained across {@link #setProto} updates.
+   */
+  private final Map<String, FileInfo> fileInfos = new ConcurrentHashMap<>();
 
   /** Helper of handling {@link #jobSpec}. */
   private final Supplier<JobSpecHelper> jobSpecHelper;
@@ -104,6 +114,30 @@ public class ProtoJobSpec implements JobSpecWrapper {
   public ProtoJobSpec setProto(JobSpec jobSpec) {
     this.jobSpec = jobSpec;
     return this;
+  }
+
+  /**
+   * Records transient in-memory metadata of resolved files for the wrapped {@link JobSpec}, keyed
+   * by {@link FileInfo#path()}.
+   *
+   * <p>If an entry with the same {@link FileInfo#path()} already exists, it is overwritten.
+   * Recorded metadata is omitted from {@link #getProto()} and {@link #toString()}, and retained
+   * across {@link #setProto} and {@link #tryResolveUnknownExtension()} updates.
+   */
+  @CanIgnoreReturnValue
+  public ProtoJobSpec addFileInfos(Iterable<FileInfo> fileInfos) {
+    for (FileInfo fileInfo : fileInfos) {
+      this.fileInfos.put(fileInfo.path(), fileInfo);
+    }
+    return this;
+  }
+
+  /**
+   * Gets transient in-memory metadata of a resolved file for the wrapped {@link JobSpec} by its
+   * {@link FileInfo#path()}, if recorded.
+   */
+  public Optional<FileInfo> getFileInfo(String path) {
+    return Optional.ofNullable(fileInfos.get(path));
   }
 
   @Override
