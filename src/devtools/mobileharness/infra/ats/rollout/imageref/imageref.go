@@ -13,10 +13,16 @@
 package imageref
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 )
+
+// ErrInvalid means an image or a build is not one a rollout may use. It is
+// returned wrapped; test for it with errors.Is. It does not fix itself:
+// somebody has to correct the reference.
+var ErrInvalid = errors.New("invalid image reference")
 
 var (
 	// digestForm is the only form of digest a rollout uses.
@@ -45,7 +51,7 @@ func IsGoogleRegistry(host string) bool {
 }
 
 // SplitImage returns the registry host and the repository of image. It
-// returns an error unless image is a repository alone: in the form
+// returns an error wrapping ErrInvalid unless image is a repository alone: in the form
 // host/repository, without a tag or a digest, the repository a valid name.
 //
 // It does not judge the host; see IsGoogleRegistry.
@@ -53,13 +59,13 @@ func SplitImage(image string) (host, repository string, err error) {
 	host, repository, ok := strings.Cut(image, "/")
 	switch {
 	case !ok || host == "" || repository == "":
-		return "", "", fmt.Errorf("image %q is not in the form host/repository", image)
+		return "", "", fmt.Errorf("%w: image %q is not in the form host/repository", ErrInvalid, image)
 	case strings.Contains(repository, "@"):
-		return "", "", fmt.Errorf("image %q carries a digest, want the repository alone", image)
+		return "", "", fmt.Errorf("%w: image %q carries a digest, want the repository alone", ErrInvalid, image)
 	case strings.Contains(repository[strings.LastIndex(repository, "/")+1:], ":"):
-		return "", "", fmt.Errorf("image %q carries a tag, want the repository alone", image)
+		return "", "", fmt.Errorf("%w: image %q carries a tag, want the repository alone", ErrInvalid, image)
 	case !repositoryForm.MatchString(repository):
-		return "", "", fmt.Errorf("image %q has repository %q, which is not a valid repository name", image, repository)
+		return "", "", fmt.Errorf("%w: image %q has repository %q, which is not a valid repository name", ErrInvalid, image, repository)
 	}
 	return host, repository, nil
 }
@@ -71,21 +77,21 @@ func Build(image, digest string) string {
 }
 
 // ParseBuild returns the image and the digest of a build. It returns an
-// error unless build is one a rollout may roll out: "image@digest", the
+// error wrapping ErrInvalid unless build is one a rollout may roll out: "image@digest", the
 // image a repository alone on a Google registry, the digest a sha256 digest.
 func ParseBuild(build string) (image, digest string, err error) {
 	image, digest, ok := strings.Cut(build, "@")
 	if !ok {
-		return "", "", fmt.Errorf("build %q has no digest, want an image at a sha256 digest", build)
+		return "", "", fmt.Errorf("%w: build %q has no digest, want an image at a sha256 digest", ErrInvalid, build)
 	}
 	host, _, err := SplitImage(image)
 	switch {
 	case err != nil:
 		return "", "", fmt.Errorf("build %q: %w", build, err)
 	case !IsGoogleRegistry(host):
-		return "", "", fmt.Errorf("build %q is on host %q, want a Google registry host such as \"asia-docker.pkg.dev\" or \"gcr.io\"", build, host)
+		return "", "", fmt.Errorf("%w: build %q is on host %q, want a Google registry host such as \"asia-docker.pkg.dev\" or \"gcr.io\"", ErrInvalid, build, host)
 	case !IsDigest(digest):
-		return "", "", fmt.Errorf("build %q has digest %q, want a sha256 digest", build, digest)
+		return "", "", fmt.Errorf("%w: build %q has digest %q, want a sha256 digest", ErrInvalid, build, digest)
 	}
 	return image, digest, nil
 }

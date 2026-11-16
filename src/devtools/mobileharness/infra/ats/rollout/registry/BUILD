@@ -31,5 +31,8 @@ go_test(
     name = "registry_test",
     srcs = ["registry_test.go"],
     embed = [":registry"],
-    deps = ["@com_github_google_go_cmp//cmp"],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/rollout/imageref",
+        "@com_github_google_go_cmp//cmp",
+    ],
 )

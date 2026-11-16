@@ -16,7 +16,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/imageref"
 	"github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/record"
@@ -53,10 +52,6 @@ type Versioner interface {
 type Resolver struct {
 	Images  Digester
 	Configs Versioner
-	// Timeout bounds one Resolve call as a whole. Every lookup of the call
-	// starts at once, so this is also the most any one lookup can take; there
-	// is no timeout per lookup. Zero sets no bound beyond the context's own.
-	Timeout time.Duration
 }
 
 // lookup is the result of one call to the registry or to Parameter Manager.
@@ -78,15 +73,14 @@ type imageTag struct {
 // all pools get the same tenant config version, even if the tag or the config
 // moves during the call.
 //
+// The deadline of ctx bounds the call as a whole. Every lookup starts at
+// once, so that is also the most any one lookup can take; there is no
+// timeout per lookup.
+//
 // It returns no error. A lookup that fails, including one cut short by the
-// timeout, leaves unresolved the groups that needed it, and only those, each
-// with the error in UpstreamErr; a group is never resolved in part.
+// deadline, leaves unresolved the groups that needed it, and only those,
+// each with the error in UpstreamErr; a group is never resolved in part.
 func (r *Resolver) Resolve(ctx context.Context, d *view.Domain) {
-	if r.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, r.Timeout)
-		defer cancel()
-	}
 	digests := make(map[imageTag]*lookup)
 	versions := make(map[string]*lookup)
 	for i := range d.Groups {

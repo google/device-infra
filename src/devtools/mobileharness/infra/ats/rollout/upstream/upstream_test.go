@@ -345,18 +345,20 @@ func TestResolve_LookupsRunConcurrently(t *testing.T) {
 	}, nil)
 }
 
-func TestResolve_TimeoutBoundsWholeCall(t *testing.T) {
+func TestResolve_DeadlineBoundsWholeCall(t *testing.T) {
 	// No lookup ever returns on its own.
 	c := &calls{started: make(chan string, 16), release: make(chan struct{})}
 	r := newResolver(&answers{calls: c})
-	r.Timeout = 50 * time.Millisecond
 	d := domain(group(controller, "latest"), group("dda", "latest"), invalidGroup("public_testing"))
+	const timeout = 50 * time.Millisecond
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 	start := time.Now()
 
-	r.Resolve(context.Background(), &d)
+	r.Resolve(ctx, &d)
 
 	if elapsed := time.Since(start); elapsed > 10*time.Second {
-		t.Errorf("Resolve() with a timeout of %v took %v", r.Timeout, elapsed)
+		t.Errorf("Resolve() with a deadline %v away took %v", timeout, elapsed)
 	}
 	checkUpstreams(t, d, nil, map[string]error{controller: context.DeadlineExceeded, "dda": context.DeadlineExceeded})
 }

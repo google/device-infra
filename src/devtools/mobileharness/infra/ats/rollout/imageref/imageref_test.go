@@ -1,6 +1,7 @@
 package imageref
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -116,8 +117,8 @@ func TestSplitImage_Errors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			host, repository, err := SplitImage(tc.image)
-			if err == nil || host != "" || repository != "" {
-				t.Errorf("SplitImage(%q) = %q, %q, %v, want an error and no parts", tc.image, host, repository, err)
+			if !errors.Is(err, ErrInvalid) || host != "" || repository != "" {
+				t.Errorf("SplitImage(%q) = %q, %q, %v, want an error wrapping ErrInvalid and no parts", tc.image, host, repository, err)
 			}
 		})
 	}
@@ -161,8 +162,8 @@ func TestParseBuild_Errors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			gotImage, gotDigest, err := ParseBuild(tc.build)
-			if err == nil || gotImage != "" || gotDigest != "" {
-				t.Errorf("ParseBuild(%q) = %q, %q, %v, want an error and no parts", tc.build, gotImage, gotDigest, err)
+			if !errors.Is(err, ErrInvalid) || gotImage != "" || gotDigest != "" {
+				t.Errorf("ParseBuild(%q) = %q, %q, %v, want an error wrapping ErrInvalid and no parts", tc.build, gotImage, gotDigest, err)
 			}
 		})
 	}

@@ -19,9 +19,11 @@ import (
 )
 
 // ErrNotFound means the registry has no such image, or the image has no such
-// tag. It is returned wrapped; test for it with errors.Is. Unlike every other
-// error of this package, it is not going to fix itself: somebody has to push
-// the image or correct the group's image or tag.
+// tag. It is returned wrapped; test for it with errors.Is. It is not going to
+// fix itself: somebody has to push the image or correct the group's image or
+// tag. The same holds for an image or a tag that Digest refuses without a
+// request, whose error wraps imageref.ErrInvalid. Every other error of this
+// package may be gone on the next call.
 var ErrNotFound = errors.New("image or tag not found in the registry")
 
 // accept lists the manifest types a tag may point to. It includes the two
@@ -90,16 +92,16 @@ func (c *Client) Digest(ctx context.Context, image, tag string) (string, error) 
 		return "", fmt.Errorf("registry: %w", err)
 	}
 	if !c.allowed(host) {
-		return "", fmt.Errorf("registry: image %q is on host %q, want a Google registry host such as \"asia-docker.pkg.dev\" or \"gcr.io\"", image, host)
+		return "", fmt.Errorf("registry: %w: image %q is on host %q, want a Google registry host such as \"asia-docker.pkg.dev\" or \"gcr.io\"", imageref.ErrInvalid, image, host)
 	}
 	if pinned, ok := strings.CutPrefix(tag, "@"); ok {
 		if !imageref.IsDigest(pinned) {
-			return "", fmt.Errorf("registry: tag %q of image %q starts with \"@\" but is not a sha256 digest", tag, image)
+			return "", fmt.Errorf("registry: %w: tag %q of image %q starts with \"@\" but is not a sha256 digest", imageref.ErrInvalid, tag, image)
 		}
 		return pinned, nil
 	}
 	if !tagForm.MatchString(tag) {
-		return "", fmt.Errorf("registry: %q is not a valid tag of image %q", tag, image)
+		return "", fmt.Errorf("registry: %w: %q is not a valid tag of image %q", imageref.ErrInvalid, tag, image)
 	}
 	// The scheme is always https: the request carries a credential.
 	target := url.URL{Scheme: "https", Host: host, Path: "/v2/" + repository + "/manifests/" + tag}

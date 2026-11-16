@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/imageref"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -204,6 +205,11 @@ func TestDigest_Errors(t *testing.T) {
 			if errors.Is(err, ErrNotFound) != tc.wantNotFound {
 				t.Errorf("Digest() error = %v, want errors.Is(err, ErrNotFound) = %t", err, tc.wantNotFound)
 			}
+			// What the registry answers may change; only a reference that
+			// was refused is invalid.
+			if errors.Is(err, imageref.ErrInvalid) {
+				t.Errorf("Digest() error = %v, want one that does not wrap imageref.ErrInvalid", err)
+			}
 		})
 	}
 }
@@ -261,8 +267,8 @@ func TestDigest_RejectsWithoutRequest(t *testing.T) {
 
 			got, err := c.Digest(context.Background(), host+tc.image, tc.tag)
 
-			if err == nil || got != "" {
-				t.Errorf("Digest(%q, %q) = %q, %v, want an error and no digest", host+tc.image, tc.tag, got, err)
+			if !errors.Is(err, imageref.ErrInvalid) || got != "" {
+				t.Errorf("Digest(%q, %q) = %q, %v, want an error wrapping imageref.ErrInvalid and no digest", host+tc.image, tc.tag, got, err)
 			}
 			if n := len(f.requests()); n != 0 || tok.calls != 0 {
 				t.Errorf("Digest(%q, %q) sent %d requests and asked for %d tokens, want none", host+tc.image, tc.tag, n, tok.calls)
@@ -337,8 +343,13 @@ func TestDigest_TokenToGoogleRegistriesOnly(t *testing.T) {
 				t.Fatalf("New() failed: %v", err)
 			}
 
-			if _, err := c.Digest(context.Background(), tc.host+"/project/img", "latest"); err == nil {
+			_, err = c.Digest(context.Background(), tc.host+"/project/img", "latest")
+			if err == nil {
 				t.Fatalf("Digest() on host %q returned no error, want one", tc.host)
+			}
+			// A refused host is an invalid reference; a failed request is not.
+			if got := errors.Is(err, imageref.ErrInvalid); got == tc.wantAllowed {
+				t.Errorf("Digest() on host %q error = %v, want errors.Is(err, imageref.ErrInvalid) = %t", tc.host, err, !tc.wantAllowed)
 			}
 
 			var want []string
