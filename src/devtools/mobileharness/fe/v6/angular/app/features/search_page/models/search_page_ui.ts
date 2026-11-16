@@ -45,6 +45,41 @@ export type SearchPageConfig = Partial<FleetSearchConfig> &
 /** Default rows-per-page size inside an expanded group card. */
 export const DEFAULT_GROUP_EXPAND_PAGE_SIZE = 100;
 
+/**
+ * Default page size of the search footers: rows per page of the flat results
+ * table, and groups per page of the grouped header list.
+ */
+export const DEFAULT_PAGE_SIZE = 25;
+
+/**
+ * Rows-per-page options offered for fleet rows (flat table and expanded group
+ * cards). The upper end matches the legacy MHFE page sizes lab operators rely
+ * on and the BFF's 5000-row clamp; anything above 100 rows is rendered through
+ * the windowed (virtual scroll) table so the page stays responsive.
+ */
+export const PAGE_SIZE_OPTIONS: readonly number[] = [
+  10, 25, 50, 100, 500, 1000, 2000, 5000,
+];
+
+/**
+ * Initial row-height estimate (px) of the flat results table per density.
+ * Mirrors `.density-* .results-table tr { height }` in
+ * `shared/styles/search_table_common.scss`; the windowed table measures the
+ * real rendered height afterwards, so a drift here only costs one re-layout.
+ */
+export const ROW_HEIGHT_BY_DENSITY: Readonly<Record<TableDensity, number>> = {
+  compact: 40,
+  default: 52,
+  comfortable: 64,
+};
+
+/**
+ * Initial row-height estimate (px) of an expanded group card's inner table.
+ * The SCSS declares 32px, but the checkbox touch target stretches the rendered
+ * row to 37px; like the flat estimate it is corrected by measurement.
+ */
+export const GROUP_ROW_HEIGHT_ESTIMATE = 37;
+
 /** Data state structure for an expanded group card page. */
 export interface GroupPageState {
   readonly loading?: boolean;
