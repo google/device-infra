@@ -179,6 +179,11 @@ public class TestRetryHandler {
       addFinalAttemptProperty(currentTestInfo);
       return;
     }
+    // Do not retry if the job has a job-level error
+    if (jobInfo.properties().getBoolean(Job._HAS_JOB_LEVEL_ERROR).orElse(false)) {
+      addFinalAttemptProperty(currentTestInfo);
+      return;
+    }
     // Do not retry if the current test halts the future retry.
     if (currentTestInfo.properties().getBoolean(Test.HALT_RETRY).orElse(false)) {
       addFinalAttemptProperty(currentTestInfo);

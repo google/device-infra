@@ -567,6 +567,7 @@ public class JobRunner implements Runnable {
           });
     } catch (MobileHarnessException e) {
       jobError = e;
+      jobInfo.properties().add(PropertyName.Job._HAS_JOB_LEVEL_ERROR, "true");
       jobInfo.findings().addAndLog(Severity.SEVERE, e, logger);
     } catch (InterruptedException e) {
       jobError = e;
@@ -580,14 +581,13 @@ public class JobRunner implements Runnable {
               logger);
     } catch (Throwable t) {
       // For safety, catches all unknown error.
-      jobError = t;
+      MobileHarnessException fatalError =
+          createExceptionWithoutStackTrace(
+              InfraErrorId.CLIENT_JR_JOB_EXEC_FATAL_ERROR, "Fatal job error", t);
+      jobError = fatalError;
+      jobInfo.properties().add(PropertyName.Job._HAS_JOB_LEVEL_ERROR, "true");
       logger.atSevere().withCause(t).log("FATAL JOB ERROR");
-      jobInfo
-          .findings()
-          .addAndLog(
-              Severity.SEVERE,
-              createExceptionWithoutStackTrace(
-                  InfraErrorId.CLIENT_JR_JOB_EXEC_FATAL_ERROR, "Fatal job error", t));
+      jobInfo.findings().addAndLog(Severity.SEVERE, fatalError);
     } finally {
       // Tears down device allocator.
       boolean interrupted = Thread.interrupted();
@@ -1420,11 +1420,12 @@ public class JobRunner implements Runnable {
               break;
             case ERROR:
             case TIMEOUT:
+            case ABORT:
             case UNKNOWN:
               hasErrorTests = true;
               testIdForDisplayMhfeLink = testInfo.locator().getId();
               break;
-            default:
+            case UNRECOGNIZED:
               throw createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_TEST_HAS_UNKNOWN_RESULT,
                   "Unknown test result " + testInfo.resultWithCause().get().type());
