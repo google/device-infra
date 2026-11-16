@@ -732,6 +732,41 @@ describe('HostOverview Component', () => {
     expect(component.isDeviceLoading()).toBeFalse();
   });
 
+  it('clears device selection when device filter changes or devices are reloaded', () => {
+    const mockDevice = {
+      id: 'device-1',
+      deviceStatus: {status: 'IDLE', isCritical: false},
+    } as unknown as DeviceSummary;
+    component.deviceDataSource.data = [mockDevice];
+    component.selection.select(mockDevice);
+    expect(component.selection.selected.length).toBe(1);
+
+    // Applying the same empty filter preserves selection
+    component.deviceFilterInput = '   ';
+    component.applyDeviceFilter();
+    expect(component.selection.selected.length).toBe(1);
+
+    // Changing the filter value clears selection
+    component.deviceFilterInput = 'pixel';
+    component.applyDeviceFilter();
+    expect(component.selection.selected.length).toBe(0);
+
+    // Clearing the filter when active clears selection
+    component.selection.select(mockDevice);
+    expect(component.selection.selected.length).toBe(1);
+    component.clearDeviceFilter();
+    expect(component.selection.selected.length).toBe(0);
+
+    // Reloading devices clears selection
+    component.selection.select(mockDevice);
+    expect(component.selection.selected.length).toBe(1);
+    spyOn(hostService, 'getHostDeviceSummaries').and.returnValue(
+      of({deviceSummaries: [mockDevice]}),
+    );
+    component.loadDevices();
+    expect(component.selection.selected.length).toBe(0);
+  });
+
   it('renders Title Case headers and version-info icons with DEVICE_VERSION_DESCRIPTION in device and sub-device tables', () => {
     const testbedDevice = {
       id: 'testbed-1',

@@ -364,27 +364,52 @@ export class FleetSearchStore extends SearchPageStore {
   // 3. Table Columns, Selection, & View Configuration
   // ===========================================================================
 
-  /** Map of currently selected composite item keys (`deviceId@@hostName` or `deviceId`) to their search result Row. */
-  readonly selectedItems = signal<Map<string, Row>>(new Map());
+  /**
+   * Unique scope key reflecting the active dataset query, pagination, and sort parameters
+   * for invalidating row selection.
+   */
+  private readonly selectionScopeKey = computed(() => {
+    return `${this.searchScopeKey()}:${this.sortColumn()}:${this.sortAsc()}:${this.pageIndex()}:${this.pageToken()}:${this.pageSize()}`;
+  });
+
+  /**
+   * Map of currently selected composite item keys (`deviceId@@hostName` or `deviceId`) to their
+   * search result Row. Automatically resets when the query scope, pagination, or sorting changes.
+   */
+  readonly selectedItems = linkedSignal<string, Map<string, Row>>({
+    source: () => this.selectionScopeKey(),
+    computation: () => new Map(),
+  });
 
   /** Clears the current selection state. */
-  clearSelection() {
+  clearSelection(): void {
     this.selectedItems.set(new Map());
   }
 
+  /** Removes the specified rows from the current selection if any are selected. */
+  private deselectRows(rows: readonly Row[] | undefined): void {
+    const current = this.selectedItems();
+    if (!rows?.length || current.size === 0) return;
+    const nextMap = new Map(current);
+    for (const row of rows) {
+      nextMap.delete(getDeviceTargetKey(row));
+    }
+    if (nextMap.size !== current.size) {
+      this.selectedItems.set(nextMap);
+    }
+  }
+
   /** Toggles selection for one or more rows (e.g. a single row, current flat page, or an expanded group card page). */
-  toggleSelectRows(rows: Row[] | undefined) {
-    if (!rows || rows.length === 0) return;
-    const nextMap = new Map(this.selectedItems());
-    const allSelected = rows.every((r) => isRowSelected(r, nextMap));
-    if (allSelected) {
-      rows.forEach((r) => {
-        nextMap.delete(getDeviceTargetKey(r));
-      });
-    } else {
-      rows.forEach((r) => {
-        nextMap.set(getDeviceTargetKey(r), r);
-      });
+  toggleSelectRows(rows: readonly Row[] | undefined): void {
+    if (!rows?.length) return;
+    const current = this.selectedItems();
+    if (rows.every((r) => isRowSelected(r, current))) {
+      this.deselectRows(rows);
+      return;
+    }
+    const nextMap = new Map(current);
+    for (const row of rows) {
+      nextMap.set(getDeviceTargetKey(row), row);
     }
     this.selectedItems.set(nextMap);
   }
@@ -410,14 +435,13 @@ export class FleetSearchStore extends SearchPageStore {
     this.resetPagination();
   }
 
-  /** Updates page size, resets pagination, and clears row selection and expanded groups. */
+  /** Updates page size, resets pagination, and clears expanded groups. */
   override setPageSize(newSize: number) {
     if (this.pageSize() === newSize) {
       return;
     }
     super.setPageSize(newSize);
     this.resetExpandedGroups();
-    this.clearSelection();
   }
 
   /** Current visible column descriptors (isomorphic support for localStorage and searchConfig defaults). */
@@ -571,6 +595,12 @@ export class FleetSearchStore extends SearchPageStore {
     computation: () => new Set<string>(),
   });
 
+  /** Most recently expanded or interacted group header ID, automatically reset when query scope changes. */
+  readonly focusedGroupId = linkedSignal<string, string | null>({
+    source: () => this.searchScopeKey(),
+    computation: () => null,
+  });
+
   /**
    * Sorting mode for grouped view headers.
    * Automatically falls back to 'count:desc' if the active sort key is removed from groupBy.
@@ -578,14 +608,12 @@ export class FleetSearchStore extends SearchPageStore {
   readonly groupSort = linkedSignal<string[], string>({
     source: () => this.groupByKeys(),
     computation: (keys, previous) => {
-      if (!previous) return 'count:desc';
-      if (previous.value.startsWith('gb_')) {
-        const sortedKey = previous.value.slice(previous.value.indexOf(':') + 1);
-        if (!keys.includes(sortedKey)) {
-          return 'count:desc';
-        }
-      }
-      return previous.value;
+      const prev = previous?.value;
+      if (!prev) return 'count:desc';
+      const sortedKey = prev.startsWith('gb_')
+        ? prev.slice(prev.indexOf(':') + 1)
+        : null;
+      return sortedKey && !keys.includes(sortedKey) ? 'count:desc' : prev;
     },
   });
 
@@ -661,18 +689,21 @@ export class FleetSearchStore extends SearchPageStore {
   }
 
   /** Toggles accordion open/collapsed state for a group and loads rows if newly opened and not cached. */
-  toggleGroup(groupId: string) {
-    const current = new Set(this.openGroupIds());
-    if (current.has(groupId)) {
-      current.delete(groupId);
+  toggleGroup(groupId: string): void {
+    const nextOpenIds = new Set(this.openGroupIds());
+    const cachedData = this.expandedGroupPages().get(groupId)?.data;
+    if (nextOpenIds.delete(groupId)) {
+      this.openGroupIds.set(nextOpenIds);
       this.groupLoadSubs.get(groupId)?.unsubscribe();
-    } else {
-      current.add(groupId);
-      if (!this.expandedGroupPages().get(groupId)?.data) {
-        this.onLoadGroupRows(groupId);
-      }
+      this.deselectRows(cachedData?.rows);
+      return;
     }
-    this.openGroupIds.set(current);
+    nextOpenIds.add(groupId);
+    this.openGroupIds.set(nextOpenIds);
+    this.focusedGroupId.set(groupId);
+    if (!cachedData) {
+      this.onLoadGroupRows(groupId);
+    }
   }
 
   /** Active in-flight row-load subscription per group ID so newer loads abort superseded RPCs. */
@@ -706,7 +737,9 @@ export class FleetSearchStore extends SearchPageStore {
 
     const scopeKey = this.searchScopeKey();
     const visibleCols = this.visibleColumns();
-    const state = {...this.expandedGroupPages().get(groupId), ...overrides};
+    const existingState = this.expandedGroupPages().get(groupId);
+    this.deselectRows(existingState?.data?.rows);
+    const state = {...existingState, ...overrides};
     const hasCustomSort =
       !!state.sortColumn && visibleCols.has(state.sortColumn);
     const sortColumn = hasCustomSort ? state.sortColumn : this.sortColumn();

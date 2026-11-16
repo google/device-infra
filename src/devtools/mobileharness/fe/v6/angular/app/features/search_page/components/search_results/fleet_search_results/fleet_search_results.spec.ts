@@ -69,6 +69,7 @@ class MockFleetSearchStore {
   readonly groupSort = signal<string>('count_desc');
   readonly setGroupSort = jasmine.createSpy('setGroupSort');
   readonly openGroupIds = signal<Set<string>>(new Set());
+  readonly focusedGroupId = signal<string | null>(null);
   readonly expandedGroupPages = signal<Map<string, unknown>>(new Map());
   readonly displayColumns = signal<Column[]>([]);
   readonly columnDescriptions = signal<ReadonlyMap<string, string>>(new Map());
@@ -350,6 +351,27 @@ describe('FleetSearchResultsComponent', () => {
       const retryBtn = errorEl.query(By.css('.rt-btn-outlined'));
       retryBtn.nativeElement.click();
       expect(mockStore.executeSearch).toHaveBeenCalled();
+    });
+
+    it('renders utilization legend items with explanatory tooltips for devices', () => {
+      mockStore.groups.set([{groupId: 'group-1', values: ['IDLE']}]);
+      mockStore.entity.set('devices');
+      fixture.detectChanges();
+
+      const topLegend = fixture.debugElement.query(By.css('.rt-util-key-top'));
+      expect(topLegend).not.toBeNull();
+
+      const items = topLegend.queryAll(By.css('.rt-util-key-item'));
+      expect(items.length).toBe(3);
+      expect(items[0].nativeElement.getAttribute('aria-label')).toBe(
+        component.utilizationBusyTooltip,
+      );
+      expect(items[1].nativeElement.getAttribute('aria-label')).toBe(
+        component.utilizationIdleTooltip,
+      );
+      expect(items[2].nativeElement.getAttribute('aria-label')).toBe(
+        component.utilizationOthersTooltip,
+      );
     });
   });
 

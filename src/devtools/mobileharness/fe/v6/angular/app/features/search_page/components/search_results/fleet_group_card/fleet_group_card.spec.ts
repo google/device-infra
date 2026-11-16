@@ -11,6 +11,7 @@ import {FleetGroupCardComponent} from './fleet_group_card';
 class MockFleetSearchStore {
   readonly entity = signal<string>('devices');
   readonly openGroupIds = signal<Set<string>>(new Set());
+  readonly focusedGroupId = signal<string | null>(null);
   readonly expandedGroupPages = signal<Map<string, GroupPageState>>(new Map());
   readonly displayColumns = signal<Column[]>([]);
   readonly columnDescriptions = signal<ReadonlyMap<string, string>>(new Map());
@@ -393,5 +394,69 @@ describe('FleetGroupCardComponent', () => {
       'group-1',
       'device_field::uuid',
     );
+  });
+
+  it('scrolls the enclosing .rt-accordion on expand click without scrolling on collapse and applies focused class', () => {
+    const accordionEl = document.createElement('div');
+    accordionEl.className = 'rt-accordion';
+    document.body.appendChild(accordionEl);
+    accordionEl.appendChild(fixture.nativeElement);
+
+    try {
+      const scrollToSpy = spyOn(accordionEl, 'scrollTo');
+      spyOn(accordionEl, 'getBoundingClientRect').and.returnValue({
+        top: 120,
+      } as DOMRect);
+      spyOn(
+        (fixture.nativeElement as HTMLElement),
+        'getBoundingClientRect',
+      ).and.returnValue({
+        top: 340,
+      } as DOMRect);
+      Object.defineProperty(accordionEl, 'scrollTop', {
+        value: 50,
+        configurable: true,
+      });
+
+      fixture.componentRef.setInput('group', mockGroup);
+      fixture.detectChanges();
+
+      const sectionEl = fixture.debugElement.query(By.css('.rt-group'))
+        .nativeElement as HTMLElement;
+      const headerBtn = fixture.debugElement.query(By.css('.rt-group-head'))
+        .nativeElement as HTMLButtonElement;
+      expect(sectionEl.classList.contains('focused')).toBeFalse();
+      expect(scrollToSpy).not.toHaveBeenCalled();
+
+      // 1. Clicking header to expand calls toggleGroup, scrolls .rt-accordion, and applies .focused
+      headerBtn.click();
+      mockStore.openGroupIds.set(new Set(['group-1']));
+      mockStore.focusedGroupId.set('group-1');
+      fixture.detectChanges();
+
+      expect(mockStore.toggleGroup).toHaveBeenCalledWith('group-1');
+      expect(sectionEl.classList.contains('focused')).toBeTrue();
+      expect(scrollToSpy).toHaveBeenCalledTimes(1);
+      expect(
+        scrollToSpy.calls.mostRecent().args[0] as unknown as ScrollToOptions,
+      ).toEqual({
+        top: 270,
+        behavior: 'smooth',
+      });
+
+      // 2. Focusing a different group removes the .focused class from this group
+      mockStore.focusedGroupId.set('group-2');
+      fixture.detectChanges();
+      expect(sectionEl.classList.contains('focused')).toBeFalse();
+
+      // 3. Clicking header while open collapses without scrolling
+      scrollToSpy.calls.reset();
+      headerBtn.click();
+      mockStore.openGroupIds.set(new Set());
+      fixture.detectChanges();
+      expect(scrollToSpy).not.toHaveBeenCalled();
+    } finally {
+      accordionEl.remove();
+    }
   });
 });

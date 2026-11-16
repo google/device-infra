@@ -1,9 +1,12 @@
 import {DecimalPipe} from '@angular/common';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
   inject,
+  Injector,
   input,
 } from '@angular/core';
 import {MatCheckboxModule} from '@angular/material/checkbox';
@@ -17,7 +20,11 @@ import {
   GroupPageState,
 } from '../../../models';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
-import {formatPaginationRange, getDeviceTargetKey} from '../../../utils';
+import {
+  formatPaginationRange,
+  getDeviceTargetKey,
+  getRowsSelectionState,
+} from '../../../utils';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
 import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
 
@@ -40,6 +47,8 @@ import {SearchPaginationComponent} from '../common/search_pagination/search_pagi
 })
 export class FleetGroupCardComponent {
   readonly store = inject(FleetSearchStore);
+  private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   /** Fleet group header card data object. */
   readonly group = input.required<FleetGroup>();
@@ -50,6 +59,13 @@ export class FleetGroupCardComponent {
   /** Whether this group card accordion is currently open/expanded. */
   readonly isOpen = computed<boolean>(() =>
     this.store.openGroupIds().has(this.group().groupId),
+  );
+
+  /** Whether this group card is the currently focused expanded group. */
+  readonly isFocused = computed<boolean>(
+    () =>
+      this.isOpen() &&
+      this.store.focusedGroupId() === this.group().groupId,
   );
 
   /** Async state for lazy-loaded group row data. */
@@ -108,21 +124,43 @@ export class FleetGroupCardComponent {
   });
 
   /** Tri-state checkbox selection state ({all, some}) for the current group page. */
-  readonly selectionState = computed(() => {
-    const items = this.rowItems();
-    let selectedCount = 0;
-    for (const item of items) {
-      if (item.selected) selectedCount++;
-    }
-    return {
-      all: items.length > 0 && selectedCount === items.length,
-      some: selectedCount > 0 && selectedCount < items.length,
-    };
-  });
+  readonly selectionState = computed(() =>
+    getRowsSelectionState(
+      this.groupState()?.data?.rows ?? [],
+      this.store.selectedItems(),
+    ),
+  );
 
   /** Formatted range text for the inner group pagination footer (e.g. "1–25 of 100"). */
   readonly innerRangeText = computed<string>(() => {
     const data = this.groupState()?.data;
     return formatPaginationRange(data?.rangeStart, data?.rangeEnd, data?.total);
   });
+
+  /** Toggles this group card and scrolls it into view when expanding. */
+  onToggleGroup(): void {
+    const willOpen = !this.isOpen();
+    this.store.toggleGroup(this.group().groupId);
+    if (willOpen) {
+      this.scrollCardIntoView();
+    }
+  }
+
+  private scrollCardIntoView(): void {
+    afterNextRender(
+      () => {
+        const hostEl = this.elementRef.nativeElement;
+        const accordion = hostEl.closest('.rt-accordion');
+        if (!accordion) return;
+        const offset =
+          hostEl.getBoundingClientRect().top -
+          accordion.getBoundingClientRect().top;
+        accordion.scrollTo({
+          top: Math.max(0, accordion.scrollTop + offset),
+          behavior: 'smooth',
+        });
+      },
+      {injector: this.injector},
+    );
+  }
 }

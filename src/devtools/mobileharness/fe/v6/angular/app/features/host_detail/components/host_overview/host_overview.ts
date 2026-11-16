@@ -595,6 +595,7 @@ export class HostOverviewPage {
   // --- Devices Card ---
   loadDevices() {
     this.isDeviceLoading.set(true);
+    this.selection.clear();
     this.hostService
       .getHostDeviceSummaries(this.localHost().hostName)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -611,7 +612,11 @@ export class HostOverviewPage {
   }
 
   applyDeviceFilter() {
-    this.deviceFilterValue = this.deviceFilterInput.trim().toLowerCase();
+    const nextFilter = this.deviceFilterInput.trim().toLowerCase();
+    if (nextFilter !== this.deviceFilterValue) {
+      this.selection.clear();
+    }
+    this.deviceFilterValue = nextFilter;
     this.deviceDataSource.filter = this.deviceFilterValue;
   }
 
