@@ -150,6 +150,7 @@ MctsMediaTranscodingTestCases
 MctsMediaV2TestCases
 MctsTextClassifierTestCases
 MctsVideoTestCases
+MtsWebAppTestCases
 MultiDeviceRangingTestCases
 net-tests-utils-host-common
 SdkSandboxManagerDisabledTests

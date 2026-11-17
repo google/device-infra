@@ -161,6 +161,12 @@ module_package_to_module_info: {
   value: "android-mcts-uprobestats"
 }
 
+# C-introduced modules
+module_package_to_module_info: {
+  key: "com.google.android.webapp"
+  value: "android-mcts-webapp"
+}
+
 # Go modules
 module_package_to_module_info: {
   key: "com.google.android.go.adbd"
@@ -298,5 +304,10 @@ module_package_to_module_info: {
 module_package_to_module_info: {
   key: "com.google.android.go.uprobestats"
   value: "android-mcts-uprobestats"
+}
+# C-introduced modules
+module_package_to_module_info: {
+  key: "com.google.android.go.webapp"
+  value: "android-mcts-webapp"
 }
 
