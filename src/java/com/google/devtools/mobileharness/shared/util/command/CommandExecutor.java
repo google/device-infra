@@ -507,8 +507,8 @@ public class CommandExecutor {
         commandProcess.stdinWriter().flush();
       } catch (IOException e) {
         logger.atWarning().withCause(e).log(
-            "Failed to write [%s] to stdin of command [%s], kill it",
-            input, commandProcess.command());
+            "Failed to write input (%d chars) to stdin of command [%s], kill it",
+            input.length(), commandProcess.command());
         commandProcess.kill();
       }
     }

@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.lightning.networkconnector;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.MoreObjects;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -44,6 +45,18 @@ public abstract class WifiConnectArgs {
 
   /** Number of retrying if failed to connect the device to the given ssid. */
   public abstract Optional<Integer> retryNum();
+
+  @Override
+  public final String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("wifiSsid", wifiSsid())
+        .add("wifiPsk", wifiPsk().map(psk -> psk.isEmpty() ? "" : "<redacted>"))
+        .add("scanSsid", scanSsid())
+        .add("logFailuresOnly", logFailuresOnly())
+        .add("waitTimeout", waitTimeout())
+        .add("retryNum", retryNum())
+        .toString();
+  }
 
   public static Builder builder() {
     return new AutoValue_WifiConnectArgs.Builder();
