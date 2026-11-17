@@ -150,6 +150,22 @@ public class DeviceConditionUtilTest {
   }
 
   @Test
+  public void checkStatus_lameduck() {
+    DeviceCondition deviceCondition =
+        DeviceCondition.newBuilder()
+            .setDirty(false)
+            .setDirtyModifyTimeMsFromMaster(2L)
+            .setStatusFromLab(DeviceStatus.LAMEDUCK)
+            .setStatusFromLabModifyTimeMsFromMaster(3L)
+            .build();
+    assertThat(DeviceConditionUtil.summarizeStatus(deviceCondition))
+        .isEqualTo(DeviceStatus.LAMEDUCK);
+    assertThat(DeviceConditionUtil.isIdle(deviceCondition)).isFalse();
+    assertThat(DeviceConditionUtil.isReady(deviceCondition)).isFalse();
+    assertThat(DeviceConditionUtil.isInHealthyStatus(deviceCondition)).isFalse();
+  }
+
+  @Test
   public void mergeMnmDeviceStatusIfAny() {
     assertThat(
             DeviceConditionUtil.mergeMnmDeviceStatusIfAny(

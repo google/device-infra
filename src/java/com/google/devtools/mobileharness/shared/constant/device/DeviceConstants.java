@@ -36,7 +36,7 @@ public final class DeviceConstants {
           "FuchsiaRecoveringDevice");
 
   public static final ImmutableSet<DeviceStatus> HEALTHY_STATUS =
-      ImmutableSet.of(DeviceStatus.IDLE, DeviceStatus.BUSY, DeviceStatus.LAMEDUCK);
+      ImmutableSet.of(DeviceStatus.IDLE, DeviceStatus.BUSY);
 
   private DeviceConstants() {}
 }
