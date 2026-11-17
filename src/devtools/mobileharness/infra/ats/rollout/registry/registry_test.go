@@ -72,7 +72,7 @@ type tokens struct {
 	calls int
 }
 
-func (t *tokens) token(context.Context) (string, error) {
+func (t *tokens) token() (string, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.calls++
@@ -291,6 +291,25 @@ func TestDigest_NoTokenSendsNothing(t *testing.T) {
 	}
 }
 
+func TestDigest_DoneContextFetchesNoToken(t *testing.T) {
+	f := &fakeRegistry{status: http.StatusOK, digest: digestA}
+	tok := &tokens{}
+	c, host := newClient(t, f, tok)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := c.Digest(ctx, host+"/project/img", "latest")
+
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("Digest() with a done context returned error %v, want %v", err, context.Canceled)
+	}
+	// The token function takes no context: once called, it could not be
+	// stopped.
+	if n := len(f.requests()); n != 0 || tok.calls != 0 {
+		t.Errorf("Digest() with a done context sent %d requests and asked for %d tokens, want none", n, tok.calls)
+	}
+}
+
 func TestDigest_CallerDeadline(t *testing.T) {
 	c, host := newClient(t, &fakeRegistry{wait: true}, &tokens{})
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -384,7 +403,7 @@ type roundTripper func(*http.Request) (*http.Response, error)
 func (f roundTripper) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
 func TestNew(t *testing.T) {
-	token := func(context.Context) (string, error) { return "", nil }
+	token := func() (string, error) { return "", nil }
 	if _, err := New(http.DefaultClient, token); err != nil {
 		t.Errorf("New() failed: %v", err)
 	}

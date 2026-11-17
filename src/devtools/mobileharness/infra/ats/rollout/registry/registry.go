@@ -54,7 +54,7 @@ var tagForm = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}$`)
 // choosing. Package imageref has the rule, which the agent applies as well.
 type Client struct {
 	http  *http.Client
-	token func(context.Context) (string, error)
+	token func() (string, error)
 	// allowed reports whether a host is a registry that credentials may be
 	// sent to. It is imageref.IsGoogleRegistry except in tests, which serve
 	// a registry locally.
@@ -63,8 +63,9 @@ type Client struct {
 
 // New returns a client that sends its requests with c and authenticates them
 // with the access token that token returns. c must not add credentials of its
-// own. token is called once per request.
-func New(c *http.Client, token func(context.Context) (string, error)) (*Client, error) {
+// own. token is called once per request. It takes no context, so it must
+// return in bounded time by itself.
+func New(c *http.Client, token func() (string, error)) (*Client, error) {
 	switch {
 	case c == nil:
 		return nil, errors.New("registry: the HTTP client is nil")
@@ -105,7 +106,12 @@ func (c *Client) Digest(ctx context.Context, image, tag string) (string, error) 
 	}
 	// The scheme is always https: the request carries a credential.
 	target := url.URL{Scheme: "https", Host: host, Path: "/v2/" + repository + "/manifests/" + tag}
-	token, err := c.token(ctx)
+	// The token function takes no context, so a caller whose time is up
+	// must not start a token fetch that it cannot stop.
+	if err := ctx.Err(); err != nil {
+		return "", fmt.Errorf("registry: resolving %s:%s: %w", image, tag, err)
+	}
+	token, err := c.token()
 	if err != nil {
 		return "", fmt.Errorf("registry: getting an access token to resolve %s:%s: %w", image, tag, err)
 	}

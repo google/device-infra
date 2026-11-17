@@ -34,5 +34,5 @@ go_test(
     name = "auth_test",
     srcs = ["auth_test.go"],
     embed = [":auth"],
-    deps = ["@com_github_google_go_cmp//cmp"],
+    deps = ["@org_golang_x_oauth2//google"],
 )

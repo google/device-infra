@@ -1,507 +1,22 @@
 package auth
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/google/go-cmp/cmp"
+	"golang.org/x/oauth2/google"
 )
-
-// longLife and shortLife are token lifetimes in seconds: one far above
-// refreshBefore, so the token is kept, and one below it, so that the next
-// call fetches again.
-const (
-	longLife  = 3600
-	shortLife = 5
-)
-
-// giveUp is the deadline of a caller that is not going to get a token, and
-// tooLong is how long such a caller may take to return: far less than
-// fetchTimeout, which is what bounds the fetch it gave up on.
-const (
-	giveUp  = 50 * time.Millisecond
-	tooLong = 5 * time.Second
-)
-
-// hold makes a fake server keep its token requests waiting until release is
-// called, which the server's cleanup does at the latest. A nil hold keeps
-// nothing waiting.
-type hold struct {
-	once sync.Once
-	ch   chan struct{}
-}
-
-func newHold() *hold { return &hold{ch: make(chan struct{})} }
-
-func (h *hold) release() {
-	if h != nil {
-		h.once.Do(func() { close(h.ch) })
-	}
-}
-
-// wait returns when the hold is released or the client has gone away.
-func (h *hold) wait(r *http.Request) {
-	if h == nil {
-		return
-	}
-	select {
-	case <-h.ch:
-	case <-r.Context().Done():
-	}
-}
-
-// fakeMetadata is a metadata server. It answers the project ID and token
-// requests, and records every request.
-type fakeMetadata struct {
-	// project and projectStatus are the answer for the project ID; a zero
-	// status means 200.
-	project       string
-	projectStatus int
-	// lifetime is the expires_in of the tokens, which are "token-1",
-	// "token-2", and so on. tokenBody, if set, is the answer instead, and
-	// tokenStatus its status; a zero status means 200.
-	lifetime    int
-	tokenBody   string
-	tokenStatus int
-	// noFlavor leaves out the header that marks a metadata server's answers.
-	noFlavor bool
-	// hold, if set, keeps token requests waiting.
-	hold *hold
-
-	mu sync.Mutex
-	// got is each request as "<Metadata-Flavor header> <path>?<query>".
-	got    []string
-	tokens int
-}
-
-func (f *fakeMetadata) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.mu.Lock()
-	f.got = append(f.got, r.Header.Get("Metadata-Flavor")+" "+r.URL.RequestURI())
-	f.mu.Unlock()
-	if !f.noFlavor {
-		w.Header().Set("Metadata-Flavor", "Google")
-	}
-	status, body := http.StatusNotFound, "not found"
-	switch r.URL.Path {
-	case "/computeMetadata/v1/project/project-id":
-		status, body = f.projectStatus, f.project
-	case "/computeMetadata/v1/instance/service-accounts/default/token":
-		f.hold.wait(r)
-		f.mu.Lock()
-		f.tokens++
-		n := f.tokens
-		f.mu.Unlock()
-		status, body = f.tokenStatus, f.tokenBody
-		if body == "" {
-			body = fmt.Sprintf(`{"access_token": "token-%d", "expires_in": %d, "token_type": "Bearer"}`, n, f.lifetime)
-		}
-	}
-	if status == 0 {
-		status = http.StatusOK
-	}
-	w.WriteHeader(status)
-	io.WriteString(w, body)
-}
-
-func (f *fakeMetadata) requests() []string {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return append([]string(nil), f.got...)
-}
-
-// tokenRequests returns how many token requests the server has answered or
-// is holding.
-func (f *fakeMetadata) tokenRequests() int {
-	n := 0
-	for _, r := range f.requests() {
-		if strings.Contains(r, "/token") {
-			n++
-		}
-	}
-	return n
-}
-
-// serve starts f and returns its endpoint.
-func (f *fakeMetadata) serve(t *testing.T) string {
-	t.Helper()
-	ts := httptest.NewServer(f)
-	t.Cleanup(ts.Close)
-	// Registered after the server's Close, so that it runs before it: Close
-	// waits for the requests that are held.
-	t.Cleanup(f.hold.release)
-	return ts.URL
-}
-
-// metadataCredentials returns credentials from f for one scope.
-func metadataCredentials(t *testing.T, f *fakeMetadata) *Credentials {
-	t.Helper()
-	creds, err := fromMetadata(context.Background(), f.serve(t), []string{ScopeDatastore})
-	if err != nil {
-		t.Fatalf("fromMetadata() failed: %v", err)
-	}
-	return creds
-}
-
-func TestFromMetadata(t *testing.T) {
-	f := &fakeMetadata{project: "the-project\n", lifetime: longLife}
-	creds, err := fromMetadata(context.Background(), f.serve(t), []string{ScopeCloudPlatform, ScopeDatastore})
-	if err != nil {
-		t.Fatalf("fromMetadata() failed: %v", err)
-	}
-
-	if creds.Project != "the-project" {
-		t.Errorf("fromMetadata() project = %q, want %q", creds.Project, "the-project")
-	}
-	// The second token is the first one, kept.
-	for range 2 {
-		got, err := creds.Token(context.Background())
-		if got != "token-1" || err != nil {
-			t.Errorf("Token() = %q, %v, want %q", got, err, "token-1")
-		}
-	}
-	want := []string{
-		"Google /computeMetadata/v1/project/project-id",
-		"Google /computeMetadata/v1/instance/service-accounts/default/token?scopes=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform%2Chttps%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdatastore",
-	}
-	if diff := cmp.Diff(want, f.requests()); diff != "" {
-		t.Errorf("requests to the metadata server (-want +got):\n%s", diff)
-	}
-}
-
-func TestFromMetadata_Errors(t *testing.T) {
-	tests := []struct {
-		name   string
-		server *fakeMetadata
-		scopes []string
-	}{
-		{name: "no_scopes", server: &fakeMetadata{project: "p"}},
-		{name: "server_fails", server: &fakeMetadata{project: "p", projectStatus: http.StatusInternalServerError}, scopes: []string{ScopeDatastore}},
-		{name: "no_project_ID", server: &fakeMetadata{projectStatus: http.StatusNotFound}, scopes: []string{ScopeDatastore}},
-		{name: "empty_project_ID", server: &fakeMetadata{project: " \n"}, scopes: []string{ScopeDatastore}},
-		{name: "not_metadata_server", server: &fakeMetadata{project: "<html>", noFlavor: true}, scopes: []string{ScopeDatastore}},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			creds, err := fromMetadata(context.Background(), tc.server.serve(t), tc.scopes)
-			if err == nil {
-				t.Errorf("fromMetadata() = %+v, want an error", creds)
-			}
-		})
-	}
-}
-
-func TestFromMetadata_BoundedByContext(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		<-r.Context().Done()
-	}))
-	t.Cleanup(ts.Close)
-	ctx, cancel := context.WithTimeout(context.Background(), giveUp)
-	defer cancel()
-
-	_, err := fromMetadata(ctx, ts.URL, []string{ScopeDatastore})
-
-	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("fromMetadata() against a server that does not answer returned error %v, want %v", err, context.DeadlineExceeded)
-	}
-}
-
-func TestMetadataToken_Errors(t *testing.T) {
-	tests := []struct {
-		name   string
-		server *fakeMetadata
-	}{
-		{name: "server_fails", server: &fakeMetadata{tokenStatus: http.StatusInternalServerError}},
-		{name: "no_service_account", server: &fakeMetadata{tokenStatus: http.StatusNotFound}},
-		{name: "not_JSON", server: &fakeMetadata{tokenBody: "the-secret"}},
-		{name: "no_token", server: &fakeMetadata{tokenBody: `{"expires_in": 3600}`}},
-		{name: "no_lifetime", server: &fakeMetadata{tokenBody: `{"access_token": "the-secret"}`}},
-		{name: "lifetime_in_past", server: &fakeMetadata{tokenBody: `{"access_token": "the-secret", "expires_in": -1}`}},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			tc.server.project = "p"
-			creds := metadataCredentials(t, tc.server)
-
-			got, err := creds.Token(context.Background())
-
-			if got != "" || err == nil {
-				t.Fatalf("Token() = %q, %v, want an error and no token", got, err)
-			}
-			if strings.Contains(err.Error(), "the-secret") {
-				t.Errorf("Token() error quotes the answer of the metadata server: %v", err)
-			}
-			// A failure is not kept: the next call asks again.
-			if _, err := creds.Token(context.Background()); err == nil {
-				t.Errorf("second Token() returned no error, want one")
-			}
-			if n := tc.server.tokenRequests(); n != 2 {
-				t.Errorf("two Token() calls made %d token requests, want 2", n)
-			}
-		})
-	}
-}
-
-func TestToken_RefetchedWhenAboutToExpire(t *testing.T) {
-	creds := metadataCredentials(t, &fakeMetadata{project: "p", lifetime: shortLife})
-
-	for _, want := range []string{"token-1", "token-2"} {
-		got, err := creds.Token(context.Background())
-		if got != want || err != nil {
-			t.Errorf("Token() = %q, %v, want %q", got, err, want)
-		}
-	}
-}
-
-func TestToken_ConcurrentCallersShareOneFetch(t *testing.T) {
-	f := &fakeMetadata{project: "p", lifetime: longLife, hold: newHold()}
-	creds := metadataCredentials(t, f)
-	const callers = 8
-	type result struct {
-		token string
-		err   error
-	}
-	results := make(chan result, callers)
-	var started sync.WaitGroup
-	for range callers {
-		started.Add(1)
-		go func() {
-			started.Done()
-			token, err := creds.Token(context.Background())
-			results <- result{token, err}
-		}()
-	}
-	// Every caller asks while the first fetch is held. The pause gives the
-	// callers time to get from Done to Token; one that is slower still gets
-	// the token, and could only hide a second fetch, not cause a failure.
-	started.Wait()
-	time.Sleep(giveUp)
-
-	f.hold.release()
-
-	for range callers {
-		if r := <-results; r.token != "token-1" || r.err != nil {
-			t.Errorf("Token() = %q, %v, want %q", r.token, r.err, "token-1")
-		}
-	}
-	if n := f.tokenRequests(); n != 1 {
-		t.Errorf("%d concurrent Token() calls made %d token requests, want 1", callers, n)
-	}
-}
-
-func TestToken_StopsWaitingWhenContextDone(t *testing.T) {
-	f := &fakeMetadata{project: "p", lifetime: longLife, hold: newHold()}
-	creds := metadataCredentials(t, f)
-	ctx, cancel := context.WithTimeout(context.Background(), giveUp)
-	defer cancel()
-	start := time.Now()
-
-	got, err := creds.Token(ctx)
-
-	if got != "" || !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("Token() while the fetch stalls = %q, %v, want error %v", got, err, context.DeadlineExceeded)
-	}
-	if elapsed := time.Since(start); elapsed > tooLong {
-		t.Errorf("Token() with a deadline of %v returned after %v", giveUp, elapsed)
-	}
-
-	// The fetch that the caller gave up on goes on, and its token serves
-	// the next caller.
-	f.hold.release()
-	if got, err := creds.Token(context.Background()); got != "token-1" || err != nil {
-		t.Errorf("Token() after the fetch went through = %q, %v, want %q", got, err, "token-1")
-	}
-	if n := f.tokenRequests(); n != 1 {
-		t.Errorf("made %d token requests, want 1", n)
-	}
-}
-
-func TestToken_DoneContextFetchesNothing(t *testing.T) {
-	f := &fakeMetadata{project: "p", lifetime: longLife}
-	creds := metadataCredentials(t, f)
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	got, err := creds.Token(ctx)
-
-	if got != "" || !errors.Is(err, context.Canceled) {
-		t.Errorf("Token() = %q, %v, want error %v", got, err, context.Canceled)
-	}
-	if n := f.tokenRequests(); n != 0 {
-		t.Errorf("Token() with a done context made %d token requests, want 0", n)
-	}
-}
-
-// fakeAPI is an API server that records the Authorization header of each
-// request and answers with status, or redirects to redirect if set.
-type fakeAPI struct {
-	status   int
-	redirect string
-
-	mu  sync.Mutex
-	got []string
-}
-
-func (f *fakeAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.mu.Lock()
-	f.got = append(f.got, r.Header.Get("Authorization"))
-	f.mu.Unlock()
-	if f.redirect != "" {
-		http.Redirect(w, r, f.redirect, http.StatusFound)
-		return
-	}
-	w.WriteHeader(f.status)
-}
-
-func (f *fakeAPI) authorizations() []string {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return append([]string(nil), f.got...)
-}
-
-func (f *fakeAPI) serve(t *testing.T) string {
-	t.Helper()
-	ts := httptest.NewServer(f)
-	t.Cleanup(ts.Close)
-	return ts.URL
-}
-
-func TestClient_SendsBearerToken(t *testing.T) {
-	creds := metadataCredentials(t, &fakeMetadata{project: "p", lifetime: longLife})
-	api := &fakeAPI{status: http.StatusOK}
-	url := api.serve(t)
-
-	for range 2 {
-		resp, err := creds.Client.Post(url, "application/json", strings.NewReader("{}"))
-		if err != nil {
-			t.Fatalf("Client.Post() failed: %v", err)
-		}
-		resp.Body.Close()
-	}
-
-	want := []string{"Bearer token-1", "Bearer token-1"}
-	if diff := cmp.Diff(want, api.authorizations()); diff != "" {
-		t.Errorf("Authorization headers the API saw (-want +got):\n%s", diff)
-	}
-}
-
-func TestClient_LeavesRequestUnchanged(t *testing.T) {
-	creds := metadataCredentials(t, &fakeMetadata{project: "p", lifetime: longLife})
-	api := &fakeAPI{status: http.StatusOK}
-	req, err := http.NewRequest(http.MethodGet, api.serve(t), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := creds.Client.Do(req)
-	if err != nil {
-		t.Fatalf("Client.Do() failed: %v", err)
-	}
-	resp.Body.Close()
-
-	if got := req.Header.Get("Authorization"); got != "" {
-		t.Errorf("Client.Do() set Authorization %q on the caller's request, want it unchanged", got)
-	}
-}
-
-func TestClient_NoRedirects(t *testing.T) {
-	creds := metadataCredentials(t, &fakeMetadata{project: "p", lifetime: longLife})
-	elsewhere := &fakeAPI{status: http.StatusOK}
-	api := &fakeAPI{redirect: elsewhere.serve(t)}
-
-	resp, err := creds.Client.Get(api.serve(t))
-	if err != nil {
-		t.Fatalf("Client.Get() failed: %v", err)
-	}
-	resp.Body.Close()
-
-	if resp.StatusCode != http.StatusFound {
-		t.Errorf("Client.Get() of a URL that redirects returned status %d, want the redirect itself, %d", resp.StatusCode, http.StatusFound)
-	}
-	if got := elsewhere.authorizations(); len(got) != 0 {
-		t.Errorf("the host redirected to got requests with Authorization %q, want no request", got)
-	}
-}
-
-func TestClient_TokenWaitBoundedByContext(t *testing.T) {
-	creds := metadataCredentials(t, &fakeMetadata{project: "p", lifetime: longLife, hold: newHold()})
-	api := &fakeAPI{status: http.StatusOK}
-	ctx, cancel := context.WithTimeout(context.Background(), giveUp)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api.serve(t), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	start := time.Now()
-
-	resp, err := creds.Client.Do(req)
-
-	if !errors.Is(err, context.DeadlineExceeded) {
-		if err == nil {
-			resp.Body.Close()
-		}
-		t.Errorf("Client.Do() while the token fetch stalls returned error %v, want %v", err, context.DeadlineExceeded)
-	}
-	if elapsed := time.Since(start); elapsed > tooLong {
-		t.Errorf("Client.Do() with a deadline of %v returned after %v", giveUp, elapsed)
-	}
-	if got := api.authorizations(); len(got) != 0 {
-		t.Errorf("the API got requests with Authorization %q, want no request without a token", got)
-	}
-}
-
-// closeRecorder is a request body that records that it was closed.
-type closeRecorder struct {
-	io.Reader
-	closed bool
-}
-
-func (c *closeRecorder) Close() error {
-	c.closed = true
-	return nil
-}
-
-func TestTransport_NoTokenClosesBody(t *testing.T) {
-	creds := metadataCredentials(t, &fakeMetadata{project: "p", tokenStatus: http.StatusInternalServerError})
-	api := &fakeAPI{status: http.StatusOK}
-	body := &closeRecorder{Reader: strings.NewReader("{}")}
-	req, err := http.NewRequest(http.MethodPost, api.serve(t), body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// The transport is called directly: an http.Client leaves closing the
-	// body to its transport, which is what is tested here.
-	resp, err := creds.Client.Transport.RoundTrip(req)
-
-	if err == nil {
-		resp.Body.Close()
-		t.Errorf("RoundTrip() without a token returned no error, want one")
-	}
-	if !body.closed {
-		t.Errorf("RoundTrip() without a token left the request body open, want it closed")
-	}
-	if got := api.authorizations(); len(got) != 0 {
-		t.Errorf("the API got requests with Authorization %q, want no request without a token", got)
-	}
-}
 
 // privateKey returns a private key in the PEM form of a service account key
 // file. The key is generated once for the test binary.
@@ -517,388 +32,232 @@ var privateKey = sync.OnceValue(func() string {
 	return string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}))
 })
 
-// claims is what a token request asserts, of the claims the tests check.
-type claims struct {
-	Iss   string `json:"iss"`
-	Scope string `json:"scope"`
-	Aud   string `json:"aud"`
-}
-
-// fakeTokenEndpoint is the OAuth token endpoint that a service account key
-// names. It answers each request with a token, "sa-token-1", "sa-token-2",
-// and so on, and records what the requests assert.
-type fakeTokenEndpoint struct {
-	// lifetime is the expires_in of the tokens.
-	lifetime int
-	// status, if not zero, is the status of an error answer instead.
-	status int
-	// body, if set, is the answer instead of a token, with status 200.
-	body string
-	// hold, if set, keeps the requests waiting.
-	hold *hold
-
-	mu  sync.Mutex
-	got []claims
-	// malformed counts the requests that are not a JWT bearer grant.
-	malformed int
-}
-
-func (f *fakeTokenEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c, ok := assertedClaims(r)
-	f.mu.Lock()
-	if ok {
-		f.got = append(f.got, c)
-	} else {
-		f.malformed++
-	}
-	n := len(f.got)
-	f.mu.Unlock()
-	f.hold.wait(r)
-	w.Header().Set("Content-Type", "application/json")
-	if f.status != 0 {
-		w.WriteHeader(f.status)
-		io.WriteString(w, `{"error": "invalid_grant", "error_description": "from the test"}`)
-		return
-	}
-	if f.body != "" {
-		io.WriteString(w, f.body)
-		return
-	}
-	fmt.Fprintf(w, `{"access_token": "sa-token-%d", "expires_in": %d, "token_type": "Bearer"}`, n, f.lifetime)
-}
-
-// assertedClaims returns the claims of the JWT in a token request, without
-// checking its signature. It reports false if the request is not a JWT
-// bearer grant.
-func assertedClaims(r *http.Request) (claims, bool) {
-	if r.Method != http.MethodPost || r.PostFormValue("grant_type") != "urn:ietf:params:oauth:grant-type:jwt-bearer" {
-		return claims{}, false
-	}
-	parts := strings.Split(r.PostFormValue("assertion"), ".")
-	if len(parts) != 3 {
-		return claims{}, false
-	}
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return claims{}, false
-	}
-	var c claims
-	if json.Unmarshal(payload, &c) != nil {
-		return claims{}, false
-	}
-	return c, true
-}
-
-func (f *fakeTokenEndpoint) requests() (got []claims, malformed int) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return append([]claims(nil), f.got...), f.malformed
-}
-
-func (f *fakeTokenEndpoint) serve(t *testing.T) string {
+// tokenEndpoint serves an OAuth token endpoint that answers every request
+// with the access token "sa-token", and returns its URL.
+func tokenEndpoint(t *testing.T) string {
 	t.Helper()
-	ts := httptest.NewServer(f)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"access_token": "sa-token", "expires_in": 3600, "token_type": "Bearer"}`)
+	}))
 	t.Cleanup(ts.Close)
-	// See fakeMetadata.serve for the order.
-	t.Cleanup(f.hold.release)
 	return ts.URL
 }
 
-const serviceAccount = "rollout@the-project.iam.gserviceaccount.com"
-
-// serviceAccountKey returns the fields of a service account key file whose
-// tokens come from tokenURL.
+// serviceAccountKey returns the fields of a service account key file of the
+// project "the-project", whose tokens come from tokenURL.
 func serviceAccountKey(tokenURL string) map[string]any {
 	return map[string]any{
 		"type":           "service_account",
 		"project_id":     "the-project",
 		"private_key_id": "key-1",
 		"private_key":    privateKey(),
-		"client_email":   serviceAccount,
+		"client_email":   "rollout@the-project.iam.gserviceaccount.com",
 		"token_uri":      tokenURL,
 	}
 }
 
-// writeFile writes a credentials file with the given content, which is
-// marshaled as JSON unless it is a string, and returns its path.
-func writeFile(t *testing.T, content any) string {
+// writeFile writes a credentials file with the given fields and returns its
+// path.
+func writeFile(t *testing.T, fields map[string]any) string {
 	t.Helper()
-	data, ok := content.(string)
-	if !ok {
-		b, err := json.Marshal(content)
-		if err != nil {
-			t.Fatal(err)
-		}
-		data = string(b)
+	data, err := json.Marshal(fields)
+	if err != nil {
+		t.Fatal(err)
 	}
-	path := filepath.Join(t.TempDir(), "sa-key.json")
-	if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+	path := filepath.Join(t.TempDir(), "credentials.json")
+	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatal(err)
 	}
 	return path
 }
 
-// serviceAccountCredentials returns credentials from a key file whose
-// tokens come from f.
-func serviceAccountCredentials(t *testing.T, f *fakeTokenEndpoint) *Credentials {
+// checkCredentials checks that creds are those of serviceAccountKey: the
+// project, the token, and a client that sends the token.
+func checkCredentials(t *testing.T, creds *Credentials) {
 	t.Helper()
-	creds, err := FromServiceAccountFile(writeFile(t, serviceAccountKey(f.serve(t))), ScopeDatastore)
-	if err != nil {
-		t.Fatalf("FromServiceAccountFile() failed: %v", err)
-	}
-	return creds
-}
-
-func TestFromServiceAccountFile(t *testing.T) {
-	f := &fakeTokenEndpoint{lifetime: longLife}
-	tokenURL := f.serve(t)
-	creds, err := FromServiceAccountFile(writeFile(t, serviceAccountKey(tokenURL)), ScopeCloudPlatform, ScopeDatastore)
-	if err != nil {
-		t.Fatalf("FromServiceAccountFile() failed: %v", err)
-	}
-
 	if creds.Project != "the-project" {
-		t.Errorf("FromServiceAccountFile() project = %q, want %q", creds.Project, "the-project")
+		t.Errorf("Project = %q, want %q", creds.Project, "the-project")
 	}
-	if got, malformed := f.requests(); len(got) != 0 || malformed != 0 {
-		t.Errorf("FromServiceAccountFile() made token requests %+v and %d malformed ones, want none before a token is needed", got, malformed)
+	if got, err := creds.Token(); got != "sa-token" || err != nil {
+		t.Errorf("Token() = %q, %v, want %q", got, err, "sa-token")
 	}
-	// The second token is the first one, kept.
-	for range 2 {
-		got, err := creds.Token(context.Background())
-		if got != "sa-token-1" || err != nil {
-			t.Errorf("Token() = %q, %v, want %q", got, err, "sa-token-1")
-		}
-	}
-	want := []claims{{Iss: serviceAccount, Scope: ScopeCloudPlatform + " " + ScopeDatastore, Aud: tokenURL}}
-	got, malformed := f.requests()
-	if diff := cmp.Diff(want, got); diff != "" || malformed != 0 {
-		t.Errorf("token requests: %d malformed, claims (-want +got):\n%s", malformed, diff)
-	}
-}
 
-func TestFromServiceAccountFile_ClientSendsBearerToken(t *testing.T) {
-	creds := serviceAccountCredentials(t, &fakeTokenEndpoint{lifetime: longLife})
-	api := &fakeAPI{status: http.StatusOK}
-
-	resp, err := creds.Client.Get(api.serve(t))
+	authorization := make(chan string, 1)
+	api := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		authorization <- r.Header.Get("Authorization")
+	}))
+	t.Cleanup(api.Close)
+	resp, err := creds.Client.Get(api.URL)
 	if err != nil {
 		t.Fatalf("Client.Get() failed: %v", err)
 	}
 	resp.Body.Close()
-
-	if diff := cmp.Diff([]string{"Bearer sa-token-1"}, api.authorizations()); diff != "" {
-		t.Errorf("Authorization headers the API saw (-want +got):\n%s", diff)
+	if got, want := <-authorization, "Bearer sa-token"; got != want {
+		t.Errorf("Client.Get() sent Authorization %q, want %q", got, want)
 	}
 }
 
-func TestFromServiceAccountFile_Errors(t *testing.T) {
-	without := func(field string) map[string]any {
-		key := serviceAccountKey("https://oauth2.example.com/token")
-		delete(key, field)
-		return key
+func TestFromServiceAccountFile(t *testing.T) {
+	path := writeFile(t, serviceAccountKey(tokenEndpoint(t)))
+
+	creds, err := FromServiceAccountFile(path, ScopeDatastore)
+
+	if err != nil {
+		t.Fatalf("FromServiceAccountFile() failed: %v", err)
 	}
-	with := func(field string, value any) map[string]any {
-		key := serviceAccountKey("https://oauth2.example.com/token")
-		key[field] = value
-		return key
+	checkCredentials(t, creds)
+}
+
+func TestFromServiceAccountFile_Errors(t *testing.T) {
+	key := func(change func(map[string]any)) map[string]any {
+		fields := serviceAccountKey("https://oauth2.example.com/token")
+		change(fields)
+		return fields
 	}
 	tests := []struct {
 		name string
-		// content is the content of the file; nil means there is no file.
-		content any
-		scopes  []string
+		// fields is the content of the file; nil means there is no file.
+		fields map[string]any
 	}{
-		{name: "no_file", scopes: []string{ScopeDatastore}},
-		{name: "no_scopes", content: serviceAccountKey("https://oauth2.example.com/token")},
-		{name: "not_JSON", content: privateKey(), scopes: []string{ScopeDatastore}},
-		{name: "empty_file", content: "", scopes: []string{ScopeDatastore}},
-		{name: "no_type", content: without("type"), scopes: []string{ScopeDatastore}},
-		{name: "no_project_ID", content: without("project_id"), scopes: []string{ScopeDatastore}},
-		{name: "empty_project_ID", content: with("project_id", ""), scopes: []string{ScopeDatastore}},
-		// The login that gcloud leaves in a home directory.
-		{
-			name: "user_credentials",
-			content: map[string]any{
-				"type":          "authorized_user",
-				"client_id":     "id",
-				"client_secret": "secret",
-				"refresh_token": "token",
-			},
-			scopes: []string{ScopeDatastore},
-		},
-		// Credentials that would be fetched from a URL the file names.
-		{name: "external_account", content: with("type", "external_account"), scopes: []string{ScopeDatastore}},
-		{name: "impersonated_service_account", content: with("type", "impersonated_service_account"), scopes: []string{ScopeDatastore}},
-		// A key of another kind of service account, which the library
-		// would load the same way.
-		{name: "service_account_of_another_kind", content: with("type", "gdch_service_account"), scopes: []string{ScopeDatastore}},
+		{name: "no_file"},
+		{name: "no_project_ID", fields: key(func(f map[string]any) { delete(f, "project_id") })},
+		// The login that gcloud leaves in a home directory is not a key.
+		{name: "user_credentials", fields: key(func(f map[string]any) { f["type"] = "authorized_user" })},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "absent.json")
-			if tc.content != nil {
-				path = writeFile(t, tc.content)
+			if tc.fields != nil {
+				path = writeFile(t, tc.fields)
 			}
 
-			creds, err := FromServiceAccountFile(path, tc.scopes...)
-
-			if err == nil {
-				t.Fatalf("FromServiceAccountFile() = %+v, want an error", creds)
-			}
-			if strings.Contains(err.Error(), "PRIVATE KEY") {
-				t.Errorf("FromServiceAccountFile() error quotes the key file: %v", err)
+			if creds, err := FromServiceAccountFile(path, ScopeDatastore); err == nil {
+				t.Errorf("FromServiceAccountFile() = %+v, want an error", creds)
 			}
 		})
 	}
 }
 
-func TestServiceAccountToken_Errors(t *testing.T) {
-	tests := []struct {
-		name string
-		// key changes a valid key whose tokens come from the fake endpoint.
-		key      func(key map[string]any)
-		endpoint *fakeTokenEndpoint
-	}{
-		{name: "endpoint_refuses_key", endpoint: &fakeTokenEndpoint{status: http.StatusBadRequest}},
-		{name: "endpoint_fails", endpoint: &fakeTokenEndpoint{status: http.StatusInternalServerError}},
-		{
-			name: "private_key_that_is_no_key",
-			key: func(key map[string]any) {
-				key["private_key"] = "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"
-			},
-			endpoint: &fakeTokenEndpoint{lifetime: longLife},
-		},
-		{name: "no_token", endpoint: &fakeTokenEndpoint{body: `{"expires_in": 3600, "token_type": "Bearer"}`}},
-		// A token without a lifetime is not one to keep forever.
-		{name: "no_lifetime", endpoint: &fakeTokenEndpoint{body: `{"access_token": "the-secret", "token_type": "Bearer"}`}},
-		{name: "lifetime_of_zero", endpoint: &fakeTokenEndpoint{body: `{"access_token": "the-secret", "expires_in": 0, "token_type": "Bearer"}`}},
-		{name: "lifetime_in_past", endpoint: &fakeTokenEndpoint{body: `{"access_token": "the-secret", "expires_in": -1, "token_type": "Bearer"}`}},
-		{name: "not_JSON", endpoint: &fakeTokenEndpoint{body: "the-secret"}},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			key := serviceAccountKey(tc.endpoint.serve(t))
-			if tc.key != nil {
-				tc.key(key)
-			}
-			creds, err := FromServiceAccountFile(writeFile(t, key), ScopeDatastore)
-			if err != nil {
-				t.Fatalf("FromServiceAccountFile() failed: %v", err)
-			}
+func TestDefault_FileNamedByEnvironment(t *testing.T) {
+	t.Setenv("GOOGLE_APPLICATION_CREDENTIALS", writeFile(t, serviceAccountKey(tokenEndpoint(t))))
 
-			got, err := creds.Token(context.Background())
+	creds, err := Default(ScopeCloudPlatform)
 
-			if got != "" || err == nil {
-				t.Fatalf("Token() = %q, %v, want an error and no token", got, err)
-			}
-			if strings.Contains(err.Error(), "the-secret") {
-				t.Errorf("Token() error quotes the answer of the token endpoint: %v", err)
-			}
-			// A failure is not kept: the next call asks again.
-			if _, err := creds.Token(context.Background()); err == nil {
-				t.Errorf("second Token() returned no error, want one")
-			}
-		})
-	}
-}
-
-// TestKeyFileToken_NewExchangeEveryTime calls the fetch function of the
-// key file directly, as the token cache does when its token is about to
-// expire by its own clock. Each call must be a request, also while the last
-// token has a long time left: nothing below the cache keeps a token.
-func TestKeyFileToken_NewExchangeEveryTime(t *testing.T) {
-	f := &fakeTokenEndpoint{lifetime: longLife}
-	k, project, err := readKeyFile(writeFile(t, serviceAccountKey(f.serve(t))), []string{ScopeDatastore})
 	if err != nil {
-		t.Fatalf("readKeyFile() failed: %v", err)
+		t.Fatalf("Default() failed: %v", err)
 	}
-	if project != "the-project" {
-		t.Errorf("readKeyFile() project = %q, want %q", project, "the-project")
-	}
+	checkCredentials(t, creds)
+}
 
-	for _, want := range []string{"sa-token-1", "sa-token-2", "sa-token-3"} {
-		got, expiry, err := k.token(context.Background())
-		if got != want || err != nil {
-			t.Errorf("token() = %q, %v, want %q", got, err, want)
-		}
-		if left := time.Until(expiry); left < longLife*time.Second/2 || left > longLife*time.Second {
-			t.Errorf("token() expiry is in %v, want it about %d seconds from now", left, longLife)
-		}
+func TestDefault_FileWithoutProject(t *testing.T) {
+	// What "gcloud auth application-default login" leaves: a user's login,
+	// which names a quota project and no project.
+	t.Setenv("GOOGLE_APPLICATION_CREDENTIALS", writeFile(t, map[string]any{
+		"type":             "authorized_user",
+		"client_id":        "id",
+		"client_secret":    "secret",
+		"refresh_token":    "token",
+		"quota_project_id": "the-project",
+	}))
+
+	if creds, err := Default(ScopeCloudPlatform); err == nil {
+		t.Errorf("Default() = %+v, want an error for credentials that name no project", creds)
 	}
 }
 
-// TestTokenCache_ExpiryIsWallClockTime checks the one thing about clocks
-// that a test can check without setting one: that the cache keeps an expiry
-// without a monotonic clock reading, so that the time a token has left is
-// measured by the wall clock. With the reading, a wall clock set forward, or
-// a machine that was suspended, would not shorten that time.
-func TestTokenCache_ExpiryIsWallClockTime(t *testing.T) {
-	// A time made from time.Now has a monotonic reading.
-	expiry := time.Now().Add(longLife * time.Second)
-	c := &tokenCache{fetch: func(context.Context) (string, time.Time, error) { return "token", expiry, nil }}
-	if _, err := c.get(context.Background()); err != nil {
-		t.Fatalf("get() failed: %v", err)
-	}
-
-	c.mu.Lock()
-	got := c.expiry
-	c.mu.Unlock()
-
-	if !got.Equal(expiry) {
-		t.Errorf("the cache keeps expiry %v, want %v", got, expiry)
-	}
-	// Time.String ends with "m=..." for a time with a monotonic reading.
-	if s := got.String(); strings.Contains(s, " m=") {
-		t.Errorf("the cache keeps expiry %s, which has a monotonic clock reading, want none", s)
-	}
-}
-
-// TestMetadataEndpoint_NeedsNoDNS checks that the metadata server is named by
-// a link-local address: one that takes no DNS lookup, and that a host
-// outside Google Cloud does not route beyond its own link.
-func TestMetadataEndpoint_NeedsNoDNS(t *testing.T) {
-	u, err := url.Parse(metadataEndpoint)
+func TestToken_ExchangeFails(t *testing.T) {
+	refusing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, `{"error": "invalid_grant"}`)
+	}))
+	t.Cleanup(refusing.Close)
+	creds, err := FromServiceAccountFile(writeFile(t, serviceAccountKey(refusing.URL)), ScopeDatastore)
 	if err != nil {
-		t.Fatalf("url.Parse(%q) failed: %v", metadataEndpoint, err)
+		t.Fatalf("FromServiceAccountFile() failed: %v", err)
 	}
-	ip := net.ParseIP(u.Hostname())
-	if u.Scheme != "http" || ip == nil || !ip.IsLinkLocalUnicast() {
-		t.Errorf("metadataEndpoint = %q, want an http URL whose host is a link-local address", metadataEndpoint)
+
+	got, err := creds.Token()
+
+	// The package's error wraps the library's, which says what Google
+	// answered.
+	var authErr *google.AuthenticationError
+	if got != "" || !errors.As(err, &authErr) {
+		t.Errorf("Token() = %q, %v, want no token and an error wrapping a *google.AuthenticationError", got, err)
 	}
 }
 
-func TestServiceAccountToken_RefetchedWhenAboutToExpire(t *testing.T) {
-	creds := serviceAccountCredentials(t, &fakeTokenEndpoint{lifetime: shortLife})
+func TestClient_NoRedirects(t *testing.T) {
+	// A host that the caller did not name, and that must not get the token.
+	var mu sync.Mutex
+	var reached []string
+	other := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		reached = append(reached, r.Header.Get("Authorization"))
+	}))
+	t.Cleanup(other.Close)
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, other.URL, http.StatusFound)
+	}))
+	t.Cleanup(api.Close)
+	creds, err := FromServiceAccountFile(writeFile(t, serviceAccountKey(tokenEndpoint(t))), ScopeDatastore)
+	if err != nil {
+		t.Fatalf("FromServiceAccountFile() failed: %v", err)
+	}
 
-	for _, want := range []string{"sa-token-1", "sa-token-2"} {
-		got, err := creds.Token(context.Background())
-		if got != want || err != nil {
-			t.Errorf("Token() = %q, %v, want %q", got, err, want)
+	resp, err := creds.Client.Get(api.URL)
+
+	if err != nil {
+		t.Fatalf("Client.Get() failed: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusFound {
+		t.Errorf("Client.Get() status = %d, want the redirect itself, %d", resp.StatusCode, http.StatusFound)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(reached) != 0 {
+		t.Errorf("the host of the redirect got requests with Authorization %q, want no request", reached)
+	}
+}
+
+func TestCredentials_ClientAndTokenAtTheSameTime(t *testing.T) {
+	// The client and the token function share the tokens, and callers use
+	// both at once: the upstream step resolves tags and config versions at
+	// the same time. The race detector is what checks this test. Every
+	// round starts with new credentials, because the first token is where
+	// the two ways meet.
+	path := writeFile(t, serviceAccountKey(tokenEndpoint(t)))
+	api := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	t.Cleanup(api.Close)
+
+	for range 20 {
+		creds, err := FromServiceAccountFile(path, ScopeDatastore)
+		if err != nil {
+			t.Fatalf("FromServiceAccountFile() failed: %v", err)
 		}
-	}
-}
-
-func TestServiceAccountToken_StopsWaitingWhenContextDone(t *testing.T) {
-	f := &fakeTokenEndpoint{lifetime: longLife, hold: newHold()}
-	creds := serviceAccountCredentials(t, f)
-	ctx, cancel := context.WithTimeout(context.Background(), giveUp)
-	defer cancel()
-	start := time.Now()
-
-	got, err := creds.Token(ctx)
-
-	if got != "" || !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("Token() while the fetch stalls = %q, %v, want error %v", got, err, context.DeadlineExceeded)
-	}
-	if elapsed := time.Since(start); elapsed > tooLong {
-		t.Errorf("Token() with a deadline of %v returned after %v", giveUp, elapsed)
-	}
-
-	// The fetch does not end with the context of any caller: it goes on,
-	// and its token serves the next one.
-	f.hold.release()
-	if got, err := creds.Token(context.Background()); got != "sa-token-1" || err != nil {
-		t.Errorf("Token() after the fetch went through = %q, %v, want %q", got, err, "sa-token-1")
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		for range 4 {
+			wg.Go(func() {
+				<-start
+				if _, err := creds.Token(); err != nil {
+					t.Errorf("Token() failed: %v", err)
+				}
+			})
+			wg.Go(func() {
+				<-start
+				resp, err := creds.Client.Get(api.URL)
+				if err != nil {
+					t.Errorf("Client.Get() failed: %v", err)
+					return
+				}
+				resp.Body.Close()
+			})
+		}
+		close(start)
+		wg.Wait()
 	}
 }
