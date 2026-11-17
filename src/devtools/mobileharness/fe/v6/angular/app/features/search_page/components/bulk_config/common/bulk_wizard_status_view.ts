@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Shared status view for bulk configuration wizards rendering loading, step error, applying, success, and per-device failure states.
+ */
+
 import {
   ChangeDetectionStrategy,
   Component,

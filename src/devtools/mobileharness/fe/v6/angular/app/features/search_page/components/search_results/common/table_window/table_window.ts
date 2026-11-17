@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Structural virtual-scrolling directive (`appTableWindow`) that windows large HTML/Material tables using top/bottom spacer rows.
+ */
+
 import {
   afterRenderEffect,
   computed,
@@ -374,6 +378,7 @@ export class TableWindowDirective<T extends {readonly key: string}> {
     this.scrollTop.set(0);
   }
 
+  /** Updates `scrollTop` signal from the host scroll container's current scroll offset. */
   protected onScroll(): void {
     this.scrollTop.set(this.host.nativeElement.scrollTop);
   }

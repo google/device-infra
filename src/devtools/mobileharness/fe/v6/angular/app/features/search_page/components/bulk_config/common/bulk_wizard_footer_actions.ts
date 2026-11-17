@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Shared dialog footer action buttons managing step navigation, review confirmation, and retry actions across bulk configuration wizards.
+ */
+
 import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 
 import {BulkWizardSession} from './bulk_wizard_session';

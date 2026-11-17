@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Shared device change review table rendering Device ID, projected current configuration cell, and update status badge.
+ */
+
 import {NgTemplateOutlet} from '@angular/common';
 import {
   ChangeDetectionStrategy,

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Helpers for persisting and validating Fleet flat-table and group-expand page sizes in localStorage.
+ */
+
 import {PAGE_SIZE_OPTIONS} from '../models';
 import {readStorage, writeStorage} from './search_storage_utils';
 

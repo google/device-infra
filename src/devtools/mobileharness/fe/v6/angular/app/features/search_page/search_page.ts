@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Root search page component orchestrating the search box, landing view, and Fleet/TJS results views.
+ */
+
 import {DecimalPipe} from '@angular/common';
 import {
   afterNextRender,
@@ -65,6 +69,7 @@ export class SearchPage implements OnInit {
     return this.store.isTjs() ? 'tjs_results' : 'fleet_results';
   });
 
+  /** Initializes ATS embedded state synchronization, `q` auto-focus, and hides global loading spinner. */
   ngOnInit() {
     // Only register the search state synchronization effect in embedded mode
     // within the ATS/OSS environment (e.g. running inside MTT UI2 iframe).
@@ -99,12 +104,14 @@ export class SearchPage implements OnInit {
     this.loadingService.hide();
   }
 
+  /** Populates the search query with an example string, opens suggestions, and focuses the search box. */
   fillSearch(text: string) {
     this.store.searchQuery.set(text);
     this.store.showSuggestions.set(true);
     this.focusSearchBox();
   }
 
+  /** Focuses the underlying `SearchBox` input immediately or after the next render if not yet mounted. */
   private focusSearchBox() {
     const box = this.searchBox();
     if (box) {
@@ -119,6 +126,7 @@ export class SearchPage implements OnInit {
     }
   }
 
+  /** Exits the landing launcher state and executes an unfiltered search to browse all items. */
   onBrowseAll() {
     this.store.browseAll.set(true);
     this.store.executeSearch();

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Dialog input models for the Filter / Group-By KeyPicker modal.
+ */
+
 import {Filter, Fleet, SearchEntity} from '../../../core/models/search';
 
 /** Mode of key picker: selecting a filter key or a group-by key. */

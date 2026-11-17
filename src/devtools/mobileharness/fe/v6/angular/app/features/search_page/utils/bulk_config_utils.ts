@@ -1,5 +1,39 @@
-import {DeviceTarget} from '../../../core/models/device_config_models';
+/**
+ * @fileoverview Pure utility functions for bulk device configuration (target extraction, dimension token parsing, and review summaries).
+ */
+
+import {
+  CandidateDimensionKey,
+  CandidateDimensionValue,
+  CandidateWifi,
+  DeviceConfigChangeStatus,
+  DeviceDimensionConfigEntry,
+  DeviceTarget,
+  DeviceWifi,
+} from '../../../core/models/device_config_models';
 import {Row} from '../../../core/models/search';
+import {BulkConfigReviewSummary} from '../models';
+
+/** Scans a search result row's cells to extract the primary deviceId, hostName, and universe. */
+function scanRowLinkTarget(row: Pick<Row, 'id' | 'cells'>): {
+  deviceId: string;
+  hostName?: string;
+  universe?: string;
+} {
+  const deviceId = row.id ?? '';
+  let hostName: string | undefined;
+  let universe: string | undefined;
+  for (const cell of row.cells || []) {
+    const target = cell.link?.target;
+    if (!target) continue;
+    hostName ??=
+      target.device?.hostName ||
+      (target.host?.hostName !== deviceId ? target.host?.hostName : undefined);
+    universe ??= target.device?.universe || target.host?.universe;
+    if (hostName && universe) break;
+  }
+  return {deviceId, hostName, universe};
+}
 
 /**
  * Extracts a DeviceTarget ({deviceId, hostName}) from a search result Row.
@@ -9,18 +43,8 @@ import {Row} from '../../../core/models/search';
 export function extractDeviceTarget(
   row: Pick<Row, 'id' | 'cells'>,
 ): DeviceTarget {
-  const deviceId = row.id ?? '';
-  for (const cell of row.cells || []) {
-    const hostName =
-      cell.link?.target?.device?.hostName ||
-      (cell.link?.target?.host?.hostName !== deviceId
-        ? cell.link?.target?.host?.hostName
-        : undefined);
-    if (hostName) {
-      return {deviceId, hostName};
-    }
-  }
-  return {deviceId};
+  const {deviceId, hostName} = scanRowLinkTarget(row);
+  return hostName ? {deviceId, hostName} : {deviceId};
 }
 
 /**
@@ -31,20 +55,15 @@ export function extractDeviceTarget(
 export function getDeviceTargetKey(
   item: DeviceTarget | Pick<Row, 'id' | 'cells'>,
 ): string {
-  const {deviceId = '', hostName} =
-    'deviceId' in item ? item : extractDeviceTarget(item);
+  const {
+    deviceId = '',
+    hostName,
+    universe,
+  } = 'deviceId' in item
+    ? {...item, universe: undefined}
+    : scanRowLinkTarget(item);
   const baseKey = hostName ? `${deviceId}@@${hostName}` : deviceId;
-  if ('deviceId' in item) {
-    return baseKey;
-  }
-  for (const cell of item.cells || []) {
-    const universe =
-      cell.link?.target?.device?.universe || cell.link?.target?.host?.universe;
-    if (universe) {
-      return `${baseKey}@@${universe}`;
-    }
-  }
-  return baseKey;
+  return universe ? `${baseKey}@@${universe}` : baseKey;
 }
 
 /** Formats a device count with locale-aware grouping and pluralization (e.g. '1 device', '1,200 devices'). */
@@ -146,4 +165,163 @@ export function hasClosedQuotes(text: string): boolean {
  */
 export function canonicalizeValueSet(values: readonly string[]): string {
   return [...values].sort().join('::');
+}
+
+const VALID_CUSTOM_DIM_KEY_REGEX = /^[a-z0-9_\-\.]+$/;
+
+/** Validates a custom dimension key against the system blocklist and character rules. */
+export function validateCustomDimensionKey(
+  cleanKey: string,
+  systemDimensionNames: ReadonlySet<string>,
+): string {
+  if (!cleanKey) return '';
+  if (systemDimensionNames.has(cleanKey)) {
+    return `"${cleanKey}" is automatically detected by OmniLab and cannot be configured manually.`;
+  }
+  if (!VALID_CUSTOM_DIM_KEY_REGEX.test(cleanKey)) {
+    return 'Dimension key may only contain lowercase letters, numbers, underscores, dashes, and dots.';
+  }
+  return '';
+}
+
+/** Maps device dimension review entries into table rows with value truncation and expansion state. */
+export function buildDimensionReviewRows(
+  entries: readonly DeviceDimensionConfigEntry[],
+  expandedKeys: ReadonlySet<string>,
+) {
+  return entries.map((entry) => {
+    const values = entry.values ?? [];
+    const isExpanded = expandedKeys.has(getDeviceTargetKey(entry));
+    const hiddenCount = Math.max(0, values.length - 2);
+    return {
+      ...entry,
+      isExpanded,
+      visibleValues: isExpanded ? values : values.slice(0, 2),
+      hiddenCount,
+      hiddenTooltip: isExpanded ? '' : values.slice(2).join(', '),
+    };
+  });
+}
+
+/** Filters and enriches candidate dimension keys with fleet count text and selection badges. */
+export function filterCandidateDimensionKeys(
+  candidates: readonly CandidateDimensionKey[],
+  query: string,
+  totalSelected: number,
+) {
+  const matched = query
+    ? candidates.filter((c) => c.dimensionName.includes(query))
+    : candidates;
+  return matched.slice(0, 50).map((c) => ({
+    ...c,
+    fleetSupportText: `${formatDeviceCount(c.fleetDeviceCount ?? 0)} in fleet`,
+    badge: formatCurrentSelectionBadge(c.selectedDeviceCount, totalSelected),
+    isActive: c.dimensionName === query,
+  }));
+}
+
+/** Enriches candidate dimension value suggestions with canonical keys and active state. */
+export function buildDimensionSuggestionRows(
+  candidates: readonly CandidateDimensionValue[],
+  isClearDimension: boolean,
+  targetValues: readonly string[],
+) {
+  const targetCanon = isClearDimension
+    ? null
+    : canonicalizeValueSet(targetValues);
+  return candidates.map((sug) => {
+    const canonKey = canonicalizeValueSet(sug.values);
+    return {
+      ...sug,
+      fleetSupportText: `${formatDeviceCount(sug.deviceCount ?? 0)} in fleet`,
+      canonKey,
+      isActive: canonKey === targetCanon,
+    };
+  });
+}
+
+/** Filters candidate Wi-Fi networks and enriches them with subtitle and active selection state. */
+export function filterCandidateWifiOptions(
+  list: readonly CandidateWifi[],
+  rawQuery: string,
+  isClear: boolean,
+  target: DeviceWifi,
+) {
+  const q = rawQuery.trim().toLowerCase();
+  const targetSsid = target.ssid.trim();
+  const matched = q
+    ? list.filter((c) => c.wifi.ssid.toLowerCase().includes(q))
+    : list;
+  return matched.map((c) => ({
+    wifi: c.wifi,
+    subtitle:
+      c.fleetInUse?.deviceCount != null
+        ? `${formatDeviceCount(c.fleetInUse.deviceCount)} in fleet`
+        : c.curatedPreset
+          ? 'Preset network'
+          : '',
+    isActive:
+      !isClear &&
+      c.wifi.ssid === targetSsid &&
+      (c.wifi.psk || '') === target.psk &&
+      Boolean(c.wifi.scanSsid) === target.scanSsid,
+  }));
+}
+
+/** Computes a single-pass review summary consolidating device status counts and labels. */
+export function computeBulkReviewSummary(
+  entries: ReadonlyArray<{status?: DeviceConfigChangeStatus}>,
+): BulkConfigReviewSummary {
+  let willUpdateCount = 0;
+  let alreadyMatchCount = 0;
+  let readOnlyCount = 0;
+
+  for (const entry of entries) {
+    switch (entry.status) {
+      case DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE:
+        willUpdateCount++;
+        break;
+      case DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES:
+        alreadyMatchCount++;
+        break;
+      case DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY:
+        readOnlyCount++;
+        break;
+      default:
+        break;
+    }
+  }
+
+  return {
+    willUpdateCount,
+    willUpdateLabel: formatDeviceCount(willUpdateCount),
+    alreadyMatchCount,
+    alreadyMatchLabel: formatDeviceCount(alreadyMatchCount),
+    readOnlyCount,
+    readOnlyLabel: formatDeviceCount(readOnlyCount),
+  };
+}
+
+/** Extracts DeviceTarget items marked as WILL_UPDATE from review entries. */
+export function extractWillUpdateTargets(
+  entries: ReadonlyArray<{
+    deviceId: string;
+    hostName?: string;
+    status?: DeviceConfigChangeStatus;
+  }>,
+): DeviceTarget[] {
+  const updateTargets: DeviceTarget[] = [];
+  for (const r of entries) {
+    if (
+      r.status ===
+      DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE
+    ) {
+      updateTargets.push(
+        r.hostName
+          ? {deviceId: r.deviceId, hostName: r.hostName}
+          : {deviceId: r.deviceId},
+      );
+    }
+  }
+  return updateTargets;
 }

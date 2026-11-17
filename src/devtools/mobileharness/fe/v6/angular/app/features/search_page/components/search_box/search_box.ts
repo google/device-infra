@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Compound search bar container assembling SearchInput, FilterPresets, and FilterValuePicker.
+ */
+
 import {
   ChangeDetectionStrategy,
   Component,

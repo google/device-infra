@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Interactive Wi-Fi network chip with a CDK hover overlay card for viewing and copying PSK credentials.
+ */
+
 import {ConnectedPosition, OverlayModule} from '@angular/cdk/overlay';
 import {
   ChangeDetectionStrategy,
@@ -119,6 +123,7 @@ export class WifiDetailChip {
     }, 2000);
   }
 
+  /** Clears any active timer that resets the `copiedPsk` indicator. */
   private clearCopyTimer() {
     clearTimeout(this.copyTimer ?? undefined);
     this.copyTimer = null;

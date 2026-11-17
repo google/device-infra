@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Search suggestions popover displaying active criteria chips, pending filter chip, and BFF typeahead suggestions.
+ */
+
 import {
   ChangeDetectionStrategy,
   Component,
@@ -19,17 +23,25 @@ import {Filter} from '../../../../../core/models/search';
 import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {
   FilterChip,
-  FilterKeyMetadata,
+  FocusChipType,
   KeyPickerMode,
   MAX_GROUP_BY_KEYS,
+  PendingFilterItem,
   SearchBoxSuggestion,
 } from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
 import {
+  findChipAnchorElement,
+  formatSuggestionCount,
   getChipKey,
+  getEntityNoun,
+  getSuggestionCountTooltip,
+  isChipFocusedInPopover,
+  isPendingChipFocusedInPopover,
   toFleetProto,
   toSearchEntityProto,
   trackChip,
+  trackSuggestion,
 } from '../../../utils';
 import {KeyPickerComponent} from '../key_picker/key_picker';
 
@@ -51,11 +63,7 @@ export class SearchSuggestions {
   readonly store = inject(SearchPageStore);
   private readonly dialog = inject(MatDialog, {optional: true});
   readonly getChipKey = getChipKey;
-
-  /** Tracking function for active filter and group-by chips in Angular templates. */
-  trackChip(chip: FilterChip): string {
-    return trackChip(chip);
-  }
+  readonly trackChip = trackChip;
 
   /** Template references to active filter chips rendered inside the popover. */
   readonly filterChipEls = viewChildren('filterChipEl', {read: ElementRef});
@@ -97,80 +105,47 @@ export class SearchSuggestions {
   }>();
 
   /** Event emitted when the Add filter button is clicked in the popover. */
-  readonly addFilter = output<{event: MouseEvent}>();
+  readonly addFilter = output<void>();
 
   /** Event emitted when the Add group-by button is clicked in the popover. */
-  readonly addGroupBy = output<{event: MouseEvent}>();
+  readonly addGroupBy = output<void>();
 
   /** Event emitted when the user clicks Collapse or Clear all in the panel. */
   readonly collapsePanel = output<void>();
 
   /** Automatically opens ValuePicker anchored to the rendered popover chip when requested. */
-  private readonly autoOpenValuePickerEffect = effect(
-    () => {
-      const req = this.store.pendingFilterOpenRequest();
-      if (!req) return;
+  private readonly autoOpenValuePickerEffect = effect(() => {
+    const req = this.store.pendingFilterOpenRequest();
+    if (!req) return;
 
-      const isPending = Boolean(this.store.pendingFilter());
-      let chipEl: HTMLElement | null = null;
+    const isPending = Boolean(this.store.pendingFilter());
+    let chipEl: HTMLElement | null = null;
 
-      if (isPending) {
-        // When opening a new pending filter, anchor specifically to the pending chip element.
-        // Reading pendingChipEl() registers a dependency so this effect re-runs the instant
-        // Angular finishes rendering the pending chip into the DOM:
-        chipEl = this.pendingChipEl()?.nativeElement ?? null;
-        if (!chipEl) {
-          // Pending chip has not yet rendered in the DOM; wait for viewChild resolution instead
-          // of prematurely falling back to the outer container!
-          return;
-        }
-      } else {
-        // Active filter chip: re-run if filterChipEls update
-        this.filterChipEls();
-        chipEl = this.getChipElement(req.key, req.title);
-        if (!chipEl) {
-          chipEl = this.getPopoverContainerElement();
-        }
-      }
+    if (isPending) {
+      chipEl = this.pendingChipEl()?.nativeElement ?? null;
+      if (!chipEl) return;
+    } else {
+      chipEl =
+        this.getChipElement(req.key, req.title) ??
+        this.getPopoverContainerElement();
+    }
 
-      if (chipEl) {
-        this.store.openValuePicker(
-          req.key,
-          chipEl,
-          req.title,
-          req.metadata,
-          req.stagedValues,
-          /* keepSuggestionsOpen= */ true,
-        );
-        this.store.pendingFilterOpenRequest.set(null);
-      }
-    },
-    {allowSignalWrites: true},
-  );
+    if (chipEl) {
+      this.store.openValuePicker(
+        req.key,
+        chipEl,
+        req.title,
+        req.metadata,
+        req.stagedValues,
+        /* keepSuggestionsOpen= */ true,
+      );
+      this.store.pendingFilterOpenRequest.set(null);
+    }
+  });
 
   /** Locates the HTMLElement for an active filter chip with the given key using filterChipEls. */
   getChipElement(key: string, title?: string): HTMLElement | null {
-    const k = key.toLowerCase();
-    const t = title ? title.toLowerCase() : null;
-
-    for (const item of this.filterChipEls()) {
-      const el = item.nativeElement;
-      if (!el || !el.getAttribute) continue;
-
-      const chipKey = el.getAttribute('data-chip-key')?.toLowerCase() || '';
-      const pillKey =
-        el.getAttribute('data-chip-pill-key')?.toLowerCase() || '';
-
-      if (
-        chipKey === k ||
-        pillKey === k ||
-        (t && (chipKey === t || pillKey === t))
-      ) {
-        el.scrollIntoView?.({block: 'nearest'});
-        return el;
-      }
-    }
-    return null;
+    return findChipAnchorElement(this.filterChipEls(), key, title);
   }
 
   /** Returns the popover container element as a fallback anchor. */
@@ -179,30 +154,22 @@ export class SearchSuggestions {
   }
 
   /** Checks whether the given chip matches the currently focused chip key and type in the store. */
-  isChipFocused(chip: FilterChip, expectedType: 'filter' | 'groupby'): boolean {
-    if (this.store.focusChipType() !== expectedType) {
-      return false;
-    }
-    const focusKey = this.store.focusChipKey();
-    if (!focusKey) {
-      return false;
-    }
-    const normFocus = focusKey.toLowerCase();
-    const chipKey = (chip.key || getChipKey(chip) || '').toLowerCase();
-    const pillKey = (chip.pillKey || '').toLowerCase();
-    return normFocus === chipKey || normFocus === pillKey;
+  isChipFocused(chip: FilterChip, expectedType: FocusChipType): boolean {
+    return isChipFocusedInPopover(
+      chip,
+      expectedType,
+      this.store.focusChipType(),
+      this.store.focusChipKey(),
+    );
   }
 
   /** Checks whether the pending chip matches the currently focused filter key in the store. */
   isPendingChipFocused(pKey: string): boolean {
-    if (this.store.focusChipType() !== 'filter') {
-      return false;
-    }
-    const focusKey = this.store.focusChipKey();
-    if (!focusKey) {
-      return false;
-    }
-    return focusKey.toLowerCase() === pKey.toLowerCase();
+    return isPendingChipFocusedInPopover(
+      pKey,
+      this.store.focusChipType(),
+      this.store.focusChipKey(),
+    );
   }
 
   /** Active filter chips (excluding group-by). */
@@ -211,19 +178,14 @@ export class SearchSuggestions {
   /** Active group-by chips. */
   readonly activeGroupByChips = this.store.groupByChips;
 
-  /** Maximum number of group-by keys allowed concurrently. */
-  readonly maxGroupByKeys = MAX_GROUP_BY_KEYS;
-
   /** Whether adding more group-by keys is disabled (maximum reached). */
   readonly isAddGroupByDisabled = computed<boolean>(
-    () => this.activeGroupByChips().length >= this.maxGroupByKeys,
+    () => this.activeGroupByChips().length >= MAX_GROUP_BY_KEYS,
   );
 
-  /** Whether group-by criteria are supported for the active search entity (Fleet only, not TJS). */
+  /** Whether group-by criteria and the Add filter button are supported (Fleet only, not TJS). */
   readonly showGroupBySection = computed<boolean>(() => !this.store.isTjs());
-
-  /** Whether the Add filter button is supported for the active search entity (Fleet only, not TJS). */
-  readonly showAddFilterButton = computed<boolean>(() => !this.store.isTjs());
+  readonly showAddFilterButton = this.showGroupBySection;
 
   /** Whether there are any active filter or group-by chips. */
   readonly hasActiveChips = computed<boolean>(
@@ -239,10 +201,9 @@ export class SearchSuggestions {
   /** Whether to show the criteria section (filters and group-by chips/buttons). */
   readonly showCriteriaSection = computed<boolean>(
     () =>
+      this.showGroupBySection() ||
       this.hasActiveChips() ||
-      !!this.pendingFilterKey() ||
-      this.showAddFilterButton() ||
-      this.showGroupBySection(),
+      Boolean(this.pendingFilterKey()),
   );
 
   /** Live result count label displayed in the panel header (e.g., "918 devices"). Semantic text for TJS. */
@@ -252,8 +213,7 @@ export class SearchSuggestions {
     }
     const count = this.store.effectiveTotalCount();
     if (count !== null && count !== undefined) {
-      const entity = this.store.entity() || 'devices';
-      const noun = count === 1 ? entity.replace(/s$/, '') : entity;
+      const noun = getEntityNoun(this.store.entity() || 'devices', count !== 1);
       return `${count.toLocaleString()} ${noun}`;
     }
     return 'Active criteria';
@@ -290,50 +250,27 @@ export class SearchSuggestions {
   readonly isAutoCollapseChecked = this.store.autoCollapseAfterApply;
 
   /** Stable tracking function for suggestion items in `@for` loop to avoid DOM churn. */
-  trackSuggestion(item: SearchBoxSuggestion): string {
-    if (item.openPicker?.key) {
-      return `picker:${item.openPicker.key}`;
-    }
-    if (item.addGroupBy?.key) {
-      return `groupby:${item.addGroupBy.key}`;
-    }
-    const af = item.applyFilter;
-    if (af && 'resultingFilter' in af && af.resultingFilter?.key) {
-      return `apply:${af.resultingFilter.key}:${item.label || ''}:${af.pillCondition || ''}`;
-    }
-    if (af && 'filter' in af && af.filter?.key) {
-      return `apply-tjs:${af.filter.key}:${item.label || ''}:${af.pillCondition || ''}`;
-    }
-    const text = (item.mainText || []).map((seg) => seg.text).join('');
-    return `item:${item.label || ''}:${text}`;
-  }
+  readonly trackSuggestion = trackSuggestion;
 
   /** Formats the suggestion count badge text according to BFF count specifications. */
-  formatCount(item: SearchBoxSuggestion): string {
-    if (item.count === undefined || item.count === null) return '';
-    const prefix = item.count > 0 ? (item.countPrefix || '') : '';
-    const formattedNum = item.count.toLocaleString();
-    const unit = item.countUnit ? ` ${item.countUnit}` : '';
-    return `${prefix}${formattedNum}${unit}`;
-  }
+  readonly formatCount = formatSuggestionCount;
 
   /** Tooltip for counts that exceed maximum scan threshold. */
-  getCountTooltip(item: SearchBoxSuggestion): string {
-    return item.overMax
-      ? 'That many groups is hard to scan — consider filtering first.'
-      : '';
-  }
+  readonly getCountTooltip = getSuggestionCountTooltip;
 
+  /** Emits `selectSuggestion` when a typeahead suggestion row is clicked. */
   onItemClick(item: SearchBoxSuggestion) {
     this.selectSuggestion.emit({item});
   }
 
+  /** Emits `editChip` when an active filter chip inside the popover is clicked. */
   onChipClick(chip: FilterChip, anchor: HTMLElement, event: MouseEvent) {
     event.stopPropagation();
     if (chip.isGroupBy) return;
     this.editChip.emit({chip, anchor, event});
   }
 
+  /** Removes a filter or group-by chip and collapses the popover if auto-collapse is enabled. */
   onRemoveChip(chip: FilterChip, event: MouseEvent) {
     event.stopPropagation();
     this.store.removeFilterChip(chip);
@@ -342,8 +279,9 @@ export class SearchSuggestions {
     }
   }
 
+  /** Opens the FilterValuePicker anchored to a pending filter chip when clicked. */
   onPendingChipClick(
-    pf: {key: string; displayName: string; metadata?: FilterKeyMetadata},
+    pf: PendingFilterItem,
     anchor: HTMLElement,
     event: MouseEvent,
   ) {
@@ -372,27 +310,31 @@ export class SearchSuggestions {
     });
   }
 
+  /** Opens the KeyPicker dialog in `'filter'` mode and notifies the parent search input. */
   onAddFilterClick(event: MouseEvent) {
     event.stopPropagation();
     this.openKeyPicker('filter');
-    this.addFilter.emit({event});
+    this.addFilter.emit();
   }
 
+  /** Opens the KeyPicker dialog in `'groupby'` mode and notifies the parent search input. */
   onAddGroupByClick(event: MouseEvent) {
     event.stopPropagation();
     if (this.isAddGroupByDisabled()) {
       return;
     }
     this.openKeyPicker('groupby');
-    this.addGroupBy.emit({event});
+    this.addGroupBy.emit();
   }
 
+  /** Clears all search criteria and collapses the suggestions popover. */
   onClearAll(event: MouseEvent) {
     event.stopPropagation();
     this.store.resetSearchState();
     this.collapsePanel.emit();
   }
 
+  /** Updates the persisted auto-collapse-after-apply preference when the footer checkbox is toggled. */
   onAutoCollapseChange(event: Event) {
     event.stopPropagation();
     const target = event.target as HTMLInputElement | null;
@@ -401,6 +343,7 @@ export class SearchSuggestions {
     }
   }
 
+  /** Emits `collapsePanel` when the Collapse button in the popover footer is clicked. */
   onCollapse(event: MouseEvent) {
     event.stopPropagation();
     this.collapsePanel.emit();

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Shared Step 1 banner shown when a bulk configuration wizard is in clear/unset mode (e.g. "No default Wi-Fi" or "Not set").
+ */
+
 import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 

@@ -1,6 +1,5 @@
 import {IntComparisonOperator} from '../../../core/models/search';
-import {FilterChip, PickerValueItem} from '../models';
-import {EMPTY_FILTER_VALUE} from './search_filter_utils';
+import {EMPTY_FILTER_VALUE, FilterChip, PickerValueItem} from '../models';
 import {
   buildComplexMatchFromEvent,
   buildDisplayValues,
@@ -9,12 +8,9 @@ import {
   computePinnedValues,
   extractAdvancedStateFromChip,
   getDefault24hRange,
-  getPacificTimezoneName,
   isMultiModeAdvanced,
   isValuePickerSelectionEmpty,
-  pacificToUtc,
   parseDateRange,
-  utcToPacific,
 } from './value_picker_utils';
 
 describe('value_picker_utils', () => {
@@ -22,37 +18,28 @@ describe('value_picker_utils', () => {
     {value: 'apple', displayLabel: 'Apple', filtered: 10, total: 100},
     {value: 'banana', displayLabel: 'Banana', filtered: 50, total: 50},
     {value: 'cherry', displayLabel: 'Cherry', filtered: 5, total: 200},
-    {
-      value: 'date',
-      displayLabel: 'Date',
-      filtered: 0,
-      total: 10,
-      disabled: true,
-    },
   ];
 
   describe('buildDisplayValues', () => {
     it('should return base items if no selected inputs', () => {
       const result = buildDisplayValues(mockItems, new Set());
-      expect(result.length).toBe(4);
+      expect(result.length).toBe(3);
     });
 
     it('should add missing selected inputs as interactive items with count 0', () => {
       const selected = new Set(['grape', 'apple', 'orange']);
       const result = buildDisplayValues(mockItems, selected, false, false);
-      expect(result.length).toBe(6);
+      expect(result.length).toBe(5);
 
       const grape = result.find((i) => i.value === 'grape');
       expect(grape).toBeDefined();
       expect(grape?.filtered).toBe(0);
       expect(grape?.total).toBe(0);
-      expect(grape?.disabled).toBeFalsy();
 
       const orange = result.find((i) => i.value === 'orange');
       expect(orange).toBeDefined();
       expect(orange?.filtered).toBe(0);
       expect(orange?.total).toBe(0);
-      expect(orange?.disabled).toBeFalsy();
 
       // 'apple' already exists in baseItems, should not be duplicated or overwritten with 0 count
       const apples = result.filter((i) => i.value === 'apple');
@@ -68,13 +55,12 @@ describe('value_picker_utils', () => {
       expect(custom).toBeDefined();
       expect(custom?.filtered).toBeUndefined();
       expect(custom?.total).toBeUndefined();
-      expect(custom?.disabled).toBeFalsy();
     });
 
     it('should return base items when loading even with custom inputs', () => {
       const selected = new Set(['grape', 'orange']);
       const result = buildDisplayValues(mockItems, selected, false, true);
-      expect(result.length).toBe(4);
+      expect(result.length).toBe(3);
     });
   });
 
@@ -96,13 +82,7 @@ describe('value_picker_utils', () => {
         sortBy: 'value',
         sortAsc: true,
       });
-      // Normal items sorted by label asc, disabled item 'date' sinks to bottom
-      expect(asc.map((i) => i.value)).toEqual([
-        'apple',
-        'banana',
-        'cherry',
-        'date',
-      ]);
+      expect(asc.map((i) => i.value)).toEqual(['apple', 'banana', 'cherry']);
 
       const desc = computeFilteredAndSortedValues({
         items: mockItems,
@@ -110,12 +90,7 @@ describe('value_picker_utils', () => {
         sortBy: 'value',
         sortAsc: false,
       });
-      expect(desc.map((i) => i.value)).toEqual([
-        'cherry',
-        'banana',
-        'apple',
-        'date',
-      ]);
+      expect(desc.map((i) => i.value)).toEqual(['cherry', 'banana', 'apple']);
     });
 
     it('should sort by filtered count desc and asc', () => {
@@ -125,12 +100,7 @@ describe('value_picker_utils', () => {
         sortBy: 'filtered',
         sortAsc: false,
       });
-      expect(desc.map((i) => i.value)).toEqual([
-        'banana',
-        'apple',
-        'cherry',
-        'date',
-      ]);
+      expect(desc.map((i) => i.value)).toEqual(['banana', 'apple', 'cherry']);
 
       const asc = computeFilteredAndSortedValues({
         items: mockItems,
@@ -138,12 +108,7 @@ describe('value_picker_utils', () => {
         sortBy: 'filtered',
         sortAsc: true,
       });
-      expect(asc.map((i) => i.value)).toEqual([
-        'cherry',
-        'apple',
-        'banana',
-        'date',
-      ]);
+      expect(asc.map((i) => i.value)).toEqual(['cherry', 'apple', 'banana']);
     });
 
     it('should sort by total count desc', () => {
@@ -153,12 +118,7 @@ describe('value_picker_utils', () => {
         sortBy: 'total',
         sortAsc: false,
       });
-      expect(desc.map((i) => i.value)).toEqual([
-        'cherry',
-        'apple',
-        'banana',
-        'date',
-      ]);
+      expect(desc.map((i) => i.value)).toEqual(['cherry', 'apple', 'banana']);
     });
 
     it('should break ties using displayLabel alphabetically when counts are equal', () => {
@@ -234,20 +194,7 @@ describe('value_picker_utils', () => {
     });
   });
 
-  describe('pacificToUtc, utcToPacific & parseDateRange', () => {
-    it('should convert Pacific Time datetime string to UTC ISO string', () => {
-      // PDT test (July, UTC-7)
-      expect(pacificToUtc('2026-07-15T14:30')).toBe('2026-07-15T21:30:00.000Z');
-
-      // PST test (January, UTC-8)
-      expect(pacificToUtc('2026-01-15T14:30')).toBe('2026-01-15T22:30:00.000Z');
-    });
-
-    it('should return timezone abbreviation for given date', () => {
-      expect(getPacificTimezoneName(Date.UTC(2026, 6, 15))).toBe('PDT');
-      expect(getPacificTimezoneName(Date.UTC(2026, 0, 15))).toBe('PST');
-    });
-
+  describe('parseDateRange & getDefault24hRange', () => {
     it('should parse range string correctly', () => {
       const set = new Set(['From: 2026-01-01T00:00 To: 2026-01-02T00:00']);
       const parsed = parseDateRange(set);
@@ -300,17 +247,6 @@ describe('value_picker_utils', () => {
       const parsed = parseDateRange(dateOnlySet);
       expect(parsed.from).toBe('2026-01-01T00:00');
       expect(parsed.to).toBe('2026-01-02T00:00');
-    });
-
-    it('should normalize various datetime formats via utcToPacific', () => {
-      expect(utcToPacific('')).toBe('');
-      expect(utcToPacific('2026-01-01T12:00')).toBe('2026-01-01T12:00');
-      expect(utcToPacific('2026-01-01 12:00')).toBe('2026-01-01T12:00');
-      expect(utcToPacific('2026-01-01')).toBe('2026-01-01T00:00');
-      expect(utcToPacific('2026-07-15T21:30:00.000Z')).toBe('2026-07-15T14:30');
-      expect(utcToPacific('2026-07-15 21:30:00 UTC')).toBe('2026-07-15T14:30');
-      // Epoch millisecond timestamp (1784151000000 ms is 2026-07-15T21:30:00 UTC = 2026-07-15T14:30 PDT)
-      expect(utcToPacific('1784151000000')).toBe('2026-07-15T14:30');
     });
 
     it('should populate with empty when only single bound is provided', () => {

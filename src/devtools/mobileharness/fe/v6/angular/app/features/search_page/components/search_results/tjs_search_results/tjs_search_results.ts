@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Search results table view for Test, Job, and Session (TJS) entities.
+ */
+
 import {TitleCasePipe} from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -10,7 +14,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatTableModule} from '@angular/material/table';
 
-import {Column} from '../../../../../core/models/search';
+import {Column, Row} from '../../../../../core/models/search';
 import {TjsSearchStore} from '../../../services/tjs_search_store';
 import {DensityDropdownComponent} from '../common/density_dropdown/density_dropdown';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
@@ -36,6 +40,10 @@ import {SearchPaginationComponent} from '../common/search_pagination/search_pagi
 })
 export class TjsSearchResultsComponent {
   readonly store = inject(TjsSearchStore);
+
+  /** Stable row tracking function for `mat-table` to avoid full DOM recreation across updates. */
+  readonly trackByRow = (index: number, row: Row): string =>
+    row.id || String(index);
 
   /** Derived table columns array for mat-table header and row definitions. */
   readonly columnsToDisplay = computed<string[]>(() => {

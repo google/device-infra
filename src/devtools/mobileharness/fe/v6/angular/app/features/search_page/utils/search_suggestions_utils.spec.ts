@@ -1,5 +1,4 @@
 import {
-  clearStoredAutoCollapseAfterApply,
   getStoredAutoCollapseAfterApply,
   getStoredFilterCollapsed,
   saveStoredAutoCollapseAfterApply,
@@ -30,15 +29,6 @@ describe('search_suggestions_utils', () => {
 
       saveStoredAutoCollapseAfterApply('devices', 'internal', true);
       expect(getStoredAutoCollapseAfterApply('devices', 'internal')).toBeTrue();
-    });
-
-    it('clears stored auto-collapse preference from localStorage', () => {
-      saveStoredAutoCollapseAfterApply('devices', 'internal', false);
-      expect(
-        getStoredAutoCollapseAfterApply('devices', 'internal'),
-      ).toBeFalse();
-      clearStoredAutoCollapseAfterApply('devices', 'internal');
-      expect(getStoredAutoCollapseAfterApply('devices', 'internal')).toBeNull();
     });
 
     it('returns null when stored auto-collapse value in localStorage is corrupted JSON', () => {

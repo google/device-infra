@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Reusable dropdown menu component for selecting search table row density (`compact`, `default`, `comfortable`).
+ */
+
 import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
@@ -20,6 +24,7 @@ export class DensityDropdownComponent {
   /** Event emitted when user selects a different density option. */
   readonly densityChange = output<TableDensity>();
 
+  /** Emits the selected table row density mode. */
   setDensity(mode: TableDensity) {
     this.densityChange.emit(mode);
   }

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Expandable accordion card for a single Fleet group header, rendering utilization bars and a lazy-loaded inner device/host table.
+ */
+
 import {DecimalPipe} from '@angular/common';
 import {
   afterNextRender,
@@ -23,9 +27,11 @@ import {
 } from '../../../models';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
 import {
+  buildUtilizationViewModel,
   formatPaginationRange,
-  getDeviceTargetKey,
   getRowsSelectionState,
+  resolveGroupInnerColumns,
+  toSelectableRows,
 } from '../../../utils';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
 import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
@@ -79,9 +85,7 @@ export class FleetGroupCardComponent {
 
   /** Whether this group card is the currently focused expanded group. */
   readonly isFocused = computed<boolean>(
-    () =>
-      this.isOpen() &&
-      this.store.focusedGroupId() === this.group().groupId,
+    () => this.isOpen() && this.store.focusedGroupId() === this.group().groupId,
   );
 
   /** Async state for lazy-loaded group row data. */
@@ -90,54 +94,26 @@ export class FleetGroupCardComponent {
   );
 
   /** Computed structured utilization view model for progress and legend bars. */
-  readonly utilization = computed(() => {
-    const util = this.group().utilization;
-    const total = util?.total || 0;
-    if (!util || total <= 0) return null;
-
-    const toMetric = (v = 0) => {
-      const width = Math.min(100, Math.max(0, (100 * v) / total));
-      return {count: v, pct: Math.round(width), width};
-    };
-
-    const busy = toMetric(util.busy);
-    const idle = toMetric(util.idle);
-    const other = toMetric(util.other);
-
-    return {
-      busyCount: busy.count,
-      busyPct: busy.pct,
-      busyWidth: busy.width,
-      idleCount: idle.count,
-      idlePct: idle.pct,
-      idleWidth: idle.width,
-      otherCount: other.count,
-      otherPct: other.pct,
-      otherWidth: other.width,
-    };
-  });
+  readonly utilization = computed(() =>
+    buildUtilizationViewModel(this.group().utilization),
+  );
 
   /** Group rows with pre-computed composite tracking keys and selection state. */
-  readonly rowItems = computed(() => {
-    const rows = this.groupState()?.data?.rows ?? [];
-    const selected = this.store.selectedItems();
-    return rows.map((row) => {
-      const key = getDeviceTargetKey(row);
-      return {row, key, selected: selected.has(key)};
-    });
-  });
+  readonly rowItems = computed(() =>
+    toSelectableRows(
+      this.groupState()?.data?.rows ?? [],
+      this.store.selectedItems(),
+    ),
+  );
 
   /** Effective columns for the inner table with pre-resolved header descriptions. */
-  readonly innerColumns = computed<Column[]>(() => {
-    const rawCols = this.groupState()?.data?.columns;
-    const cols =
-      rawCols && rawCols.length > 0 ? rawCols : this.store.displayColumns();
-    const descriptions = this.store.columnDescriptions();
-    return cols.map((col) => {
-      const description = col.description || descriptions.get(col.key);
-      return description ? {...col, description} : col;
-    });
-  });
+  readonly innerColumns = computed<Column[]>(() =>
+    resolveGroupInnerColumns(
+      this.groupState()?.data?.columns,
+      this.store.displayColumns(),
+      this.store.columnDescriptions(),
+    ),
+  );
 
   /** Tri-state checkbox selection state ({all, some}) for the current group page. */
   readonly selectionState = computed(() =>
@@ -162,6 +138,7 @@ export class FleetGroupCardComponent {
     }
   }
 
+  /** Smoothly scrolls the parent `.rt-accordion` container to align this card at the top after expansion. */
   private scrollCardIntoView(): void {
     afterNextRender(
       () => {

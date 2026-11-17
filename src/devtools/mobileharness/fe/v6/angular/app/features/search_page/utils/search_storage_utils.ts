@@ -1,4 +1,8 @@
 /**
+ * @fileoverview Safe JSON-based `window.localStorage` read, write, and remove wrappers.
+ */
+
+/**
  * Safely reads and JSON-parses a value from window.localStorage.
  * Returns null if localStorage is unavailable, the key is absent, or JSON parsing fails.
  */

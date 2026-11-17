@@ -52,7 +52,12 @@
             [class]="'density-' + store.density()"
             [class.stale-loading]="isLoading"
           >
-            <table mat-table [dataSource]="rows" class="results-table">
+            <table
+              mat-table
+              [dataSource]="rows"
+              [trackBy]="trackByRow"
+              class="results-table"
+            >
               <!-- Dynamic Columns -->
               @for (col of store.displayColumns(); track col.key; let colIdx = $index) {
                 <ng-container [matColumnDef]="col.key">

@@ -1,9 +1,12 @@
+/**
+ * @fileoverview Two-pane Material 3 dialog for customizing and reordering visible Fleet table columns.
+ */
+
 import {
   CdkDrag,
   CdkDragDrop,
   CdkDragHandle,
   CdkDropList,
-  moveItemInArray,
 } from '@angular/cdk/drag-drop';
 import {DecimalPipe} from '@angular/common';
 import {
@@ -43,7 +46,13 @@ import {
   EntityType,
   FleetScope,
 } from '../../../../models';
-import {toFleetProto, toSearchEntityProto} from '../../../../utils';
+import {
+  getEntityNoun,
+  reorderDraftColumns,
+  resolveLockedColumnKeys,
+  toFleetProto,
+  toSearchEntityProto,
+} from '../../../../utils';
 
 /**
  * Material 3 two-pane Column Selector Dialog for customizing visible table columns.
@@ -93,30 +102,19 @@ export class ColumnSelectorComponent {
   );
 
   /** Default column descriptors fallback when resetting. */
-  readonly defaultColumns = computed<FleetColumnDescriptor[]>(() => {
-    return this.data?.defaultColumns ?? [];
-  });
+  readonly defaultColumns = computed<FleetColumnDescriptor[]>(
+    () => this.data?.defaultColumns ?? [],
+  );
 
   /** Locked identity column keys derived from locked descriptors. */
-  readonly lockedColumns = computed<string[]>(() => {
-    const defaults = this.defaultColumns();
-    const lockedFromDefaults = defaults
-      .filter((c) => c.locked)
-      .map((c) => c.key);
-    if (lockedFromDefaults.length > 0) {
-      return lockedFromDefaults;
-    }
-    const current = this.data?.columns ?? [];
-    return current.filter((c) => c.locked).map((c) => c.key);
-  });
+  readonly lockedColumns = computed<string[]>(() =>
+    resolveLockedColumnKeys(this.defaultColumns(), this.data?.columns ?? []),
+  );
 
   /** Initial selected column descriptors from dialog data. */
   private readonly initialColumns = computed<FleetColumnDescriptor[]>(() => {
     const fromData = this.data?.columns;
-    if (fromData && fromData.length > 0) {
-      return fromData;
-    }
-    return this.defaultColumns();
+    return fromData?.length ? fromData : this.defaultColumns();
   });
 
   /** Working draft array of selected column descriptors. */
@@ -140,11 +138,11 @@ export class ColumnSelectorComponent {
   );
 
   /** Current non-locked column keys passed to backend for recommendation context. */
-  readonly recentKeys = computed<string[]>(() => {
-    return this.initialColumns()
+  readonly recentKeys = computed<string[]>(() =>
+    this.initialColumns()
       .filter((c) => !c.locked)
-      .map((c) => c.key);
-  });
+      .map((c) => c.key),
+  );
 
   /** Reactive resource fetching column catalog from backend. */
   readonly catalogResource = rxResource<
@@ -181,39 +179,37 @@ export class ColumnSelectorComponent {
   });
 
   /** Pre-formatted catalog sections using FleetColumnCatalogSection model directly from protobuf response. */
-  readonly viewCatalogSections = computed<FleetColumnCatalogSection[]>(() => {
-    return (this.catalogResource.value()?.sections || []).filter(
+  readonly viewCatalogSections = computed<FleetColumnCatalogSection[]>(() =>
+    (this.catalogResource.value()?.sections || []).filter(
       (s) => (s.entries?.length ?? 0) > 0,
-    );
-  });
+    ),
+  );
 
   /** Total count of matching entries across all visible catalog sections. */
-  readonly matchedColumnsCount = computed<number>(() => {
-    return this.viewCatalogSections().reduce(
+  readonly matchedColumnsCount = computed<number>(() =>
+    this.viewCatalogSections().reduce(
       (sum, s) => sum + (s.entries?.length || 0),
       0,
-    );
-  });
+    ),
+  );
 
   /** Whether the catalog is loading. */
-  readonly isCatalogLoading = computed<boolean>(() => {
-    return this.catalogResource.isLoading();
-  });
+  readonly isCatalogLoading = this.catalogResource.isLoading;
 
   /** Unit label for device/host counts. */
-  readonly entityUnit = computed<string>(() => {
-    return this.entity() === 'hosts' ? 'hosts' : 'devices';
-  });
+  readonly entityUnit = computed<string>(() =>
+    getEntityNoun(this.entity(), true),
+  );
 
   /** Selected column keys set for O(1) template lookup. */
-  readonly selectedKeySet = computed<Set<string>>(() => {
-    return new Set(this.draftColumns().map((col) => col.key));
-  });
+  readonly selectedKeySet = computed<Set<string>>(
+    () => new Set(this.draftColumns().map((col) => col.key)),
+  );
 
   /** Locked column keys set for O(1) template lookup. */
-  readonly lockedKeySet = computed<Set<string>>(() => {
-    return new Set(this.lockedColumns());
-  });
+  readonly lockedKeySet = computed<Set<string>>(
+    () => new Set(this.lockedColumns()),
+  );
 
   /** Checks whether a given column key is locked. */
   isLocked(key: string): boolean {
@@ -266,20 +262,15 @@ export class ColumnSelectorComponent {
 
   /** Handles drag-and-drop reordering. Locked columns cannot be displaced. */
   drop(event: CdkDragDrop<FleetColumnDescriptor[]>) {
-    if (event.previousIndex === event.currentIndex) return;
-
-    const currentDraft = [...this.draftColumns()];
-    const lockedCount = currentDraft.filter((col) =>
-      this.isLocked(col.key),
-    ).length;
-
-    // Do not allow moving locked columns
-    if (event.previousIndex < lockedCount) return;
-
+    const reordered = reorderDraftColumns(
+      this.draftColumns(),
+      this.lockedKeySet(),
+      event.previousIndex,
+      event.currentIndex,
+    );
+    if (!reordered) return;
     this.isReset.set(false);
-    const targetIndex = Math.max(lockedCount, event.currentIndex);
-    moveItemInArray(currentDraft, event.previousIndex, targetIndex);
-    this.draftColumns.set(currentDraft);
+    this.draftColumns.set(reordered);
   }
 
   /** Resets draft columns to default configuration. */

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Primary search input component with Fleet scope switcher, active/composite filter chips, and keyboard navigation.
+ */
+
 import {
   ChangeDetectionStrategy,
   Component,
@@ -16,7 +20,12 @@ import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tool
 import {HeaderSearchDockService} from '../../../../../shared/services/header_search_dock_service';
 import {FilterChip, SearchBoxSuggestion} from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
-import {getChipKey, trackChip} from '../../../utils';
+import {
+  formatFilterSummaryTooltip,
+  formatGroupBySummaryTooltip,
+  getChipKey,
+  trackChip,
+} from '../../../utils';
 import {SearchSuggestions} from '../search_suggestions/search_suggestions';
 
 /**
@@ -50,13 +59,8 @@ export class SearchInput {
   /** Shared search page state store injected via Angular Dependency Injection. */
   readonly store = inject(SearchPageStore);
 
-  /** Helper to safely extract chip keys. */
   readonly getChipKey = getChipKey;
-
-  /** Tracking function for active filter and group-by chips in Angular templates. */
-  trackChip(chip: FilterChip): string {
-    return trackChip(chip);
-  }
+  readonly trackChip = trackChip;
 
   /** Whether the search input is currently docked in the global header toolbar. */
   readonly isDockedInput = input<boolean | undefined>(undefined, {
@@ -100,18 +104,14 @@ export class SearchInput {
   readonly isPanelOpen = this.store.isSuggestionsPanelOpen;
 
   /** Summary tooltip for the composite `N filters` chip. */
-  readonly filterSummaryTooltip = computed<string>(() => {
-    const lines = this.filterChips().map(
-      (c) => `${c.pillKey} (${c.pillCondition})`,
-    );
-    return `${lines.join('\n')}\n\nClick to view or edit.`;
-  });
+  readonly filterSummaryTooltip = computed<string>(() =>
+    formatFilterSummaryTooltip(this.filterChips()),
+  );
 
   /** Summary tooltip for the composite `M group-by` chip. */
-  readonly groupBySummaryTooltip = computed<string>(() => {
-    const keys = this.groupByChips().map((c) => c.pillKey);
-    return `Group by: ${keys.join(', ')}\n\nClick to view or edit.`;
-  });
+  readonly groupBySummaryTooltip = computed<string>(() =>
+    formatGroupBySummaryTooltip(this.groupByChips()),
+  );
 
   /** Whether the FilterValuePicker is currently open for one of the collapsed filter chips. */
   readonly isCompositeFilterPickerActive = computed<boolean>(() =>
@@ -210,13 +210,7 @@ export class SearchInput {
     );
   }
 
-  /**
-   * Handles user selection of an auto-complete suggestion item.
-   * If the suggestion requests an open-picker action, opens the FilterValuePicker overlay anchored to the search box;
-   * otherwise, applies the suggestion filter directly to the store.
-   *
-   * @param event Object containing the selected `SearchBoxSuggestion` item.
-   */
+  /** Handles user selection of an auto-complete suggestion item. */
   onSelectSuggestion(event: {item: SearchBoxSuggestion}) {
     const {item} = event;
     this.highlightedGroup.set(null);
@@ -231,12 +225,7 @@ export class SearchInput {
     }
   }
 
-  /**
-   * Handles user text input events in the search box.
-   * Updates the search query signal, resets active suggestion highlight, and opens suggestions popover.
-   *
-   * @param val Current text value in the search input box.
-   */
+  /** Updates the search query signal, resets active suggestion highlight, and opens suggestions popover. */
   onSearchInput(val: string) {
     this.highlightedGroup.set(null);
     this.store.closeValuePicker();
@@ -245,11 +234,7 @@ export class SearchInput {
     this.activeSuggestionIndex.set(-1);
   }
 
-  /**
-   * Clears only the user's typed text in the search input while preserving active filter and group-by chips.
-   *
-   * @param event Mouse event from clicking the clear button.
-   */
+  /** Clears only the user's typed text in the search input while preserving active filter and group-by chips. */
   onClearInput(event?: MouseEvent) {
     event?.stopPropagation();
     this.store.clearSearchQuery();
@@ -272,22 +257,13 @@ export class SearchInput {
     this.store.showSuggestions.set(true);
   }
 
-  /**
-   * Prevents click propagation from closing overlays and displays suggestions popover on input click.
-   *
-   * @param event Mouse event from input click.
-   */
+  /** Prevents click propagation from closing overlays and displays suggestions popover on input click. */
   onInputClick(event?: MouseEvent) {
     event?.stopPropagation();
     this.onInputFocus();
   }
 
-  /**
-   * Handles click events anywhere on the outer search box area.
-   * Delegates focus to the text input unless a chip or clear button was explicitly clicked.
-   *
-   * @param event Mouse event from search box container click.
-   */
+  /** Delegates focus to the text input unless a chip or clear button was explicitly clicked. */
   onSearchBoxClick(event?: MouseEvent) {
     const target = event?.target as HTMLElement | null;
     if (
@@ -337,12 +313,7 @@ export class SearchInput {
     this.store.showSuggestions.set(false);
   }
 
-  /**
-   * Dispatches keyboard navigation events for search input controls.
-   * Handles ArrowUp/ArrowDown for suggestion highlighting, Enter for selection/execution, and Escape for closing overlays.
-   *
-   * @param event Keyboard event triggered from the search input.
-   */
+  /** Dispatches ArrowUp/ArrowDown, Enter, and Escape keyboard navigation events. */
   onKeyDown(event: KeyboardEvent) {
     const key = event.key;
     if (!['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(key)) return;
@@ -378,13 +349,7 @@ export class SearchInput {
     }
   }
 
-  /**
-   * Private helper executing selection or search query when the Enter key is pressed.
-   *
-   * @param event Keyboard event.
-   * @param isShowing Whether suggestions popover is active.
-   * @param suggestions Array of available search suggestions.
-   */
+  /** Executes suggestion selection or search query when Enter is pressed. */
   private handleEnterKey(
     event: KeyboardEvent,
     isShowing: boolean,
@@ -406,7 +371,7 @@ export class SearchInput {
     }
   }
 
-  /** Private helper closing suggestions popover or value picker overlay when Escape key is pressed. */
+  /** Closes suggestions popover or value picker overlay when Escape is pressed. */
   private handleEscapeKey() {
     if (this.store.showSuggestions()) {
       this.store.showSuggestions.set(false);
@@ -419,15 +384,7 @@ export class SearchInput {
     }
   }
 
-  /**
-   * Handles clicking an active filter or group-by chip in the search bar:
-   * Consistent with composite chips and quick filter/group-by presets, opens the suggestions
-   * popover first, locates/highlights the corresponding chip in the popover, and (for filters)
-   * opens the FilterValuePicker anchored to that popover chip.
-   *
-   * @param chip The FilterChip to locate/edit.
-   * @param event Optional MouseEvent to prevent event bubbling.
-   */
+  /** Opens the suggestions popover and locates/edits the clicked filter or group-by chip. */
   openPickerForChip(chip: FilterChip, event?: Event) {
     event?.stopPropagation();
     this.highlightedGroup.set(null);

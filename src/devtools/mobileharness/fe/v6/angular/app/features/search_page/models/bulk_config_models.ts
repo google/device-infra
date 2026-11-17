@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Models and state contracts for bulk device configuration wizard dialogs (Wi-Fi and dimensions).
+ */
+
+import {Signal} from '@angular/core';
+import {Observable} from 'rxjs';
+
 import {
   ConfigurableDimension,
   DeviceTarget,
@@ -30,4 +37,35 @@ export interface BulkConfigReviewSummary {
 export interface BulkApplyError {
   deviceId: string;
   reason: string;
+}
+
+/** Cancellable, retryable async task tracker returned by `useInlineTask`. */
+export interface BulkInlineTask {
+  readonly isLoading: Signal<boolean>;
+  readonly hasLoaded: Signal<boolean>;
+  readonly error: Signal<string | null>;
+  run: <TResponse>(
+    createRequest: () => Observable<TResponse>,
+    onSuccess: (res: TResponse) => void,
+    fallbackErrorMessage?: string,
+  ) => void;
+  retry: () => void;
+  cancel: () => void;
+}
+
+/** Discriminated union representing the mutually exclusive states of the batch apply mutation. */
+export type BulkApplyState =
+  | {readonly status: 'idle'}
+  | {readonly status: 'applying'}
+  | {readonly status: 'rpc_error'; readonly message: string}
+  | {readonly status: 'success'}
+  | {readonly status: 'errors'; readonly errors: readonly BulkApplyError[]};
+
+/** Consolidated dimension configuration state for the active Fleet results view. */
+export interface BulkDimensionConfigState {
+  readonly isLoading: boolean;
+  readonly error: string | null;
+  readonly enabled: boolean;
+  readonly dimensions: readonly ConfigurableDimension[];
+  readonly allowCustom: boolean;
 }

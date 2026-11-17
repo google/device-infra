@@ -183,15 +183,17 @@
     </div>
 
     <!-- Suggestion Popover -->
-    <app-search-suggestions
-      [activeIndex]="activeSuggestionIndex()"
-      [highlightedGroup]="highlightedGroup()"
-      (selectSuggestion)="onSelectSuggestion($event)"
-      (editChip)="onEditChipFromSuggestions($event)"
-      (addFilter)="onAddFilter()"
-      (addGroupBy)="onAddGroupBy()"
-      (collapsePanel)="onCollapsePanel()"
-    ></app-search-suggestions>
+    @if (isPanelOpen() || store.pendingFilterOpenRequest()) {
+      <app-search-suggestions
+        [activeIndex]="activeSuggestionIndex()"
+        [highlightedGroup]="highlightedGroup()"
+        (selectSuggestion)="onSelectSuggestion($event)"
+        (editChip)="onEditChipFromSuggestions($event)"
+        (addFilter)="onAddFilter()"
+        (addGroupBy)="onAddGroupBy()"
+        (collapsePanel)="onCollapsePanel()"
+      ></app-search-suggestions>
+    }
   </div>
 
   <!-- Refresh Button -->

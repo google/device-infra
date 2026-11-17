@@ -312,20 +312,15 @@
                   [class.vp-pinned-item]="isPinned"
                   [class.is-no-value-row]="item.isNoValue"
                   [class.dimmed]="!isPlain() && !state().loading && (item.total ?? 0) === 0"
-                  [class.disabled]="item.disabled"
                   (click)="toggleValue(item)"
                 >
-                  <mat-icon
-                    class="material-symbols-outlined vp-check"
-                    [class.disabled]="item.disabled"
-                  >
+                  <mat-icon class="material-symbols-outlined vp-check">
                     {{ selectedSet().has(item.value) ? 'check_box' : 'check_box_outline_blank' }}
                   </mat-icon>
                   <span
                     class="vp-val"
                     [class.no-value-text]="item.isNoValue"
-                    [class.disabled-text]="item.disabled"
-                    [matTooltip]="item.disabled ? 'Value not found in options' : (item.isNoValue ? 'No value assigned for this key' : item.displayLabel)"
+                    [matTooltip]="item.isNoValue ? 'No value assigned for this key' : item.displayLabel"
                     tooltipIfTruncated
                   >
                     @if (item.isNoValue) {
@@ -334,7 +329,7 @@
                       {{ item.displayLabel }}
                     }
                   </span>
-                  @if (showRowActions() && !item.disabled) {
+                  @if (showRowActions()) {
                     <span class="vp-actions">
                       <button
                         class="vp-act-btn vp-act-only"

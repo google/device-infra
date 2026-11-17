@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Sub-view inside FilterValuePicker for configuring prefix, substring, regex, multi-value exact/at-least, and integer comparison conditions.
+ */
+
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,7 +21,7 @@ import {
   INT_COMPARISON_OPERATORS,
   IntComparisonOp,
 } from '../../../models';
-import {parseStrictInt32} from '../../../utils';
+import {isMultiModeAdvanced, parseStrictInt32} from '../../../utils';
 
 /** Standalone sub-view handling integer comparison, prefix, regex, substring, and multi-chip matching modes. */
 @Component({
@@ -60,24 +64,20 @@ export class AdvancedMatchView {
       parseStrictInt32(this.text()) === undefined,
   );
 
-  readonly isMultiMode = computed(() => {
-    const m = this.mode();
-    return m === 'exactly' || m === 'at_least';
-  });
+  readonly isMultiMode = computed(() => isMultiModeAdvanced(this.mode()));
 
   readonly placeholder = computed(() => {
     const currentMode = this.mode();
-    const found = this.advModesList.find(
-      (m: {id: AdvancedMatchMode; label: string; placeholder: string}) =>
-        m.id === currentMode,
-    );
+    const found = this.advModesList.find((m) => m.id === currentMode);
     return found?.placeholder || 'Enter value…';
   });
 
+  /** Selects the active integer comparison operator (`'gt'`, `'gte'`, `'lt'`, `'lte'`). */
   selectIntOp(op: IntComparisonOp) {
     this.intOp.set(op);
   }
 
+  /** Switches the active advanced match mode and migrates values between single-value and multi-value modes. */
   selectMode(newMode: AdvancedMatchMode) {
     const wasMulti = this.isMultiMode();
     this.mode.set(newMode);
@@ -90,6 +90,7 @@ export class AdvancedMatchView {
     }
   }
 
+  /** Copies the single-value text into `values` when switching from a single-value mode to a multi-value mode. */
   private syncSingleToMulti() {
     const val = this.text().trim();
     if (val && this.values().length === 0) {
@@ -97,12 +98,14 @@ export class AdvancedMatchView {
     }
   }
 
+  /** Copies the first item from `values` into `text` when switching from a multi-value mode to a single-value mode. */
   private syncMultiToSingle() {
     if (!this.text().trim() && this.values().length > 0) {
       this.text.set(this.values()[0]);
     }
   }
 
+  /** Appends a trimmed non-duplicate value chip in multi-value mode (`'exactly'` or `'at_least'`). */
   addChip() {
     const val = this.inputVal().trim();
     if (!val) return;
@@ -114,6 +117,7 @@ export class AdvancedMatchView {
     this.inputVal.set('');
   }
 
+  /** Removes the value chip at the given index in multi-value mode. */
   removeChip(index: number) {
     this.values.update((vals) => vals.filter((_, i) => i !== index));
   }

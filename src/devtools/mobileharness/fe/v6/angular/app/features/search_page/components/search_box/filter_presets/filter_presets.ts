@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Collapsible bar below the search box rendering promoted quick-filter and group-by preset links.
+ */
+
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,7 +16,7 @@ import {SearchPageStore} from '../../../services/search_page_store';
 import {
   getStoredFilterCollapsed,
   saveStoredFilterCollapsed,
-} from '../../../utils/search_suggestions_utils';
+} from '../../../utils';
 
 /**
  * Standalone component displaying promoted quick filter keys and group-by preset links below the primary search box.
@@ -36,13 +40,14 @@ export class FilterPresets {
    * localStorage, separately for e.g. devices and hosts).
    */
   readonly isCollapsed = linkedSignal({
-    source: this.store.isLandingState,
-    computation: (isLanding, previous) =>
+    source: () => ({
+      isLanding: this.store.isLandingState(),
+      entity: this.store.entity(),
+    }),
+    computation: ({isLanding, entity}, previous) =>
       isLanding
         ? false
-        : (getStoredFilterCollapsed(this.store.entity()) ??
-          previous?.value ??
-          false),
+        : (getStoredFilterCollapsed(entity) ?? previous?.value ?? false),
   });
 
   readonly hasPromotedFilters = computed(

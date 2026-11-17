@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Reactive store managing Fleet (Devices & Hosts) BFF search resources, grouping, column customization, pagination, and row selection.
+ */
+
 import {
   computed,
   inject,
@@ -6,44 +10,26 @@ import {
   signal,
 } from '@angular/core';
 import {rxResource, takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {EMPTY, Observable, of, Subject, Subscription, throwError} from 'rxjs';
-import {catchError, map, switchMap} from 'rxjs/operators';
+import {Observable, of, throwError} from 'rxjs';
+import {catchError, map} from 'rxjs/operators';
 
 import {
   Column,
-  ComplexMatch,
   Filter,
-  Fleet,
-  FleetChipResolverRequest,
-  FleetColumnDescriptor,
   FleetGroup,
-  FleetPromotedKeysRequest,
-  FleetResolvedFilterChip,
-  FleetResolvedGroupByChip,
   FleetSearchConfig,
-  FleetSearchConfigRequest,
   FleetSearchRequest,
   FleetSearchResults,
   FleetSuggestion,
-  FleetSuggestionRequest,
-  FleetValidFilterChip,
-  FleetValueListRequest,
   Row,
-  TranslateArsenalSearchResponse,
 } from '../../../core/models/search';
 import {SnackBarService} from '../../../shared/services/snackbar_service';
 import {getErrorMessage} from '../../../shared/utils/error_utils';
 import {
-  createInitialValuePickerState,
-  DEFAULT_GROUP_EXPAND_PAGE_SIZE,
   DEFAULT_PAGE_SIZE,
   EntityType,
   FilterChip,
   FilterKeyMetadata,
-  FilterPair,
-  FleetScope,
-  GroupPageState,
-  PickerValueItem,
   PromotedFilterKeyItem,
   PromotedGroupByKeyItem,
   SearchBoxSuggestion,
@@ -53,391 +39,238 @@ import {
 } from '../models';
 import {
   areFilterArraysEqual,
-  buildComplexMatchFromEvent,
-  buildFilterChipFromResolved,
+  buildFleetChipResolverInput,
   buildFleetFilterFromChip,
+  buildFleetFilterFromPickerEvent,
   buildFleetGroupSort,
-  buildResolvedFilterChips,
-  buildSimpleFleetFilter,
-  clearStoredVisibleColumns,
+  buildFleetInitialPickerState,
+  buildFleetKeyMetadataMap,
+  buildFleetPickerConfig,
+  computeFleetRangeText,
   createGroupByChip,
-  EMPTY_FILTER_VALUE,
-  extractAdvancedStateFromChip,
-  extractComplexMatchInfo,
-  extractFilterChipFromFleetSuggestion,
-  formatPaginationRange,
-  getChipKey,
-  getDeviceTargetKey,
-  getRowsSelectionState,
-  getStoredGroupExpandPageSize,
+  extractAppliedFleetPickerChips,
+  extractChipsFromFleetSuggestion,
   getStoredPageSize,
-  getStoredVisibleColumns,
-  getUnknownColumnKeyFromError,
-  isChipNegated,
-  isRowSelected,
   isValuePickerSelectionEmpty,
-  parseArsenalQueryParam,
-  saveStoredGroupExpandPageSize,
+  mapFleetPromotedKeysResponse,
+  mapFleetResolvedChipsResponse,
+  mapFleetValueListResponse,
   saveStoredPageSize,
-  saveStoredVisibleColumns,
   toFleetProto,
   toSearchEntityProto,
 } from '../utils';
 import {SearchPageStore} from './search_page_store';
+import {
+  useArsenalTranslator,
+  useGroupAccordion,
+  useTableSelection,
+  useVisibleColumns,
+} from './slices';
 
-/**
- * State store managing search, grouping, pagination, and selection for Fleet entities (Devices & Hosts).
- */
+/** State store managing search, grouping, pagination, and selection for Fleet entities (Devices & Hosts). */
 @Injectable()
-export class FleetSearchStore extends SearchPageStore {
-  private readonly snackBarService = inject(SnackBarService);
-  // ===========================================================================
-  // 1. Dynamic UI Prompts & Suggestion Signals
-  // ===========================================================================
-
-  private static readonly DUPLICATE_KEY_WARNING_PREFIX =
-    'Only one filter per key is supported; ignored ';
-
+export class FleetSearchStore extends SearchPageStore<FleetSuggestion, Filter> {
   private static readonly SUPPORTED_ENTITIES = new Set<EntityType>([
     'devices',
     'hosts',
   ]);
-
   private static readonly LEGACY_QUERY_PARAM_KEYS = ['arsenal_query'] as const;
 
-  private readonly translateArsenalSubject = new Subject<{
-    arsenalKey: string;
-    unpacked: ReturnType<typeof parseArsenalQueryParam>;
-  } | null>();
+  override readonly supportsFleetScope = true;
+  protected override readonly supportsLandingPage = true;
+
+  private readonly snackBarService = inject(SnackBarService);
 
   constructor() {
     super();
-
     // The entity is fixed for the lifetime of this store instance, so the saved
     // "Rows per page" of the flat table can be restored once up front.
     const storedPageSize = getStoredPageSize(this.entity());
     if (storedPageSize !== null) {
       this.pageSize.set(storedPageSize);
     }
-
-    this.translateArsenalSubject
-      .pipe(
-        switchMap((req) => {
-          if (!req) {
-            return EMPTY;
-          }
-          const {arsenalKey, unpacked} = req;
-          return this.searchService
-            .translateArsenalSearch({
-              entity: toSearchEntityProto(this.entity()),
-              filters:
-                unpacked.filters.length > 0 ? unpacked.filters : undefined,
-              columns:
-                unpacked.columns.length > 0 ? unpacked.columns : undefined,
-              groupByKeys:
-                unpacked.groupByKeys.length > 0
-                  ? unpacked.groupByKeys
-                  : undefined,
-            })
-            .pipe(
-              map((res) => ({res, arsenalKey, unpacked})),
-              catchError(() => {
-                if (
-                  this.lastSyncedUrlKey === arsenalKey &&
-                  this.isCurrentRouteActive()
-                ) {
-                  this.snackBarService.showWarning(
-                    'Could not translate legacy Arsenal query.',
-                  );
-                }
-                return EMPTY;
-              }),
-            );
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(({res, arsenalKey, unpacked}) => {
-        if (
-          this.lastSyncedUrlKey !== arsenalKey ||
-          !this.isCurrentRouteActive()
-        ) {
-          return;
-        }
-        this.applyArsenalTranslation(res, unpacked);
-      });
   }
 
-  protected override getLegacyQueryParamKeys(): readonly string[] {
-    return FleetSearchStore.LEGACY_QUERY_PARAM_KEYS;
-  }
-
-  protected override cancelPendingLegacyTranslation() {
-    this.translateArsenalSubject.next(null);
-  }
-
-  /** Subclass hook providing default entity type when route metadata is absent. */
+  /** Returns `'devices'` as the default Fleet entity type. */
   override getDefaultEntity(): EntityType {
     return 'devices';
   }
 
+  /** Returns the supported Fleet entity types (`'devices'` and `'hosts'`). */
   override getSupportedEntities(): Set<EntityType> {
     return FleetSearchStore.SUPPORTED_ENTITIES;
   }
 
-  /** Placeholder text for search box input based on current entity (devices vs hosts). */
-  override readonly searchPlaceholder = computed(() => {
-    switch (this.entity()) {
-      case 'devices':
-        return 'Type "pixel 10", or "model is", or a device ID';
-      case 'hosts':
-        return 'Type a host name, or "status is", or a host ID';
-      default:
-        return 'Type search query…';
-    }
-  });
+  /** Returns legacy query parameter keys (`'arsenal_query'`) handled by Fleet search. */
+  override getLegacyQueryParamKeys(): readonly string[] {
+    return FleetSearchStore.LEGACY_QUERY_PARAM_KEYS;
+  }
 
-  /** Reactive resource fetching search bar autocomplete suggestions. */
-  private readonly suggestionsResource = rxResource<
-    FleetSuggestion[],
-    | {
-        entity: EntityType;
-        input: string;
-        fleet: string;
-        activeFilters: Filter[];
-        groupBy: string[];
-      }
-    | undefined
-  >({
+  /** Memoized protobuf `entity` and `fleet` scope fields for Fleet BFF requests. */
+  private readonly baseScope = computed(
+    () => ({
+      entity: toSearchEntityProto(this.entity()),
+      fleet: toFleetProto(this.fleet()),
+    }),
+    {equal: (a, b) => a.entity === b.entity && a.fleet === b.fleet},
+  );
+
+  override readonly searchPlaceholder = computed(() =>
+    this.entity() === 'hosts'
+      ? 'Type a host name, or "status is", or a host ID'
+      : 'Type "pixel 10", or "model is", or a device ID',
+  );
+
+  readonly effectiveFilters = computed<Filter[]>(
+    () =>
+      this.activeChips()
+        .filter((c) => !c.isGroupBy)
+        .map((c) => buildFleetFilterFromChip(c)),
+    {equal: areFilterArraysEqual},
+  );
+
+  private readonly suggestionsResource = rxResource({
     params: () => {
       const input = this.getActiveSuggestionInput();
       if (input === null) return undefined;
-
+      const filters = this.effectiveFilters();
+      const groupBy = this.groupByKeys();
       return {
-        entity: this.entity(),
+        ...this.baseScope(),
         input,
-        fleet: this.fleet(),
-        activeFilters: this.effectiveFilters(),
-        groupBy: this.groupByKeys(),
-      };
-    },
-    stream: ({params: req}) => {
-      if (!req) return of([]);
-      const fleetReq: FleetSuggestionRequest = {
-        entity: toSearchEntityProto(req.entity),
-        input: req.input,
-        filters: req.activeFilters.length > 0 ? req.activeFilters : undefined,
-        groupBy: req.groupBy.length > 0 ? req.groupBy : undefined,
-        fleet: toFleetProto(req.fleet),
+        filters: filters.length > 0 ? filters : undefined,
+        groupBy: groupBy.length > 0 ? groupBy : undefined,
         limit: 10,
       };
-      return this.searchService.getFleetSuggestions(fleetReq).pipe(
-        map((res) => res.items || []),
-        catchError(() => of([])),
-      );
     },
+    stream: ({params: req}) =>
+      req
+        ? this.searchService.getFleetSuggestions(req).pipe(
+            map((res) => res.items || []),
+            catchError(() => of([])),
+          )
+        : of([]),
   });
 
-  /** Autocomplete suggestions consumed directly from the BFF response without transformation. */
   override readonly suggestions = computed<SearchBoxSuggestion[]>(
     () => this.suggestionsResource.value() ?? [],
   );
-
-  /** Whether autocomplete suggestions are currently being fetched or debounced. */
-  override readonly isSuggestionsLoading = computed<boolean>(() =>
-    this.computeSuggestionsLoading(this.suggestionsResource.isLoading()),
+  override readonly isSuggestionsLoading = this.computeSuggestionsLoading(
+    this.suggestionsResource.isLoading,
   );
 
-  // ===========================================================================
-  // 2. Page Configuration & Metadata Resources
-  // ===========================================================================
-
-  /** Reactive resource fetching search configuration (defaults, landing settings, default columns). */
-  private readonly searchConfigResource = rxResource<
-    FleetSearchConfig | null,
-    string | undefined
-  >({
-    params: () => {
-      if (!this.isCurrentRouteActive()) return undefined;
-      return `${this.entity()}:${this.fleet()}`;
-    },
-    stream: ({params: key}) => {
-      if (!key) return of(null);
-      const [e, fleet] = key.split(':') as [EntityType, string];
-      const fleetReq: FleetSearchConfigRequest = {
-        entity: toSearchEntityProto(e),
-        fleet: toFleetProto(fleet),
-      };
-      return this.searchService
-        .getFleetSearchConfig(fleetReq)
-        .pipe(catchError(() => of(null)));
-    },
+  private readonly searchConfigResource = rxResource({
+    params: () => (this.isCurrentRouteActive() ? this.baseScope() : undefined),
+    stream: ({params: req}) =>
+      req
+        ? this.searchService
+            .getFleetSearchConfig(req)
+            .pipe(catchError(() => of(null)))
+        : of(null),
   });
 
-  /** Configuration for the current search page. */
   override readonly searchConfig = computed<FleetSearchConfig | null>(
     () => this.searchConfigResource.value() || null,
   );
+  override readonly isConfigLoading = this.searchConfigResource.isLoading;
 
-  /** Whether initial search configuration is loading. */
-  override readonly isConfigLoading = computed<boolean>(() =>
-    this.searchConfigResource.isLoading(),
-  );
-
-  /** Reactive resource fetching promoted filter keys and promoted group-by keys once on page entry. */
-  private readonly promotedKeysResource = rxResource<
-    {
-      filterKeys: PromotedFilterKeyItem[];
-      groupByKeys: PromotedGroupByKeyItem[];
-    },
-    | {
-        entity: EntityType;
-        fleet: string;
-        groupBy: string[];
-        filters: Filter[];
-      }
-    | undefined
-  >({
+  private readonly promotedKeysResource = rxResource({
     params: () => {
       if (!this.isCurrentRouteActive()) return undefined;
+      const groupBy = this.groupByKeys();
+      const filters = this.effectiveFilters();
       return {
-        entity: this.entity(),
-        fleet: this.fleet(),
-        groupBy: this.groupByKeys(),
-        filters: this.effectiveFilters(),
+        ...this.baseScope(),
+        groupBy: groupBy.length > 0 ? groupBy : undefined,
+        filters: filters.length > 0 ? filters : undefined,
       };
     },
-    stream: ({params: req}) => {
-      if (!req) return of({filterKeys: [], groupByKeys: []});
-
-      const fleetReq: FleetPromotedKeysRequest = {
-        entity: toSearchEntityProto(req.entity),
-        fleet: toFleetProto(req.fleet),
-        groupBy: req.groupBy.length > 0 ? req.groupBy : undefined,
-        filters: req.filters.length > 0 ? req.filters : undefined,
-      };
-      return this.searchService.getFleetPromotedKeys(fleetReq).pipe(
-        map((res) => ({
-          filterKeys: (res.filterKeys || []).map((pk) => ({
-            ...pk,
-            displayName: pk.metadata?.keyDisplayName || pk.key,
-          })),
-          groupByKeys: res.groupByKeys || [],
-        })),
-        catchError(() => of({filterKeys: [], groupByKeys: []})),
-      );
-    },
+    stream: ({params: req}) =>
+      req
+        ? this.searchService.getFleetPromotedKeys(req).pipe(
+            map(mapFleetPromotedKeysResponse),
+            catchError(() => of({filterKeys: [], groupByKeys: []})),
+          )
+        : of({filterKeys: [], groupByKeys: []}),
   });
 
-  /** Promoted filter key preset items. */
   override readonly promotedFilterKeys = computed<PromotedFilterKeyItem[]>(
     () => this.promotedKeysResource.value()?.filterKeys || [],
   );
-
-  /** Promoted group-by key preset items. */
   override readonly promotedGroupByKeys = computed<PromotedGroupByKeyItem[]>(
     () => this.promotedKeysResource.value()?.groupByKeys || [],
   );
-
-  /** Whether promoted keys are currently loading. */
-  override readonly isPromotedKeysLoading = computed<boolean>(() =>
-    this.promotedKeysResource.isLoading(),
-  );
-
-  /** Dynamic dictionary map containing metadata for all known filter and group-by keys. */
+  override readonly isPromotedKeysLoading = this.promotedKeysResource.isLoading;
   override readonly keyMetadataMap = computed<Map<string, FilterKeyMetadata>>(
-    () => {
-      const nextMap = new Map<string, FilterKeyMetadata>();
-      for (const chip of this.activeChips()) {
-        const chipKey = getChipKey(chip);
-        if (chipKey && chip.metadata) {
-          nextMap.set(chipKey, chip.metadata);
-        }
-      }
-      const pending = this.pendingFilter();
-      if (pending?.metadata) {
-        nextMap.set(pending.key, pending.metadata);
-      }
-      const res = this.promotedKeysResource.value();
-      for (const pk of res?.filterKeys ?? []) {
-        if (pk.metadata) {
-          nextMap.set(pk.key, pk.metadata);
-        }
-      }
-      for (const gk of res?.groupByKeys ?? []) {
-        if (!nextMap.has(gk.key)) {
-          nextMap.set(gk.key, {keyDisplayName: gk.displayName});
-        }
-      }
-      return nextMap;
-    },
+    () =>
+      buildFleetKeyMetadataMap(
+        this.activeChips(),
+        this.pendingFilter(),
+        this.promotedKeysResource.value(),
+      ),
   );
 
-  // ===========================================================================
-  // 3. Table Columns, Selection, & View Configuration
-  // ===========================================================================
+  private readonly columnsSlice = useVisibleColumns(this);
+  readonly visibleColumnDescriptors =
+    this.columnsSlice.visibleColumnDescriptors;
+  readonly visibleColumns = this.columnsSlice.visibleColumns;
+  override readonly displayColumns = this.columnsSlice.displayColumns;
+  readonly columnDescriptions = this.columnsSlice.columnDescriptions;
+  readonly setVisibleColumns = this.columnsSlice.setVisibleColumns;
+  readonly resetVisibleColumns = this.columnsSlice.resetVisibleColumns;
 
-  /**
-   * Unique scope key reflecting the active dataset query, pagination, and sort parameters
-   * for invalidating row selection.
-   */
-  private readonly selectionScopeKey = computed(() => {
-    return `${this.searchScopeKey()}:${this.sortColumn()}:${this.sortAsc()}:${this.pageIndex()}:${this.pageToken()}:${this.pageSize()}`;
-  });
-
-  /**
-   * Map of currently selected composite item keys (`deviceId@@hostName` or `deviceId`) to their
-   * search result Row. Automatically resets when the query scope, pagination, or sorting changes.
-   */
-  readonly selectedItems = linkedSignal<string, Map<string, Row>>({
-    source: () => this.selectionScopeKey(),
-    computation: () => new Map(),
-  });
-
-  /** Clears the current selection state. */
-  clearSelection(): void {
-    this.selectedItems.set(new Map());
-  }
-
-  /** Removes the specified rows from the current selection if any are selected. */
-  private deselectRows(rows: readonly Row[] | undefined): void {
-    const current = this.selectedItems();
-    if (!rows?.length || current.size === 0) return;
-    const nextMap = new Map(current);
-    for (const row of rows) {
-      nextMap.delete(getDeviceTargetKey(row));
-    }
-    if (nextMap.size !== current.size) {
-      this.selectedItems.set(nextMap);
-    }
-  }
-
-  /** Toggles selection for one or more rows (e.g. a single row, current flat page, or an expanded group card page). */
-  toggleSelectRows(rows: readonly Row[] | undefined): void {
-    if (!rows?.length) return;
-    const current = this.selectedItems();
-    if (rows.every((r) => isRowSelected(r, current))) {
-      this.deselectRows(rows);
-      return;
-    }
-    const nextMap = new Map(current);
-    for (const row of rows) {
-      nextMap.set(getDeviceTargetKey(row), row);
-    }
-    this.selectedItems.set(nextMap);
-  }
-
-  /** Current column key used for table sorting, defaulting to the locked identity column from BFF. */
   readonly sortColumn = linkedSignal<string, string>({
     source: () =>
       this.searchConfig()?.columns?.defaults?.find((c) => c.locked)?.key ?? '',
     computation: (source) => source,
   });
-
-  /** Sort order direction (true = ascending, false = descending). */
   readonly sortAsc = signal<boolean>(true);
 
-  /** Toggles sort order for the specified column (flips direction if active, or activates ascending) and resets to page 1. */
-  toggleSort(colKey: string) {
+  /** Clears selection and refreshes either open groups or flat pagination when visible columns change. */
+  onVisibleColumnsChanged(): void {
+    this.clearSelection();
+    if (this.groupByKeys().length > 0) {
+      this.groupAccordion.reloadOpenGroupsForColumnChange();
+    } else {
+      this.resetPagination();
+    }
+  }
+
+  private readonly groupAccordion = useGroupAccordion(this);
+  readonly openGroupIds = this.groupAccordion.openGroupIds;
+  readonly focusedGroupId = this.groupAccordion.focusedGroupId;
+  readonly groupSort = this.groupAccordion.groupSort;
+  readonly expandedGroupPages = this.groupAccordion.expandedGroupPages;
+  override readonly groupSortOptions = this.groupAccordion.groupSortOptions;
+  readonly groupSortActiveLabel = this.groupAccordion.groupSortActiveLabel;
+  readonly setGroupSort = this.groupAccordion.setGroupSort;
+  readonly toggleGroup = this.groupAccordion.toggleGroup;
+  readonly toggleGroupRowSort = this.groupAccordion.toggleGroupRowSort;
+  readonly setGroupPageSize = this.groupAccordion.setGroupPageSize;
+  readonly onLoadGroupRows = this.groupAccordion.onLoadGroupRows;
+
+  private readonly selectionScopeKey = computed(
+    () =>
+      `${this.groupAccordion.searchScopeKey()}:${this.sortColumn()}:${this.sortAsc()}:${this.pageIndex()}:${this.pageToken()}:${this.pageSize()}:${this.groupHeaderPageSize()}`,
+  );
+  private readonly selectionSlice = useTableSelection(
+    this.selectionScopeKey,
+    computed(() => this.rows()),
+  );
+  readonly selectedItems = this.selectionSlice.selectedItems;
+  readonly selectionState = this.selectionSlice.selectionState;
+  readonly clearSelection = this.selectionSlice.clearSelection;
+  readonly deselectRows = this.selectionSlice.deselectRows;
+  readonly toggleSelectRows = this.selectionSlice.toggleSelectRows;
+
+  private readonly arsenalTranslator = useArsenalTranslator(this);
+  override readonly cancelPendingLegacyTranslation =
+    this.arsenalTranslator.cancelPendingLegacyTranslation;
+  override readonly handleLegacyQueryParams =
+    this.arsenalTranslator.handleLegacyQueryParams;
+
+  /** Toggles ascending/descending sort direction or switches the active sort column for the flat table. */
+  toggleSort(colKey: string): void {
     if (this.sortColumn() === colKey) {
       this.sortAsc.update((asc) => !asc);
     } else {
@@ -451,13 +284,11 @@ export class FleetSearchStore extends SearchPageStore {
    * Updates the flat table's rows per page, persists it per entity, resets pagination, and clears
    * expanded groups.
    */
-  override setPageSize(newSize: number) {
-    if (this.pageSize() === newSize) {
-      return;
-    }
+  override setPageSize(newSize: number): void {
+    if (this.pageSize() === newSize) return;
     saveStoredPageSize(this.entity(), newSize);
     super.setPageSize(newSize);
-    this.resetExpandedGroups();
+    this.groupAccordion.resetExpandedGroups();
   }
 
   /**
@@ -468,716 +299,156 @@ export class FleetSearchStore extends SearchPageStore {
   readonly groupHeaderPageSize = signal<number>(DEFAULT_PAGE_SIZE);
 
   /** Updates groups per page, resets pagination, and clears row selection and expanded groups. */
-  setGroupHeaderPageSize(newSize: number) {
-    if (this.groupHeaderPageSize() === newSize) {
-      return;
-    }
+  setGroupHeaderPageSize(newSize: number): void {
+    if (this.groupHeaderPageSize() === newSize) return;
     this.groupHeaderPageSize.set(newSize);
     this.resetPagination();
-    this.resetExpandedGroups();
-    this.clearSelection();
+    this.groupAccordion.resetExpandedGroups();
   }
 
-  /** Current visible column descriptors (isomorphic support for localStorage and searchConfig defaults). */
-  readonly visibleColumnDescriptors = linkedSignal<
-    {cfg: FleetSearchConfig | null; entity: string; fleet: string},
-    FleetColumnDescriptor[]
-  >({
-    source: () => ({
-      cfg: this.searchConfig(),
-      entity: this.entity(),
-      fleet: this.fleet(),
-    }),
-    computation: ({cfg, entity, fleet}) => {
-      const stored = getStoredVisibleColumns(entity, fleet);
-      if (stored && stored.length > 0) {
-        return stored;
-      }
-      return cfg?.columns?.defaults ?? [];
-    },
-  });
-
-  /** Set of column keys currently requested/visible in the data table for search query execution. */
-  readonly visibleColumns = computed<Set<string>>(
-    () => new Set(this.visibleColumnDescriptors().map((c) => c.key)),
-    {
-      equal: (a, b) => {
-        if (a.size !== b.size) return false;
-        const iterB = b.values();
-        for (const key of a) {
-          if (key !== iterB.next().value) return false;
-        }
-        return true;
-      },
-    },
-  );
-
-  /** Sets the visible table columns, persists them to localStorage, and updates table results if columns changed. */
-  setVisibleColumns(columns: readonly FleetColumnDescriptor[]) {
-    const descriptors = [...columns];
-    const defaults = this.searchConfig()?.columns?.defaults ?? [];
-    const matchesDefaults =
-      defaults.length > 0 &&
-      descriptors.length === defaults.length &&
-      descriptors.every((d, idx) => d.key === defaults[idx].key);
-
-    if (matchesDefaults) {
-      this.resetVisibleColumns();
-      return;
-    }
-
-    saveStoredVisibleColumns(this.entity(), this.fleet(), descriptors);
-    this.applyVisibleColumnUpdate(descriptors);
-  }
-
-  /** Resets visible table columns to searchConfig defaults and clears custom saved preferences. */
-  resetVisibleColumns() {
-    clearStoredVisibleColumns(this.entity(), this.fleet());
-    const defaults = this.searchConfig()?.columns?.defaults ?? [];
-    this.applyVisibleColumnUpdate(defaults);
-  }
-
-  private applyVisibleColumnUpdate(nextDescriptors: FleetColumnDescriptor[]) {
-    const prev = this.visibleColumns();
-    this.visibleColumnDescriptors.set(nextDescriptors);
-    // visibleColumns keeps its previous Set when the ordered keys are unchanged.
-    if (this.visibleColumns() === prev) {
-      return;
-    }
-
-    this.clearSelection();
-    if (this.groupByKeys().length > 0) {
-      // Group headers do not depend on visible columns, so the header page stays where it is and
-      // only the open groups reload their rows for the new columns.
-      this.expandedGroupPages.update(
-        (prev) =>
-          new Map(
-            Array.from(prev, ([id, state]) => [
-              id,
-              {...state, data: undefined},
-            ]),
-          ),
-      );
-      for (const groupId of this.openGroupIds()) {
-        this.onLoadGroupRows(groupId);
-      }
-    } else {
-      this.resetPagination();
-    }
-  }
-
-  /** Display columns to render in search results table. */
-  override readonly displayColumns = computed<Column[]>(() => {
-    const cols = this.searchResults()?.flat?.columns;
-    if (cols && cols.length > 0) {
-      return cols;
-    }
-    const descriptors = this.visibleColumnDescriptors();
-    if (descriptors.length > 0) {
-      return descriptors.map((c) => ({
-        key: c.key,
-        displayName: c.displayName,
-        ...(c.description ? {description: c.description} : {}),
-      }));
-    }
-    return [];
-  });
-
-  /**
-   * Descriptions of the column keys that have one, for the table header tooltips. Seeds saved
-   * visible column descriptors first so live key metadata, BFF default column descriptors, and
-   * flat or grouped result columns override any cached localStorage text for the same key.
-   */
-  readonly columnDescriptions = computed<ReadonlyMap<string, string>>(() => {
-    const descriptions = new Map<string, string>();
-    for (const descriptor of this.visibleColumnDescriptors()) {
-      if (descriptor.description) {
-        descriptions.set(descriptor.key, descriptor.description);
-      }
-    }
-    for (const [key, meta] of this.keyMetadataMap()) {
-      if (meta.description) {
-        descriptions.set(key, meta.description);
-      }
-    }
-    const results = this.searchResults();
-    const liveDescriptors = [
-      ...(this.searchConfig()?.columns?.defaults ?? []),
-      ...(results?.flat?.columns ?? []),
-      ...(results?.grouped?.groupByKeys ?? []),
-    ];
-    for (const descriptor of liveDescriptors) {
-      if (descriptor.description) {
-        descriptions.set(descriptor.key, descriptor.description);
-      }
-    }
-    return descriptions;
-  });
-
-  // ===========================================================================
-  // 4. Grouped View & Header Accordion States
-  // ===========================================================================
-
-  /** Unique scope key reflecting the active query parameters for invalidating expanded group state. */
-  private readonly searchScopeKey = computed(() => {
-    return `${this.entity()}:${this.currentUrlParamKey()}:${this.groupSort()}`;
-  });
-
-  /** Set of expanded group header IDs, automatically reset when query scope changes. */
-  readonly openGroupIds = linkedSignal<string, Set<string>>({
-    source: () => this.searchScopeKey(),
-    computation: () => new Set<string>(),
-  });
-
-  /** Most recently expanded or interacted group header ID, automatically reset when query scope changes. */
-  readonly focusedGroupId = linkedSignal<string, string | null>({
-    source: () => this.searchScopeKey(),
-    computation: () => null,
-  });
-
-  /**
-   * Sorting mode for grouped view headers.
-   * Automatically falls back to 'count:desc' if the active sort key is removed from groupBy.
-   */
-  readonly groupSort = linkedSignal<string[], string>({
-    source: () => this.groupByKeys(),
-    computation: (keys, previous) => {
-      const prev = previous?.value;
-      if (!prev) return 'count:desc';
-      const sortedKey = prev.startsWith('gb_')
-        ? prev.slice(prev.indexOf(':') + 1)
-        : null;
-      return sortedKey && !keys.includes(sortedKey) ? 'count:desc' : prev;
-    },
-  });
-
-  /** Map holding pagination data and loading states for expanded group headers, automatically reset when query scope changes. */
-  readonly expandedGroupPages = linkedSignal<
-    string,
-    Map<string, GroupPageState>
-  >({
-    source: () => this.searchScopeKey(),
-    computation: () => new Map(),
-  });
-
-  /** Grouped results object from the primary search resource. */
-  readonly groupedResults = computed(() => this.searchResults()?.grouped);
-
-  /** Groups array to render in grouped view accordion. */
-  readonly groups = computed<FleetGroup[]>(() => {
-    return this.groupedResults()?.groups || [];
-  });
-
-  /** Formats display label text for active group-by headers (e.g. "Model × Status"). */
-  readonly groupKeysText = computed(() => {
-    const keys = this.searchResults()?.grouped?.groupByKeys || [];
-    return keys.map((k: Column) => k.displayName || k.key).join(' × ');
-  });
-
-  /** Dynamic options list for sorting group header cards based on entity and active group-by chips. */
-  override readonly groupSortOptions = computed<
-    Array<{value: string; label: string}>
-  >(() => {
-    const entityLabel = this.entity() === 'hosts' ? 'hosts' : 'devices';
-    const countOptions = [
-      {value: 'count:desc', label: `Most ${entityLabel}`},
-      {value: 'count:asc', label: `Fewest ${entityLabel}`},
-    ];
-
-    const groupByChips = this.activeChips().filter((c) => c.isGroupBy);
-    if (groupByChips.length === 0) {
-      return countOptions;
-    }
-
-    const gbOptions: Array<{value: string; label: string}> = [];
-    for (const chip of groupByChips) {
-      const rawKey = getChipKey(chip);
-      const meta = this.getKeyMetadata(rawKey);
-      const displayName = chip.pillKey || meta?.keyDisplayName || rawKey;
-
-      gbOptions.push({
-        value: `gb_asc:${rawKey}`,
-        label: `${displayName} (A–Z)`,
-      });
-      gbOptions.push({
-        value: `gb_desc:${rawKey}`,
-        label: `${displayName} (Z–A)`,
-      });
-    }
-
-    return [...countOptions, ...gbOptions];
-  });
-
-  /** Formats user-facing active label for group sorting button (e.g. "Most devices" or "Model (A–Z)"). */
-  readonly groupSortActiveLabel = computed<string>(() => {
-    const activeVal = this.groupSort();
-    const options = this.groupSortOptions();
-    const hit = options.find((o) => o.value === activeVal);
-    return hit ? hit.label : 'Sort';
-  });
-
-  /** Sets the sort order mode for group header cards and resets pagination. */
-  setGroupSort(value: string) {
-    this.resetPagination();
-    this.groupSort.set(value);
-  }
-
-  /** Toggles accordion open/collapsed state for a group and loads rows if newly opened and not cached. */
-  toggleGroup(groupId: string): void {
-    const nextOpenIds = new Set(this.openGroupIds());
-    const cachedData = this.expandedGroupPages().get(groupId)?.data;
-    if (nextOpenIds.delete(groupId)) {
-      this.openGroupIds.set(nextOpenIds);
-      this.groupLoadSubs.get(groupId)?.unsubscribe();
-      this.deselectRows(cachedData?.rows);
-      return;
-    }
-    nextOpenIds.add(groupId);
-    this.openGroupIds.set(nextOpenIds);
-    this.focusedGroupId.set(groupId);
-    if (!cachedData) {
-      this.onLoadGroupRows(groupId);
-    }
-  }
-
-  /** Active in-flight row-load subscription per group ID so newer loads abort superseded RPCs. */
-  private readonly groupLoadSubs = new Map<string, Subscription>();
-
-  /** Toggles sort order for a column inside an expanded group card and reloads its first page. */
-  toggleGroupRowSort(groupId: string, colKey: string) {
-    const state = this.expandedGroupPages().get(groupId);
-    const currentCol = state?.sortColumn || this.sortColumn();
-    const sortAsc = currentCol === colKey ? !(state?.sortAsc ?? true) : true;
-    this.onLoadGroupRows(groupId, undefined, {sortColumn: colKey, sortAsc});
-  }
-
-  /**
-   * Updates rows-per-page size for an expanded group card and reloads its first page. The choice is
-   * also saved per entity so the next group expanded for the first time starts with it; groups that
-   * are already loaded keep their own size.
-   */
-  setGroupPageSize(groupId: string, pageSize: number) {
-    saveStoredGroupExpandPageSize(this.entity(), pageSize);
-    const currentSize =
-      this.expandedGroupPages().get(groupId)?.pageSize ??
-      DEFAULT_GROUP_EXPAND_PAGE_SIZE;
-    if (currentSize !== pageSize) {
-      this.onLoadGroupRows(groupId, undefined, {pageSize});
-    }
-  }
-
-  /** Loads flat rows for a specific expanded group header, applying any state overrides. */
-  onLoadGroupRows(
-    groupId: string,
-    pageToken?: string,
-    overrides?: Partial<GroupPageState>,
-  ) {
-    this.groupLoadSubs.get(groupId)?.unsubscribe();
-
-    const scopeKey = this.searchScopeKey();
-    const visibleCols = this.visibleColumns();
-    const existingState = this.expandedGroupPages().get(groupId);
-    this.deselectRows(existingState?.data?.rows);
-    const state = {...existingState, ...overrides};
-    const hasCustomSort =
-      !!state.sortColumn && visibleCols.has(state.sortColumn);
-    const sortColumn = hasCustomSort ? state.sortColumn : this.sortColumn();
-    const sortAsc = hasCustomSort ? (state.sortAsc ?? true) : true;
-    const pageSize = this.resolveGroupPageSize(state);
-    const filters = this.effectiveFilters();
-
-    const req: FleetSearchRequest = {
-      entity: toSearchEntityProto(this.entity()),
-      fleet: toFleetProto(this.fleet()),
-      filters: filters.length > 0 ? filters : undefined,
-      groupExpand: {
-        groupId,
-        columns: Array.from(visibleCols),
-        ...(sortColumn ? {sort: {key: sortColumn, ascending: sortAsc}} : {}),
-        page: {pageSize, pageToken: pageToken || undefined},
-      },
-    };
-
-    this.updateGroupExpandState(groupId, {
-      ...state,
-      loading: true,
-      error: undefined,
-      sortColumn,
-      sortAsc,
-      pageSize,
-    });
-
-    const sub = this.searchService
-      .searchFleet(req)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          if (this.searchScopeKey() !== scopeKey) return;
-          this.updateGroupExpandState(groupId, {
-            loading: false,
-            error: undefined,
-            data: res.flat,
-          });
-        },
-        error: (err) => {
-          if (this.searchScopeKey() !== scopeKey) return;
-          const msg = getErrorMessage(err);
-          this.updateGroupExpandState(groupId, {
-            loading: false,
-            error:
-              msg !== 'An unknown error occurred.'
-                ? msg
-                : 'Failed to load group rows.',
-          });
-        },
-      });
-
-    this.groupLoadSubs.set(groupId, sub);
-  }
-
-  /**
-   * Rows per page to load for a group.
-   *
-   * 1. A group that has already been loaded keeps the page size it was loaded with (changing one
-   *    group never affects the others).
-   * 2. A group expanded for the first time starts from the page size saved for this entity.
-   * 3. When nothing is saved yet, the default applies.
-   */
-  private resolveGroupPageSize(state: GroupPageState): number {
-    if (state.pageSize !== undefined) {
-      return state.pageSize;
-    }
-    const storedPageSize = getStoredGroupExpandPageSize(this.entity());
-    if (storedPageSize !== null) {
-      return storedPageSize;
-    }
-    return DEFAULT_GROUP_EXPAND_PAGE_SIZE;
-  }
-
-  /** Helper to update state for an expanded group in expandedGroupPages map. */
-  private updateGroupExpandState(groupId: string, patch: GroupPageState) {
-    this.expandedGroupPages.update((map) => {
-      const next = new Map(map);
-      const existing = next.get(groupId);
-      next.set(groupId, {...existing, ...patch});
-      return next;
-    });
-  }
-
-  // ===========================================================================
-  // 5. ValuePicker Popover Async Options Resource
-  // ===========================================================================
-
-  /** Reactive resource fetching value list items for the active Popover ValuePicker. */
-  private readonly valueListResource = rxResource<
-    PickerValueItem[],
-    | {
-        entity: EntityType;
-        key: string;
-        activeFilters: Filter[];
-        fleet: string;
-      }
-    | undefined
-  >({
+  private readonly valueListResource = rxResource({
     params: () => {
-      if (!this.isCurrentRouteActive()) return undefined;
       const key = this.pickerKey();
-      const show = this.showValuePicker();
-      if (!show || !key) return undefined;
-
+      if (!this.isCurrentRouteActive() || !this.showValuePicker() || !key) {
+        return undefined;
+      }
+      const filters = this.effectiveFilters();
       return {
-        entity: this.entity(),
+        ...this.baseScope(),
         key,
-        activeFilters: this.effectiveFilters(),
-        fleet: this.fleet(),
+        filters: filters.length > 0 ? filters : undefined,
       };
     },
-    stream: ({params: req}) => {
-      if (!req) return of([]);
-      const fleetReq: FleetValueListRequest = {
-        entity: toSearchEntityProto(req.entity),
-        key: req.key,
-        filters: req.activeFilters.length > 0 ? req.activeFilters : undefined,
-        fleet: toFleetProto(req.fleet),
-      };
-      return this.searchService.getFleetValueList(fleetReq).pipe(
-        map((res) => {
-          if (res.counted) {
-            const list: PickerValueItem[] = (res.counted.values || []).map(
-              (v) => ({
-                value: v.value,
-                displayLabel: v.displayLabel || v.value,
-                filtered: v.filtered ?? 0,
-                total: v.total ?? 0,
-              }),
-            );
-            if (res.counted.noValueEntry) {
-              list.push({
-                value: EMPTY_FILTER_VALUE,
-                displayLabel: '(no value)',
-                filtered: res.counted.noValueEntry.filtered ?? 0,
-                total: res.counted.noValueEntry.total ?? 0,
-                isNoValue: true,
-              });
-            }
-            return list;
-          }
-
-          if (res.plain) {
-            const list: PickerValueItem[] = (res.plain.values || []).map(
-              (v) => ({
-                value: v.value,
-                displayLabel: v.displayLabel || v.value,
-              }),
-            );
-            if (res.plain.noValueEntry) {
-              list.push({
-                value: EMPTY_FILTER_VALUE,
-                displayLabel: '(no value)',
-                isNoValue: true,
-              });
-            }
-            return list;
-          }
-
-          return [];
-        }),
-        catchError(() => of([])),
-      );
-    },
+    stream: ({params: req}) =>
+      req
+        ? this.searchService.getFleetValueList(req).pipe(
+            map(mapFleetValueListResponse),
+            catchError(() => of([])),
+          )
+        : of([]),
   });
 
-  /** Effective ValuePicker state combining base selections with async loaded values and loading status. */
   override readonly effectivePickerState = computed<ValuePickerState>(() => {
     const raw = this.pickerState();
     const asyncVals = this.valueListResource.value();
     return {
       ...raw,
       loading: raw.loading || this.valueListResource.isLoading(),
-      values: asyncVals && asyncVals.length > 0 ? asyncVals : raw.values,
+      values: asyncVals?.length ? asyncVals : raw.values,
     };
   });
 
-  // ===========================================================================
-  // 6. Primary Search Resource & Execution
-  // ===========================================================================
-
-  /** Primary reactive resource fetching flat or grouped fleet search results. */
-  readonly searchResource = rxResource<
-    FleetSearchResults | null,
-    FleetSearchRequest | undefined
-  >({
-    params: () => {
-      if (!this.isCurrentRouteActive()) return undefined;
-      if (this.isLandingState()) return undefined;
-
-      const fleet = this.fleet();
-      const pageToken = this.pageToken();
-
+  readonly searchResource = rxResource({
+    params: (): FleetSearchRequest | undefined => {
+      if (!this.isCurrentRouteActive() || this.isLandingState()) {
+        return undefined;
+      }
+      const pageToken = this.pageToken() || undefined;
       const filters = this.effectiveFilters();
-      const groupByKeys = this.groupByKeys();
-
-      const req: FleetSearchRequest = {
-        entity: toSearchEntityProto(this.entity()),
-        fleet: toFleetProto(fleet),
+      const groupBy = this.groupByKeys();
+      const base: FleetSearchRequest = {
+        ...this.baseScope(),
         filters: filters.length > 0 ? filters : undefined,
       };
-
-      if (groupByKeys.length > 0) {
-        const groupSort = this.groupSort();
-        req.groupHeader = {
-          groupBy: groupByKeys,
-          sort: buildFleetGroupSort(groupSort),
-          page: {
-            pageSize: this.groupHeaderPageSize(),
-            pageToken: pageToken || undefined,
-          },
-        };
-      } else {
-        // Wait for searchConfig on clean flat-search entry so neither empty columns nor an empty
-        // default sort key fires a throwaway SearchFleet before defaults/lockedColumns resolve.
-        if (
-          this.isConfigLoading() &&
-          (this.visibleColumns().size === 0 || !this.sortColumn())
-        ) {
-          return undefined;
-        }
-        const visibleColumns = Array.from(this.visibleColumns());
-        const sortColumn = this.sortColumn();
-        const sortAsc = this.sortAsc();
-        req.flat = {
-          columns: visibleColumns,
-          sort: {key: sortColumn, ascending: sortAsc},
-          page: {
-            pageSize: this.pageSize(),
-            pageToken: pageToken || undefined,
+      if (groupBy.length > 0) {
+        return {
+          ...base,
+          groupHeader: {
+            groupBy,
+            sort: buildFleetGroupSort(this.groupSort()),
+            page: {pageSize: this.groupHeaderPageSize(), pageToken},
           },
         };
       }
-      return req;
-    },
-    stream: ({params: req}) => {
-      if (!req) {
-        return of(null);
+      if (
+        this.isConfigLoading() &&
+        (this.visibleColumns().size === 0 || !this.sortColumn())
+      ) {
+        return undefined;
       }
-      return this.searchService.searchFleet(req).pipe(
-        catchError((err: unknown) => {
-          // Resetting the columns changes the request params, which re-runs
-          // this resource once with the default columns. Any other error
-          // keeps propagating to the resource (see `searchError`).
-          if (this.recoverFromUnknownColumnKey(err)) {
-            return of(null);
-          }
-          return throwError(() => err);
-        }),
-      );
+      return {
+        ...base,
+        flat: {
+          columns: Array.from(this.visibleColumns()),
+          sort: {key: this.sortColumn(), ascending: this.sortAsc()},
+          page: {pageSize: this.pageSize(), pageToken},
+        },
+      };
     },
+    stream: ({params: req}) =>
+      req
+        ? this.searchService
+            .searchFleet(req)
+            .pipe(
+              catchError((err: unknown) =>
+                this.columnsSlice.recoverFromUnknownColumnKey(err)
+                  ? of(null)
+                  : throwError(() => err),
+              ),
+            )
+        : of(null),
   });
 
-  /** Safely resolved search results, guarded with `hasValue()` so reading in error state never throws `ResourceValueError`. */
-  private readonly searchResults = computed<FleetSearchResults | null>(() =>
+  readonly searchResults = computed<FleetSearchResults | null>(() =>
     this.searchResource.hasValue()
       ? (this.searchResource.value() ?? null)
       : null,
   );
-
-  /** Human-readable error message when the primary search RPC fails. */
   readonly searchError = computed<string | null>(() => {
     const err = this.searchResource.error();
     return err ? getErrorMessage(err) : null;
   });
-
-  /**
-   * Recovers from a search the BFF rejected because the saved visible columns
-   * contain a key it no longer knows ("Unknown device|host key: <key>", e.g. a
-   * key saved to localStorage by an older UI version): clears the saved
-   * columns of the current entity / fleet, falls back to the default columns
-   * and tells the user.
-   *
-   * @return Whether the saved columns were cleared.
-   *
-   * Explanation:
-   * Only saved columns can carry such keys (the column selector and the
-   * Arsenal translation only write keys known to the BFF), so when nothing is
-   * saved there is nothing to recover from. This also guarantees at most one
-   * retry: after the clear a second failure is left alone.
-   */
-  private recoverFromUnknownColumnKey(err: unknown): boolean {
-    const unknownKey = getUnknownColumnKeyFromError(err);
-    if (!unknownKey) {
-      return false;
-    }
-    const entity = this.entity();
-    const fleet = this.fleet();
-    if (!getStoredVisibleColumns(entity, fleet)) {
-      return false;
-    }
-    clearStoredVisibleColumns(entity, fleet);
-    this.visibleColumnDescriptors.set(
-      this.searchConfig()?.columns?.defaults ?? [],
-    );
-    this.snackBarService.showWarning(
-      `Saved column "${unknownKey}" is no longer supported. Cleared your saved columns and retrying with the default columns…`,
-    );
-    return true;
-  }
-
-  /** Whether a flat search is waiting for initial default columns or sort key from searchConfig before firing. */
-  private readonly isWaitingForInitialColumns = computed<boolean>(
-    () =>
-      !this.isLandingState() &&
-      this.groupByKeys().length === 0 &&
-      this.isConfigLoading() &&
-      (this.visibleColumns().size === 0 || !this.sortColumn()),
+  readonly groupedResults = computed(() => this.searchResults()?.grouped);
+  readonly groups = computed<FleetGroup[]>(
+    () => this.groupedResults()?.groups || [],
+  );
+  readonly groupKeysText = computed(() =>
+    (this.searchResults()?.grouped?.groupByKeys || [])
+      .map((k: Column) => k.displayName || k.key)
+      .join(' × '),
   );
 
-  /** Exposes loading status of primary search resource, initial column hydration, or URL chip resolution. */
   override readonly isLoading = computed<boolean>(
     () =>
       this.searchResource.isLoading() ||
-      this.isWaitingForInitialColumns() ||
+      (!this.isLandingState() &&
+        this.groupByKeys().length === 0 &&
+        this.isConfigLoading() &&
+        (this.visibleColumns().size === 0 || !this.sortColumn())) ||
       (this.isResolvingChips() &&
         this.groups().length === 0 &&
         this.rows().length === 0),
   );
-
-  /** Rows array to render in search results table. */
-  override readonly rows = computed<Row[]>(() => {
-    return (this.searchResults()?.flat?.rows as Row[]) || [];
-  });
-
-  /** Tri-state checkbox selection state ({all, some}) for the current flat results page. */
-  readonly selectionState = computed(() =>
-    getRowsSelectionState(this.rows(), this.selectedItems()),
+  override readonly rows = computed<Row[]>(
+    () => this.searchResults()?.flat?.rows || [],
   );
-
-  /** Determines whether a next page is available based on API nextPageToken. */
-  override readonly hasNextPage = computed<boolean>(() => {
-    return !!this.getPaginationToken('next');
-  });
-
-  /** Determines whether a previous page is available based on API prevPageToken or pageIndex. */
-  override readonly hasPrevPage = computed<boolean>(() => {
-    return this.groupByKeys().length > 0
-      ? !!this.getPaginationToken('prev')
-      : this.pageIndex() > 0;
-  });
-
-  /** Unified pre-formatted semantic range text for pagination footer display across flat and grouped modes. */
-  override readonly rangeText = computed<string>(() => {
-    if (this.groupByKeys().length > 0) {
-      const res = this.groupedResults();
-      return formatPaginationRange(
-        res?.rangeStart,
-        res?.rangeEnd,
-        res?.totalGroups,
-        ' groups',
-      );
-    }
-    const res = this.searchResults()?.flat;
-    return formatPaginationRange(res?.rangeStart, res?.rangeEnd, res?.total);
-  });
-
-  /** Total matching count across flat or grouped search. */
-  override readonly effectiveTotalCount = computed<number>(() => {
-    return (
+  override readonly hasNextPage = computed<boolean>(() =>
+    Boolean(this.getPaginationToken('next')),
+  );
+  override readonly hasPrevPage = computed<boolean>(() =>
+    this.groupByKeys().length > 0
+      ? Boolean(this.getPaginationToken('prev'))
+      : this.pageIndex() > 0,
+  );
+  override readonly rangeText = computed<string>(() =>
+    computeFleetRangeText(this.groupByKeys().length > 0, this.searchResults()),
+  );
+  override readonly effectiveTotalCount = computed<number>(
+    () =>
       (this.groupByKeys().length > 0
         ? this.groupedResults()?.totalItems
-        : this.searchResults()?.flat?.total) || 0
-    );
-  });
-
-  /** Memoized effective filter list guarding downstream search resources from display-only chip updates. */
-  readonly effectiveFilters = computed<Filter[]>(
-    () =>
-      this.activeChips()
-        .filter((c) => !c.isGroupBy)
-        .map((c) => buildFleetFilterFromChip(c)),
-    {equal: areFilterArraysEqual},
+        : this.searchResults()?.flat?.total) || 0,
   );
 
-  /** Cancels in-flight group loads and clears expanded group state. */
-  private resetExpandedGroups() {
-    for (const sub of this.groupLoadSubs.values()) {
-      sub.unsubscribe();
-    }
-    this.openGroupIds.set(new Set());
-    this.expandedGroupPages.set(new Map());
-  }
-
-  /** Reloads the primary search resource and resets page token and group expansions. */
-  override executeSearch() {
+  /** Resets pagination, expanded groups, and row selection, then reloads the primary Fleet search resource. */
+  override executeSearch(): void {
     this.resetPagination();
-    this.resetExpandedGroups();
+    this.groupAccordion.resetExpandedGroups();
     this.clearSelection();
     this.searchResource.reload();
   }
 
-  // ===========================================================================
-  // 7. Pagination Controls
-  // ===========================================================================
-
-  /** Helper to extract next/prev page token from search results. */
+  /** Extracts the next or previous cursor token from the active grouped or flat search response. */
   private getPaginationToken(type: 'next' | 'prev'): string | undefined {
     const page =
       this.groupByKeys().length > 0
@@ -1186,8 +457,8 @@ export class FleetSearchStore extends SearchPageStore {
     return type === 'next' ? page?.nextPageToken : page?.prevPageToken;
   }
 
-  /** Navigates to previous page of search results. */
-  override prevPage() {
+  /** Navigates to the previous page of Fleet search results using the cursor token. */
+  override prevPage(): void {
     const token = this.getPaginationToken('prev');
     if (token !== undefined || this.pageIndex() === 1) {
       this.pageToken.set(token || '');
@@ -1195,8 +466,8 @@ export class FleetSearchStore extends SearchPageStore {
     }
   }
 
-  /** Navigates to next page of search results. */
-  override nextPage() {
+  /** Navigates to the next page of Fleet search results using the cursor token. */
+  override nextPage(): void {
     const token = this.getPaginationToken('next');
     if (token) {
       this.pageToken.set(token);
@@ -1204,374 +475,108 @@ export class FleetSearchStore extends SearchPageStore {
     }
   }
 
-  // ===========================================================================
-  // 8. URL Resolution & ValuePicker Application
-  // ===========================================================================
-
-  /** Resolves parsed URL query filters and group-by keys into FilterChip list via Fleet RPC. */
-  protected override resolveChipsFromBackend(
+  /** Resolves and validates parsed URL filter and group-by chips via `ResolveFleetChips`. */
+  override resolveChipsFromBackend(
     parsedFilters: FilterChip[],
     groupByKeys: string[],
   ): Observable<FilterChip[]> {
-    const filterPairs: Array<FilterPair<Filter>> = [];
-    for (const chip of parsedFilters) {
-      const filter = buildFleetFilterFromChip(chip);
-      if (filter) {
-        filterPairs.push({chip, filter});
-      }
-    }
-
-    const req: FleetChipResolverRequest = {
-      filters:
-        filterPairs.length > 0 ? filterPairs.map((p) => p.filter) : undefined,
-      groupByKeys: groupByKeys.length > 0 ? groupByKeys : undefined,
-      entity: toSearchEntityProto(this.entity()),
-      fleet: toFleetProto(this.fleet()),
-    };
-
+    const {filterPairs, req} = buildFleetChipResolverInput(
+      parsedFilters,
+      groupByKeys,
+      this.entity(),
+      this.fleet(),
+    );
     return this.searchService.resolveFleetChips(req).pipe(
       map((res) => {
-        // Scenarios 1, 2, 5: Backend-resolved filters only; invalid or un-returned are dropped with warning
-        const warnings: string[] = [];
-        const updatedFilterChips = buildResolvedFilterChips(
+        const {chips, warningText} = mapFleetResolvedChipsResponse(
           filterPairs,
-          res.filterChips,
-          (chip, resolved) => {
-            const valid = this.unwrapValidFilterChip(resolved, warnings);
-            return valid
-              ? {
-                  ...chip,
-                  pillKey: valid.pillKey || chip.pillKey,
-                  pillCondition: valid.pillCondition || chip.pillCondition,
-                  metadata: valid.metadata || chip.metadata,
-                }
-              : null;
-          },
-        );
-
-        const updatedGroupByChips = this.resolveGroupByChips(
           groupByKeys,
-          res.groupByChips,
-          warnings,
+          res,
         );
-        if (warnings.length > 0) {
-          this.snackBarService.showWarning(this.formatChipWarnings(warnings));
-        }
-
-        return [...updatedFilterChips, ...updatedGroupByChips];
+        if (warningText) this.snackBarService.showWarning(warningText);
+        return chips;
       }),
-      // TODO: Uniformly handle backend RPC error / 500 / offline display in search UI.
-      catchError(() => of([])),
+      catchError(() =>
+        of([...parsedFilters, ...groupByKeys.map((k) => createGroupByChip(k))]),
+      ),
     );
   }
 
-  /** Intercepts ?arsenal_query=... on cold load, delegates translation to BFF, and rewrites URL in-place. */
-  protected override handleLegacyQueryParams(
-    params: Record<string, unknown>,
-  ): boolean {
-    const rawArsenalQuery =
-      typeof params['arsenal_query'] === 'string'
-        ? params['arsenal_query'].trim()
-        : '';
-    if (!rawArsenalQuery) {
-      return false;
-    }
-
-    const arsenalKey = `arsenal:${rawArsenalQuery}`;
-    if (arsenalKey === this.lastSyncedUrlKey) {
-      return true;
-    }
-    this.lastSyncedUrlKey = arsenalKey;
-    this.cancelPendingChipResolution();
-
-    const unpacked = parseArsenalQueryParam(rawArsenalQuery);
-    this.translateArsenalSubject.next({arsenalKey, unpacked});
-
-    return true;
-  }
-
-  private applyArsenalTranslation(
-    res: TranslateArsenalSearchResponse,
-    unpacked: ReturnType<typeof parseArsenalQueryParam>,
-  ) {
-    const targetFleet: FleetScope =
-      res.fleet === Fleet.FLEET_ATS ? 'ats' : 'internal';
-    if (this.fleet() !== targetFleet) {
-      this.fleet.set(targetFleet);
-    }
-
-    if (unpacked.columns.length > 0 && res.columns && res.columns.length > 0) {
-      this.visibleColumnDescriptors.set(res.columns);
-      saveStoredVisibleColumns(this.entity(), targetFleet, res.columns);
-    }
-
-    const filters = res.filters || [];
-    const filterChips = res.filterChips || [];
-    const warnings: string[] = [];
-    const resolvedFilterChips = filters.reduce<FilterChip[]>((acc, f, i) => {
-      const valid = this.unwrapValidFilterChip(filterChips[i], warnings);
-      if (valid) {
-        acc.push(buildFilterChipFromResolved(f, valid));
-      }
-      return acc;
-    }, []);
-
-    const resolvedGroupByChips = this.resolveGroupByChips(
-      res.groupByKeys || [],
-      res.groupByChips,
-      warnings,
-    );
-    if (warnings.length > 0) {
-      this.snackBarService.showWarning(this.formatChipWarnings(warnings));
-    }
-
-    const allChips = [...resolvedFilterChips, ...resolvedGroupByChips];
-    const hadTranslatedCriteria =
-      filters.length > 0 || (res.groupByKeys?.length ?? 0) > 0;
-    const shouldBrowseAll = allChips.length === 0 && !hadTranslatedCriteria;
-    this.browseAll.set(shouldBrowseAll);
-    this.activeChips.set(allChips);
-    this.syncUrl(allChips, targetFleet, /* replaceUrl= */ true);
-    if (allChips.length > 0 || shouldBrowseAll) {
-      this.executeSearch();
-    }
-  }
-
-  /** Collects or shows a warning if the resolved filter chip is invalid and returns its valid payload. */
-  private unwrapValidFilterChip(
-    fc?: FleetResolvedFilterChip,
-    warnings?: string[],
-  ): FleetValidFilterChip | null {
-    if (fc?.invalid?.reason) {
-      if (warnings) {
-        warnings.push(fc.invalid.reason);
-      } else {
-        this.snackBarService.showWarning(fc.invalid.reason);
-      }
-    }
-    if (fc?.invalid || !fc?.valid) {
-      return null;
-    }
-    return fc.valid;
-  }
-
-  /** Scenario 6: Resolves group-by keys against backend-validated chips, dropping invalid keys with a warning. */
-  private resolveGroupByChips(
-    groupByKeys: string[],
-    groupByChips: FleetResolvedGroupByChip[] | undefined,
-    warnings: string[] = [],
-  ): FilterChip[] {
-    const resolved: FilterChip[] = [];
-    for (let i = 0; i < groupByKeys.length; i++) {
-      const gbKey = groupByKeys[i];
-      const gbc = groupByChips?.[i];
-      if (gbc?.invalid?.reason) {
-        warnings.push(gbc.invalid.reason);
-      }
-      if (gbc?.invalid) {
-        continue;
-      }
-      resolved.push(
-        createGroupByChip(
-          gbKey,
-          gbc?.valid?.displayName || gbc?.valid?.pillKey || gbKey,
-        ),
-      );
-    }
-    return resolved;
-  }
-
-  /**
-   * Formats one or more dropped-chip reasons into a single concise snackbar line, coalescing
-   * multiple ignored duplicate-key conditions into one sentence instead of stacking lines.
-   */
-  private formatChipWarnings(warnings: readonly string[]): string {
-    const prefix = FleetSearchStore.DUPLICATE_KEY_WARNING_PREFIX;
-    const duplicateKeyTargets: string[] = [];
-    const otherWarnings: string[] = [];
-    for (const raw of warnings) {
-      const trimmed = raw.trim();
-      if (trimmed.startsWith(prefix)) {
-        const target = trimmed.slice(prefix.length).replace(/\.$/, '').trim();
-        if (!duplicateKeyTargets.includes(target)) {
-          duplicateKeyTargets.push(target);
-        }
-      } else if (!otherWarnings.includes(trimmed)) {
-        otherWarnings.push(trimmed);
-      }
-    }
-    const clauses: string[] = [];
-    if (duplicateKeyTargets.length > 0) {
-      const suffix = otherWarnings.length === 0 ? '.' : '';
-      clauses.push(`${prefix}${duplicateKeyTargets.join(', ')}${suffix}`);
-    }
-    clauses.push(...otherWarnings);
-    return clauses.join('; ');
-  }
-
-  /** Constructs Fleet-specific ValuePicker configuration. */
-  protected override buildPickerConfig(
+  /** Builds Fleet ValuePicker configuration from key metadata and column descriptions. */
+  override buildPickerConfig(
     key: string,
     title?: string,
     metadata?: FilterKeyMetadata,
   ): ValuePickerConfig {
-    const meta = metadata || this.getKeyMetadata(key);
-    const displayTitle = meta?.keyDisplayName || title || key;
-
-    return {
+    return buildFleetPickerConfig(
       key,
-      type: 'list',
-      title: displayTitle,
-      description:
-        meta?.description || this.columnDescriptions().get(key) || undefined,
-      canUseAdvanced: !!meta?.canUseAdvanced,
-      canCompareInt: !!meta?.canCompareInt,
-      isPlural: !!meta?.isPlural,
-    };
+      title,
+      metadata || this.getKeyMetadata(key),
+      this.columnDescriptions(),
+    );
   }
 
-  /** Constructs initial ValuePicker interaction state from an active filter chip. */
-  protected override buildInitialPickerState(
-    key: string,
+  /** Builds initial Fleet ValuePicker state from an active filter chip and staged values. */
+  override buildInitialPickerState(
+    _key: string,
     activeChip?: FilterChip,
-    metadata?: FilterKeyMetadata,
+    _metadata?: FilterKeyMetadata,
     stagedValues: string[] = [],
   ): ValuePickerState {
-    const base = createInitialValuePickerState();
-    if (!activeChip) {
-      return {...base, selectedValues: new Set(stagedValues)};
-    }
-
-    const adv = extractAdvancedStateFromChip(activeChip);
-    if (adv.isAdv) {
-      return {
-        ...base,
-        selectedValues: new Set(stagedValues),
-        advanced: {
-          active: true,
-          mode: adv.advMode,
-          text: adv.advText,
-          values: adv.advValues,
-          intOp: adv.intOp,
-        },
-      };
-    }
-
-    const chipValues = activeChip.fleetFilter?.simple?.values
-      ? activeChip.fleetFilter.simple.values
-          .map((v) => v.value || (v.noValue ? EMPTY_FILTER_VALUE : ''))
-          .filter(Boolean)
-      : (activeChip.rawValues ?? []);
-
-    return {
-      ...base,
-      selectedValues: new Set([...chipValues, ...stagedValues]),
-      negated: isChipNegated(activeChip),
-    };
+    return buildFleetInitialPickerState(activeChip, stagedValues);
   }
 
-  /** Applies selections or advanced matching input from Popover ValuePicker. */
-  override applyValuePicker(event: ValuePickerApplyEvent) {
-    const key = this.pickerKey();
-    const title = this.pickerTitle();
-    const meta = key ? this.getKeyMetadata(key) : undefined;
-    const displayTitle = meta?.keyDisplayName || title;
-    this.closeValuePicker();
-    this.showSuggestions.set(!this.autoCollapseAfterApply());
-
+  /** Resolves the applied ValuePicker selection via `ResolveFleetChips` and updates active filter chips. */
+  override applyValuePicker(event: ValuePickerApplyEvent): void {
+    const {key, meta, displayTitle} = this.consumeActivePicker();
     if (isValuePickerSelectionEmpty(event)) {
       this.removeChipForKey(key);
       return;
     }
-
-    let rawValues: string[] | undefined = event.selected;
-    let complex: ComplexMatch | undefined;
-    let isNegated = !!event.negate;
-
-    if (event.isAdvanced) {
-      complex = buildComplexMatchFromEvent(event);
-      const info = extractComplexMatchInfo(complex);
-      rawValues = info?.values;
-      isNegated = !!info?.isNegated;
-    }
-
-    const filter: Filter = complex
-      ? {key, complex}
-      : buildSimpleFleetFilter(key, rawValues || [], isNegated);
-
-    const req: FleetChipResolverRequest = {
-      filters: [filter],
-      entity: toSearchEntityProto(this.entity()),
-      fleet: toFleetProto(this.fleet()),
-    };
-
+    const built = buildFleetFilterFromPickerEvent(key, event);
     this.searchService
-      .resolveFleetChips(req)
+      .resolveFleetChips({...this.baseScope(), filters: [built.filter]})
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          for (const fc of res.filterChips ?? []) {
-            const valid = this.unwrapValidFilterChip(fc);
-            if (!valid) continue;
-            this.addFilterChip({
-              key,
-              pillKey: valid.pillKey || displayTitle,
-              pillCondition: valid.pillCondition,
-              isGroupBy: false,
-              metadata: valid.metadata || meta,
-              rawValues,
-              negated: isNegated,
-              complex: event.isAdvanced ? complex : undefined,
-              fleetFilter: filter,
-            });
-          }
+          const {chips, warnings} = extractAppliedFleetPickerChips(
+            key,
+            displayTitle,
+            meta,
+            built,
+            res,
+          );
+          for (const w of warnings) this.snackBarService.showWarning(w);
+          for (const chip of chips) this.addFilterChip(chip);
         },
-        // TODO: Uniformly handle backend RPC error / 500 / offline display in search UI.
-        error: () => {},
+        error: (err: unknown) => {
+          this.snackBarService.showWarning?.(getErrorMessage(err));
+        },
       });
   }
 
-  // ===========================================================================
-  // 9. Suggestion Selection & State Reset
-  // ===========================================================================
-
-  /** Unpacks FleetSuggestion payload to open value picker or apply filter/group-by chips. */
-  protected override applySuggestion(rawItem: FleetSuggestion) {
+  /** Applies a selected Fleet suggestion by opening the ValuePicker or adding filter/group-by chips. */
+  protected override applySuggestion(rawItem: FleetSuggestion): void {
     if (!rawItem) return;
-
     if (rawItem.openPicker) {
       const op = rawItem.openPicker;
-      const displayTitle = op.metadata?.keyDisplayName || op.key;
       this.openQuickFilter(
         op.key,
-        displayTitle,
+        op.metadata?.keyDisplayName || op.key,
         op.metadata,
         op.stagedModify?.values,
       );
       return;
     }
-
-    this.applyFleetSuggestionDirectly(rawItem);
-  }
-
-  /** Helper to directly apply a FleetSuggestion locally without redundant backend resolution. */
-  private applyFleetSuggestionDirectly(item: FleetSuggestion) {
-    const chip = extractFilterChipFromFleetSuggestion(item);
-    if (chip) {
+    for (const chip of extractChipsFromFleetSuggestion(rawItem)) {
       this.addFilterChip(chip);
     }
-    if (item.addGroupBy) {
-      const actionKey = item.addGroupBy.key;
-      const pillTitle = item.addGroupBy.pillKey || item.addGroupBy.key;
-      this.addFilterChip(createGroupByChip(actionKey, pillTitle));
-    }
   }
 
-  /** Resets transient UI state including group view expand states and selected items. */
-  protected override resetTransientUiState() {
+  /** Resets transient UI state along with expanded group cards and row selection. */
+  protected override resetTransientUiState(): void {
     super.resetTransientUiState();
-
-    this.resetExpandedGroups();
+    this.groupAccordion.resetExpandedGroups();
     this.clearSelection();
   }
 }

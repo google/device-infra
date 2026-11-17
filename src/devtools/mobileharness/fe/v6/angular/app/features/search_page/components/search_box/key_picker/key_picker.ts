@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Modal dialog for browsing and searching BFF filter-key and group-by-key catalogs.
+ */
+
 import {DecimalPipe} from '@angular/common';
 import {
   afterNextRender,
@@ -31,9 +35,18 @@ import {
 import {SEARCH_SERVICE} from '../../../../../core/services/search/search_service';
 import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
+import {getErrorMessage} from '../../../../../shared/utils/error_utils';
 import {KeyPickerDialogData, KeyPickerMode} from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
-import {toFleetProto, toSearchEntityProto} from '../../../utils';
+import {
+  getEntityNoun,
+  getKeyEntryDescription,
+  getKeyEntryGroupCount,
+  getKeyEntryName,
+  isKeyEntryInert,
+  toFleetProto,
+  toSearchEntityProto,
+} from '../../../utils';
 
 /**
  * Key Picker modal dialog for adding filters or group-by dimensions.
@@ -152,7 +165,8 @@ export class KeyPickerComponent {
   readonly errorMessage = computed<string | null>(() => {
     const err = this.catalogResource.error();
     if (!err) return null;
-    return (err as {message?: string})?.message || 'Failed to load keys.';
+    const msg = getErrorMessage(err);
+    return msg !== 'An unknown error occurred.' ? msg : 'Failed to load keys.';
   });
 
   /** Catalog sections directly from the BFF response with non-empty entries. */
@@ -166,7 +180,10 @@ export class KeyPickerComponent {
 
   /** Entity noun ('devices' or 'hosts') for coverage display. */
   readonly entityNoun = computed<string>(() =>
-    this.entity() === SearchEntity.SEARCH_ENTITY_HOST ? 'hosts' : 'devices',
+    getEntityNoun(
+      this.entity() === SearchEntity.SEARCH_ENTITY_HOST ? 'hosts' : 'devices',
+      true,
+    ),
   );
 
   /** Total count of matching entries across all visible catalog sections. */
@@ -196,15 +213,18 @@ export class KeyPickerComponent {
     });
   }
 
+  /** Updates the key catalog search query signal. */
   onSearch(v: string) {
     this.query.set(v);
   }
 
+  /** Clears the key catalog search input and re-focuses the input element. */
   clearSearch() {
     this.query.set('');
     this.searchInput()?.nativeElement.focus();
   }
 
+  /** Closes the KeyPicker dialog. */
   close() {
     this.dialogRef?.close();
   }
@@ -215,42 +235,21 @@ export class KeyPickerComponent {
   }
 
   /** Resolves the display name from either a filter-key or group-by-key catalog entry. */
-  getEntryName(entry: FleetFilterKeyEntry | FleetGroupByKeyEntry): string {
-    if ('displayName' in entry && entry.displayName) {
-      return entry.displayName;
-    }
-    if ('metadata' in entry && entry.metadata?.keyDisplayName) {
-      return entry.metadata.keyDisplayName;
-    }
-    return entry.key;
-  }
+  readonly getEntryName = getKeyEntryName;
 
   /** Returns what a catalog entry's key means, or '' when the backend sends no description. */
-  getEntryDescription(
-    entry: FleetFilterKeyEntry | FleetGroupByKeyEntry,
-  ): string {
-    if ('description' in entry && entry.description) {
-      return entry.description;
-    }
-    if ('metadata' in entry && entry.metadata?.description) {
-      return entry.metadata.description;
-    }
-    return '';
-  }
+  readonly getEntryDescription = getKeyEntryDescription;
 
   /** Returns the group count for a group-by catalog entry when shown by BFF. */
   getGroupCount(
     entry: FleetFilterKeyEntry | FleetGroupByKeyEntry,
   ): number | undefined {
-    if (this.mode() !== 'groupby' || !('groupCount' in entry)) {
-      return undefined;
-    }
-    return entry.groupCount?.shown?.count;
+    return getKeyEntryGroupCount(entry, this.mode());
   }
 
   /** Whether a row is inert (an already-applied group-by key cannot be picked again). */
   isInert(entry: FleetFilterKeyEntry | FleetGroupByKeyEntry): boolean {
-    return Boolean(entry.applied) && this.mode() === 'groupby';
+    return isKeyEntryInert(entry, this.mode());
   }
 
   /**

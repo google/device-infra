@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Pure functions for FilterValuePicker candidate filtering, sorting, pinning, Pacific date-range parsing, and apply event construction.
+ */
+
 import {ComplexMatch} from '../../../core/models/search';
 import {dateUtils} from '../../../shared/utils/date_utils';
 import {
@@ -5,29 +9,22 @@ import {
   ApplyEventPayload,
   DateRangeState,
   DEFAULT_INT_COMPARISON_OP,
+  EMPTY_FILTER_VALUE,
   FilterChip,
   FilterSortOptions,
   IntComparisonOp,
+  PickerFooterStatusOptions,
   PickerValueItem,
   ValuePickerApplyEvent,
 } from '../models';
 import {
   createComplexMatch,
-  EMPTY_FILTER_VALUE,
   extractComplexMatchInfo,
   normalizeKey,
   parseStrictInt32,
 } from './search_filter_utils';
 
-/**
- * Pure function: Combines base candidate items with selected custom free-text inputs.
- *
- * @param baseValues List of candidate items returned by backend or configuration.
- * @param selectedValues Set of currently selected value strings.
- * @param isPlain Whether the candidate items are plain values without count columns.
- * @param isLoading Whether candidate values are currently loading.
- * @return Array of combined PickerValueItem elements.
- */
+/** Combines base candidate items with selected custom free-text inputs. */
 export function buildDisplayValues(
   baseValues: readonly PickerValueItem[],
   selectedValues?: ReadonlySet<string>,
@@ -63,35 +60,21 @@ export function buildDisplayValues(
   return [...baseValues, ...missingItems];
 }
 
-/**
- * Pure function: Filters and multi-column sorts candidate items for display in the picker UI.
- *
- * @param opts Options specifying items, search query, sort column, and sort direction.
- * @return Filtered and sorted candidate items.
- */
+/** Filters and multi-column sorts candidate items for display in the picker UI. */
 export function computeFilteredAndSortedValues(
   opts: FilterSortOptions,
 ): PickerValueItem[] {
-  const displayItems = buildDisplayValues(
-    opts.items,
-    opts.selectedValues,
-    opts.isPlain,
-    opts.isLoading,
-  );
   const q = normalizeKey(opts.query);
 
   const list = !q
-    ? displayItems
-    : displayItems.filter(
+    ? [...opts.items]
+    : opts.items.filter(
         (v) =>
           normalizeKey(v.value).includes(q) ||
           normalizeKey(v.displayLabel).includes(q),
       );
 
-  const normalItems = list.filter((v) => !v.disabled);
-  const disabledItems = list.filter((v) => v.disabled);
-
-  normalItems.sort((a, b) => {
+  return list.sort((a, b) => {
     if (opts.sortBy === 'value') {
       const res = a.displayLabel
         .toLowerCase()
@@ -108,20 +91,9 @@ export function computeFilteredAndSortedValues(
       .toLowerCase()
       .localeCompare(b.displayLabel.toLowerCase());
   });
-
-  return [...normalItems, ...disabledItems];
 }
 
-/**
- * Pure function: Computes pinned selected items when total candidate count exceeds threshold.
- *
- * @param items List of candidate items.
- * @param selectedSet Set of currently selected value strings.
- * @param query Active search query.
- * @param isLoading Whether values are currently loading.
- * @param threshold Maximum total item threshold before pinning triggers (default 20).
- * @return Array of pinned items matching current selections.
- */
+/** Computes pinned selected items when total candidate count exceeds threshold. */
 export function computePinnedValues(
   items: readonly PickerValueItem[],
   selectedSet: ReadonlySet<string>,
@@ -150,52 +122,29 @@ export function computePinnedValues(
     );
 }
 
-/**
- * Returns the active Pacific timezone abbreviation ('PDT' or 'PST') for a given timestamp.
- * Delegates to shared dateUtils.
- */
+/** Returns the active Pacific timezone abbreviation ('PDT' or 'PST') for a given timestamp. */
 export const getPacificTimezoneName = dateUtils.getPacificTimezoneName;
 
-/**
- * Converts a datetime-local string in Pacific Time (America/Los_Angeles) to UTC ISO-8601 string.
- */
+/** Converts a Pacific Time date/time string into an ISO-8601 UTC timestamp string. */
 export const pacificToUtc = dateUtils.pacificToUtc;
 
-/**
- * Converts a UTC timestamp to Pacific Time HTML datetime-local format string `YYYY-MM-DDTHH:MM`.
- */
-export const utcToPacific = dateUtils.utcToPacific;
-
-/** One day duration in milliseconds for default range computation. */
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Regular expression matching lower-bound range markers ('From:', '>=', '≥'). */
 const FROM_BOUND_REGEX = /(?:From:|≥|>=)\s*(.*?)(?=\s*(?:To:|≤|<=|&)|$)/i;
-
-/** Regular expression matching upper-bound range markers ('To:', '<=', '≤'). */
 const TO_BOUND_REGEX = /(?:To:|≤|<=)\s*(.*)/i;
-
-/** Regular expression splitting range strings by standard separators ('~', ',', ' - '). */
 const RANGE_DELIMITER_REGEX = /[~,]|(?:\s+-\s+)/;
-
-/** Regular expression stripping optional trailing timezone labels, e.g. '(PDT)', '(PST)'. */
 const TIMEZONE_SUFFIX_REGEX = /\s*\([A-Za-z]+\)$/;
 
-/**
- * Cleans and converts a raw bound string to a Pacific Time datetime-local representation.
- */
+/** Strips timezone suffixes and normalizes a raw date bound string into Pacific datetime-local format. */
 function cleanRawDateBound(raw?: string): string {
   if (!raw) return '';
   const cleaned = raw.replace(TIMEZONE_SUFFIX_REGEX, '').trim();
   if (!cleaned || cleaned === EMPTY_FILTER_VALUE) {
     return '';
   }
-  return utcToPacific(cleaned);
+  return dateUtils.utcToPacific(cleaned);
 }
 
-/**
- * Extracts from and to raw bounds from a single formatted range string.
- */
+/** Extracts `[from, to]` bound strings from a single combined range string. */
 function extractBoundsFromSingleString(str: string): [string, string] {
   const fromMatch = str.match(FROM_BOUND_REGEX);
   const toMatch = str.match(TO_BOUND_REGEX);
@@ -206,23 +155,15 @@ function extractBoundsFromSingleString(str: string): [string, string] {
   return [parts[0] || '', parts[1] || ''];
 }
 
-/**
- * Constructs default 24-hour range spanning the previous 24 hours to now in Pacific Time.
- */
+/** Constructs default 24-hour range spanning the previous 24 hours to now in Pacific Time. */
 export function getDefault24hRange(nowMs = Date.now()): DateRangeState {
   return {
-    from: utcToPacific(nowMs - ONE_DAY_MS),
-    to: utcToPacific(nowMs),
+    from: dateUtils.utcToPacific(nowMs - ONE_DAY_MS),
+    to: dateUtils.utcToPacific(nowMs),
   };
 }
 
-/**
- * Pure function: Extracts From and To date strings from selected values or returns default 24h range in Pacific Time.
- * Follows Angular 20+ best practices: pure, strongly typed, defensive against null/undefined/arrays/sets.
- *
- * @param selectedValues Iterable of selected value strings (e.g. Set or Array).
- * @return DateRangeState containing 'from' and 'to' datetime-local strings in Pacific Time.
- */
+/** Extracts From and To date strings from selected values or returns default 24h range in Pacific Time. */
 export function parseDateRange(
   selectedValues?: Iterable<string> | null,
 ): DateRangeState {
@@ -251,12 +192,7 @@ export function parseDateRange(
   return getDefault24hRange();
 }
 
-/**
- * Pure function: Constructs canonical ValuePickerApplyEvent payload for store application.
- *
- * @param payload Event payload state parameters.
- * @return ValuePickerApplyEvent object ready to dispatch.
- */
+/** Constructs canonical ValuePickerApplyEvent payload for store application. */
 export function buildValuePickerApplyEvent(
   payload: ApplyEventPayload,
 ): ValuePickerApplyEvent {
@@ -319,12 +255,12 @@ export function buildValuePickerApplyEvent(
   };
 }
 
-/** Helper to check whether an advanced match mode is multi-value (exactly, at_least). */
+/** Checks whether an advanced match mode is multi-value (exactly, at_least). */
 export function isMultiModeAdvanced(mode?: AdvancedMatchMode): boolean {
   return mode === 'exactly' || mode === 'at_least';
 }
 
-/** Helper to extract advanced matching state from a FilterChip for ValuePicker initialization. */
+/** Extracts advanced matching state from a FilterChip for ValuePicker initialization. */
 export function extractAdvancedStateFromChip(chip: FilterChip): {
   isAdv: boolean;
   advMode: AdvancedMatchMode;
@@ -377,7 +313,7 @@ export function buildComplexMatchFromEvent(
   );
 }
 
-/** Helper to check if a ValuePickerApplyEvent payload contains empty selection values. */
+/** Checks if a ValuePickerApplyEvent payload contains empty selection values. */
 export function isValuePickerSelectionEmpty(
   event: ValuePickerApplyEvent,
 ): boolean {
@@ -396,5 +332,51 @@ export function isValuePickerSelectionEmpty(
     !event.rangeTo?.trim() &&
     !event.textVal?.trim() &&
     !event.propName?.trim()
+  );
+}
+
+/** Computes footer status summary text for the ValuePicker popover. */
+export function computePickerFooterStatusText(
+  opts: PickerFooterStatusOptions,
+): string {
+  if (opts.isAdvanced) {
+    if (opts.advMode === 'compare_int') {
+      const raw = opts.advText.trim();
+      if (!raw) return 'No values added';
+      return parseStrictInt32(raw) !== undefined
+        ? '1 value added'
+        : 'Invalid integer';
+    }
+    if (!isMultiModeAdvanced(opts.advMode)) {
+      return opts.advText.trim() ? '1 value added' : 'No values added';
+    }
+    const count = opts.advValues.length;
+    return count === 0
+      ? 'No values added'
+      : `${count} value${count > 1 ? 's' : ''} added`;
+  }
+  if (opts.type !== 'list' && opts.type !== undefined) {
+    return '';
+  }
+  const verb = opts.isNegated ? 'excluded' : 'selected';
+  return opts.selectedCount === 0
+    ? `No options ${verb}`
+    : `${opts.selectedCount} option${opts.selectedCount > 1 ? 's' : ''} ${verb}`;
+}
+
+/** Checks whether the "Add custom input" row should be displayed while picker values are loading. */
+export function shouldShowAddCustomRow(
+  loading: boolean | undefined,
+  rawQuery: string,
+  selectedSet: ReadonlySet<string>,
+  values: readonly PickerValueItem[] | undefined,
+): boolean {
+  const q = rawQuery.trim().toLowerCase();
+  if (!loading || !q) return false;
+  if (Array.from(selectedSet).some((s) => s.toLowerCase() === q)) {
+    return false;
+  }
+  return !(values || []).some(
+    (v) => v.value.toLowerCase() === q || v.displayLabel.toLowerCase() === q,
   );
 }

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Composable managing bulk device configuration eligibility, lazy dimension catalog loading, and wizard dialog launches.
+ */
+
 import {computed, DestroyRef, inject, linkedSignal, Type} from '@angular/core';
 import {rxResource, takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MatDialog} from '@angular/material/dialog';
@@ -11,7 +15,11 @@ import {
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
 import {FeatureEnablementService} from '../../../../core/services/feature_enablement_service';
 import {getErrorMessage} from '../../../../shared/utils/error_utils';
-import {BulkConfigDialogData, BulkConfigDialogResult} from '../../models';
+import {
+  BulkConfigDialogData,
+  BulkConfigDialogResult,
+  BulkDimensionConfigState,
+} from '../../models';
 import {FleetSearchStore} from '../../services/fleet_search_store';
 import {extractDeviceTarget} from '../../utils';
 import {BulkConfigDimensionDialog} from './dimension_dialog/bulk_config_dimension_dialog';
@@ -67,7 +75,7 @@ export function useBulkConfigActions() {
   });
 
   /** Consolidated dimension configuration state for the active view. */
-  const dimensionConfig = computed(() => {
+  const dimensionConfig = computed<BulkDimensionConfigState>(() => {
     if (!isBulkConfigAvailable()) {
       return {
         isLoading: false,

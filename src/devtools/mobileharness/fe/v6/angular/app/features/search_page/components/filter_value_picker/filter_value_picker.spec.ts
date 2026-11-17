@@ -402,7 +402,6 @@ describe('FilterValuePicker', () => {
     expect(customItem).toBeDefined();
     expect(customItem?.filtered).toBe(0);
     expect(customItem?.total).toBe(0);
-    expect(customItem?.disabled).toBeFalsy();
 
     // The user can deselect the custom item
     expect(component.selectedSet().has('CUSTOM_STATUS')).toBeTrue();

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Multi-step wizard dialog for batch-configuring curated or custom dimensions across selected Fleet devices.
+ */
+
 import {NgTemplateOutlet} from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -27,15 +31,17 @@ import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service
 import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {BulkConfigDialogData} from '../../../models';
 import {
-  canonicalizeValueSet,
+  buildDimensionReviewRows,
+  buildDimensionSuggestionRows,
   extractDimensionTokens,
-  formatCurrentSelectionBadge,
+  filterCandidateDimensionKeys,
   formatDeviceCount,
   formatNothingToUpdateMessage,
   formatWizardHeadline,
   formatWizardSupportText,
   getDeviceTargetKey,
   hasClosedQuotes,
+  validateCustomDimensionKey,
 } from '../../../utils';
 import {BulkClearBanner} from '../common/bulk_clear_banner';
 import {BulkPanelStatus} from '../common/bulk_panel_status';
@@ -121,17 +127,9 @@ export class BulkConfigDimensionDialog {
   readonly systemDimensionNames = signal<Set<string>>(new Set());
 
   /** Validation error for custom key, computed reactively from input and system blocklist. */
-  readonly customKeyError = computed<string>(() => {
-    const clean = this.customKey();
-    if (!clean) return '';
-    if (this.systemDimensionNames().has(clean)) {
-      return `"${clean}" is automatically detected by OmniLab and cannot be configured manually.`;
-    }
-    if (!/^[a-z0-9_\-\.]+$/.test(clean)) {
-      return 'Dimension key may only contain lowercase letters, numbers, underscores, dashes, and dots.';
-    }
-    return '';
-  });
+  readonly customKeyError = computed<string>(() =>
+    validateCustomDimensionKey(this.customKey(), this.systemDimensionNames()),
+  );
 
   // --- Dimension Target Metadata ---
   readonly dimensionKey = signal<string>(
@@ -162,21 +160,12 @@ export class BulkConfigDimensionDialog {
   });
 
   /** Pre-computed review table rows with memoized value truncation and expansion state. */
-  readonly reviewRows = computed(() => {
-    const expanded = this.expandedDeviceValues();
-    return this.wizard.reviewEntries().map((entry) => {
-      const values = entry.values ?? [];
-      const isExpanded = expanded.has(getDeviceTargetKey(entry));
-      const hiddenCount = Math.max(0, values.length - 2);
-      return {
-        ...entry,
-        isExpanded,
-        visibleValues: isExpanded ? values : values.slice(0, 2),
-        hiddenCount,
-        hiddenTooltip: isExpanded ? '' : values.slice(2).join(', '),
-      };
-    });
-  });
+  readonly reviewRows = computed(() =>
+    buildDimensionReviewRows(
+      this.wizard.reviewEntries(),
+      this.expandedDeviceValues(),
+    ),
+  );
 
   /** Constructs the reactive TargetDimensionValues message according to current UI state. */
   readonly targetDimensionValues = computed<TargetDimensionValues>(() =>
@@ -229,36 +218,22 @@ export class BulkConfigDimensionDialog {
   );
 
   /** Filtered candidate keys in Step 1 matching the user search input, with pre-computed selection badges. */
-  readonly filteredCandidateKeys = computed(() => {
-    const q = this.customKey();
-    const totalCount = this.dialogData.devices.length;
-    const candidates = this.candidateKeys();
-    const matched = q
-      ? candidates.filter((c) => c.dimensionName.includes(q))
-      : candidates;
-    return matched.slice(0, 50).map((c) => ({
-      ...c,
-      fleetSupportText: `${formatDeviceCount(c.fleetDeviceCount ?? 0)} in fleet`,
-      badge: formatCurrentSelectionBadge(c.selectedDeviceCount, totalCount),
-      isActive: c.dimensionName === q,
-    }));
-  });
+  readonly filteredCandidateKeys = computed(() =>
+    filterCandidateDimensionKeys(
+      this.candidateKeys(),
+      this.customKey(),
+      this.dialogData.devices.length,
+    ),
+  );
 
   /** Candidate value suggestions enriched with canonical keys, fleet count text, and active selection state. */
-  readonly suggestionRows = computed(() => {
-    const targetCanon = this.isClearDimension()
-      ? null
-      : canonicalizeValueSet(this.targetValues());
-    return this.candidateValues().map((sug) => {
-      const canonKey = canonicalizeValueSet(sug.values);
-      return {
-        ...sug,
-        fleetSupportText: `${formatDeviceCount(sug.deviceCount ?? 0)} in fleet`,
-        canonKey,
-        isActive: canonKey === targetCanon,
-      };
-    });
-  });
+  readonly suggestionRows = computed(() =>
+    buildDimensionSuggestionRows(
+      this.candidateValues(),
+      this.isClearDimension(),
+      this.targetValues(),
+    ),
+  );
 
   /** Whether the user can proceed from Key Step to Values Step. */
   readonly canProceedFromKeyStep = computed<boolean>(

@@ -18,6 +18,8 @@
 }
 
 .rt-group {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 54px;
   border: 1px solid #c4c7c5;
   border-radius: 12px;
   overflow: hidden;

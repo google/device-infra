@@ -1076,6 +1076,27 @@ describe('FleetSearchStore', () => {
       );
     });
 
+    it('preserves both parsedFilters and groupByKeys when resolveFleetChips fails', async () => {
+      mockSearchService.resolveFleetChips.and.returnValue(
+        throwError(() => new Error('Resolve RPC error')),
+      );
+
+      const store = await createStoreAt({
+        'f': 'device_field::status~IDLE',
+        'gb': 'dimension::model',
+      });
+
+      expect(
+        store
+          .activeChips()
+          .map((c) => ({key: c.key, isGroupBy: !!c.isGroupBy})),
+      ).toEqual([
+        {key: 'device_field::status', isGroupBy: false},
+        {key: 'dimension::model', isGroupBy: true},
+      ]);
+      expect(store.groupByKeys()).toEqual(['dimension::model']);
+    });
+
     it('shows a warning and keeps arsenal_query when translation fails', async () => {
       mockSearchService.translateArsenalSearch.and.returnValue(
         throwError(() => new Error('translate failed')),
@@ -1194,8 +1215,14 @@ describe('FleetSearchStore', () => {
       expect(store.fleet()).toBe('ats');
       expect(store.activeChips()).toEqual([]);
 
-      // 3. Navigating to a canonical ?f= URL cancels in-flight translation; late response is ignored.
+      // 3. Navigating back to the previously synced canonical ?f= URL cancels in-flight translation; late response is ignored.
       const secondArsenalQuery = 'filter=status:match:values:MISSING';
+      activatedRouteStub.snapshot.queryParams = {
+        'f': 'device_field::status~LAB_MISSING',
+      };
+      queryParams$.next({'f': 'device_field::status~LAB_MISSING'});
+      await flushAsync();
+
       activatedRouteStub.snapshot.queryParams = {
         'arsenal_query': secondArsenalQuery,
       };
@@ -2762,6 +2789,23 @@ describe('FleetSearchStore', () => {
       await flushAsync();
       expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
 
+      // Calling setGroupPageSize on an unloaded group (no cached state.pageSize) still loads rows
+      // when the requested size differs from the previously stored size (50 -> 25).
+      mockSearchService.searchFleet.calls.reset();
+      store.setGroupPageSize('dimension::model=pixel 9', 25);
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          groupExpand: jasmine.objectContaining({
+            groupId: 'dimension::model=pixel 9',
+            page: {pageSize: 25, pageToken: undefined},
+          }),
+        }),
+      );
+      store.setGroupPageSize('dimension::model=pixel 8', 50);
+      await flushAsync();
+      mockSearchService.searchFleet.calls.reset();
+
       // Changing visible columns preserves the group's custom pageSize
       store.setVisibleColumns([
         {key: 'device_field::uuid', displayName: 'UUID', locked: true},
@@ -3079,6 +3123,27 @@ describe('FleetSearchStore', () => {
       expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
       expect(store.rows().length).toBe(1);
       expect(store.isLoading()).toBeFalse();
+    });
+
+    it('preserves empty collection signal references on no-op resets and does not re-fetch searchConfig on same-scope URL changes', async () => {
+      const store = await createStoreAt({});
+      expect(mockSearchService.getFleetSearchConfig).toHaveBeenCalledTimes(1);
+
+      const initialChipsRef = store.activeChips();
+      const initialSelectedRef = store.selectedItems();
+      const initialOpenGroupsRef = store.openGroupIds();
+      const initialExpandedPagesRef = store.expandedGroupPages();
+      const initialPickerStateRef = store.pickerState();
+
+      store.clearSelection();
+      store.restoreDefaultState(false);
+
+      expect(store.activeChips()).toBe(initialChipsRef);
+      expect(store.selectedItems()).toBe(initialSelectedRef);
+      expect(store.openGroupIds()).toBe(initialOpenGroupsRef);
+      expect(store.expandedGroupPages()).toBe(initialExpandedPagesRef);
+      expect(store.pickerState()).toBe(initialPickerStateRef);
+      expect(mockSearchService.getFleetSearchConfig).toHaveBeenCalledTimes(1);
     });
 
     it('keeps isLoading true when initial search with an unvalidated URL chip returns empty while resolveFleetChips is still pending', async () => {

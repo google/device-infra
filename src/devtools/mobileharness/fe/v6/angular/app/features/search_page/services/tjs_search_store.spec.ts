@@ -314,6 +314,24 @@ describe('TjsSearchStore', () => {
 
     const serialized = store.serializedActiveFilters();
     expect(serialized).toContain('create_time~<empty>,2026-10-06T23%3A35');
+
+    // Clearing both rangeFrom and rangeTo removes the create_time chip
+    store.openValuePicker('create_time', null, 'Create Time', {
+      key: 'create_time',
+      keyDisplayName: 'Create Time',
+      timeRange: {},
+    });
+    store.applyValuePicker({
+      selected: ['From:  To: '],
+      negate: false,
+      isAdvanced: false,
+      rangeFrom: '',
+      rangeTo: '',
+    });
+    TestBed.tick();
+    expect(
+      store.activeChips().find((c) => c.key === 'create_time'),
+    ).toBeUndefined();
   });
 
   it('should keep default User chip, populate searchQuery, and open suggestions when arriving with ?q=<id>', async () => {

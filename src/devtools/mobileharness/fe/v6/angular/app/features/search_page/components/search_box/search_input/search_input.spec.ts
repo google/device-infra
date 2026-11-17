@@ -631,7 +631,6 @@ describe('SearchInput', () => {
           {text: 'model is ', emphasized: false},
           {text: 'pixel 9', emphasized: true},
         ],
-        rawItem: {openPicker: {key: 'model'}},
       },
     ]);
     fixture.detectChanges();
@@ -651,7 +650,6 @@ describe('SearchInput', () => {
           {text: 'status is ', emphasized: false},
           {text: 'IDLE', emphasized: true},
         ],
-        rawItem: {openPicker: {key: 'status'}},
       },
     ]);
     fixture.detectChanges();
@@ -942,7 +940,6 @@ describe('SearchInput', () => {
     const suggestion: SearchBoxSuggestion = {
       label: 'Filter',
       mainText: [{text: 'Status is IDLE', emphasized: false}],
-      rawItem: {openPicker: {key: 'status'}},
     };
     mockStore.showSuggestions.set(true);
     mockStore.suggestions.set([suggestion]);

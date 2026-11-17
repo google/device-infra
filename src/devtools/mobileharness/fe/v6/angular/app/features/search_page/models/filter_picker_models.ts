@@ -1,4 +1,13 @@
-import {IntComparisonOperator} from '../../../core/models/search';
+/**
+ * @fileoverview Models, operator constants, and state structures for the FilterValuePicker overlay and AdvancedMatchView.
+ */
+
+import {
+  ComplexMatch,
+  Filter,
+  IntComparisonOperator,
+} from '../../../core/models/search';
+import {FilterKeyMetadata} from './search_filter_models';
 
 /** Supported advanced matching mode keys. */
 export type AdvancedMatchMode =
@@ -34,8 +43,7 @@ export const INT_COMPARISON_OPERATORS: ReadonlyArray<{
     id: 'gte',
     symbol: '\u2265',
     title: 'At least (\u2265)',
-    proto:
-      IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+    proto: IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
   },
   {
     id: 'lt',
@@ -58,7 +66,6 @@ export interface PickerValueItem {
   filtered?: number;
   total?: number;
   isNoValue?: boolean;
-  disabled?: boolean;
 }
 
 /** Payload emitted when applying value picker changes. */
@@ -133,12 +140,6 @@ export interface FilterSortOptions {
   readonly sortBy: 'value' | 'filtered' | 'total';
   /** Sort direction flag (true = ascending, false = descending). */
   readonly sortAsc: boolean;
-  /** Set of currently selected value strings. */
-  readonly selectedValues?: ReadonlySet<string>;
-  /** Whether the candidate items are plain values without count columns. */
-  readonly isPlain?: boolean;
-  /** Loading flag indicating whether backend values are currently fetching. */
-  readonly isLoading?: boolean;
 }
 
 /** Date range bounds representation for value picker range layout. */
@@ -175,6 +176,43 @@ export interface ApplyEventPayload {
   readonly propVal?: string;
   /** Text value for plain text mode. */
   readonly textVal?: string;
+}
+
+/** Built Fleet Filter proto and extracted raw values produced from a ValuePickerApplyEvent. */
+export interface BuiltFleetPickerFilter {
+  readonly filter: Filter;
+  readonly rawValues?: string[];
+  readonly isNegated: boolean;
+  readonly complex?: ComplexMatch;
+}
+
+/** Options for computing the ValuePicker footer status summary text. */
+export interface PickerFooterStatusOptions {
+  readonly isAdvanced: boolean;
+  readonly advMode: AdvancedMatchMode;
+  readonly advText: string;
+  readonly advValues: readonly string[];
+  readonly type?: string;
+  readonly selectedCount: number;
+  readonly isNegated: boolean;
+}
+
+/** Category of chip currently focused in the suggestions popover. */
+export type FocusChipType = 'filter' | 'groupby';
+
+/** Pending filter key staged in the suggestions popover before values are applied. */
+export interface PendingFilterItem {
+  readonly key: string;
+  readonly displayName: string;
+  readonly metadata?: FilterKeyMetadata;
+}
+
+/** Queued request to open the ValuePicker anchored to a rendered popover chip. */
+export interface PendingFilterOpenRequest {
+  readonly key: string;
+  readonly title?: string;
+  readonly metadata?: FilterKeyMetadata;
+  readonly stagedValues?: string[];
 }
 
 /** List of configurations for advanced matching options. */

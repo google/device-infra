@@ -1,4 +1,8 @@
-import {computed, DestroyRef, inject, Signal, signal} from '@angular/core';
+/**
+ * @fileoverview Composable state machine (`useBulkWizardSession`) and inline task tracker (`useInlineTask`) for multi-step bulk configuration wizards.
+ */
+
+import {computed, DestroyRef, inject, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MatDialogRef} from '@angular/material/dialog';
 import {Observable, Subscription} from 'rxjs';
@@ -12,32 +16,15 @@ import {
 import {getErrorMessage} from '../../../../../shared/utils/error_utils';
 import {
   BulkApplyError,
+  BulkApplyState,
   BulkConfigDialogResult,
   BulkConfigReviewSummary,
+  BulkInlineTask,
 } from '../../../models';
-import {formatDeviceCount} from '../../../utils';
-
-/** Cancellable, retryable async task tracker returned by `useInlineTask`. */
-export interface BulkInlineTask {
-  readonly isLoading: Signal<boolean>;
-  readonly hasLoaded: Signal<boolean>;
-  readonly error: Signal<string | null>;
-  run: <TResponse>(
-    createRequest: () => Observable<TResponse>,
-    onSuccess: (res: TResponse) => void,
-    fallbackErrorMessage?: string,
-  ) => void;
-  retry: () => void;
-  cancel: () => void;
-}
-
-/** Discriminated union representing the mutually exclusive states of the batch apply mutation. */
-type BulkApplyState =
-  | {readonly status: 'idle'}
-  | {readonly status: 'applying'}
-  | {readonly status: 'rpc_error'; readonly message: string}
-  | {readonly status: 'success'}
-  | {readonly status: 'errors'; readonly errors: readonly BulkApplyError[]};
+import {
+  computeBulkReviewSummary,
+  extractWillUpdateTargets,
+} from '../../../utils';
 
 /** Reactive wizard session returned by `useBulkWizardSession`. */
 export type BulkWizardSession<
@@ -61,11 +48,13 @@ export function useInlineTask(defaultFallbackError = ''): BulkInlineTask {
   const hasLoaded = signal<boolean>(false);
   const error = signal<string | null>(null);
 
+  /** Cancels any in-flight request subscription and clears the current error. */
   const cancel = (): void => {
     sub?.unsubscribe();
     error.set(null);
   };
 
+  /** Executes an observable request, tracking loading/loaded/error signals and storing a retry callback. */
   const run = <TResponse>(
     createRequest: () => Observable<TResponse>,
     onSuccess: (res: TResponse) => void,
@@ -95,6 +84,7 @@ export function useInlineTask(defaultFallbackError = ''): BulkInlineTask {
       });
   };
 
+  /** Re-runs the most recently invoked `run(...)` request if one was registered. */
   const retry = (): void => {
     retryFn?.();
   };
@@ -157,36 +147,9 @@ export function useBulkWizardSession<
   });
 
   /** Single-pass review summary consolidating device status counts and labels. */
-  const reviewSummary = computed<BulkConfigReviewSummary>(() => {
-    let willUpdateCount = 0;
-    let alreadyMatchCount = 0;
-    let readOnlyCount = 0;
-
-    for (const entry of reviewEntries()) {
-      switch (entry.status) {
-        case DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE:
-          willUpdateCount++;
-          break;
-        case DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES:
-          alreadyMatchCount++;
-          break;
-        case DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY:
-          readOnlyCount++;
-          break;
-        default:
-          break;
-      }
-    }
-
-    return {
-      willUpdateCount,
-      willUpdateLabel: formatDeviceCount(willUpdateCount),
-      alreadyMatchCount,
-      alreadyMatchLabel: formatDeviceCount(alreadyMatchCount),
-      readOnlyCount,
-      readOnlyLabel: formatDeviceCount(readOnlyCount),
-    };
-  });
+  const reviewSummary = computed<BulkConfigReviewSummary>(() =>
+    computeBulkReviewSummary(reviewEntries()),
+  );
 
   /**
    * Unified wizard view mode derived from terminal apply states, step
@@ -240,19 +203,7 @@ export function useBulkWizardSession<
     fallbackErrorMessage: string,
   ): void => {
     if (applyState().status === 'applying') return;
-    const updateTargets: DeviceTarget[] = [];
-    for (const r of reviewEntries()) {
-      if (
-        r.status ===
-        DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE
-      ) {
-        updateTargets.push(
-          r.hostName
-            ? {deviceId: r.deviceId, hostName: r.hostName}
-            : {deviceId: r.deviceId},
-        );
-      }
-    }
+    const updateTargets = extractWillUpdateTargets(reviewEntries());
     if (updateTargets.length === 0) return;
 
     applyState.set({status: 'applying'});

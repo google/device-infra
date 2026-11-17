@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Reusable pagination footer component displaying range text, page-size selector, and prev/next navigation buttons.
+ */
+
 import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatSelectModule} from '@angular/material/select';

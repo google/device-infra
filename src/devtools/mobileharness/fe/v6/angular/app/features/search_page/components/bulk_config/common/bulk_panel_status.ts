@@ -1,8 +1,12 @@
+/**
+ * @fileoverview Shared non-blocking inline loading spinner and retryable error row for Step 1 suggestion panels in bulk configuration wizards.
+ */
+
 import {ChangeDetectionStrategy, Component, input} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
-import {BulkInlineTask} from './bulk_wizard_session';
+import {BulkInlineTask} from '../../../models';
 
 /**
  * Shared non-blocking inline status row for Step 1 suggestion panels in bulk

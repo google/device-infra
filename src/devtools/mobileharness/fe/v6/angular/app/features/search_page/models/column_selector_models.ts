@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Dialog input and result models for the Fleet table column selector modal.
+ */
+
 import {Filter, FleetColumnDescriptor} from '../../../core/models/search';
 import {EntityType, FleetScope} from './search_page_ui';
 

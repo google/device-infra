@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Fleet search results view rendering the flat virtual-scrolled table, grouped accordion list, selection toolbar, and CSV/TSV export.
+ */
+
 import {DecimalPipe, DOCUMENT, NgTemplateOutlet} from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -20,7 +24,7 @@ import {MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {DimensionList} from '../../../../../core/models/device_config_models';
-import {Column, Row} from '../../../../../core/models/search';
+import {Column} from '../../../../../core/models/search';
 import {useCopyToClipboard} from '../../../../../shared/composables/copy';
 import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
@@ -28,17 +32,18 @@ import {SnackBarService} from '../../../../../shared/services/snackbar_service';
 import {
   ColumnSelectorDialogData,
   ColumnSelectorResult,
+  MAX_EXPORT_ROWS,
   PAGE_SIZE_OPTIONS,
   ROW_HEIGHT_BY_DENSITY,
+  SelectableRowItem,
 } from '../../../models';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
 import {
   buildCsvString,
   buildExportFileName,
   buildTsvString,
-  getDeviceTargetKey,
   getEntityNoun,
-  MAX_EXPORT_ROWS,
+  toSelectableRows,
   triggerCsvDownload,
 } from '../../../utils';
 import {useBulkConfigActions} from '../../bulk_config/bulk_config_actions';
@@ -52,13 +57,6 @@ import {
   TableWindowSpacer,
 } from '../common/table_window/table_window';
 import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
-
-/** Flat table row item: the search row plus its pre-computed tracking key and selection state. */
-interface TableRowItem {
-  readonly row: Row;
-  readonly key: string;
-  readonly selected: boolean;
-}
 
 /** Component representing search results for lab fleet (devices/hosts). */
 @Component({
@@ -126,13 +124,9 @@ export class FleetSearchResultsComponent {
   });
 
   /** Flat table rows with pre-computed composite tracking keys and selection state. */
-  readonly tableRows = computed<TableRowItem[]>(() => {
-    const selected = this.store.selectedItems();
-    return this.store.rows().map((row) => {
-      const key = getDeviceTargetKey(row);
-      return {row, key, selected: selected.has(key)};
-    });
-  });
+  readonly tableRows = computed<SelectableRowItem[]>(() =>
+    toSelectableRows(this.store.rows(), this.store.selectedItems()),
+  );
 
   readonly trackByRow = (_: number, item: {key: string}) => item.key;
 
@@ -152,7 +146,7 @@ export class FleetSearchResultsComponent {
   /** `matRowDef` predicate routing the windowing spacers to the spacer row definition. */
   readonly isSpacerRow = (
     _index: number,
-    item: TableRowItem | TableWindowSpacer,
+    item: SelectableRowItem | TableWindowSpacer,
   ): boolean => isTableWindowSpacer(item);
 
   /**

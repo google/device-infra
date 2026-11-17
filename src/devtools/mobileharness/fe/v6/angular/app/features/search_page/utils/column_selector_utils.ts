@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Pure helpers for Fleet table column persistence in localStorage, locked column resolution, and drag-and-drop reordering.
+ */
+
 import {FleetColumnDescriptor} from '../../../core/models/search';
 import {getErrorMessage} from '../../../shared/utils/error_utils';
 import {readStorage, removeStorage, writeStorage} from './search_storage_utils';
@@ -55,4 +59,35 @@ export function clearStoredVisibleColumns(entity: string, fleet: string): void {
 export function getUnknownColumnKeyFromError(err: unknown): string | null {
   const match = UNKNOWN_COLUMN_KEY_PATTERN.exec(getErrorMessage(err));
   return match ? match[1] : null;
+}
+
+/** Extracts locked column keys from default descriptors, falling back to current descriptors. */
+export function resolveLockedColumnKeys(
+  defaults: readonly FleetColumnDescriptor[],
+  current: readonly FleetColumnDescriptor[],
+): string[] {
+  const lockedFromDefaults = defaults.filter((c) => c.locked).map((c) => c.key);
+  if (lockedFromDefaults.length > 0) {
+    return lockedFromDefaults;
+  }
+  return current.filter((c) => c.locked).map((c) => c.key);
+}
+
+/** Reorders draft column descriptors while keeping locked columns pinned at the start. */
+export function reorderDraftColumns(
+  currentDraft: readonly FleetColumnDescriptor[],
+  lockedKeySet: ReadonlySet<string>,
+  previousIndex: number,
+  currentIndex: number,
+): FleetColumnDescriptor[] | null {
+  if (previousIndex === currentIndex) return null;
+  const lockedCount = currentDraft.filter((col) =>
+    lockedKeySet.has(col.key),
+  ).length;
+  if (previousIndex < lockedCount) return null;
+  const next = [...currentDraft];
+  const targetIndex = Math.max(lockedCount, currentIndex);
+  const [moved] = next.splice(previousIndex, 1);
+  next.splice(targetIndex, 0, moved);
+  return next;
 }

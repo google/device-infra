@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Generic search table cell renderer dispatching on protobuf `Cell` `oneof` variants (`text`, `link`, `status`, `chips`, `multiLink`).
+ */
+
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,7 +22,8 @@ import {
 } from '../../../../../../shared/components/nav_link/nav_link';
 import {OverflowChipListComponent} from '../../../../../../shared/components/overflow_chip_list/overflow_chip_list';
 import {TooltipIfTruncatedDirective} from '../../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
-import {getStatusClass} from '../../../../utils';
+import {CellKind} from '../../../../models';
+import {computeCellKind, getStatusClass} from '../../../../utils';
 
 /** Standalone component for rendering a single search table cell generically based on Proto Cell type. */
 @Component({
@@ -39,20 +44,7 @@ export class SearchCellComponent {
   readonly column = input<Column | undefined>();
 
   /** Identifies the cell variant conforming to protobuf Cell oneof kind. */
-  readonly cellKind = computed<
-    'text' | 'link' | 'status' | 'chips' | 'multiLink' | 'empty'
-  >(() => {
-    const c = this.cell();
-    if (!c) return 'empty';
-    if (c.link) return 'link';
-    if (c.status) return 'status';
-    if (c.chips?.values && c.chips.values.length > 0) return 'chips';
-    if (c.multiLink?.entries && c.multiLink.entries.length > 0) {
-      return 'multiLink';
-    }
-    if (c.text?.value) return 'text';
-    return 'empty';
-  });
+  readonly cellKind = computed<CellKind>(() => computeCellKind(this.cell()));
 
   /** Pre-resolved nav link config for LinkCell variant. */
   readonly navLinkConfig = computed(() =>

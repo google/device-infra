@@ -1,15 +1,17 @@
+/**
+ * @fileoverview Shared UI models, view-models, and layout/pagination constants for the search page.
+ */
+
 import {
   ApplyTjsFilter,
-  FleetAddGroupBy,
   FleetApplyFilter,
   FleetFlatResults,
   FleetOpenPicker,
   FleetSearchConfig,
   FleetSuggestion,
   OpenTjsPicker,
-  TextSegment,
+  Row,
   TjsSearchConfig,
-  TjsSuggestion,
 } from '../../../core/models/search';
 
 /** Supported entity category names for search views. */
@@ -25,18 +27,13 @@ export type TableDensity = 'compact' | 'default' | 'comfortable';
  * Suggestion item entry rendered in the search box suggestion popover.
  * Directly corresponds to the BFF proto contracts (`FleetSuggestion` | `TjsSuggestion`).
  */
-export interface SearchBoxSuggestion {
-  label?: string;
-  mainText?: TextSegment[];
-  count?: number;
-  countPrefix?: string;
-  countUnit?: string;
-  overMax?: boolean;
+export type SearchBoxSuggestion = Omit<
+  FleetSuggestion,
+  'applyFilter' | 'openPicker'
+> & {
   applyFilter?: FleetApplyFilter | ApplyTjsFilter;
   openPicker?: FleetOpenPicker | OpenTjsPicker;
-  addGroupBy?: FleetAddGroupBy;
-  rawItem?: FleetSuggestion | TjsSuggestion;
-}
+};
 
 /** Unified configuration options for initializing the search page. */
 export type SearchPageConfig = Partial<FleetSearchConfig> &
@@ -80,6 +77,9 @@ export const ROW_HEIGHT_BY_DENSITY: Readonly<Record<TableDensity, number>> = {
  */
 export const GROUP_ROW_HEIGHT_ESTIMATE = 37;
 
+/** Maximum number of selected items that can be exported at once. */
+export const MAX_EXPORT_ROWS = 5000;
+
 /** Data state structure for an expanded group card page. */
 export interface GroupPageState {
   readonly loading?: boolean;
@@ -89,3 +89,38 @@ export interface GroupPageState {
   readonly sortAsc?: boolean;
   readonly pageSize?: number;
 }
+
+/** Row paired with its pre-computed composite target key and selection state. */
+export interface SelectableRowItem {
+  readonly row: Row;
+  readonly key: string;
+  readonly selected: boolean;
+}
+
+/** Pre-computed utilization progress widths, percentages, and counts for a fleet group. */
+export interface UtilizationViewModel {
+  readonly busyCount: number;
+  readonly busyPct: number;
+  readonly busyWidth: number;
+  readonly idleCount: number;
+  readonly idlePct: number;
+  readonly idleWidth: number;
+  readonly otherCount: number;
+  readonly otherPct: number;
+  readonly otherWidth: number;
+}
+
+/** Option item in the grouped view sort dropdown. */
+export interface GroupSortOption {
+  readonly value: string;
+  readonly label: string;
+}
+
+/** Discriminated variant kind for a search table Cell. */
+export type CellKind =
+  | 'text'
+  | 'link'
+  | 'status'
+  | 'chips'
+  | 'multiLink'
+  | 'empty';

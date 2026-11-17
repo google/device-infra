@@ -1,3 +1,7 @@
+/**
+ * @fileoverview CDK Connected Overlay value picker supporting multi-select value lists, date ranges, key-value pairs, plain text, and advanced matching.
+ */
+
 import {ConnectionPositionPair, OverlayModule} from '@angular/cdk/overlay';
 import {
   CdkVirtualScrollViewport,
@@ -19,6 +23,7 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
+import {useCopyToClipboard} from '../../../../shared/composables/copy';
 import {KeyDescriptionTooltipDirective} from '../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {TooltipIfTruncatedDirective} from '../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {
@@ -33,11 +38,12 @@ import {
   buildDisplayValues,
   buildValuePickerApplyEvent,
   computeFilteredAndSortedValues,
+  computePickerFooterStatusText,
   computePinnedValues,
   getPacificTimezoneName,
-  isMultiModeAdvanced,
   parseDateRange,
   parseStrictInt32,
+  shouldShowAddCustomRow,
 } from '../../utils';
 import {AdvancedMatchView} from './advanced_match_view/advanced_match_view';
 
@@ -68,6 +74,7 @@ import {AdvancedMatchView} from './advanced_match_view/advanced_match_view';
 export class FilterValuePicker {
   /** Global search page store reference injected via Angular dependency injection. */
   readonly store = inject(SearchPageStore);
+  private readonly copyToClipboard = useCopyToClipboard();
 
   /** Active value picker configuration signal from store. */
   readonly config = this.store.pickerConfig;
@@ -77,51 +84,13 @@ export class FilterValuePicker {
   /** Reference to the search input element inside the picker popover. */
   readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
-  /** Angular CDK Overlay positioning strategies with intelligent fallbacks (bottom-start, bottom-end, top-start, top-end, center). */
-  readonly pickerOverlayPositions: ConnectionPositionPair[] = [
-    {
-      originX: 'start',
-      originY: 'bottom',
-      overlayX: 'start',
-      overlayY: 'top',
-      offsetY: 6,
-    },
-    {
-      originX: 'end',
-      originY: 'bottom',
-      overlayX: 'end',
-      overlayY: 'top',
-      offsetY: 6,
-    },
-    {
-      originX: 'start',
-      originY: 'top',
-      overlayX: 'start',
-      overlayY: 'bottom',
-      offsetY: -6,
-    },
-    {
-      originX: 'end',
-      originY: 'top',
-      overlayX: 'end',
-      overlayY: 'bottom',
-      offsetY: -6,
-    },
-    {
-      originX: 'center',
-      originY: 'bottom',
-      overlayX: 'center',
-      overlayY: 'top',
-      offsetY: 6,
-    },
-    {
-      originX: 'center',
-      originY: 'top',
-      overlayX: 'center',
-      overlayY: 'bottom',
-      offsetY: -6,
-    },
-  ];
+  /** Angular CDK Overlay positioning strategies with intelligent fallbacks. */
+  readonly pickerOverlayPositions: ConnectionPositionPair[] = (
+    ['start', 'end', 'center'] as const
+  ).flatMap((x) => [
+    {originX: x, originY: 'bottom', overlayX: x, overlayY: 'top', offsetY: 6},
+    {originX: x, originY: 'top', overlayX: x, overlayY: 'bottom', offsetY: -6},
+  ]);
 
   // ===================== Local Draft Reactive State =====================
   /** Set of selected value strings linked to store effective state. */
@@ -297,8 +266,6 @@ export class FilterValuePicker {
       query: this.searchQuery(),
       sortBy: this.sortBy(),
       sortAsc: this.sortAsc(),
-      isPlain: this.isPlain(),
-      isLoading: !!this.state().loading,
     }),
   );
 
@@ -320,51 +287,27 @@ export class FilterValuePicker {
   );
 
   /** Whether "Add custom input" row should be displayed while loading. */
-  readonly showAddRow = computed(() => {
-    const q = this.searchQuery().trim().toLowerCase();
-    if (!this.state().loading || !q) return false;
-
-    const inSelected = Array.from(this.selectedSet()).some(
-      (s) => s.toLowerCase() === q,
-    );
-    if (inSelected) return false;
-
-    return !(this.state().values || []).some(
-      (v) => v.value.toLowerCase() === q || v.displayLabel.toLowerCase() === q,
-    );
-  });
+  readonly showAddRow = computed(() =>
+    shouldShowAddCustomRow(
+      this.state().loading,
+      this.searchQuery(),
+      this.selectedSet(),
+      this.state().values,
+    ),
+  );
 
   /** Footer status summary text indicating selected/excluded count or advanced values count. */
-  readonly footerStatusText = computed(() => {
-    if (this.isAdvanced()) {
-      if (this.advMode() === 'compare_int') {
-        const raw = this.advText().trim();
-        if (!raw) return 'No values added';
-        return parseStrictInt32(raw) !== undefined
-          ? '1 value added'
-          : 'Invalid integer';
-      }
-      const isMulti = isMultiModeAdvanced(this.advMode());
-      if (!isMulti) {
-        return this.advText().trim() ? '1 value added' : 'No values added';
-      }
-      const count = this.advValues().length;
-      return count === 0
-        ? 'No values added'
-        : `${count} value${count > 1 ? 's' : ''} added`;
-    }
-
-    const type = this.config()?.type;
-    if (type !== 'list' && type !== undefined) {
-      return '';
-    }
-
-    const count = this.selectedSet().size;
-    const verb = this.isNegated() ? 'excluded' : 'selected';
-    return count === 0
-      ? `No options ${verb}`
-      : `${count} option${count > 1 ? 's' : ''} ${verb}`;
-  });
+  readonly footerStatusText = computed(() =>
+    computePickerFooterStatusText({
+      isAdvanced: this.isAdvanced(),
+      advMode: this.advMode(),
+      advText: this.advText(),
+      advValues: this.advValues(),
+      type: this.config()?.type,
+      selectedCount: this.selectedSet().size,
+      isNegated: this.isNegated(),
+    }),
+  );
 
   constructor() {
     afterNextRender(() => {
@@ -394,7 +337,6 @@ export class FilterValuePicker {
 
   /** Toggles selection state of a candidate value item. */
   toggleValue(item: PickerValueItem) {
-    if (item.disabled) return;
     const next = new Set(this.selectedSet());
     if (next.has(item.value)) {
       next.delete(item.value);
@@ -412,7 +354,7 @@ export class FilterValuePicker {
   /** Copies string value to system clipboard. */
   copyValue(val: string) {
     if (!val) return;
-    navigator.clipboard.writeText(val);
+    this.copyToClipboard(val);
   }
 
   /** Clears all selected value items in local draft state. */
@@ -466,7 +408,6 @@ export class FilterValuePicker {
       textVal: this.textVal(),
     });
     this.store.applyValuePicker(event);
-    this.store.closeValuePicker();
   }
 
   /** Switches back from Advanced matching view to Simple list matching view. */

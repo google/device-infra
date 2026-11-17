@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Shared review-step summary banner displaying target metadata, device status count chips, and apply error alerts.
+ */
+
 import {ChangeDetectionStrategy, Component, input} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 

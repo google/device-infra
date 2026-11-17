@@ -1,4 +1,14 @@
-import {computed, inject, Injectable, linkedSignal} from '@angular/core';
+/**
+ * @fileoverview Reactive store managing Test, Job, and Session (TJS) BFF search resources, default chips, and cursor pagination.
+ */
+
+import {
+  computed,
+  inject,
+  Injectable,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import {
   rxResource,
   takeUntilDestroyed,
@@ -6,13 +16,11 @@ import {
 } from '@angular/core/rxjs-interop';
 import {Observable, of} from 'rxjs';
 import {catchError, filter, map, switchMap, take} from 'rxjs/operators';
+
 import {
   Column,
-  FleetSuggestion,
   Row,
   TjsFilter,
-  TjsPromotedKey,
-  TjsResolveChipsRequest,
   TjsSearchConfig,
   TjsSearchRequest,
   TjsSearchResponse,
@@ -20,12 +28,11 @@ import {
   TjsSuggestionRequest,
 } from '../../../core/models/search';
 import {SnackBarService} from '../../../shared/services/snackbar_service';
+import {getErrorMessage} from '../../../shared/utils/error_utils';
 import {
-  createInitialValuePickerState,
   EntityType,
   FilterChip,
   FilterKeyMetadata,
-  FilterPair,
   PromotedFilterKeyItem,
   SearchBoxSuggestion,
   ValuePickerApplyEvent,
@@ -34,46 +41,42 @@ import {
 } from '../models';
 import {
   areFilterArraysEqual,
-  buildResolvedFilterChips,
-  EMPTY_FILTER_VALUE,
+  buildTjsFilterFromChip,
+  buildTjsInitialPickerState,
+  buildTjsPickerConfig,
+  buildTjsPromotedKeys,
+  computeTjsActiveChips,
   extractFilterChipFromTjsSuggestion,
-  extractRawValuesFromTjsFilter,
-  getChipKey,
-  pacificToUtc,
-  resolveInitialChips,
+  extractTjsRawValues,
+  mapTjsDefaultChips,
+  mapTjsResolvedChipsResponse,
+  prepareTjsChipResolution,
   toTjsEntityProto,
 } from '../utils';
 import {SearchPageStore} from './search_page_store';
 
-/**
- * State store for Test / Job / Session (TJS) search pages.
- *
- * Extends base SearchPageStore with TJS-specific RPC communications, token-stack
- * pagination, and single-level filter handling.
- */
+/** State store for Test / Job / Session (TJS) search pages. */
 @Injectable()
-export class TjsSearchStore extends SearchPageStore {
-  private readonly snackBarService = inject(SnackBarService);
-  // ===========================================================================
-  // 1. Dynamic UI Prompts & Suggestion Signals
-  // ===========================================================================
-
+export class TjsSearchStore extends SearchPageStore<TjsSuggestion, TjsFilter> {
   private static readonly SUPPORTED_ENTITIES = new Set<EntityType>([
     'tests',
     'jobs',
     'sessions',
   ]);
 
-  /** Subclass hook providing default entity type when route metadata is absent. */
+  private readonly snackBarService = inject(SnackBarService);
+  override readonly isTjs = signal(true).asReadonly();
+
+  /** Returns `'tests'` as the default TJS entity type. */
   override getDefaultEntity(): EntityType {
     return 'tests';
   }
 
+  /** Returns the supported TJS entity types (`'tests'`, `'jobs'`, and `'sessions'`). */
   override getSupportedEntities(): Set<EntityType> {
     return TjsSearchStore.SUPPORTED_ENTITIES;
   }
 
-  /** Returns dynamic search placeholder text based on the active search entity. */
   override readonly searchPlaceholder = computed(() => {
     switch (this.entity()) {
       case 'tests':
@@ -87,263 +90,129 @@ export class TjsSearchStore extends SearchPageStore {
     }
   });
 
-  /** Reactive resource fetching auto-complete suggestions with debounce. */
   private readonly suggestionsResource = rxResource<
     TjsSuggestion[],
-    | {
-        entity: EntityType;
-        input: string;
-        filters: TjsFilter[];
-      }
-    | undefined
+    TjsSuggestionRequest | undefined
   >({
     params: () => {
       const input = this.getActiveSuggestionInput();
       if (input === null) return undefined;
-
+      const filters = this.effectiveFilters();
       return {
-        entity: this.entity(),
+        entity: toTjsEntityProto(this.entity()),
         input,
-        filters: this.effectiveFilters(),
-      };
-    },
-    stream: ({params: req}) => {
-      if (!req) return of([]);
-      const tjsReq: TjsSuggestionRequest = {
-        entity: toTjsEntityProto(req.entity),
-        input: req.input,
-        filters: req.filters.length > 0 ? req.filters : undefined,
+        filters: filters.length > 0 ? filters : undefined,
         limit: 10,
       };
-      return this.searchService.getTjsSuggestions(tjsReq).pipe(
-        map((res) => res.items || []),
-        catchError(() => of([])),
-      );
     },
+    stream: ({params: req}) =>
+      req
+        ? this.searchService.getTjsSuggestions(req).pipe(
+            map((res) => res.items || []),
+            catchError(() => of([])),
+          )
+        : of([]),
   });
 
-  /** Autocomplete suggestions consumed directly from the BFF response without transformation. */
   override readonly suggestions = computed<SearchBoxSuggestion[]>(
     () => this.suggestionsResource.value() ?? [],
   );
-
-  /** Whether autocomplete suggestions are currently being fetched or debounced. */
-  override readonly isSuggestionsLoading = computed<boolean>(() =>
-    this.computeSuggestionsLoading(this.suggestionsResource.isLoading()),
+  override readonly isSuggestionsLoading = this.computeSuggestionsLoading(
+    this.suggestionsResource.isLoading,
   );
 
-  // ===========================================================================
-  // 2. Page Configuration & Metadata Resources
-  // ===========================================================================
-
-  /** Reactive resource fetching TJS search configuration (default chips, promoted keys). */
   private readonly searchConfigResource = rxResource<
     TjsSearchConfig | null,
     EntityType | undefined
   >({
     params: () => this.entity(),
-    stream: ({params: entity}) => {
-      if (!entity) return of(null);
-      return this.searchService
-        .getTjsSearchConfig({entity: toTjsEntityProto(entity)})
-        .pipe(catchError(() => of(null)));
-    },
+    stream: ({params: entity}) =>
+      entity
+        ? this.searchService
+            .getTjsSearchConfig({entity: toTjsEntityProto(entity)})
+            .pipe(catchError(() => of(null)))
+        : of(null),
   });
 
-  /** Exposes current TJS search configuration. */
   override readonly searchConfig = computed<TjsSearchConfig | null>(
     () => this.searchConfigResource.value() || null,
   );
-
-  /** Observable stream of searchConfig for reactive waiting during cold-load chip resolution. */
   private readonly searchConfig$ = toObservable(this.searchConfig);
 
-  /** Formatted entity display label provided by BFF search config (e.g. "Tests", "Jobs", "Sessions"). */
-  readonly entityLabel = computed<string>(() => {
-    return this.searchConfig()?.entityLabel || this.entity();
-  });
-
-  /** Whether initial search configuration is loading. */
-  override readonly isConfigLoading = computed<boolean>(() =>
-    this.searchConfigResource.isLoading(),
+  readonly entityLabel = computed<string>(
+    () => this.searchConfig()?.entityLabel || this.entity(),
   );
+  override readonly isConfigLoading = this.searchConfigResource.isLoading;
+  override readonly isPromotedKeysLoading = this.searchConfigResource.isLoading;
 
-  /** Whether auxiliary promoted keys are currently loading. */
-  override readonly isPromotedKeysLoading = computed<boolean>(() =>
-    this.searchConfigResource.isLoading(),
-  );
-
-  /** Helper to determine if current route snapshot has filter or group-by query parameters. */
-  private hasUrlFilters(): boolean {
-    const qp = this.route.snapshot?.queryParams;
-    return !!(qp?.['f'] || qp?.['gb']);
-  }
-
-  /**
-   * Synchronizes active filter chips with search configuration default chips
-   * using Angular 20+ linkedSignal.
-   *
-   * On cold store instantiation:
-   * - If route contains initial URL filters, initializes with URL filters.
-   * - If route is clean, populates default chips as soon as searchConfig is available.
-   * - Local user modifications during the active tab visit (clearing/adding chips) are preserved.
-   */
   override readonly activeChips = linkedSignal<
     TjsSearchConfig | null,
     FilterChip[]
   >({
     source: () => this.searchConfig(),
-    computation: (config, previous) => {
-      // 1. If cold-start was initially waiting for config, populate defaults once config resolves
-      if (previous && !previous.source && config && !this.hasUrlFilters()) {
-        return this.mapDefaultChips(config);
-      }
-
-      // 2. Preserve user modifications during active tab usage
-      if (previous) {
-        return previous.value;
-      }
-
-      // 3. Initial evaluation on store instantiation with URL filters
-      const urlChips = this.hasUrlFilters()
-        ? resolveInitialChips(this.route)
-        : [];
-      if (urlChips.length > 0) {
-        return urlChips;
-      }
-
-      // 4. Initial clean load with search configuration loaded
-      if (config) {
-        return this.mapDefaultChips(config);
-      }
-
-      return [];
-    },
+    computation: (config, previous) =>
+      computeTjsActiveChips(config, previous, this.route, (k) =>
+        this.getKeyMetadata(k),
+      ),
   });
 
-  /** Returns default chips from active search configuration if available. */
+  /** Maps the current `TjsSearchConfig.defaultChips` into active `FilterChip` items. */
   override getDefaultChips(): FilterChip[] {
-    return this.mapDefaultChips(this.searchConfig());
+    return mapTjsDefaultChips(this.searchConfig(), (k) =>
+      this.getKeyMetadata(k),
+    );
   }
 
-  /** Helper to map TjsSearchConfig default chips to FilterChip array. */
-  private mapDefaultChips(cfg: TjsSearchConfig | null): FilterChip[] {
-    if (cfg?.defaultChips && cfg.defaultChips.length > 0) {
-      return cfg.defaultChips.map((c) => {
-        const rawVals = extractRawValuesFromTjsFilter(c.filter);
-        const key = c.filter?.key || c.pillKey;
-        const meta = this.getKeyMetadata(key);
-        return {
-          key,
-          pillKey: c.pillKey || c.keyDisplayName || meta?.keyDisplayName || key,
-          pillCondition: c.pillCondition || c.filter?.stringValue?.value || '',
-          rawValues: rawVals,
-          metadata: meta,
-          tjsFilter: c.filter,
-        };
-      });
-    }
-    return [];
-  }
-
-  /** Promoted filter key preset items derived directly from active TJS search config. */
-  override readonly promotedFilterKeys = computed<PromotedFilterKeyItem[]>(
-    () => {
-      const cfg = this.searchConfig();
-      if (!cfg?.promotedKeys) return [];
-      return cfg.promotedKeys.map((pk: TjsPromotedKey) => {
-        const displayName = pk.displayName || pk.key;
-        return {
-          key: pk.key,
-          displayName,
-          metadata: {
-            ...pk,
-            keyDisplayName: displayName,
-          },
-        };
-      });
-    },
+  override readonly promotedFilterKeys = computed<PromotedFilterKeyItem[]>(() =>
+    buildTjsPromotedKeys(this.searchConfig()),
   );
-
-  /** Dynamic dictionary map containing metadata for all known filter keys. */
   override readonly keyMetadataMap = computed<Map<string, FilterKeyMetadata>>(
     () => new Map(this.promotedFilterKeys().map((k) => [k.key, k.metadata!])),
   );
 
-  // ===========================================================================
-  // 3. Primary Search Resource & Execution
-  // ===========================================================================
-
-  /** Reactive resource fetching main TJS search results data. */
   private readonly tjsResource = rxResource<
     TjsSearchResponse,
-    | {
-        entity: EntityType;
-        pageToken: string;
-        filters: TjsFilter[];
-      }
-    | undefined
+    TjsSearchRequest | undefined
   >({
     params: () => {
       if (!this.isCurrentRouteActive()) return undefined;
-
-      // On clean page entry before searchConfig loads (or when all filters are cleared),
-      // effectiveFilters() is empty; skip firing searchTjs until active filters exist.
       const filters = this.effectiveFilters();
-      if (filters.length === 0) {
-        return undefined;
-      }
-
-      return {
-        entity: this.entity(),
-        pageToken: this.pageToken(),
-        filters,
-      };
+      return filters.length === 0
+        ? undefined
+        : {
+            entity: toTjsEntityProto(this.entity()),
+            pageToken: this.pageToken() || undefined,
+            filters,
+          };
     },
-    stream: ({params: req}) => {
-      if (!req) return of({columns: [], rows: []} as TjsSearchResponse);
-
-      const tjsReq: TjsSearchRequest = {
-        entity: toTjsEntityProto(req.entity),
-        filters: req.filters,
-        pageToken: req.pageToken || undefined,
-      };
-
-      return this.searchService.searchTjs(tjsReq).pipe(
-        catchError(() =>
-          of({
-            columns: [],
-            rows: [],
-          } as TjsSearchResponse),
-        ),
-      );
-    },
+    stream: ({params: req}) =>
+      req
+        ? this.searchService
+            .searchTjs(req)
+            .pipe(
+              catchError(() =>
+                of({columns: [], rows: []} as TjsSearchResponse),
+              ),
+            )
+        : of({columns: [], rows: []} as TjsSearchResponse),
   });
 
-  /** Exposes loading status of primary TJS search resource, initial config hydration, or URL chip resolution. */
   override readonly isLoading = computed<boolean>(
     () =>
       this.tjsResource.isLoading() ||
       (this.isConfigLoading() && !this.searchConfig()) ||
       (this.isResolvingChips() && this.rows().length === 0),
   );
+  override readonly displayColumns = computed<Column[]>(
+    () => this.tjsResource.value()?.columns || [],
+  );
+  override readonly rows = computed<Row[]>(
+    () => this.tjsResource.value()?.rows || [],
+  );
+  override readonly hasNextPage = computed<boolean>(() =>
+    Boolean(this.tjsResource.value()?.nextPageToken),
+  );
 
-  /** Columns to render in TJS search results table. */
-  override readonly displayColumns = computed<Column[]>(() => {
-    return this.tjsResource.value()?.columns || [];
-  });
-
-  /** Rows to render in TJS search results table. */
-  override readonly rows = computed<Row[]>(() => {
-    return (this.tjsResource.value()?.rows as Row[]) || [];
-  });
-
-  /** Determines whether a next page token exists in TJS search response. */
-  override readonly hasNextPage = computed<boolean>(() => {
-    return !!this.tjsResource.value()?.nextPageToken;
-  });
-
-  /** Pre-formatted semantic range text for TJS cursor pagination display (e.g. "showing 1–25"). */
   override readonly rangeText = computed<string>(() => {
     const count = this.rows().length;
     if (count === 0) return '';
@@ -352,66 +221,28 @@ export class TjsSearchStore extends SearchPageStore {
     return `showing ${start.toLocaleString()}–${end.toLocaleString()}`;
   });
 
-  /** Triggers execution of primary TJS search and forces resource reload. */
-  override executeSearch() {
+  /** Resets pagination and page-token history, then reloads the TJS search resource. */
+  override executeSearch(): void {
     this.resetPagination();
     this.prevPageTokens.set([]);
     this.tjsResource.reload();
   }
 
-  /** Memoized effective filter list guarding downstream search resources from display-only chip updates. */
   readonly effectiveFilters = computed<TjsFilter[]>(
     () =>
       this.activeChips()
-        .map((chip) => this.buildTjsFilterFromChip(chip))
+        .map((chip) => this.toTjsFilter(chip))
         .filter(Boolean) as TjsFilter[],
     {equal: areFilterArraysEqual},
   );
 
-  /** Maps FilterChip to TjsFilter Protobuf payload. */
-  private buildTjsFilterFromChip(chip: Partial<FilterChip>): TjsFilter | null {
-    if (chip.tjsFilter) {
-      return chip.tjsFilter;
-    }
-    const rawKey = chip.key || chip.pillKey;
-    if (!rawKey) return null;
-
-    const meta = chip.metadata || this.getKeyMetadata(rawKey);
-    if (this.searchConfig() && !meta) {
-      return null;
-    }
-
-    if (meta?.timeRange) {
-      const parseTime = (v?: string) =>
-        v && v !== EMPTY_FILTER_VALUE
-          ? pacificToUtc(v) || undefined
-          : undefined;
-      const from = parseTime(chip.rawValues?.[0]);
-      const to = parseTime(chip.rawValues?.[1]);
-      return from || to ? {key: rawKey, timeRange: {from, to}} : null;
-    }
-
-    if (meta?.namedPair) {
-      const name = chip.rawValues?.[0]?.trim();
-      const value = chip.rawValues?.[1]?.trim();
-      return name && value ? {key: rawKey, namedValue: {name, value}} : null;
-    }
-
-    if (meta?.enumPicker) {
-      const values = chip.rawValues?.filter(Boolean) ?? [];
-      return values.length > 0 ? {key: rawKey, enumValues: {values}} : null;
-    }
-
-    const rawValStr =
-      chip.rawValues?.filter(Boolean).join(',') || chip.pillCondition?.trim();
-    return rawValStr ? {key: rawKey, stringValue: {value: rawValStr}} : null;
+  /** Converts a `FilterChip` into a `TjsFilter` proto payload using the store's key metadata. */
+  private toTjsFilter(chip: Partial<FilterChip>): TjsFilter | null {
+    return buildTjsFilterFromChip(chip, Boolean(this.searchConfig()), (k) =>
+      this.getKeyMetadata(k),
+    );
   }
 
-  // ===========================================================================
-  // 4. Pagination Stack & History Controls
-  // ===========================================================================
-
-  /** History stack of page tokens used for backward pagination, automatically reset when chips or query change. */
   readonly prevPageTokens = linkedSignal<
     {chips: FilterChip[]; query: string},
     string[]
@@ -420,8 +251,8 @@ export class TjsSearchStore extends SearchPageStore {
     computation: () => [],
   });
 
-  /** Navigates to previous page token by popping from token history stack. */
-  override prevPage() {
+  /** Pops the previous cursor token from `prevPageTokens` and navigates back one page. */
+  override prevPage(): void {
     const tokens = this.prevPageTokens();
     if (tokens.length === 0) return;
     const prev = tokens[tokens.length - 1];
@@ -430,8 +261,8 @@ export class TjsSearchStore extends SearchPageStore {
     this.pageIndex.update((i) => Math.max(0, i - 1));
   }
 
-  /** Navigates to next page token and records current token onto pagination stack. */
-  override nextPage() {
+  /** Pushes the current cursor token onto `prevPageTokens` and advances to `nextPageToken`. */
+  override nextPage(): void {
     const nextToken = this.tjsResource.value()?.nextPageToken;
     if (!nextToken) return;
     this.prevPageTokens.update((tokens) => [...tokens, this.pageToken()]);
@@ -439,19 +270,11 @@ export class TjsSearchStore extends SearchPageStore {
     this.pageIndex.update((i) => i + 1);
   }
 
-  // ===========================================================================
-  // 5. URL Resolution & Backend Metadata Enrichment
-  // ===========================================================================
-
-  /** Resolves parsed URL query filters into FilterChip list using TJS resolve API. */
-  protected override resolveChipsFromBackend(
+  /** Waits for `searchConfig` if needed, then resolves parsed URL filter chips via `ResolveTjsChips`. */
+  override resolveChipsFromBackend(
     parsedFilters: FilterChip[],
-    _groupByKeys: string[],
   ): Observable<FilterChip[]> {
-    if (parsedFilters.length === 0) {
-      return of([]);
-    }
-
+    if (parsedFilters.length === 0) return of([]);
     if (!this.searchConfig()) {
       return this.searchConfig$.pipe(
         filter((cfg): cfg is TjsSearchConfig => cfg !== null),
@@ -459,190 +282,81 @@ export class TjsSearchStore extends SearchPageStore {
         switchMap(() => this.executeTjsResolve(parsedFilters)),
       );
     }
-
     return this.executeTjsResolve(parsedFilters);
   }
 
-  /** Executes TJS chip resolution after search configuration and promotedKeys are available. */
+  /** Validates parsed TJS filter keys against metadata and resolves display pills via `ResolveTjsChips`. */
   private executeTjsResolve(
     parsedFilters: FilterChip[],
   ): Observable<FilterChip[]> {
-    // Scenario 1 (TJS): Since promotedKeys are known in config, ignore unknown keys directly and notify user
-    const filterPairs: Array<FilterPair<TjsFilter>> = [];
-    for (const chip of parsedFilters) {
-      const key = getChipKey(chip);
-      if (!key || !this.getKeyMetadata(key)) {
-        const label = chip.pillKey || chip.key || key || 'Unknown';
-        this.snackBarService.showWarning(
-          `Filter "${label}" is not supported for ${this.entity()} and has been ignored.`,
-        );
-        continue;
-      }
-      const filter = chip.tjsFilter || this.buildTjsFilterFromChip(chip);
-      if (filter) {
-        filterPairs.push({chip, filter});
-      }
-    }
-
-    // If no matching filters, return empty array to clear invalid chips (Scenario 1 & 5)
-    if (filterPairs.length === 0) {
-      return of([]);
-    }
-
-    const req: TjsResolveChipsRequest = {
-      filters: filterPairs.map((p) => p.filter),
-    };
-
-    return this.searchService.resolveTjsChips(req).pipe(
-      map((res) =>
-        buildResolvedFilterChips(
-          filterPairs,
-          res.chips,
-          (chip, resolved, filter) => {
-            const meta = chip.key
-              ? this.getKeyMetadata(chip.key) ||
-                this.getKeyMetadata(resolved.pillKey)
-              : undefined;
-            return {
-              ...chip,
-              pillKey: resolved.pillKey || chip.pillKey,
-              pillCondition: resolved.pillCondition || chip.pillCondition,
-              metadata: meta || chip.metadata,
-              tjsFilter: filter,
-            };
-          },
-        ),
-      ),
-      // TODO: Uniformly handle backend RPC error / 500 / offline display in search UI.
-      catchError(() => of([])),
+    const {filterPairs, warnings} = prepareTjsChipResolution(
+      parsedFilters,
+      this.entity(),
+      (k) => this.getKeyMetadata(k),
+      (chip) => this.toTjsFilter(chip),
     );
+    for (const w of warnings) this.snackBarService.showWarning(w);
+    if (filterPairs.length === 0) return of([]);
+    return this.searchService
+      .resolveTjsChips({filters: filterPairs.map((p) => p.filter)})
+      .pipe(
+        map((res) =>
+          mapTjsResolvedChipsResponse(filterPairs, res, (k) =>
+            this.getKeyMetadata(k),
+          ),
+        ),
+        catchError(() => of(filterPairs.map((p) => p.chip))),
+      );
   }
 
-  // ===========================================================================
-  // 6. ValuePicker Application & TJS Filter Helpers
-  // ===========================================================================
-
-  /** Constructs TJS-specific ValuePicker configuration based on key metadata. */
-  protected override buildPickerConfig(
+  /** Builds TJS ValuePicker configuration based on key metadata (`range`, `list`, `namedPair`, or `text`). */
+  override buildPickerConfig(
     key: string,
     title?: string,
     metadata?: FilterKeyMetadata,
   ): ValuePickerConfig {
-    const meta = metadata || this.getKeyMetadata(key);
-    const displayTitle = meta?.keyDisplayName || title || key;
-
-    const namedPair =
-      typeof meta?.namedPair === 'object' ? meta.namedPair : undefined;
-    const textInput =
-      typeof meta?.textInput === 'object' ? meta.textInput : undefined;
-
-    let layoutType: 'list' | 'range' | 'namedPair' | 'text' = 'list';
-    let needsName = false;
-    let namePlaceholder = 'Name';
-    let valPlaceholder = 'Value';
-
-    if (meta?.timeRange) {
-      layoutType = 'range';
-    } else if (meta?.enumPicker) {
-      layoutType = 'list';
-    } else if (namedPair) {
-      layoutType = 'namedPair';
-      needsName = true;
-      namePlaceholder = namedPair.namePlaceholder || 'Name';
-      valPlaceholder = namedPair.valuePlaceholder || 'Value';
-    } else if (textInput) {
-      layoutType = 'text';
-      valPlaceholder = textInput.placeholder || 'Value';
-    } else {
-      layoutType = 'text';
-    }
-
-    return {
+    return buildTjsPickerConfig(
       key,
-      type: layoutType,
-      title: displayTitle,
-      needsName,
-      canUseAdvanced: false,
-      isPlural: !!meta?.isPlural,
-      namePlaceholder,
-      valPlaceholder,
-    };
+      title,
+      metadata || this.getKeyMetadata(key),
+    );
   }
 
-  /** Constructs initial ValuePicker interaction state for TJS filter keys. */
-  protected override buildInitialPickerState(
+  /** Builds initial TJS ValuePicker state from key metadata, active chip, and staged values. */
+  override buildInitialPickerState(
     key: string,
     activeChip?: FilterChip,
     metadata?: FilterKeyMetadata,
     stagedValues: string[] = [],
   ): ValuePickerState {
-    const meta = metadata || this.getKeyMetadata(key);
-    const enumPicker =
-      typeof meta?.enumPicker === 'object' ? meta.enumPicker : undefined;
-    const values =
-      enumPicker?.options?.map((o) => ({
-        value: o.value,
-        displayLabel: o.label || o.value,
-      })) ?? [];
-
-    const chipValues = this.extractInitialChipValues(activeChip);
-
-    return {
-      ...createInitialValuePickerState(),
-      values,
-      selectedValues: new Set([...chipValues, ...stagedValues]),
-    };
+    return buildTjsInitialPickerState(
+      metadata || this.getKeyMetadata(key),
+      activeChip,
+      stagedValues,
+    );
   }
 
-  /** Resolves initial selected values from an existing TJS FilterChip. */
-  private extractInitialChipValues(chip?: FilterChip): string[] {
-    if (!chip) return [];
-    if (chip.rawValues?.length) return chip.rawValues;
-    if (chip.tjsFilter) {
-      return extractRawValuesFromTjsFilter(chip.tjsFilter) ?? [];
-    }
-    if (chip.pillCondition) {
-      return chip.pillCondition
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
-    return [];
-  }
-
-  /** Handles ValuePicker apply events by resolving chips from API. */
-  override applyValuePicker(event: ValuePickerApplyEvent) {
-    const key = this.pickerKey();
-    const title = this.pickerTitle();
-    const meta = key ? this.getKeyMetadata(key) : undefined;
-    const displayTitle = meta?.keyDisplayName || title;
-    this.closeValuePicker();
-    this.showSuggestions.set(!this.autoCollapseAfterApply());
-
-    const rawValues = this.extractRawValues(event, meta);
-    const draftChip: Partial<FilterChip> = {
+  /** Resolves the applied TJS ValuePicker selection via `ResolveTjsChips` and updates active filter chips. */
+  override applyValuePicker(event: ValuePickerApplyEvent): void {
+    const {key, meta, displayTitle} = this.consumeActivePicker();
+    const rawValues = extractTjsRawValues(event, meta);
+    const tjsFilter = this.toTjsFilter({
       key,
       pillKey: displayTitle,
       rawValues,
       metadata: meta,
-    };
-
-    const tjsFilter = this.buildTjsFilterFromChip(draftChip);
+    });
     if (!tjsFilter) {
       this.removeChipForKey(key);
       return;
     }
 
-    const req: TjsResolveChipsRequest = {filters: [tjsFilter]};
     this.searchService
-      .resolveTjsChips(req)
+      .resolveTjsChips({filters: [tjsFilter]})
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          if (!res.chips || res.chips.length === 0) {
-            return;
-          }
-          for (const c of res.chips) {
+          for (const c of res.chips ?? []) {
             this.addFilterChip({
               key,
               pillKey: c.pillKey || displayTitle,
@@ -653,54 +367,26 @@ export class TjsSearchStore extends SearchPageStore {
             });
           }
         },
-        // TODO: Uniformly handle backend RPC error / 500 / offline display in search UI.
-        error: () => {},
+        error: (err: unknown) => {
+          this.snackBarService.showWarning?.(getErrorMessage(err));
+        },
       });
   }
 
-  /** Extracts raw values string array from ValuePickerApplyEvent. */
-  private extractRawValues(
-    event: ValuePickerApplyEvent,
-    meta?: FilterKeyMetadata,
-  ): string[] | undefined {
-    if (event.rangeFrom || event.rangeTo) {
-      return [
-        event.rangeFrom || EMPTY_FILTER_VALUE,
-        event.rangeTo || EMPTY_FILTER_VALUE,
-      ];
-    }
-    if (meta?.namedPair || event.propName) {
-      return [event.propName || '', event.textVal || ''];
-    }
-    if (event.textVal?.trim()) {
-      return [event.textVal.trim()];
-    }
-    if (event.selected && event.selected.length > 0) {
-      return event.selected;
-    }
-    return undefined;
-  }
-
-  // ===========================================================================
-  // 7. Suggestion Selection, Chip Mutators, & State Reset
-  // ===========================================================================
-
-  /** Unpacks TjsSuggestion payload to open value picker or apply filter chips. */
-  protected override applySuggestion(rawItem: FleetSuggestion | TjsSuggestion) {
-    const raw = rawItem as TjsSuggestion;
+  /** Applies a selected TJS suggestion by opening the ValuePicker or adding the resolved filter chip. */
+  protected override applySuggestion(raw: TjsSuggestion): void {
     if (!raw) return;
-
     if (raw.openPicker) {
       const op = raw.openPicker;
       const meta = this.getKeyMetadata(op.key);
-      const displayTitle = op.keyDisplayName || meta?.keyDisplayName || op.key;
-      this.openQuickFilter(op.key, displayTitle, meta);
+      this.openQuickFilter(
+        op.key,
+        op.keyDisplayName || meta?.keyDisplayName || op.key,
+        meta,
+      );
       return;
     }
-
     const chip = extractFilterChipFromTjsSuggestion(raw);
-    if (chip) {
-      this.addFilterChip(chip);
-    }
+    if (chip) this.addFilterChip(chip);
   }
 }

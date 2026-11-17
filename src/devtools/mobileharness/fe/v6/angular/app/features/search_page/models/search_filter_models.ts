@@ -1,4 +1,9 @@
+/**
+ * @fileoverview Models and constants for search filter chips, key metadata, promoted presets, and URL query parsing.
+ */
+
 import {
+  ArsenalFilterParam,
   ComplexMatch,
   EnumPicker,
   Filter,
@@ -20,14 +25,6 @@ export interface FilterKeyMetadata extends Partial<FleetFilterChipMetadata> {
   textInput?: TextInputPicker;
 }
 
-/** Base chip metadata and matching properties. */
-export interface ChipMetadata {
-  metadata?: FilterKeyMetadata;
-  rawValues?: string[];
-  negated?: boolean;
-  complex?: ComplexMatch;
-}
-
 /** Normalized descriptor extracted from a ComplexMatch structure matching ADV_MODES_LIST. */
 export interface ComplexMatchInfo {
   mode: AdvancedMatchMode;
@@ -37,11 +34,15 @@ export interface ComplexMatchInfo {
 }
 
 /** Structure representing an active or staged filter chip. */
-export interface FilterChip extends ChipMetadata {
+export interface FilterChip {
   key?: string;
   pillKey: string;
   pillCondition: string;
   isGroupBy?: boolean;
+  metadata?: FilterKeyMetadata;
+  rawValues?: string[];
+  negated?: boolean;
+  complex?: ComplexMatch;
   /** Authoritative backend Protobuf TjsFilter contract when in TJS domain. */
   tjsFilter?: TjsFilter;
   /** Authoritative backend Protobuf Filter contract when in Fleet domain. */
@@ -71,5 +72,15 @@ export interface ParsedUrlQueryChips {
   initialChips: FilterChip[];
 }
 
+/** Syntactically unpacked legacy Alkali Arsenal query parameters (`?arsenal_query=...`). */
+export interface ParsedArsenalQueryParams {
+  readonly filters: ArsenalFilterParam[];
+  readonly columns: string[];
+  readonly groupByKeys: string[];
+}
+
 /** Maximum number of group-by keys allowed concurrently in the search table. */
 export const MAX_GROUP_BY_KEYS = 3;
+
+/** Special UI placeholder representing an unassigned/empty value in Protobuf. */
+export const EMPTY_FILTER_VALUE = '<empty>';

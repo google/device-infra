@@ -5,5 +5,7 @@
     ></app-search-input>
   </div>
   <app-filter-presets></app-filter-presets>
-  <app-filter-value-picker></app-filter-value-picker>
+  @if (store.pickerAnchor()) {
+    <app-filter-value-picker></app-filter-value-picker>
+  }
 </div>

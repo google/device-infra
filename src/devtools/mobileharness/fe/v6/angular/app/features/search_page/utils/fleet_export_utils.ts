@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Pure formatting and browser download helpers for exporting selected Fleet table rows to CSV and TSV.
+ */
+
 import {Cell, Column, Row} from '../../../core/models/search';
 import {
   createSafeObjectURL,
@@ -5,9 +9,6 @@ import {
   setSafeHref,
 } from '../../../shared/utils/safe_dom';
 import {FleetScope} from '../models';
-
-/** Maximum number of selected items that can be exported at once. */
-export const MAX_EXPORT_ROWS = 5000;
 
 /** Returns the singular or plural display noun for the active fleet entity. */
 export function getEntityNoun(entity: string, plural: boolean): string {
@@ -84,6 +85,7 @@ function cleanTsvField(raw: string): string {
   return s;
 }
 
+/** Formats columns and rows into a delimited text table using the given field formatter and separators. */
 function buildDelimitedTable(
   columns: readonly Column[],
   rows: readonly Row[],

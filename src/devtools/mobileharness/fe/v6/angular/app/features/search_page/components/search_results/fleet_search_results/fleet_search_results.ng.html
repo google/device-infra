@@ -94,20 +94,10 @@
           }
         }
         @case ('error') {
-          <div class="rt-empty-state rt-error-state" role="alert">
-            <mat-icon class="material-symbols-outlined rt-empty-icon rt-error-icon">error</mat-icon>
-            <div class="rt-empty-title">Failed to load {{ entity }}</div>
-            <div class="rt-empty-sub">{{ store.searchError() }}</div>
-            <button type="button" class="rt-btn-outlined" (click)="store.executeSearch()">Retry</button>
-          </div>
+          <ng-container *ngTemplateOutlet="errorState"></ng-container>
         }
         @case ('empty_filtered') {
-          <div class="rt-empty-state">
-            <mat-icon class="material-symbols-outlined rt-empty-icon">search_off</mat-icon>
-            <div class="rt-empty-title">No {{ entity }} match your filters</div>
-            <div class="rt-empty-sub">Try removing a filter or broadening your search.</div>
-            <button type="button" class="rt-btn-outlined" (click)="store.resetSearchState()">Clear all filters</button>
-          </div>
+          <ng-container *ngTemplateOutlet="emptyFilteredState"></ng-container>
         }
         @case ('empty_all') {
           <div class="rt-empty-state">
@@ -176,20 +166,10 @@
     @let rows = store.rows();
     @switch (flatTableViewMode()) {
       @case ('error') {
-        <div class="rt-empty-state rt-error-state" role="alert">
-          <mat-icon class="material-symbols-outlined rt-empty-icon rt-error-icon">error</mat-icon>
-          <div class="rt-empty-title">Failed to load {{ entity }}</div>
-          <div class="rt-empty-sub">{{ store.searchError() }}</div>
-          <button type="button" class="rt-btn-outlined" (click)="store.executeSearch()">Retry</button>
-        </div>
+        <ng-container *ngTemplateOutlet="errorState"></ng-container>
       }
       @case ('empty_filtered') {
-        <div class="rt-empty-state">
-          <mat-icon class="material-symbols-outlined rt-empty-icon">search_off</mat-icon>
-          <div class="rt-empty-title">No {{ entity }} match your filters</div>
-          <div class="rt-empty-sub">Try removing a filter or broadening your search.</div>
-          <button type="button" class="rt-btn-outlined" (click)="store.resetSearchState()">Clear all filters</button>
-        </div>
+        <ng-container *ngTemplateOutlet="emptyFilteredState"></ng-container>
       }
       @case ('empty_all') {
         <div class="rt-empty-state">
@@ -477,6 +457,25 @@
         <span class="rt-legend-label-full">Others</span>
         <span class="rt-legend-label-short">Others</span>
       </span>
+    </div>
+  </ng-template>
+
+  <!-- Shared Error and Filtered Empty States -->
+  <ng-template #errorState>
+    <div class="rt-empty-state rt-error-state" role="alert">
+      <mat-icon class="material-symbols-outlined rt-empty-icon rt-error-icon">error</mat-icon>
+      <div class="rt-empty-title">Failed to load {{ entity }}</div>
+      <div class="rt-empty-sub">{{ store.searchError() }}</div>
+      <button type="button" class="rt-btn-outlined" (click)="store.executeSearch()">Retry</button>
+    </div>
+  </ng-template>
+
+  <ng-template #emptyFilteredState>
+    <div class="rt-empty-state">
+      <mat-icon class="material-symbols-outlined rt-empty-icon">search_off</mat-icon>
+      <div class="rt-empty-title">No {{ entity }} match your filters</div>
+      <div class="rt-empty-sub">Try removing a filter or broadening your search.</div>
+      <button type="button" class="rt-btn-outlined" (click)="store.resetSearchState()">Clear all filters</button>
     </div>
   </ng-template>
 </mat-card>

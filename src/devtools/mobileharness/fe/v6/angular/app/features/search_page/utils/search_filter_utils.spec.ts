@@ -11,9 +11,8 @@ import {
   TjsFilter,
   TjsSuggestion,
 } from '../../../core/models/search';
-import {EntityType, FilterChip} from '../models';
+import {EMPTY_FILTER_VALUE, EntityType, FilterChip} from '../models';
 import {
-  EMPTY_FILTER_VALUE,
   areFilterArraysEqual,
   buildFilterChipFromResolved,
   buildFleetFilterFromChip,
@@ -51,7 +50,7 @@ import {
   toSearchEntityProto,
   toTjsEntityProto,
   trackChip,
-} from './search_filter_utils';
+} from './index';
 
 describe('search_filter_utils', () => {
   describe('parseStrictInt32', () => {

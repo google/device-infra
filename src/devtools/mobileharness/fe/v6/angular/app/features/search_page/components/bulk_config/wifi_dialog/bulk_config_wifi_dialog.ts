@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Two-step wizard dialog for batch-configuring or clearing default Wi-Fi networks across selected Fleet devices.
+ */
+
 import {
   ChangeDetectionStrategy,
   Component,
@@ -22,6 +26,7 @@ import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service
 import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {BulkConfigDialogData} from '../../../models';
 import {
+  filterCandidateWifiOptions,
   formatDeviceCount,
   formatNothingToUpdateMessage,
   formatWizardHeadline,
@@ -143,31 +148,14 @@ export class BulkConfigWifiDialog {
   });
 
   /** Filtered Wi-Fi options based on search input, with formatted subtitle and active selection state. */
-  readonly filteredWifiOptions = computed(() => {
-    const q = this.searchFilter().trim().toLowerCase();
-    const isClear = this.isClearWifi();
-    const target = this.targetWifi();
-    const targetSsid = target.ssid.trim();
-
-    const list = this.candidateWifis();
-    const matched = q
-      ? list.filter((c) => c.wifi.ssid.toLowerCase().includes(q))
-      : list;
-    return matched.map((c) => ({
-      wifi: c.wifi,
-      subtitle:
-        c.fleetInUse?.deviceCount != null
-          ? `${formatDeviceCount(c.fleetInUse.deviceCount)} in fleet`
-          : c.curatedPreset
-            ? 'Preset network'
-            : '',
-      isActive:
-        !isClear &&
-        c.wifi.ssid === targetSsid &&
-        (c.wifi.psk || '') === target.psk &&
-        Boolean(c.wifi.scanSsid) === target.scanSsid,
-    }));
-  });
+  readonly filteredWifiOptions = computed(() =>
+    filterCandidateWifiOptions(
+      this.candidateWifis(),
+      this.searchFilter(),
+      this.isClearWifi(),
+      this.targetWifi(),
+    ),
+  );
 
   /** Security label for the target Wi-Fi configuration. */
   readonly securityLabel = computed<string>(() =>
