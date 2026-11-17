@@ -27,6 +27,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -146,8 +147,8 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
   };
 
   /** List of device types that don't support interactive CPU scaling governor mode. */
-  private static final ImmutableList<String> NON_INTERACTIVE_CPU_GOVERNOR =
-      ImmutableList.of("beast", "atom", "deadpool");
+  private static final ImmutableSet<String> NON_INTERACTIVE_CPU_GOVERNOR =
+      ImmutableSet.of("beast", "atom", "deadpool");
 
   /** Timeout for waiting for CPU folders and files to be created after reboot. */
   private static final long WAIT_FOR_CPU_FILES_TIMEOUT_SEC = Duration.ofMinutes(2).toSeconds();
@@ -185,6 +186,9 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
   private static final Pattern UNABLE_TO_STOP_SERVICE_MSG_PATTERN =
       Pattern.compile("Unable to stop service (?<service>\\S+)\\s+See dmesg for error reason");
 
+  /** Default Android animation scale restored after tests. */
+  private static final float DEFAULT_ANIMATION_SCALE = 1.0f;
+
   /** A List of commands. */
   private static class Commands {
 
@@ -192,16 +196,16 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
 
     private static final Joiner JOINER = Joiner.on(COMMAND_TOKEN_SPLITER).skipNulls();
 
-    protected final List<String> commands;
+    final List<String> commands;
 
     private final String prefix;
 
     /** Creates a command list, whose items all start with {@code prefix}. */
-    public Commands(Object... prefix) {
+    Commands(Object... prefix) {
       this(new ArrayList<>(), prefix);
     }
 
-    public Commands(List<String> commands, Object... prefix) {
+    Commands(List<String> commands, Object... prefix) {
       this.commands = commands;
       this.prefix = buildPrefix(prefix);
     }
@@ -221,13 +225,13 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
      * @return this object so callers could add multiple commands easily
      */
     @CanIgnoreReturnValue
-    public Commands add(Object... tokens) {
+    Commands add(Object... tokens) {
       commands.add(this.prefix + buildCommand(tokens));
       return this;
     }
 
     @CanIgnoreReturnValue
-    public Commands add(List<String> tokens) {
+    Commands add(List<String> tokens) {
       commands.add(this.prefix + buildCommand(tokens));
       return this;
     }
@@ -237,22 +241,22 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
      *
      * <p>This method would not produce correct shell command if input is a {@link List}.
      */
-    public static String buildCommand(Object... tokens) {
+    static String buildCommand(Object... tokens) {
       return JOINER.join(tokens).trim();
     }
 
     /** Takes list of command strings as input to build the shell command. */
-    public static String buildCommand(List<String> tokens) {
+    static String buildCommand(List<String> tokens) {
       return JOINER.join(tokens).trim();
     }
 
     /** Returns a list of all added commands. */
-    public List<String> get() {
+    List<String> get() {
       return commands;
     }
 
     /** Returns true if no command is added. */
-    public boolean isEmpty() {
+    boolean isEmpty() {
       return commands.isEmpty();
     }
   }
@@ -267,7 +271,7 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
     final Commands secure = new Commands("settings", "put", "secure");
     final Commands global = new Commands("settings", "put", "global");
 
-    public boolean isEmpty() {
+    boolean isEmpty() {
       return system.isEmpty() && secure.isEmpty() && global.isEmpty();
     }
   }
@@ -279,7 +283,7 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
 
     final Commands svc;
 
-    public CommonCommands() {
+    CommonCommands() {
       super();
       gservice =
           new Commands(
@@ -681,17 +685,17 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
 
     // animator_duration_scale
     if (spec.hasAnimatorDurationScale()) {
-      settings.global.add("animator_duration_scale", spec.getAnimatorDurationScale());
+      setAnimationScale("animator_duration_scale", spec.getAnimatorDurationScale());
     }
 
     // transition_animation_scale
     if (spec.hasTransitionAnimationScale()) {
-      settings.global.add("transition_animation_scale", spec.getTransitionAnimationScale());
+      setAnimationScale("transition_animation_scale", spec.getTransitionAnimationScale());
     }
 
     // window_animation_scale
     if (spec.hasWindowAnimationScale()) {
-      settings.global.add("window_animation_scale", spec.getWindowAnimationScale());
+      setAnimationScale("window_animation_scale", spec.getWindowAnimationScale());
     }
 
     // bluetooth_on
@@ -1028,6 +1032,11 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
     }
   }
 
+  private void setAnimationScale(String settingName, float scale) {
+    settings.global.add(settingName, scale);
+    commandsOnTestEnd.add("settings", "put", "global", settingName, DEFAULT_ANIMATION_SCALE);
+  }
+
   private static Map<Long, Long> getAllCpuRuntimeFreqsSpecified(
       AndroidDeviceSettingsDecoratorSpec spec) {
     Map<Long, Long> freqs = new HashMap<>();
@@ -1127,33 +1136,31 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
       String deviceType = getProperty(deviceId, AndroidProperty.TYPE.getPropertyKeys());
       if (deviceType != null) {
         switch (Ascii.toLowerCase(deviceType)) {
-          case "angler":
+          case "angler" -> {
             minPwrLevel = "4";
             maxPwrLevel = "4";
             commandsAfterSettings.add("echo 11863 > /sys/class/devfreq/qcom,gpubw.70/min_freq");
-            break;
-          case "bullhead":
+          }
+          case "bullhead" -> {
             minPwrLevel = "4";
             maxPwrLevel = "4";
             commandsAfterSettings.add("echo 7102 > /sys/class/devfreq/qcom,gpubw.19/min_freq");
-            break;
-          case "dragon":
+          }
+          case "dragon" -> {
             minPwrLevel = "0";
             maxPwrLevel = "0";
             commandsAfterSettings.add("echo 0a > /sys/class/drm/card0/device/pstate");
-            break;
-          case "fugu":
+          }
+          case "fugu" -> {
             commandsAfterSettings.add("echo -n 533000 > /sys/class/devfreq/dfrgx/max_freq");
             commandsAfterSettings.add("echo -n 533000 > /sys/class/devfreq/dfrgx/min_freq");
-            break;
-          case "taimen":
-          // fall through
-          case "walleye":
+          }
+          case "taimen", "walleye" -> {
             minPwrLevel = "0";
             maxPwrLevel = "0";
             commandsAfterSettings.add("echo 13763 > /sys/class/devfreq/soc:qcom,gpubw/min_freq");
-            break;
-          default: // fall out
+          }
+          default -> {} // fall out
         }
       }
       commandsAfterSettings.add("echo", maxPwrLevel, ">", GPU_MAX_PWRLEVEL_CONFIG_FILE_ON_DEVICE);
@@ -1704,9 +1711,9 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
   protected void tearDown(TeardownContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
-    // After the test we need to enable the apps that were disabled, otherwise there could be a
-    // situation when the device can't be properly started after reboot because crucial
-    // first-party apps were disabled (for example, com.google.android.googlequicksearchbox).
+    // Restore device state after the test: re-enable disabled apps so first-party apps (for
+    // example, com.google.android.googlequicksearchbox) start properly after reboot, and reset
+    // modified animation scales for satellite lab devices that skip post-test resets.
     try {
       runCommands(testInfo, commandsOnTestEnd);
     } catch (MobileHarnessException e) {
