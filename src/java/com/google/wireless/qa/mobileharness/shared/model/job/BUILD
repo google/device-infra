@@ -111,7 +111,6 @@ java_library(
         ":test_schedule_unit",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
-        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
@@ -136,6 +135,18 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@protobuf//:protobuf_java",
+    ],
+)
+
+java_library(
+    name = "test_info_internal",
+    srcs = ["TestInfoInternal.java"],
+    visibility = [
+        # Note: only for MH infra, please don't add more visibilities.
+    ],
+    deps = [
+        ":job",
+        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
 

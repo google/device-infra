@@ -41,6 +41,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
@@ -88,6 +89,9 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
   private final CountDownTimer timer = new TestTimer();
 
   private final Supplier<TestExecutionUnit> testExecutionUnitSupplier;
+
+  /** Hook invoked with this test before {@link #getGenFileDir} of it or of a sub-test returns. */
+  @Nullable private volatile Consumer<TestInfo> onGetGenFileDir;
 
   /**
    * Creates a TestInfo with all the required final fields. Note: please don't make this public at
@@ -354,11 +358,39 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
       fileUtil.prepareDir(testDir);
       fileUtil.grantFileOrDirFullAccess(jobDir);
       fileUtil.grantFileOrDirFullAccess(testDir);
+      runOnGetGenFileDir();
       return testDir;
     } else {
       fileUtil.prepareDir(jobDir);
       fileUtil.grantFileOrDirFullAccess(jobDir);
       return jobDir;
+    }
+  }
+
+  /**
+   * Registers a hook invoked with this root test before {@link #getGenFileDir} of it or of one of
+   * its sub-tests returns a directory of its own, e.g. to put the gen files of the test that are
+   * only stored remotely back in it on first access.
+   *
+   * <p>The hook guards its own state. It may be called by several threads at once, and again from
+   * inside itself if it reads the gen file dir.
+   *
+   * <p>Package-private: only MH infra registers it, through {@link TestInfoInternal}.
+   *
+   * @throws IllegalArgumentException if this is a sub-test
+   */
+  void setOnGetGenFileDir(@Nullable Consumer<TestInfo> onGetGenFileDir) {
+    Preconditions.checkArgument(
+        isRootTest(), "Hook can only be registered on a root test: %s", locator());
+    this.onGetGenFileDir = onGetGenFileDir;
+  }
+
+  /** Runs the {@link #setOnGetGenFileDir} hook of the root test, if any. */
+  private void runOnGetGenFileDir() {
+    TestInfo rootTest = getRootTest();
+    Consumer<TestInfo> hook = rootTest.onGetGenFileDir;
+    if (hook != null) {
+      hook.accept(rootTest);
     }
   }
 
