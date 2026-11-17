@@ -350,3 +350,42 @@ func TestRxConn_ToFlux_SingleSubscriberPolicy(t *testing.T) {
 		t.Fatal("timeout waiting for error on second subscription")
 	}
 }
+
+// TestRxConn_FromFlux_WriteErrorThenMorePayloads covers a local peer that goes
+// away (e.g. a killed curl) while the remote side keeps sending payloads on the
+// same stream. Every payload after the first failed write must be dropped
+// without panicking.
+func TestRxConn_FromFlux_WriteErrorThenMorePayloads(t *testing.T) {
+	clientSide, serverSide := net.Pipe()
+
+	conn, err := New(serverSide)
+	if err != nil {
+		t.Fatalf("Failed to create rxConn: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+
+	incoming := flux.CreateProcessor()
+	conn.FromFlux(ctx, incoming)
+
+	// The local peer disappears, so every Write on serverSide fails from now on.
+	if err := clientSide.Close(); err != nil {
+		t.Fatalf("Failed to close clientSide: %v", err)
+	}
+
+	// The remote side does not know yet and keeps sending.
+	for i := 0; i < 3; i++ {
+		incoming.Next(payload.New([]byte("data"), nil))
+	}
+
+	done := make(chan struct{})
+	go func() {
+		conn.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for FromFlux to finish after write error")
+	}
+}

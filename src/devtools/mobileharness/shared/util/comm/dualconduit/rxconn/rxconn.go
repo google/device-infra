@@ -140,13 +140,25 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 func (c *Conn) FromFlux(ctx context.Context, incoming flux.Flux) {
 	slog.DebugContext(ctx, "rxconn.FromFlux subscribing", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 	c.wg.Add(1)
+	// The Flux keeps delivering payloads after OnNext returns an error (the
+	// remote side is not told to stop), and each of them reports the error
+	// again. failed drops those payloads, and finish makes sure the WaitGroup
+	// is released only once. The subscription is deliberately not cancelled:
+	// on the responder side that sends a CANCEL frame, which rsocket-go's
+	// requester does not handle for channels.
+	var failed atomic.Bool
+	var finish sync.Once
 	incoming.Subscribe(ctx,
 		rx.OnNext(func(p payload.Payload) error {
+			if failed.Load() {
+				return nil
+			}
 			data := p.Data()
 			// Write in a loop to ensure all bytes are flushed
 			for len(data) > 0 {
 				n, err := c.conn.Write(data)
 				if err != nil {
+					failed.Store(true)
 					slog.ErrorContext(ctx, "rxconn.FromFlux write error", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr(), "error", err)
 					return err // Connection dropped locally, triggers OnError implicitly
 				}
@@ -159,7 +171,7 @@ func (c *Conn) FromFlux(ctx context.Context, incoming flux.Flux) {
 			slog.DebugContext(ctx, "rxconn.FromFlux OnComplete received", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 			defer func() {
 				slog.DebugContext(ctx, "rxconn.FromFlux OnComplete exiting", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
-				c.wg.Done()
+				finish.Do(c.wg.Done)
 			}()
 			// Remote sent EOF via RSocket. We mirror the FIN locally.
 			if cw, ok := c.conn.(interface{ CloseWrite() error }); ok {
@@ -171,7 +183,7 @@ func (c *Conn) FromFlux(ctx context.Context, incoming flux.Flux) {
 			slog.ErrorContext(ctx, "rxconn.FromFlux OnError received", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr(), "error", err)
 			defer func() {
 				slog.DebugContext(ctx, "rxconn.FromFlux OnError exiting", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
-				c.wg.Done()
+				finish.Do(c.wg.Done)
 			}()
 			// Remote dropped abruptly. Kill the local socket.
 			slog.InfoContext(ctx, "rxconn.FromFlux closing connection due to remote error", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
