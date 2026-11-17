@@ -72,6 +72,18 @@ public final class FleetChipResolverTest {
   }
 
   @Test
+  public void resolve_withSource_resolvesChips() {
+    FleetChipResolverResponse response =
+        resolver.resolve(
+            request(simple("device_field::status", "IDLE")).toBuilder()
+                .setSource("alloc_diag")
+                .build());
+
+    assertThat(response.getFilterChipsCount()).isEqualTo(1);
+    assertThat(response.getFilterChips(0).getValid().getPillKey()).isEqualTo("Status");
+  }
+
+  @Test
   public void simpleMultiValue_showsCount() {
     FleetChipResolverResponse response =
         resolver.resolve(request(simple("device_field::status", "IDLE", "BUSY")));
