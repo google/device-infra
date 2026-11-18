@@ -23,11 +23,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.truth.extensions.proto.FieldScope;
 import com.google.common.truth.extensions.proto.FieldScopes;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceError;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
@@ -75,6 +77,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
@@ -956,5 +960,22 @@ public class LabInfoServiceTest {
                 .setName("fake_dimension_name")
                 .setDeviceCount(1)
                 .build());
+  }
+
+  @Test
+  public void getDeviceErrors_success() throws Exception {
+    DeviceError deviceError = DeviceError.newBuilder().setTimestampMs(12345L).build();
+    when(labInfoProvider.getDeviceErrors("device_id", "host_name"))
+        .thenReturn(ImmutableList.of(deviceError));
+
+    GetDeviceErrorsResponse response =
+        labInfoService.doGetDeviceErrors(
+            GetDeviceErrorsRequest.newBuilder()
+                .setDeviceId("device_id")
+                .setHostName("host_name")
+                .build());
+
+    assertThat(response)
+        .isEqualTo(GetDeviceErrorsResponse.newBuilder().addDeviceErrors(deviceError).build());
   }
 }

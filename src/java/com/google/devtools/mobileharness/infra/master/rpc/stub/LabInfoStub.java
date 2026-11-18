@@ -22,6 +22,8 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 
@@ -44,4 +46,11 @@ public interface LabInfoStub {
   /** Gets all device dimensions with device counts asynchronously. */
   ListenableFuture<GetAllDeviceDimensionsResponse> getAllDeviceDimensionsAsync(
       GetAllDeviceDimensionsRequest request);
+
+  /** Gets errors of a device synchronously. */
+  GetDeviceErrorsResponse getDeviceErrors(GetDeviceErrorsRequest request)
+      throws RpcExceptionWithErrorId;
+
+  /** Gets errors of a device asynchronously. */
+  ListenableFuture<GetDeviceErrorsResponse> getDeviceErrorsAsync(GetDeviceErrorsRequest request);
 }

@@ -150,4 +150,11 @@ message DeviceCondition {
 
   // Optional. The timestamp of the last time when the device was healthy.
   google.protobuf.Timestamp last_healthy_time = 3;
+
+  // Reserved for the removed `repeated DeviceError device_error`. Do not reuse.
+  reserved 4;
+  reserved "device_error";
+
+  // Optional. Whether the device has errors reported from the lab.
+  bool has_device_error = 5;
 }

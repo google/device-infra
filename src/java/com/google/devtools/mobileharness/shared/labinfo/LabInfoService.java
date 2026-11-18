@@ -42,6 +42,8 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -103,6 +105,27 @@ public class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
         this::doGetAllDeviceDimensions,
         LabInfoServiceGrpc.getServiceDescriptor(),
         LabInfoServiceGrpc.getGetAllDeviceDimensionsMethod());
+  }
+
+  @Override
+  public void getDeviceErrors(
+      GetDeviceErrorsRequest request, StreamObserver<GetDeviceErrorsResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doGetDeviceErrors,
+        LabInfoServiceGrpc.getServiceDescriptor(),
+        LabInfoServiceGrpc.getGetDeviceErrorsMethod());
+  }
+
+  @VisibleForTesting
+  GetDeviceErrorsResponse doGetDeviceErrors(GetDeviceErrorsRequest request)
+      throws MobileHarnessException {
+    logger.atInfo().log("Get device errors, req=[%s]", shortDebugString(request));
+    return GetDeviceErrorsResponse.newBuilder()
+        .addAllDeviceErrors(
+            labInfoProvider.getDeviceErrors(request.getDeviceId(), request.getHostName()))
+        .build();
   }
 
   @VisibleForTesting
