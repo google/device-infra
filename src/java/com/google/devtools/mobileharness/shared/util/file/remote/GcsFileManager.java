@@ -370,22 +370,7 @@ public class GcsFileManager {
       localFileUtil.moveFileOrDir(tmpFile, localCache);
       return localCache;
     } finally {
-      boolean interrupted = Thread.interrupted();
-      try {
-        if (localFileUtil.isFileExist(tmpFile)) {
-          localFileUtil.removeFileOrDir(tmpFile);
-        }
-      } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log("Failed to remove temporary file: %s", tmpFile);
-      } catch (InterruptedException e) {
-        logger.atWarning().withCause(e).log(
-            "Interrupted when removing temporary file: %s", tmpFile);
-        interrupted = true;
-      } finally {
-        if (interrupted) {
-          Thread.currentThread().interrupt();
-        }
-      }
+      removeTmpFileBestEffort(tmpFile);
     }
   }
 
@@ -422,16 +407,17 @@ public class GcsFileManager {
           isCached.set(false);
           if (localFileUtil.isDirExist(fileOrDir)) {
             ZipInfo zipInfo = compressDirectory(fileOrDir, zipStoreOnly, zipTimeout, checksum);
-            long fileSize = localFileUtil.getFileSize(zipInfo.zipFilePath());
-            String decodedChecksum = zipInfo.decodedChecksum();
-            ExecutionInfo executionInfo =
-                ExecutionInfo.create(
-                    fileSize,
-                    !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum), "application/zip"),
-                    decodedChecksum);
-            // Remove the zip file after uploading.
-            localFileUtil.removeFileOrDir(zipInfo.zipFilePath());
-            return executionInfo;
+            try {
+              long fileSize = localFileUtil.getFileSize(zipInfo.zipFilePath());
+              String decodedChecksum = zipInfo.decodedChecksum();
+              return ExecutionInfo.create(
+                  fileSize,
+                  !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum), "application/zip"),
+                  decodedChecksum);
+            } finally {
+              // Each upload owns its temporary zip so cleanup cannot race with concurrent uploads.
+              removeTmpFileBestEffort(zipInfo.zipFilePath());
+            }
           } else if (fileExists(fileOrDir)) {
             String decodedChecksum =
                 checksum.isPresent() ? checksum.get() : gcsUtil.calculateChecksum(fileOrDir);
@@ -519,7 +505,7 @@ public class GcsFileManager {
   }
 
   /**
-   * Compresses {@code dir} into a file named {@code <zipped_file_md5>.zip}
+   * Compresses {@code dir} into a temporary zip file owned by the caller.
    *
    * @param dir directory to zip
    * @param zipStoreOnly whether pack all file together without any compression
@@ -537,6 +523,7 @@ public class GcsFileManager {
 
     Path tmpZipFile =
         homeDir.resolve(String.format("TMP_%s.zip", Long.toUnsignedString(random.nextLong())));
+    boolean succeeded = false;
     try {
       localFileUtil.prepareParentDir(tmpZipFile);
       logger.atInfo().log("Start compressing: directory %s to tmp file %s.", dir, tmpZipFile);
@@ -551,37 +538,14 @@ public class GcsFileManager {
           /* keepFileMetadata= */ false);
       String decodedChecksum =
           checksum.isPresent() ? checksum.get() : gcsUtil.calculateChecksum(tmpZipFile);
-      String crc32cChecksum = gcsUtil.decodeCrc32c(gcsUtil.calculateCrc32c(tmpZipFile));
       logger.atInfo().log(
-          "Compressed: directory %s to tmp file %s. checksum: %s. crc32c checksum: %s;"
-              + "store_only: %s; timeout: %s",
-          dir, tmpZipFile, decodedChecksum, crc32cChecksum, zipStoreOnly, zipTimeout);
-
-      Path zipFile = homeDir.resolve(decodedChecksum + ".zip");
-      Callable<Path> cacheLoader =
-          () -> {
-            localFileUtil.moveFileOrDir(tmpZipFile, zipFile);
-            localFileUtil.setFilePermission(zipFile, "r-xr-xr-x");
-            logger.atInfo().log("Update local cache: %s: %s", crc32cChecksum, zipFile);
-            return zipFile;
-          };
-      Path cachedPath = localCache.get(crc32cChecksum, cacheLoader);
-      if (!localFileUtil.isFileOrDirExist(cachedPath)) {
-        // The cached file was deleted from disk (e.g., by upload() cleanup or external tools
-        // like tmpreaper) while the in-memory cache entry remained. Invalidate and retry.
-        logger.atWarning().log(
-            "Cached compressed file %s was deleted outside. Invalidating cache and retrying.",
-            cachedPath);
-        localCache.invalidate(crc32cChecksum);
-        cachedPath = localCache.get(crc32cChecksum, cacheLoader);
-      }
-      return ZipInfo.create(decodedChecksum, cachedPath);
-    } catch (ExecutionException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.GCS_COMPRESS_DIRECTORY, "Failed to cache compressed file " + tmpZipFile, e);
+          "Compressed: directory %s to tmp file %s. checksum: %s; store_only: %s; timeout: %s",
+          dir, tmpZipFile, decodedChecksum, zipStoreOnly, zipTimeout);
+      succeeded = true;
+      return ZipInfo.create(decodedChecksum, tmpZipFile);
     } finally {
-      if (localFileUtil.isFileExist(tmpZipFile)) {
-        localFileUtil.removeFileOrDir(tmpZipFile);
+      if (!succeeded) {
+        removeTmpFileBestEffort(tmpZipFile);
       }
     }
   }
@@ -600,6 +564,24 @@ public class GcsFileManager {
       logger.atWarning().withCause(e).log("Failed to remove cached file :%s", fileInfo);
     } catch (InterruptedException e) {
       logger.atWarning().withCause(e).log("Interrupted while removing cached file: %s", fileInfo);
+    }
+  }
+
+  private void removeTmpFileBestEffort(Path tmpFile) {
+    boolean interrupted = Thread.interrupted();
+    try {
+      if (localFileUtil.isFileExist(tmpFile)) {
+        localFileUtil.removeFileOrDir(tmpFile);
+      }
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to remove temporary file: %s", tmpFile);
+    } catch (InterruptedException e) {
+      logger.atWarning().withCause(e).log("Interrupted when removing temporary file: %s", tmpFile);
+      interrupted = true;
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 
