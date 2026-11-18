@@ -50,10 +50,8 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordProtoUtil;
-import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
-import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommonUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -77,13 +75,6 @@ public class CompatibilityReportMerger {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final long PARSE_TIMEOUT_IN_HOUR = 1;
-
-  private static final ImmutableSet<String> EXTRA_BUILD_INFO_ATTR_TO_KEPT =
-      ImmutableSet.of(
-          XmlConstants.DEVICE_KERNEL_INFO_ATTR,
-          XmlConstants.SYSTEM_IMG_INFO_ATTR,
-          XmlConstants.VENDOR_IMG_INFO_ATTR,
-          XmlConstants.ADB_VERSION_ATTR);
 
   private final ListeningExecutorService threadPool;
   private final CompatibilityReportParser reportParser;
@@ -185,7 +176,7 @@ public class CompatibilityReportMerger {
 
     ImmutableList<Module> modulesForSummary =
         mergedModuleList.stream()
-            .filter(module -> !SuiteCommonUtil.isModuleChecker(module) && !module.getSkipped())
+            .filter(CompatibilityReportUtil::isModuleCountedInSummary)
             .collect(toImmutableList());
     int modulesDoneInSummary = (int) modulesForSummary.stream().filter(Module::getDone).count();
     int modulesTotalInSummary = modulesForSummary.size();
@@ -247,10 +238,6 @@ public class CompatibilityReportMerger {
         Module.newBuilder().setName(modules.get(0).getName()).setAbi(modules.get(0).getAbi());
     long mergedModuleRuntime = 0L;
     boolean mergedModuleDone = true;
-    int mergedModulePassedTests = 0;
-    int mergedModuleFailedTests = 0;
-    int mergedModuleWarningTests = 0;
-    int mergedModuleTotalTests = 0;
     List<TestCase> testCases = new ArrayList<>();
     Reason moduleNotDoneReason = null;
     for (Module module : modules) {
@@ -262,29 +249,11 @@ public class CompatibilityReportMerger {
       testCases.addAll(module.getTestCaseList());
     }
     ImmutableList<TestCase> mergedtestCases = mergeTestCasesFromSameModule(testCases);
-    for (TestCase testCase : mergedtestCases) {
-      for (Test test : testCase.getTestList()) {
-        if (test.getResult()
-            .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.PASSED))) {
-          mergedModulePassedTests++;
-        } else if (test.getResult()
-            .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE))) {
-          mergedModuleFailedTests++;
-        } else if (test.getResult()
-            .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.WARNING))) {
-          mergedModuleWarningTests++;
-        }
-        mergedModuleTotalTests++;
-      }
-    }
     mergedModule
         .setRuntimeMillis(mergedModuleRuntime)
         .setDone(mergedModuleDone)
-        .setPassed(mergedModulePassedTests)
-        .setFailedTests(mergedModuleFailedTests)
-        .setWarningTests(mergedModuleWarningTests)
-        .setTotalTests(mergedModuleTotalTests)
         .addAllTestCase(mergedtestCases);
+    CompatibilityReportUtil.populateModuleTestCounts(mergedModule);
     if (moduleNotDoneReason != null) {
       mergedModule.setReason(moduleNotDoneReason);
     }
@@ -338,16 +307,7 @@ public class CompatibilityReportMerger {
     }
 
     logger.atInfo().log("Found %d duplicated test cases: %s", tests.size(), tests.get(0).getName());
-    Optional<Test> passTest =
-        tests.stream()
-            .filter(test ->
-                test.getResult()
-                    .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.PASSED)))
-            .findFirst();
-    if (passTest.isPresent()) {
-      return passTest;
-    }
-    return Optional.of(tests.get(0));
+    return tests.stream().reduce(CompatibilityReportUtil::pickPreferredTestAttempt);
   }
 
   /**
@@ -446,11 +406,7 @@ public class CompatibilityReportMerger {
             .orElse(BuildInfo.getDefaultInstance());
     ImmutableList<Attribute> attrs =
         buildInfo.getAttributeList().stream()
-            .filter(attr ->
-                attr.getKey().startsWith("build_")
-                    || attr.getKey().startsWith("csr_")
-                    || attr.getKey().endsWith(".root_of_trust.verified_boot_hash")
-                    || EXTRA_BUILD_INFO_ATTR_TO_KEPT.contains(attr.getKey()))
+            .filter(attr -> CompatibilityReportUtil.isAllowedBuildAttribute(attr.getKey()))
             .collect(toImmutableList());
 
     return buildInfo.toBuilder().clearAttribute().addAllAttribute(attrs).build();
@@ -665,10 +621,10 @@ public class CompatibilityReportMerger {
       ImmutableList<String> abiAndName = AbiUtil.parseId(skippedModuleId);
       if (abiAndName.size() == 2) {
         reportBuilder.addModuleInfo(
-            createSkippedModule(
+            CompatibilityReportUtil.createSkippedModule(
                 abiAndName.get(0),
                 abiAndName.get(1),
-                String.format("Module %s is skipped by module controller.", abiAndName.get(1))));
+                CompatibilityReportUtil.formatControllerSkippedReason(abiAndName.get(1))));
       }
     }
 
@@ -708,16 +664,6 @@ public class CompatibilityReportMerger {
     for (ChildReference child : testRecord.getChildrenList()) {
       generateTestRecordMetricsMap(child.getInlineTestRecord(), metricsMap);
     }
-  }
-
-  public static Module createSkippedModule(String abi, String name, String reason) {
-    return Module.newBuilder()
-        .setAbi(abi)
-        .setName(name)
-        .setDone(true)
-        .setSkipped(true)
-        .setReason(Reason.newBuilder().setMsg(reason))
-        .build();
   }
 
   /** Parses multiple Mobly reports syncly. */

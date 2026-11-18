@@ -42,6 +42,7 @@ import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -104,12 +105,12 @@ public class MoblyReportHelper {
       CertificationSuiteInfo suiteInfo) {
     ImmutableMap.Builder<String, String> attrs = ImmutableMap.builder();
 
-    attrs.put(XmlConstants.START_TIME_ATTR, Long.toString(startTime.toEpochMilli()));
-    attrs.put(XmlConstants.END_TIME_ATTR, Long.toString(endTime.toEpochMilli()));
-    attrs.put(XmlConstants.START_DISPLAY_TIME_ATTR, toReadableDateString(startTime));
-    attrs.put(XmlConstants.END_DISPLAY_TIME_ATTR, toReadableDateString(endTime));
-
-    attrs.putAll(getSuiteAttributes(suiteInfo));
+    attrs
+        .put(XmlConstants.START_TIME_ATTR, Long.toString(startTime.toEpochMilli()))
+        .put(XmlConstants.END_TIME_ATTR, Long.toString(endTime.toEpochMilli()))
+        .put(XmlConstants.START_DISPLAY_TIME_ATTR, toReadableDateString(startTime))
+        .put(XmlConstants.END_DISPLAY_TIME_ATTR, toReadableDateString(endTime))
+        .putAll(CompatibilityReportUtil.toSuiteAttributesMap(suiteInfo));
 
     // Device Info
     String deviceList = "";
@@ -119,24 +120,9 @@ public class MoblyReportHelper {
     attrs.put(XmlConstants.DEVICES_ATTR, deviceList);
 
     // Host Info
-    attrs.put(XmlConstants.HOST_NAME_ATTR, getHostName());
-    attrs.put(XmlConstants.OS_NAME_ATTR, getSystemProperty("os.name"));
-    attrs.put(XmlConstants.OS_VERSION_ATTR, getSystemProperty("os.version"));
-    attrs.put(XmlConstants.OS_ARCH_ATTR, getSystemProperty("os.arch"));
-    attrs.put(XmlConstants.JAVA_VENDOR_ATTR, getSystemProperty("java.vendor"));
-    attrs.put(XmlConstants.JAVA_VERSION_ATTR, getSystemProperty("java.version"));
+    attrs.putAll(
+        CompatibilityReportUtil.buildHostAttributes(getHostName(), this::getSystemProperty));
 
-    return attrs.buildOrThrow();
-  }
-
-  private static ImmutableMap<String, String> getSuiteAttributes(CertificationSuiteInfo suiteInfo) {
-    ImmutableMap.Builder<String, String> attrs = ImmutableMap.builder();
-    attrs.put(XmlConstants.SUITE_NAME_ATTR, suiteInfo.suiteName());
-    attrs.put(XmlConstants.SUITE_VARIANT_ATTR, suiteInfo.suiteVariant());
-    attrs.put(XmlConstants.SUITE_VERSION_ATTR, suiteInfo.suiteVersion());
-    attrs.put(XmlConstants.SUITE_PLAN_ATTR, suiteInfo.suitePlan());
-    attrs.put(XmlConstants.SUITE_BUILD_ATTR, suiteInfo.suiteBuild());
-    attrs.put(XmlConstants.SUITE_REPORT_VERSION_ATTR, suiteInfo.suiteReportVersion());
     return attrs.buildOrThrow();
   }
 
@@ -253,7 +239,7 @@ public class MoblyReportHelper {
 
   private static ImmutableSet<String> getTargetProps() {
     ImmutableSet.Builder<String> props = ImmutableSet.builder();
-    for (DeviceBuildInfo deviceBuildInfo : DeviceBuildInfo.values()) {
+    for (DeviceBuildInfo deviceBuildInfo : EnumSet.allOf(DeviceBuildInfo.class)) {
       props.addAll(deviceBuildInfo.getPropNames());
     }
     return props.build();

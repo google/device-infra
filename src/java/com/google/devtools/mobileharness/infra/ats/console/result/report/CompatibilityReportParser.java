@@ -16,17 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Map.Entry.comparingByKey;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.LoggedFile;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
@@ -39,8 +34,8 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportUtil.TestCounts;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
-import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -274,49 +269,8 @@ public class CompatibilityReportParser {
 
   private static void handleResult(StartElement result, Context context) {
     Map<String, String> attributeMap = getAttributeMap(result);
-    ImmutableList.Builder<Attribute> attributes = ImmutableList.builder();
-    // Ensures attributes start, end, start_display, end_display are showed at the beginning.
-    if (attributeMap.containsKey(XmlConstants.START_TIME_ATTR)) {
-      attributes.add(
-          Attribute.newBuilder()
-              .setKey(XmlConstants.START_TIME_ATTR)
-              .setValue(attributeMap.get(XmlConstants.START_TIME_ATTR).trim())
-              .build());
-      attributeMap.remove(XmlConstants.START_TIME_ATTR);
-    }
-    if (attributeMap.containsKey(XmlConstants.END_TIME_ATTR)) {
-      attributes.add(
-          Attribute.newBuilder()
-              .setKey(XmlConstants.END_TIME_ATTR)
-              .setValue(attributeMap.get(XmlConstants.END_TIME_ATTR).trim())
-              .build());
-      attributeMap.remove(XmlConstants.END_TIME_ATTR);
-    }
-    if (attributeMap.containsKey(XmlConstants.START_DISPLAY_TIME_ATTR)) {
-      attributes.add(
-          Attribute.newBuilder()
-              .setKey(XmlConstants.START_DISPLAY_TIME_ATTR)
-              .setValue(attributeMap.get(XmlConstants.START_DISPLAY_TIME_ATTR).trim())
-              .build());
-      attributeMap.remove(XmlConstants.START_DISPLAY_TIME_ATTR);
-    }
-    if (attributeMap.containsKey(XmlConstants.END_DISPLAY_TIME_ATTR)) {
-      attributes.add(
-          Attribute.newBuilder()
-              .setKey(XmlConstants.END_DISPLAY_TIME_ATTR)
-              .setValue(attributeMap.get(XmlConstants.END_DISPLAY_TIME_ATTR).trim())
-              .build());
-      attributeMap.remove(XmlConstants.END_DISPLAY_TIME_ATTR);
-    }
-
-    // Appends the rest of attributes
-    attributeMap.entrySet().stream()
-        .sorted(comparingByKey())
-        .map(attr ->
-            Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue().trim()).build())
-        .forEach(attributes::add);
-
-    context.resultBuilder.addAllAttribute(attributes.build());
+    context.resultBuilder.addAllAttribute(
+        CompatibilityReportUtil.buildOrderedResultAttributes(attributeMap));
     boolean isRetryResult =
         Boolean.parseBoolean(attributeMap.getOrDefault(XmlConstants.IS_RETRY_RESULT_ATTR, "false"));
     if (isRetryResult) {
@@ -326,40 +280,8 @@ public class CompatibilityReportParser {
 
   private static void handleBuildInfo(StartElement buildInfo, Context context) {
     // <Build> is a self-closing tag, update the parent when entering this tag.
-    BuildInfo.Builder build = BuildInfo.newBuilder();
-    Map<String, String> attributeMap = getAttributeMap(buildInfo);
-
-    // Build fingerprint related attributes.
-    if (attributeMap.containsKey(XmlConstants.BUILD_FINGERPRINT_ATTR)) {
-      build.setBuildFingerprint(attributeMap.get(XmlConstants.BUILD_FINGERPRINT_ATTR).trim());
-    }
-    if (attributeMap.containsKey(XmlConstants.BUILD_FINGERPRINT_UNALTERED_ATTR)) {
-      build.setBuildFingerprintUnaltered(
-          attributeMap.get(XmlConstants.BUILD_FINGERPRINT_UNALTERED_ATTR).trim());
-    }
-    if (attributeMap.containsKey(XmlConstants.BUILD_VENDOR_FINGERPRINT_ATTR)) {
-      build.setBuildVendorFingerprint(
-          attributeMap.get(XmlConstants.BUILD_VENDOR_FINGERPRINT_ATTR).trim());
-    }
-
-    ImmutableList<Attribute> buildAttributes =
-        attributeMap.entrySet().stream()
-            .filter(e -> e.getKey().startsWith("build_"))
-            .sorted(comparingByKey())
-            .map(attr ->
-                Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue()).build())
-            .collect(toImmutableList());
-
-    ImmutableList<Attribute> nonBuildAttributes =
-        attributeMap.entrySet().stream()
-            .filter(e -> !e.getKey().startsWith("build_"))
-            .sorted(comparingByKey())
-            .map(attr ->
-                Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue()).build())
-            .collect(toImmutableList());
-
-    build.addAllAttribute(nonBuildAttributes).addAllAttribute(buildAttributes);
-    context.resultBuilder.setBuild(build.build());
+    context.resultBuilder.setBuild(
+        CompatibilityReportUtil.buildBuildInfo(getAttributeMap(buildInfo)));
   }
 
   private static void handleRunHistory(Context context) {
@@ -566,25 +488,12 @@ public class CompatibilityReportParser {
   private static void handleEndModule(Context context) {
     if (context.currentModule != null) {
       Module.Builder currentModuleBuilder = context.currentModule;
-      // Calculate the number of failed tests and warning tests.
-      int failedTests = 0;
-      int warningTests = 0;
-      for (TestCase testCase : currentModuleBuilder.getTestCaseList()) {
-        for (Test test : testCase.getTestList()) {
-          if (test.getResult()
-              .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE))) {
-            // Same as
-            // tools/tradefederation/core/invocation_interfaces/com/android/tradefed/result/TestRunResult.java
-            // #getNumAllFailedTests
-            failedTests++;
-          } else if (test.getResult()
-              .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.WARNING))) {
-            warningTests++;
-          }
-        }
-      }
-      currentModuleBuilder.setFailedTests(failedTests);
-      currentModuleBuilder.setWarningTests(warningTests);
+      // Same as
+      // tools/tradefederation/core/invocation_interfaces/com/android/tradefed/result/TestRunResult.java
+      // #getNumAllFailedTests
+      TestCounts counts =
+          CompatibilityReportUtil.countModuleTests(currentModuleBuilder.getTestCaseList());
+      currentModuleBuilder.setFailedTests(counts.failed()).setWarningTests(counts.warning());
       context.resultBuilder.addModuleInfo(context.currentModule.build());
       context.currentModule = null;
     }

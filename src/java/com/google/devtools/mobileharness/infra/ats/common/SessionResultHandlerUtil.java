@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
@@ -44,6 +45,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger.ParseResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger.TradefedResultBundle;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportUtil;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
@@ -423,9 +425,10 @@ public class SessionResultHandlerUtil {
                 test.locator().getId(), nonTradefedTestResultsDir));
         // Check if the module is skipped by feature checker.
         if (!isPrecondition && jobInfo.resultWithCause().get().type() == TestResult.SKIP) {
+          // Modules without an ABI have no XTS_MODULE_ABI_PROP.
           Module skippedModule =
-              CompatibilityReportMerger.createSkippedModule(
-                  jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
+              CompatibilityReportUtil.createSkippedModule(
+                  nullToEmpty(jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP)),
                   getParameterizedModuleName(jobInfo),
                   test.resultWithCause()
                       .get()
