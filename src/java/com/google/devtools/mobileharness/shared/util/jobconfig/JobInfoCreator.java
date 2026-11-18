@@ -351,11 +351,13 @@ public final class JobInfoCreator {
     // Finalizes sub-devices and their dimensions.
     if (mhJobConfig.hasDevice()) {
       finalizeSubDeviceSpecs(
+          mhJobConfig,
           mhJobConfig.getDevice().getSubDeviceSpecList(),
           mhJobConfig.hasSharedDimensionNames()
               ? mhJobConfig.getSharedDimensionNames().getContentList()
               : ImmutableList.of(),
-          jobInfo);
+          jobInfo,
+          genDirPath);
     }
 
     // Sets overriding dimensions.
@@ -647,7 +649,24 @@ public final class JobInfoCreator {
   @VisibleForTesting
   static void finalizeSubDeviceSpecs(
       List<SubDeviceSpec> subDeviceSpecConfigs, List<String> sharedDimensionNames, JobInfo jobInfo)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
+    finalizeSubDeviceSpecs(
+        JobConfig.newBuilder().setNeedCheckBuiltFiles(false).build(),
+        subDeviceSpecConfigs,
+        sharedDimensionNames,
+        jobInfo,
+        /* genDirPath= */ null);
+  }
+
+  /** Finalizes {@code SubDeviceSpecs} in {@code JobInfo} and resolves scoped-spec file targets. */
+  @VisibleForTesting
+  static void finalizeSubDeviceSpecs(
+      JobConfig mhJobConfig,
+      List<SubDeviceSpec> subDeviceSpecConfigs,
+      List<String> sharedDimensionNames,
+      JobInfo jobInfo,
+      @Nullable String genDirPath)
+      throws MobileHarnessException, InterruptedException {
     SubDeviceSpecs subDeviceSpecs = jobInfo.subDeviceSpecs();
     for (int i = 0; i < subDeviceSpecConfigs.size(); i++) {
       SubDeviceSpec deviceSpec = subDeviceSpecConfigs.get(i);
@@ -714,6 +733,7 @@ public final class JobInfoCreator {
       }
       subDeviceSpec.dimensions().addAll(deviceSpec.getDimensions().getContentMap());
       subDeviceSpec.scopedSpecs().addAll(decoratorSpecs);
+      resolveScopedSpecsFiles(mhJobConfig, jobInfo, genDirPath, subDeviceSpec.scopedSpecs());
     }
     subDeviceSpecs.addSharedDimensionNames(sharedDimensionNames);
   }
@@ -770,7 +790,16 @@ public final class JobInfoCreator {
     }
     addSpecsOfDriver(scopedSpecs, mhJobConfig.getDriver(), false);
 
-    // Try to resolve the files in the scoped specs of SpecConfigable driver/decorators.
+    resolveScopedSpecsFiles(mhJobConfig, jobInfo, genDirPath, scopedSpecs);
+  }
+
+  /**
+   * Resolves {@link #SCOPED_SPEC_FILE_PREFIX}-prefixed file targets in {@code scopedSpecs} for
+   * {@code SpecConfigable} drivers and decorators.
+   */
+  private static void resolveScopedSpecsFiles(
+      JobConfig mhJobConfig, JobInfo jobInfo, @Nullable String genDirPath, ScopedSpecs scopedSpecs)
+      throws MobileHarnessException, InterruptedException {
     Map<String, String> targetLocations = mhJobConfig.getTargetLocations().getContentMap();
     scopedSpecs.addAll(
         JobSpecWalker.resolve(
