@@ -21,7 +21,6 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /** Factory for creating certification suite info. */
 public class CertificationSuiteInfoFactory {
@@ -50,6 +49,16 @@ public class CertificationSuiteInfoFactory {
 
   public static final String SUITE_REPORT_VERSION = "5.0";
 
+  /** Resolves the compatibility report {@code suite_variant} for {@code suitePlan}. */
+  public static String resolveSuiteVariant(String suitePlan, String defaultValue) {
+    for (SuiteVariant variant : SuiteVariant.values()) {
+      if (suitePlan.equals(variant.getConfigName())) {
+        return variant.getReportDisplayName();
+      }
+    }
+    return defaultValue;
+  }
+
   /**
    * Creates suite info based on given info.
    *
@@ -73,9 +82,7 @@ public class CertificationSuiteInfoFactory {
     if (suiteInfo.containsKey(SuiteCommon.SUITE_BUILD)) {
       certificationSuiteInfoBuilder.setSuiteBuild(suiteInfo.get(SuiteCommon.SUITE_BUILD));
     }
-    certificationSuiteInfoBuilder.setSuiteReportVersion(SUITE_REPORT_VERSION);
-
-    return certificationSuiteInfoBuilder.build();
+    return certificationSuiteInfoBuilder.setSuiteReportVersion(SUITE_REPORT_VERSION).build();
   }
 
   /**
@@ -100,15 +107,6 @@ public class CertificationSuiteInfoFactory {
   }
 
   public String getSuiteVariant(String suitePlan, String defaultValue) {
-    return createSuiteVariant(suitePlan).orElse(defaultValue);
-  }
-
-  private Optional<String> createSuiteVariant(String suitePlan) {
-    for (SuiteVariant var : SuiteVariant.values()) {
-      if (suitePlan.equals(var.getConfigName())) {
-        return Optional.of(var.getReportDisplayName());
-      }
-    }
-    return Optional.empty();
+    return resolveSuiteVariant(suitePlan, defaultValue);
   }
 }
