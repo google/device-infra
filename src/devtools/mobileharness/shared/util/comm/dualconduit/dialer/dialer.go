@@ -37,6 +37,14 @@ const (
 	keepAliveAckTimeout        = 15 * time.Second
 	keepAliveMissedAcks        = 3
 	ipv4Loopback               = "127.0.0.1"
+	// defaultConnectTimeout bounds how long one attempt to connect to the
+	// acceptor may take. It is shorter than the keep-alive interval: rsocket-go
+	// starts the keep-alive timer before it dials, so a slower dial would have a
+	// keep-alive frame due before the SETUP frame has been sent.
+	defaultConnectTimeout = 10 * time.Second
+	// rsocketDefaultKeepAliveTickPeriod is the keep-alive interval rsocket-go
+	// uses when a client does not set one.
+	rsocketDefaultKeepAliveTickPeriod = 20 * time.Second
 
 	reverseConduitCloseSignalDelay = 100 * time.Millisecond
 	checkConnectionRequestTimeout  = 10 * time.Second
@@ -56,6 +64,20 @@ type Service struct {
 	DefaultRetryPolicy  RetryPolicy
 	KeepAliveTickPeriod time.Duration
 	rttHistogram        metric.Float64Histogram
+	connectTimeout      time.Duration
+}
+
+// connectTimeoutFor returns the connect timeout for a client with the given
+// keep-alive interval, keeping it below that interval.
+func (s *Service) connectTimeoutFor(keepAliveTickPeriod time.Duration) time.Duration {
+	timeout := s.connectTimeout
+	if timeout <= 0 {
+		timeout = defaultConnectTimeout
+	}
+	if half := keepAliveTickPeriod / 2; half > 0 && half < timeout {
+		timeout = half
+	}
+	return timeout
 }
 
 // New creates a new Service with an initialized conduit.Manager, session.Manager, and default retry policy.
@@ -99,6 +121,7 @@ func New(ctx context.Context, hostname string, forwardAddress string, newTranspo
 		DefaultRetryPolicy:  policy,
 		KeepAliveTickPeriod: tickPeriod,
 		rttHistogram:        rttHistogram,
+		connectTimeout:      defaultConnectTimeout,
 	}
 	cm.SubscribeToRemove(s.handleConduitRemoved)
 	return s
@@ -228,6 +251,7 @@ func (s *Service) reverseConduitAcceptor(id string, destinationEndpoint string, 
 func (s *Service) startRSocketClient(id string, req *dconpb.EstablishConduitRequest, setup payload.Payload, condReady chan struct{}, metadataPush chan payload.Payload) (rsocket.Client, error) {
 	builder := rsocket.Connect().
 		SetupPayload(setup).
+		ConnectTimeout(s.connectTimeoutFor(s.KeepAliveTickPeriod)).
 		KeepAlive(s.KeepAliveTickPeriod, keepAliveAckTimeout, keepAliveMissedAcks)
 
 	var starter rsocket.ToClientStarter = builder
@@ -356,6 +380,7 @@ func (s *Service) CheckConnection(ctx context.Context) error {
 		slog.InfoContext(ctx, "Performing pre-flight check to acceptor")
 		client, err := rsocket.Connect().
 			SetupPayload(payload.New([]byte(probeSignal), nil)).
+			ConnectTimeout(s.connectTimeoutFor(rsocketDefaultKeepAliveTickPeriod)).
 			Transport(trans).
 			Start(ctx)
 		if err != nil {

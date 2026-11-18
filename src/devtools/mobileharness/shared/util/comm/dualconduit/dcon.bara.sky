@@ -117,6 +117,7 @@ dcon_go_imports_map = {
     "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/rx": "github.com/rsocket/rsocket-go/rx",
     "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/flux/flux": "github.com/rsocket/rsocket-go/rx/flux",
     "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/mono/mono": "github.com/rsocket/rsocket-go/rx/mono",
+    "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/core/core": "github.com/rsocket/rsocket-go/core",
     "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/core/transport/transport": "github.com/rsocket/rsocket-go/core/transport",
     "google3/third_party/golang/protobuf/v2/proto/proto": "google.golang.org/protobuf/proto",
     "google3/google/protobuf/any_go_proto": "google.golang.org/protobuf/types/known/anypb",

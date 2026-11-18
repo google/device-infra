@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -30,6 +30,18 @@ go_library(
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/auth",
         "@com_github_rsocket_rsocket_go//:rsocket-go",
+        "@com_github_rsocket_rsocket_go//core",
         "@com_github_rsocket_rsocket_go//core/transport",
+    ],
+)
+
+go_test(
+    name = "transport_test",
+    srcs = ["transport_test.go"],
+    embed = [":transport"],
+    deps = [
+        "@com_github_rsocket_rsocket_go//:rsocket-go",
+        "@com_github_rsocket_rsocket_go//core/transport",
+        "@com_github_rsocket_rsocket_go//payload",
     ],
 )

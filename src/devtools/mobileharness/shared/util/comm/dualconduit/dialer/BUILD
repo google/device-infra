@@ -53,6 +53,10 @@ go_library(
 
 go_test(
     name = "dialer_test",
-    srcs = ["retry_test.go"],
+    srcs = [
+        "dialer_test.go",
+        "retry_test.go",
+    ],
     embed = [":dialer"],
+    deps = ["@com_github_rsocket_rsocket_go//core/transport"],
 )
