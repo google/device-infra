@@ -82,9 +82,7 @@ public final class HealthAndActivityBuilderTest {
                 "In Transition (Cleanup)",
                 UiState.TRANSITIONING),
             new Case(
-                device(DeviceStatus.BUSY, "FailedAndroidDevice"),
-                "Auto Recovery",
-                UiState.RECOVERING),
+                device(DeviceStatus.BUSY, "FailedDevice"), "Auto Recovery", UiState.RECOVERING),
             new Case(
                 device(DeviceStatus.IDLE, "AndroidRealDevice").toBuilder()
                     .setHealthCategory(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR)
@@ -125,7 +123,7 @@ public final class HealthAndActivityBuilderTest {
   @Test
   public void busyRecoveringDevice_reportsARecoveryTask() {
     HealthAndActivityInfo info =
-        builder.buildHealthAndActivityInfo(device(DeviceStatus.BUSY, "FailedAndroidDevice"));
+        builder.buildHealthAndActivityInfo(device(DeviceStatus.BUSY, "FailedDevice"));
 
     assertThat(info.getCurrentTask().getType()).isEqualTo("Recovery Task");
   }

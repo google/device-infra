@@ -26,6 +26,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/device:device_health_util",
         "@maven//:com_google_guava_guava",
     ],
 )

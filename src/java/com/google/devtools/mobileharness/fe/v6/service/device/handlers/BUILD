@@ -57,6 +57,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/remotecontrol",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:job_sync",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/device:device_constants",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_github_ben_manes_caffeine_caffeine",

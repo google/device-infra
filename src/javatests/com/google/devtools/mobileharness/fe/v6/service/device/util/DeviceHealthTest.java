@@ -132,7 +132,7 @@ public final class DeviceHealthTest {
 
   @Test
   public void of_busyDeviceWithAbnormalType_isAutoRecovery() {
-    DeviceHealth health = DeviceHealth.of(device(DeviceStatus.BUSY, "FailedAndroidDevice"));
+    DeviceHealth health = DeviceHealth.of(device(DeviceStatus.BUSY, "FailedDevice"));
 
     assertThat(health.state()).isEqualTo(State.AUTO_RECOVERY);
     assertThat(health.category()).isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_AUTO_RECOVERY);
@@ -168,15 +168,6 @@ public final class DeviceHealthTest {
     assertThat(health.state()).isEqualTo(State.UNKNOWN);
     assertThat(health.category()).isEqualTo(HealthCategory.HEALTH_CATEGORY_UNSPECIFIED);
     assertThat(health.title()).isEqualTo("Unknown");
-  }
-
-  @Test
-  public void isTypeAbnormal_matchesBadStateKeywordsIgnoringCase() {
-    assertThat(DeviceHealth.isTypeAbnormal("DisconnectedDevice")).isTrue();
-    assertThat(DeviceHealth.isTypeAbnormal("failedAndroidDevice")).isTrue();
-    assertThat(DeviceHealth.isTypeAbnormal("AndroidFastbootDevice")).isTrue();
-    assertThat(DeviceHealth.isTypeAbnormal("AndroidRecoveryDevice")).isTrue();
-    assertThat(DeviceHealth.isTypeAbnormal("AndroidRealDevice")).isFalse();
   }
 
   @Test

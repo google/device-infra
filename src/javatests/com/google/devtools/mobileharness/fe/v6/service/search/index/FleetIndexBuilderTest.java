@@ -911,7 +911,7 @@ public final class FleetIndexBuilderTest {
         DeviceInfo.newBuilder()
             .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-recovering"))
             .setDeviceStatus(DeviceStatus.BUSY)
-            .setDeviceFeature(DeviceFeature.newBuilder().addType("FailedAndroidDevice"))
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("FailedDevice"))
             .build();
     LabQueryResult labResult =
         LabQueryResult.newBuilder()

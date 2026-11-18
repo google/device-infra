@@ -18,12 +18,12 @@ package com.google.devtools.mobileharness.fe.v6.service.device.util;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.shared.util.device.DeviceHealthUtil;
 import java.util.List;
 
 /**
@@ -66,27 +66,6 @@ public final class DeviceHealth {
   /** The temp dimension that marks a device as quarantined when its value is {@code true}. */
   private static final String QUARANTINED_DIMENSION = "quarantined";
 
-  /** Device type substrings that indicate the device is in a bad state. Device-family-agnostic. */
-  private static final ImmutableSet<String> ABNORMAL_TYPE_KEYWORDS =
-      ImmutableSet.of(
-          "FAILED",
-          "ABNORMAL",
-          "DISCONNECTED",
-          "OFFLINE",
-          "UNAUTHORIZED",
-          "FASTBOOT",
-          "FASTBOOTDMODE",
-          "RECOVERY");
-
-  /** Statuses in which the device is temporarily unavailable but expected to self-recover. */
-  private static final ImmutableSet<String> TRANSIT_STATUSES =
-      ImmutableSet.of(
-          DeviceStatus.INIT.name(),
-          DeviceStatus.PREPPING.name(),
-          DeviceStatus.LAMEDUCK.name(),
-          DeviceStatus.DIRTY.name(),
-          DeviceStatus.DYING.name());
-
   private final State state;
   private final HealthCategory category;
   private final String title;
@@ -99,29 +78,16 @@ public final class DeviceHealth {
 
   /** Classifies {@code deviceInfo}. */
   public static DeviceHealth of(DeviceInfo deviceInfo) {
-    String status = deviceInfo.getDeviceStatus().name();
+    DeviceStatus status = deviceInfo.getDeviceStatus();
     List<String> types = deviceInfo.getDeviceFeature().getTypeList();
-    boolean hasAbnormalTypes = types.stream().anyMatch(DeviceHealth::isTypeAbnormal);
-    HealthCategory category =
-        resolveHealthCategory(deviceInfo, status, !types.isEmpty(), hasAbnormalTypes);
+    HealthCategory category = resolveHealthCategory(deviceInfo, status, types);
     // Quarantine is a special case on top of the category: a device manually withheld from tests
     // while idle. It takes precedence over the category.
     State state =
-        isQuarantined(deviceInfo) && status.equals(DeviceStatus.IDLE.name())
+        isQuarantined(deviceInfo) && status == DeviceStatus.IDLE
             ? State.QUARANTINED
             : stateOf(category, status);
-    return new DeviceHealth(state, category, title(state, status));
-  }
-
-  /** Returns whether a device type name marks the device as being in a bad state. */
-  public static boolean isTypeAbnormal(String type) {
-    String upperType = Ascii.toUpperCase(type);
-    for (String keyword : ABNORMAL_TYPE_KEYWORDS) {
-      if (upperType.contains(keyword)) {
-        return true;
-      }
-    }
-    return false;
+    return new DeviceHealth(state, category, formatTitle(state, status.name()));
   }
 
   /** The health state. */
@@ -149,47 +115,20 @@ public final class DeviceHealth {
 
   /**
    * Prefers the upstream {@link HealthCategory} from {@link DeviceInfo}. If absent or unspecified
-   * (for example ATS LabInfo), falls back to {@link #computeCategory}.
+   * (for example ATS LabInfo), falls back to {@link DeviceHealthUtil#calculateHealthCategory}.
    */
   private static HealthCategory resolveHealthCategory(
-      DeviceInfo deviceInfo, String status, boolean hasTypes, boolean hasAbnormalTypes) {
+      DeviceInfo deviceInfo, DeviceStatus status, List<String> types) {
     if (deviceInfo.hasHealthCategory()
         && deviceInfo.getHealthCategory() != HealthCategory.HEALTH_CATEGORY_UNSPECIFIED) {
       return deviceInfo.getHealthCategory();
     }
-    return computeCategory(status, hasTypes, hasAbnormalTypes);
-  }
-
-  /**
-   * Classifies the device into a standard health category. Status- and type-driven only, so it
-   * applies uniformly to every device family.
-   *
-   * <p>TODO: Retire this method once calculateHealthCategory(status, type) is moved to a shared
-   * package and supports all device families.
-   */
-  private static HealthCategory computeCategory(
-      String status, boolean hasTypes, boolean hasAbnormalTypes) {
-    boolean idleOrBusy =
-        status.equals(DeviceStatus.IDLE.name()) || status.equals(DeviceStatus.BUSY.name());
-    // A device with no detected type cannot be allocated, so it is only "In Service" when it has at
-    // least one (non-abnormal) type.
-    if (idleOrBusy && hasTypes && !hasAbnormalTypes) {
-      return HealthCategory.HEALTH_CATEGORY_IN_SERVICE;
+    HealthCategory category = DeviceHealthUtil.calculateHealthCategory(status, types);
+    if (category != HealthCategory.HEALTH_CATEGORY_UNSPECIFIED) {
+      return category;
     }
-    if (TRANSIT_STATUSES.contains(status)) {
-      return HealthCategory.HEALTH_CATEGORY_IN_TRANSITION;
-    }
-    // BUSY + abnormal type = auto recovery. The upstream standard treats any BUSY device with
-    // unhealthy device types as being in automated recovery, without inspecting the running job.
-    if (status.equals(DeviceStatus.BUSY.name()) && hasAbnormalTypes) {
-      return HealthCategory.HEALTH_CATEGORY_IN_AUTO_RECOVERY;
-    }
-    // Not BUSY, or BUSY without abnormal types but missing types entirely.
-    // No detected type also needs a human: the device cannot be allocated.
-    if (status.equals(DeviceStatus.FAILED.name())
-        || status.equals(DeviceStatus.MISSING.name())
-        || hasAbnormalTypes
-        || !hasTypes) {
+    // A device in IDLE or BUSY with no detected type cannot be allocated and needs manual repair.
+    if (status == DeviceStatus.IDLE || status == DeviceStatus.BUSY) {
       return HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR;
     }
     return HealthCategory.HEALTH_CATEGORY_UNSPECIFIED;
@@ -207,10 +146,10 @@ public final class DeviceHealth {
     return false;
   }
 
-  private static State stateOf(HealthCategory category, String status) {
+  private static State stateOf(HealthCategory category, DeviceStatus status) {
     return switch (category) {
       case HEALTH_CATEGORY_IN_SERVICE ->
-          status.equals(DeviceStatus.BUSY.name()) ? State.IN_SERVICE_BUSY : State.IN_SERVICE_IDLE;
+          status == DeviceStatus.BUSY ? State.IN_SERVICE_BUSY : State.IN_SERVICE_IDLE;
       case HEALTH_CATEGORY_IN_TRANSITION -> State.IN_TRANSITION;
       case HEALTH_CATEGORY_IN_AUTO_RECOVERY -> State.AUTO_RECOVERY;
       case HEALTH_CATEGORY_NEED_MANUAL_REPAIR -> State.NEEDS_MANUAL_REPAIR;
@@ -218,7 +157,7 @@ public final class DeviceHealth {
     };
   }
 
-  private static String title(State state, String status) {
+  private static String formatTitle(State state, String status) {
     return switch (state) {
       case QUARANTINED -> "Quarantined";
       case IN_SERVICE_IDLE -> "In Service (Idle)";
