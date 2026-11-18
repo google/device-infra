@@ -919,6 +919,51 @@ public final class SessionResultHandlerUtilTest {
   }
 
   @Test
+  public void processResult_skippedNonTradefedModuleWithoutAbi_addsSkippedModuleWithoutAbi()
+      throws Exception {
+    flags.set("tmp_dir_root", folder.newFolder("tmp_dir_root_5").toString());
+    Path resultDir = folder.newFolder("skipped_no_abi_result_dir").toPath();
+    Path logDir = folder.newFolder("skipped_no_abi_log_dir").toPath();
+    Path testGenFileDir = folder.newFolder("skipped_no_abi_test_gen_files").toPath();
+
+    setUpNonTradefedJob(
+        /* xtsJobName= */ null,
+        TestResult.SKIP,
+        new MobileHarnessException(
+            InfraErrorId.DM_RESERVE_BUSY_DEVICE, "Module is skipped by feature checker."),
+        testGenFileDir.toString());
+    when(jobProperties.getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+        .thenReturn(Optional.of("CtsHostMoblyTestCases"));
+    when(jobProperties.get(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+        .thenReturn("CtsHostMoblyTestCases");
+    // SessionRequestHandlerUtil only sets XTS_MODULE_ABI_PROP for modules with an ABI.
+    when(jobProperties.get(SessionHandlerHelper.XTS_MODULE_ABI_PROP)).thenReturn(null);
+
+    sessionResultHandlerUtil.processResult(
+        resultDir,
+        logDir,
+        /* latestResultLink= */ null,
+        /* latestLogLink= */ null,
+        ImmutableList.of(jobInfo),
+        newCtsSessionRequestInfo());
+
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<List<Result>> reportListCaptor = ArgumentCaptor.forClass(List.class);
+    verify(compatibilityReportMerger)
+        .mergeReports(reportListCaptor.capture(), eq(true), anyBoolean());
+
+    ImmutableList<Module> modules =
+        reportListCaptor.getValue().stream()
+            .flatMap(r -> r.getModuleInfoList().stream())
+            .collect(toImmutableList());
+    assertThat(modules).hasSize(1);
+    assertThat(modules.get(0).getName()).isEqualTo("CtsHostMoblyTestCases");
+    assertThat(modules.get(0).hasAbi()).isFalse();
+    assertThat(modules.get(0).getSkipped()).isTrue();
+    assertThat(modules.get(0).getDone()).isTrue();
+  }
+
+  @Test
   public void isSessionCompleted_onlyPreconditionJobPassed_returnsFalse() throws Exception {
     for (String jobName :
         ImmutableList.of(XtsConstants.SETUP_JOB_NAME, XtsConstants.TEARDOWN_JOB_NAME)) {

@@ -18,21 +18,40 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
+    name = "compatibility_report_util",
+    srcs = ["CompatibilityReportUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
+    ],
+    deps = [
+        ":certification_suite_info",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common_util",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "compatibility_report_parser",
     srcs = ["CompatibilityReportParser.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
     ],
     deps = [
+        ":compatibility_report_util",
         ":context",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
@@ -57,16 +76,15 @@ java_library(
     ],
     deps = [
         ":compatibility_report_parser",
+        ":compatibility_report_util",
         ":mobly_report_parser",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/tradefed:test_record_proto_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
@@ -83,6 +101,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/module:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     deps = ["@maven//:com_google_inject_guice"],
@@ -98,12 +117,14 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     runtime_deps = [
         "@maven//:net_sf_kxml_kxml2",
     ],
     deps = [
+        ":compatibility_report_util",
         ":zip_util",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
@@ -111,6 +132,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/checksum:compatibility_report_checksum_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/tradefed:test_record_writer",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_report_properties_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
@@ -140,6 +162,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report/moblytestentryconverter:contrib_mobly_test_entry_converters",
     ],
     deps = [
+        ":compatibility_report_util",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
@@ -169,6 +192,7 @@ java_library(
     ],
     deps = [
         ":certification_suite_info",
+        ":compatibility_report_util",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -188,7 +212,9 @@ java_library(
     name = "certification_suite_info",
     srcs = ["CertificationSuiteInfo.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform:__subpackages__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
@@ -200,6 +226,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
