@@ -25,7 +25,10 @@ package(
 
 java_library(
     name = "local",
-    srcs = ["LocalFileUtil.java"],
+    srcs = [
+        "LocalFilePermissionsHelper.java",
+        "LocalFileUtil.java",
+    ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
