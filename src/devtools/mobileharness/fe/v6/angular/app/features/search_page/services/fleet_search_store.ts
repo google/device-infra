@@ -226,8 +226,17 @@ export class FleetSearchStore extends SearchPageStore<FleetSuggestion, Filter> {
   });
   readonly sortAsc = signal<boolean>(true);
 
-  /** Clears selection and refreshes either open groups or flat pagination when visible columns change. */
+  /** Clears selection, resets sort if the sorted column was removed, and refreshes open groups or flat pagination. */
   onVisibleColumnsChanged(): void {
+    const currentSort = this.sortColumn();
+    if (currentSort && !this.visibleColumns().has(currentSort)) {
+      const defaultSort =
+        this.searchConfig()?.columns?.defaults?.find((c) => c.locked)?.key ??
+        this.visibleColumnDescriptors().find((c) => c.locked)?.key ??
+        '';
+      this.sortColumn.set(defaultSort);
+      this.sortAsc.set(true);
+    }
     this.clearSelection();
     if (this.groupByKeys().length > 0) {
       this.groupAccordion.reloadOpenGroupsForColumnChange();

@@ -228,7 +228,7 @@ describe('FilterValuePicker', () => {
     expect(mockStore.closeValuePicker).toHaveBeenCalled();
   });
 
-  it('should handle date range picker type', () => {
+  it('should handle date range picker type including identical from and to bounds', () => {
     mockStore.pickerConfig.set({
       key: 'created_time',
       title: 'Created Time',
@@ -243,9 +243,21 @@ describe('FilterValuePicker', () => {
 
     expect(component.rangeFrom()).toBe('2026-01-01T00:00');
     expect(component.rangeTo()).toBe('2026-01-02T00:00');
+
+    // Same timestamp for both from and to (Set collapses to 1 item, rawValues preserves both)
+    mockStore.effectivePickerState.set({
+      ...createInitialValuePickerState(),
+      values: [],
+      selectedValues: new Set(['2026-07-15T21:30:00.000Z']),
+      rawValues: ['2026-07-15T21:30:00.000Z', '2026-07-15T21:30:00.000Z'],
+    });
+    fixture.detectChanges();
+
+    expect(component.rangeFrom()).toBe('2026-07-15T14:30');
+    expect(component.rangeTo()).toBe('2026-07-15T14:30');
   });
 
-  it('should handle namedPair picker type', () => {
+  it('should handle namedPair picker type including when name and value are identical', () => {
     mockStore.pickerConfig.set({
       key: 'property',
       title: 'Property',
@@ -261,6 +273,19 @@ describe('FilterValuePicker', () => {
 
     expect(component.propName()).toBe('custom_key');
     expect(component.propVal()).toBe('custom_value');
+    expect(component.isApplyDisabled()).toBeFalse();
+
+    // Identical name and value ('test' / 'test')
+    mockStore.effectivePickerState.set({
+      ...createInitialValuePickerState(),
+      values: [],
+      selectedValues: new Set(['test']),
+      rawValues: ['test', 'test'],
+    });
+    fixture.detectChanges();
+
+    expect(component.propName()).toBe('test');
+    expect(component.propVal()).toBe('test');
     expect(component.isApplyDisabled()).toBeFalse();
   });
 

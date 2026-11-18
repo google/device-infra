@@ -94,9 +94,8 @@ export function extractRawValuesFromTjsFilter(
     return filter.enumValues.values;
   }
   if (filter.namedValue) {
-    return [filter.namedValue.name || '', filter.namedValue.value || ''].filter(
-      Boolean,
-    );
+    const {name = '', value = ''} = filter.namedValue;
+    return name || value ? [name, value] : undefined;
   }
   if (filter.timeRange) {
     const fromVal = filter.timeRange.from || '';
@@ -286,10 +285,12 @@ export function buildTjsInitialPickerState(
       .filter(Boolean);
   }
 
+  const rawValues = [...chipValues, ...stagedValues];
   return {
     ...createInitialValuePickerState(),
     values,
-    selectedValues: new Set([...chipValues, ...stagedValues]),
+    selectedValues: new Set(rawValues),
+    rawValues,
   };
 }
 

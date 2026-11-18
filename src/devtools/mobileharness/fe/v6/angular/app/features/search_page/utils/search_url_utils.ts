@@ -149,11 +149,10 @@ export function parseUrlChips(
     return {parsedFilters: [], groupByKeys: [], initialChips: []};
   }
   const fParams = getQueryParamAsArray(params['f']);
-  const gbParam: string = params['gb'] || '';
   const groupByKeys = Array.from(
     new Set(
-      gbParam
-        .split(',')
+      getQueryParamAsArray(params['gb'])
+        .flatMap((g) => g.split(','))
         .map((k) => k.trim())
         .filter(Boolean),
     ),

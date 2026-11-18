@@ -3011,6 +3011,187 @@ describe('FleetSearchStore', () => {
       expect(store.selectedItems().size).toBe(0);
       expect(store.selectionState()).toEqual({all: false, some: false});
     });
+
+    it('resets sortColumn to the default locked column when the sorted column is removed from visibleColumns', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {
+            defaults: [
+              {key: 'id', displayName: 'Device ID', locked: true},
+              {key: 'host_name', displayName: 'Host Name'},
+              {key: 'status', displayName: 'Status'},
+            ],
+          },
+        }),
+      );
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [{valid: {pillKey: 'Status', pillCondition: 'IDLE'}}],
+          groupByChips: [],
+        }),
+      );
+      const store = await createStoreAt({'f': 'device_field::status~IDLE'});
+
+      // Sort by 'host_name' descending
+      store.toggleSort('host_name');
+      store.toggleSort('host_name');
+      expect(store.sortColumn()).toBe('host_name');
+      expect(store.sortAsc()).toBeFalse();
+
+      // Remove 'host_name' from visible columns -> sort resets to locked default ('id', asc)
+      store.setVisibleColumns([
+        {key: 'id', displayName: 'Device ID', locked: true},
+        {key: 'status', displayName: 'Status'},
+      ]);
+      expect(store.sortColumn()).toBe('id');
+      expect(store.sortAsc()).toBeTrue();
+
+      // When searchConfig has no locked default, falls back to locked visible descriptor or ''
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({columns: {defaults: [{key: 'status', displayName: 'Status'}]}}),
+      );
+      (
+        store as unknown as {
+          searchConfigResource: {reload: () => void};
+        }
+      ).searchConfigResource.reload();
+      await flushAsync();
+
+      store.toggleSort('status');
+      store.setVisibleColumns([
+        {key: 'id', displayName: 'Device ID', locked: true},
+      ]);
+      expect(store.sortColumn()).toBe('id');
+
+      store.toggleSort('id');
+      store.setVisibleColumns([{key: 'host_name', displayName: 'Host Name'}]);
+      expect(store.sortColumn()).toBe('');
+    });
+
+    it('computes effectiveTotalCount, groupKeysText, searchPlaceholder, and promoted keys across modes', async () => {
+      mockSearchService.getFleetPromotedKeys.and.returnValue(
+        of({
+          filterKeys: [{key: 'status', metadata: {keyDisplayName: 'Status'}}],
+          groupByKeys: [{key: 'model', displayName: 'Model'}],
+        }),
+      );
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [{valid: {pillKey: 'Status', pillCondition: 'IDLE'}}],
+          groupByChips: [],
+        }),
+      );
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          flat: {
+            columns: [{key: 'id', displayName: 'ID'}],
+            rows: [{id: 'd1', cells: [{text: {value: 'd1'}}]}],
+            total: 42,
+          },
+        }),
+      );
+
+      const store = await createStoreAt({'f': 'device_field::status~IDLE'});
+      expect(store.getDefaultEntity()).toBe('devices');
+      expect(store.searchPlaceholder()).toContain('pixel 10');
+      expect(store.promotedFilterKeys().map((k) => k.key)).toEqual(['status']);
+      expect(store.promotedGroupByKeys().map((k) => k.key)).toEqual(['model']);
+      expect(store.effectiveTotalCount()).toBe(42);
+      expect(store.groupKeysText()).toBe('');
+
+      // Switch to grouped mode and verify grouped effectiveTotalCount and groupKeysText
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [],
+          groupByChips: [
+            {valid: {pillKey: 'Model', displayName: 'Model'}},
+            {valid: {pillKey: 'Status', displayName: 'Status'}},
+          ],
+        }),
+      );
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groupByKeys: [
+              {key: 'model', displayName: 'Model'},
+              {key: 'status', displayName: ''},
+            ],
+            groups: [{groupId: 'g1', values: ['Pixel'], itemCount: 15}],
+            totalGroups: 1,
+            totalItems: 15,
+          },
+        }),
+      );
+
+      queryParams$.next({'gb': 'model,status'});
+      await flushAsync();
+
+      expect(store.effectiveTotalCount()).toBe(15);
+      expect(store.groupKeysText()).toBe('Model × status');
+    });
+
+    it('gracefully handles backend RPC errors in valueList, suggestions, searchConfig, promotedKeys, and applyValuePicker', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        throwError(() => new Error('Config error')),
+      );
+      mockSearchService.getFleetPromotedKeys.and.returnValue(
+        throwError(() => new Error('Promoted keys error')),
+      );
+      mockSearchService.getFleetSuggestions.and.returnValue(
+        throwError(() => new Error('Suggestions error')),
+      );
+      mockSearchService.getFleetValueList.and.returnValue(
+        throwError(() => new Error('Value list error')),
+      );
+
+      const store = await createStoreAt({});
+      expect(store.searchConfig()).toBeNull();
+      expect(store.promotedFilterKeys()).toEqual([]);
+      expect(store.promotedGroupByKeys()).toEqual([]);
+
+      // Trigger suggestions resource error fallback
+      store.showSuggestions.set(true);
+      store.searchQuery.set('pixel');
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 350);
+      });
+      await flushAsync();
+      expect(store.suggestions()).toEqual([]);
+
+      // Trigger valueListResource error fallback
+      store.openValuePicker('status', null, 'Status');
+      await flushAsync();
+      expect(store.effectivePickerState().values).toEqual([]);
+      expect(store.effectivePickerState().loading).toBeFalse();
+
+      // Apply empty value picker selection removes existing chip for key (picker is already open for 'status')
+      store.activeChips.set([
+        {
+          key: 'status',
+          pillKey: 'Status',
+          pillCondition: 'IDLE',
+          isGroupBy: false,
+          rawValues: ['IDLE'],
+        },
+      ]);
+      store.applyValuePicker({selected: [], negate: false, isAdvanced: false});
+      expect(store.activeChips()).toEqual([]);
+
+      // Apply non-empty value picker when resolveFleetChips fails shows warning
+      mockSearchService.resolveFleetChips.and.returnValue(
+        throwError(() => new Error('Resolve failed')),
+      );
+      store.openValuePicker('status', null, 'Status');
+      store.applyValuePicker({
+        selected: ['IDLE'],
+        negate: false,
+        isAdvanced: false,
+      });
+      await flushAsync();
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledWith(
+        'Resolve failed',
+      );
+    });
   });
 
   describe('initial load and URL refresh loading states', () => {

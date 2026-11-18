@@ -115,19 +115,19 @@ export class FilterValuePicker {
     () => this.state().advanced?.intOp || DEFAULT_INT_COMPARISON_OP,
   );
 
+  /** Selected values as an ordered array, preserving duplicate positional entries for range and namedPair modes. */
+  readonly selectedValuesList = computed(
+    () => this.state().rawValues ?? Array.from(this.state().selectedValues),
+  );
+
   /** Parsed date range state object for date-range picker type. */
   readonly rangeState = linkedSignal<DateRangeState>(() =>
-    parseDateRange(this.state().selectedValues),
+    parseDateRange(this.selectedValuesList()),
   );
   /** 'From' timestamp string for date-range picker type. */
   readonly rangeFrom = linkedSignal(() => this.rangeState().from);
   /** 'To' timestamp string for date-range picker type. */
   readonly rangeTo = linkedSignal(() => this.rangeState().to);
-
-  /** Selected values as an array for efficient multi-field consumption. */
-  readonly selectedValuesList = computed(() =>
-    Array.from(this.state().selectedValues),
-  );
 
   /** Property key name for namedPair picker type. */
   readonly propName = linkedSignal(() => {

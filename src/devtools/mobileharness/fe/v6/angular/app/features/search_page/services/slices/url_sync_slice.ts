@@ -67,26 +67,23 @@ export function useSearchUrlSync(host: SearchUrlSyncHost) {
       host.fleet.set(fleetParam);
     }
 
-    const fParams = getQueryParamAsArray(
-      params['f'] as string | string[] | undefined,
-    );
-    const gbKeys = ((params['gb'] as string) || '').split(',').filter(Boolean);
-    const qParam = ((params['q'] as string) || '').trim();
+    const fParams = getQueryParamAsArray(params['f']);
+    const {parsedFilters, groupByKeys, initialChips} = parseUrlChips(params);
+    const qParam = getQueryParamAsArray(params['q'])[0] || '';
 
-    const baseKey = buildUrlParamKey(fParams, gbKeys, fleetParam);
+    const baseKey = buildUrlParamKey(fParams, groupByKeys, fleetParam);
     const incomingKey = qParam ? `${baseKey}|q:${qParam}` : baseKey;
     if (incomingKey === lastSyncedUrlKey) return;
     lastSyncedUrlKey = incomingKey;
     host.cancelPendingLegacyTranslation();
 
-    if (fParams.length === 0 && gbKeys.length === 0) {
+    if (fParams.length === 0 && groupByKeys.length === 0) {
       cancelPendingChipResolution();
       host.restoreDefaultState(false);
     } else {
-      const {parsedFilters, initialChips} = parseUrlChips(params);
       host.activeChips.set(initialChips);
       isResolvingChips.set(true);
-      resolveFiltersSubject.next({parsedFilters, gbKeys});
+      resolveFiltersSubject.next({parsedFilters, gbKeys: groupByKeys});
     }
 
     if (qParam) {

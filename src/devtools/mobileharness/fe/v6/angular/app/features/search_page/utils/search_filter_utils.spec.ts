@@ -1526,13 +1526,16 @@ describe('search_filter_utils', () => {
       expect(result.parsedFilters[0].pillCondition).toBe('IDLE');
     });
 
-    it('handles single string f parameter instead of array', () => {
+    it('handles single string f parameter instead of array and repeated/duplicate gb parameters', () => {
       const params: Params = {
         'f': 'status~IDLE',
+        'gb': ['model, model', ' host '],
       };
       const result = parseUrlChips(params);
       expect(result.parsedFilters.length).toBe(1);
       expect(result.parsedFilters[0].pillKey).toBe('status');
+      expect(result.groupByKeys).toEqual(['model', 'host']);
+      expect(result.initialChips.filter((c) => c.isGroupBy).length).toBe(2);
     });
   });
 

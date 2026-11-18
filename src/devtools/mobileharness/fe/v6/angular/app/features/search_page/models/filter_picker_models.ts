@@ -103,6 +103,7 @@ export interface ValuePickerState {
   loading: boolean;
   values: PickerValueItem[];
   selectedValues: Set<string>;
+  rawValues?: string[];
   negated: boolean;
   advanced: {
     active: boolean;
