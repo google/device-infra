@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.shared.util.system;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.Test;
@@ -43,5 +45,18 @@ public final class SystemUtilTest {
 
     assertThat(processUptime).isAtLeast(Duration.ZERO);
     assertThat(systemUtil.getProcessUptime().orElseThrow()).isAtLeast(processUptime);
+  }
+
+  @Test
+  public void isLocalPortListening_detectsListeningAndClosedPort() throws Exception {
+    int port;
+    try (ServerSocket serverSocket =
+        new ServerSocket(/* port= */ 0, /* backlog= */ 1, InetAddress.getLoopbackAddress())) {
+      port = serverSocket.getLocalPort();
+      assertThat(systemUtil.isLocalPortListening(port)).isTrue();
+    }
+    assertThat(systemUtil.isLocalPortListening(port)).isFalse();
+    assertThat(systemUtil.isLocalPortListening(0)).isFalse();
+    assertThat(systemUtil.isLocalPortListening(-1)).isFalse();
   }
 }
