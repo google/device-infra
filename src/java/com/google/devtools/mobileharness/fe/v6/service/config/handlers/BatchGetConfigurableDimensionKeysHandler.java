@@ -28,6 +28,7 @@ import static java.util.stream.Collectors.groupingBy;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
@@ -44,9 +45,12 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConf
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysResponse.CandidateDimensionKey;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DimensionList;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
@@ -68,6 +72,7 @@ public final class BatchGetConfigurableDimensionKeysHandler {
   private final ConfigurationProvider configurationProvider;
   private final ConfigServiceCapabilityFactory configServiceCapabilityFactory;
   private final BatchDeviceConfigPolicy policy;
+  private final DimensionCatalogStore dimensionCatalogStore;
   private final ListeningExecutorService executor;
 
   @Inject
@@ -76,11 +81,13 @@ public final class BatchGetConfigurableDimensionKeysHandler {
       ConfigurationProvider configurationProvider,
       ConfigServiceCapabilityFactory configServiceCapabilityFactory,
       BatchDeviceConfigPolicy policy,
+      DimensionCatalogStore dimensionCatalogStore,
       ListeningExecutorService executor) {
     this.labInfoProvider = labInfoProvider;
     this.configurationProvider = configurationProvider;
     this.configServiceCapabilityFactory = configServiceCapabilityFactory;
     this.policy = policy;
+    this.dimensionCatalogStore = dimensionCatalogStore;
     this.executor = executor;
   }
 
@@ -177,11 +184,13 @@ public final class BatchGetConfigurableDimensionKeysHandler {
   }
 
   /**
-   * Queries {@code LabInfoService.GetAllDeviceDimensions} so fleet key discovery runs in O(distinct
-   * keys) rather than scanning every device via {@code GetLabInfo}. Because {@code
-   * GetAllDeviceDimensions} aggregates dimension names across both {@code supported_dimension} and
-   * {@code required_dimension}, non-curated custom keys report combined fleet counts while curated
-   * keys belonging only to the opposite list are excluded.
+   * Returns the fleet device count of every key that is configurable in {@code dimensionList}. The
+   * counts come from {@code LabInfoService.GetAllDeviceDimensions} (see {@link
+   * #fetchAllDimensionFleetCounts}), so fleet key discovery runs in O(distinct keys) rather than
+   * scanning every device via {@code GetLabInfo}. Because {@code GetAllDeviceDimensions} aggregates
+   * dimension names across both {@code supported_dimension} and {@code required_dimension},
+   * non-curated custom keys report combined fleet counts while curated keys belonging only to the
+   * opposite list are excluded.
    */
   private ListenableFuture<ImmutableMap<String, Integer>> fetchDimensionFleetCounts(
       DimensionList dimensionList) {
@@ -194,17 +203,41 @@ public final class BatchGetConfigurableDimensionKeysHandler {
             policy.getDefaultConfigurableKeys(oppositeList),
             policy.getDefaultConfigurableKeys(dimensionList));
     return Futures.transform(
+        fetchAllDimensionFleetCounts(),
+        allCounts ->
+            ImmutableMap.copyOf(
+                Maps.filterEntries(
+                    allCounts,
+                    entry ->
+                        entry.getValue() > 0
+                            && BatchDeviceConfigUtil.isValidConfigurableDimensionKey(
+                                entry.getKey(), policy)
+                            && !excludedCuratedKeys.contains(entry.getKey()))),
+        executor);
+  }
+
+  /**
+   * Returns the device count of every dimension name in the self fleet.
+   *
+   * <p>{@code GetAllDeviceDimensions} scans the whole fleet on the master and often takes several
+   * seconds, so this serves the copy that {@code DimensionCatalogRefresher} keeps in {@link
+   * DimensionCatalogStore} (refreshed in the background every hour for fleet search). It calls the
+   * master only while that catalog is still empty, for example right after the server starts.
+   */
+  private ListenableFuture<ImmutableMap<String, Integer>> fetchAllDimensionFleetCounts() {
+    ImmutableMap<String, Integer> catalogCounts =
+        dimensionCatalogStore.getDimensionCounts(Fleet.FLEET_SELF);
+    if (!catalogCounts.isEmpty()) {
+      return immediateFuture(catalogCounts);
+    }
+    return Futures.transform(
         labInfoProvider.getAllDeviceDimensionsAsync(
             GetAllDeviceDimensionsRequest.getDefaultInstance(), UniverseScope.SELF),
         response ->
             response.getDimensionsList().stream()
-                .filter(dim -> dim.getDeviceCount() > 0)
-                .filter(dim ->
-                    BatchDeviceConfigUtil.isValidConfigurableDimensionKey(dim.getName(), policy)
-                        && !excludedCuratedKeys.contains(dim.getName()))
                 .collect(
                     toImmutableMap(
-                        dim -> dim.getName(),
+                        DeviceDimensionSummary::getName,
                         dim -> (int) Math.min(dim.getDeviceCount(), Integer.MAX_VALUE),
                         Math::max)),
         executor);

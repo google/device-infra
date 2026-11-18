@@ -25,6 +25,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -70,6 +71,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimension
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigSection;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.TargetDimensionValues;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateError;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.IamPermissionChecker;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
@@ -108,6 +111,18 @@ public final class BatchDimensionConfigHandlersTest {
 
   private static final UniverseScope SELF_UNIVERSE = UniverseScope.SELF;
 
+  private static final GetDimensionValueSuggestionsRequest POOL_SUGGESTIONS =
+      GetDimensionValueSuggestionsRequest.newBuilder()
+          .setDimensionName("pool")
+          .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
+          .build();
+
+  private static final GetDimensionValueSuggestionsRequest LABEL_SUGGESTIONS =
+      GetDimensionValueSuggestionsRequest.newBuilder()
+          .setDimensionName("label")
+          .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
+          .build();
+
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Rule public final SetFlags flags = new SetFlags();
 
@@ -129,6 +144,8 @@ public final class BatchDimensionConfigHandlersTest {
   @Inject private BatchGetDeviceDimensionConfigsHandler batchGetDeviceDimensionConfigsHandler;
 
   @Inject private BatchUpdateDeviceDimensionConfigsHandler batchUpdateDeviceDimensionConfigsHandler;
+
+  @Inject private DimensionCatalogStore dimensionCatalogStore;
 
   private FakeBatchFleet fleet;
 
@@ -377,6 +394,51 @@ public final class BatchDimensionConfigHandlersTest {
             BatchGetConfigurableDimensionKeysRequest.newBuilder()
                 .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
                 .build()));
+  }
+
+  @Test
+  public void batchGetConfigurableDimensionKeys_internal_readsFleetCountsFromDimensionCatalog()
+      throws Exception {
+    dimensionCatalogStore.setDimensionCounts(
+        Fleet.FLEET_SELF,
+        ImmutableMap.of(
+            "model", 100, "pool", 50, "label", 2, "dim::label", 5, "custom_team_tag", 3));
+    fleet
+        .install()
+        .addDevice(
+            "dev1",
+            "host1",
+            Optional.of(
+                DeviceConfig.newBuilder()
+                    .setUuid("dev1")
+                    .setBasicConfig(
+                        BasicDeviceConfig.newBuilder()
+                            .setCompositeDimension(
+                                DeviceCompositeDimension.newBuilder()
+                                    .addSupportedDimension(
+                                        DeviceDimension.newBuilder()
+                                            .setName("custom_team_tag")
+                                            .setValue("team_a"))))
+                    .build()));
+
+    BatchGetConfigurableDimensionKeysResponse response =
+        batchGetConfigurableDimensionKeysHandler
+            .batchGetConfigurableDimensionKeys(
+                BatchGetConfigurableDimensionKeysRequest.newBuilder()
+                    .addDevices(target("dev1", "host1"))
+                    .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
+                    .build())
+            .get();
+
+    // The catalog replaces the fleet-wide master call; the selected devices are still read live.
+    verify(labInfoProvider, never()).getAllDeviceDimensionsAsync(any(), any());
+    verify(configurationProvider).getDeviceConfigs(ImmutableList.of("dev1"), SELF_UNIVERSE);
+    assertThat(response.getCandidateKeysList())
+        .containsExactly(
+            candidateKey("custom_team_tag", /* selectedCount= */ 1, /* fleetCount= */ 3),
+            candidateKey("label", /* selectedCount= */ 0, /* fleetCount= */ 2),
+            candidateKey("cluster", /* selectedCount= */ 0, /* fleetCount= */ 0))
+        .inOrder();
   }
 
   @Test
@@ -632,6 +694,135 @@ public final class BatchDimensionConfigHandlersTest {
                 .setDimensionName("pool")
                 .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
                 .build()));
+  }
+
+  @Test
+  public void getDimensionValueSuggestions_internal_servesRepeatedRequestsFromCache()
+      throws Exception {
+    fleet.install().setFleetQueryResponse(fleetWithRequiredPools("shared", "shared", "dedicated"));
+
+    GetDimensionValueSuggestionsResponse first =
+        getDimensionValueSuggestionsHandler.getDimensionValueSuggestions(POOL_SUGGESTIONS).get();
+    GetDimensionValueSuggestionsResponse second =
+        getDimensionValueSuggestionsHandler.getDimensionValueSuggestions(POOL_SUGGESTIONS).get();
+
+    assertThat(first.getCandidateValuesList()).hasSize(2);
+    assertThat(second).isEqualTo(first);
+    verify(labInfoProvider).getLabInfoAsync(any(), eq(SELF_UNIVERSE));
+
+    // Another dimension is cached separately.
+    assertThat(
+            getDimensionValueSuggestionsHandler
+                .getDimensionValueSuggestions(LABEL_SUGGESTIONS)
+                .get()
+                .getCandidateValuesList())
+        .isEmpty();
+    verify(labInfoProvider, times(2)).getLabInfoAsync(any(), eq(SELF_UNIVERSE));
+  }
+
+  @Test
+  public void getDimensionValueSuggestions_internal_doesNotCacheFailures() throws Exception {
+    when(labInfoProvider.getLabInfoAsync(any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateFailedFuture(new IllegalStateException("master unavailable")))
+        .thenReturn(immediateFuture(fleetWithRequiredPools("shared")));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                getDimensionValueSuggestionsHandler
+                    .getDimensionValueSuggestions(POOL_SUGGESTIONS)
+                    .get());
+    assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
+    assertThat(e).hasCauseThat().hasMessageThat().isEqualTo("master unavailable");
+
+    assertThat(
+            getDimensionValueSuggestionsHandler
+                .getDimensionValueSuggestions(POOL_SUGGESTIONS)
+                .get()
+                .getCandidateValues(0)
+                .getValuesList())
+        .containsExactly("shared");
+    verify(labInfoProvider, times(2)).getLabInfoAsync(any(), eq(SELF_UNIVERSE));
+  }
+
+  @Test
+  public void getDimensionValueSuggestions_internal_providerThrows_failsTheFuture() {
+    when(labInfoProvider.getLabInfoAsync(any(), eq(SELF_UNIVERSE)))
+        .thenThrow(new IllegalStateException("no lab info stub"));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                getDimensionValueSuggestionsHandler
+                    .getDimensionValueSuggestions(POOL_SUGGESTIONS)
+                    .get());
+
+    assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
+    assertThat(e).hasCauseThat().hasMessageThat().isEqualTo("no lab info stub");
+  }
+
+  @Test
+  public void refreshCuratedDimensionSuggestions_internal_preloadsEveryCuratedDimension()
+      throws Exception {
+    fleet.install().setFleetQueryResponse(fleetWithRequiredPools("shared"));
+
+    getDimensionValueSuggestionsHandler.refreshCuratedDimensionSuggestions();
+
+    ArgumentCaptor<GetLabInfoRequest> requests = ArgumentCaptor.forClass(GetLabInfoRequest.class);
+    verify(labInfoProvider, times(3)).getLabInfoAsync(requests.capture(), eq(SELF_UNIVERSE));
+    assertThat(
+            requests.getAllValues().stream()
+                .map(request ->
+                    request
+                        .getLabQuery()
+                        .getFilter()
+                        .getDeviceFilter()
+                        .getDeviceMatchCondition(0)
+                        .getDimensionMatchCondition()
+                        .getCondition()
+                        .getKey()))
+        .containsExactly("pool", "label", "cluster");
+
+    // The dialog of a curated dimension is then served from memory.
+    assertThat(
+            getDimensionValueSuggestionsHandler
+                .getDimensionValueSuggestions(POOL_SUGGESTIONS)
+                .get()
+                .getCandidateValues(0)
+                .getValuesList())
+        .containsExactly("shared");
+    verify(labInfoProvider, times(3)).getLabInfoAsync(any(), eq(SELF_UNIVERSE));
+  }
+
+  @Test
+  public void refreshCuratedDimensionSuggestions_failedReloadKeepsPreviousSuggestions()
+      throws Exception {
+    when(labInfoProvider.getLabInfoAsync(any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateFuture(fleetWithRequiredPools("shared")))
+        .thenReturn(immediateFailedFuture(new IllegalStateException("master unavailable")));
+    GetDimensionValueSuggestionsResponse loaded =
+        getDimensionValueSuggestionsHandler.getDimensionValueSuggestions(POOL_SUGGESTIONS).get();
+
+    getDimensionValueSuggestionsHandler.refreshCuratedDimensionSuggestions();
+
+    assertThat(
+            getDimensionValueSuggestionsHandler
+                .getDimensionValueSuggestions(POOL_SUGGESTIONS)
+                .get())
+        .isEqualTo(loaded);
+    verify(labInfoProvider, times(4)).getLabInfoAsync(any(), eq(SELF_UNIVERSE));
+  }
+
+  @Test
+  public void refreshCuratedDimensionSuggestions_deviceConfigPolicy_doesNothing() {
+    enterAtsMode();
+
+    getDimensionValueSuggestionsHandler.refreshCuratedDimensionSuggestions();
+
+    verify(labInfoProvider, never()).getLabInfoAsync(any(), any());
+    verify(configurationProvider, never()).getDeviceConfigs(any(), any());
   }
 
   @Test
@@ -1169,6 +1360,39 @@ public final class BatchDimensionConfigHandlersTest {
     return IntStream.rangeClosed(0, BatchDeviceConfigHelper.MAX_BATCH_DEVICE_IDS)
         .mapToObj(i -> target("dev" + i, "host1"))
         .collect(toImmutableList());
+  }
+
+  private static BatchGetConfigurableDimensionKeysResponse.CandidateDimensionKey candidateKey(
+      String dimensionName, int selectedCount, int fleetCount) {
+    return BatchGetConfigurableDimensionKeysResponse.CandidateDimensionKey.newBuilder()
+        .setDimensionName(dimensionName)
+        .setSelectedDeviceCount(selectedCount)
+        .setFleetDeviceCount(fleetCount)
+        .build();
+  }
+
+  /** Returns a fleet with one device per given value, which the device has as its required pool. */
+  private static GetLabInfoResponse fleetWithRequiredPools(String... pools) {
+    DeviceList.Builder devices = DeviceList.newBuilder();
+    for (int i = 0; i < pools.length; i++) {
+      devices.addDeviceInfo(
+          DeviceInfo.newBuilder()
+              .setDeviceLocator(DeviceLocator.newBuilder().setId("dev" + i))
+              .setDeviceFeature(
+                  DeviceFeature.newBuilder()
+                      .setCompositeDimension(
+                          DeviceCompositeDimension.newBuilder()
+                              .addRequiredDimension(
+                                  DeviceDimension.newBuilder()
+                                      .setName("pool")
+                                      .setValue(pools[i])))));
+    }
+    return GetLabInfoResponse.newBuilder()
+        .setLabQueryResult(
+            LabQueryResult.newBuilder()
+                .setLabView(
+                    LabView.newBuilder().addLabData(LabData.newBuilder().setDeviceList(devices))))
+        .build();
   }
 
   private Map<String, DeviceConfig> captureSingleWrite() {
