@@ -19,8 +19,10 @@ load("@protobuf//bazel:proto_library.bzl", "proto_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/tradefed:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/tradefed:__subpackages__",
     ],

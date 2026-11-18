@@ -25,7 +25,12 @@ public final class SuiteCommonUtil {
 
   /** Returns whether the given module is a module checker. */
   public static boolean isModuleChecker(Module module) {
-    return module.getName().startsWith(SuiteCommon.MODULE_CHECKER_PRE)
-        || module.getName().startsWith(SuiteCommon.MODULE_CHECKER_POST);
+    return isModuleChecker(module.getName());
+  }
+
+  /** Returns whether the given module or test run name is a module checker. */
+  public static boolean isModuleChecker(String name) {
+    return name.startsWith(SuiteCommon.MODULE_CHECKER_PRE)
+        || name.startsWith(SuiteCommon.MODULE_CHECKER_POST);
   }
 }

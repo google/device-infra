@@ -66,6 +66,21 @@ message TestRecord {
   // The attempt number of a target if the target ran several times. First
   // attempt is 0 (Default value).
   int64 attempt_id = 12;
+
+  // Describes the reason for skipping an invocation, module, or test.
+  // Nested inside TestRecord (wire-identical to AOSP Tradefed's top-level
+  // android_test_record.SkipReason) to avoid a google3 ProtoDB symbol conflict
+  // with tools/tradefederation/core/proto/test_record.proto.
+  message SkipReason {
+    // A message description of the reason.
+    string reason = 1;
+
+    // The trigger for the skip.
+    string trigger = 2;
+  }
+
+  // Describes whether the record is skipped and why.
+  SkipReason skip_reason = 13;
 }
 
 // A reference to a finer-grained TestRecord.
