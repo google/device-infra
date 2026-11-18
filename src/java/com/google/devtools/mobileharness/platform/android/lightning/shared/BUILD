@@ -35,6 +35,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/testrunner/step/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

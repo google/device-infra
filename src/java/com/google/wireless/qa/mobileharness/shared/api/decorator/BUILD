@@ -874,25 +874,10 @@ java_library(
 java_library(
     name = "android_switch_language_decorator",
     srcs = ["AndroidSwitchLanguageDecorator.java"],
-    resources = [
-        "//src/java/com/google/wireless/qa/mobileharness/tool/android/language:switchlanguage.apk",
-    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation:android_instrumentation_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
-        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemsetting",
-        "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
-        "//src/java/com/google/devtools/mobileharness/platform/android/shared/autovalue:util_args",
-        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/user:android_user_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/base",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:language_setting_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/android:android_packages",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
@@ -900,7 +885,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_switch_language_decorator_spec_java_proto",
-        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
