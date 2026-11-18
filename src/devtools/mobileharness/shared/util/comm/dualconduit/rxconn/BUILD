@@ -22,7 +22,14 @@ package(
 
 go_library(
     name = "rxconn",
-    srcs = ["rxconn.go"],
+    srcs = [
+        "conn.go",
+        "outbox.go",
+        "protocol0.go",
+        "refuse.go",
+        "rxshield.go",
+        "state.go",
+    ],
     importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn",
     deps = [
         "@com_github_rsocket_rsocket_go//payload",
@@ -33,9 +40,17 @@ go_library(
 
 go_test(
     name = "rxconn_test",
-    srcs = ["rxconn_test.go"],
+    srcs = [
+        "outbox_test.go",
+        "protocol0_test.go",
+        "rxconn_rsocket_test.go",
+        "rxconn_test.go",
+        "state_test.go",
+    ],
     embed = [":rxconn"],
     deps = [
+        "@com_github_rsocket_rsocket_go//:rsocket-go",
+        "@com_github_rsocket_rsocket_go//core/transport",
         "@com_github_rsocket_rsocket_go//payload",
         "@com_github_rsocket_rsocket_go//rx",
         "@com_github_rsocket_rsocket_go//rx/flux",

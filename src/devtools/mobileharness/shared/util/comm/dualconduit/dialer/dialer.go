@@ -24,7 +24,9 @@ import (
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/conduit"
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/session"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/attribute"
@@ -65,6 +67,29 @@ type Service struct {
 	KeepAliveTickPeriod time.Duration
 	rttHistogram        metric.Float64Histogram
 	connectTimeout      time.Duration
+	// fatal receives the error after which the dialer cannot work with its
+	// acceptor. See Fatal.
+	fatal chan error
+}
+
+// Fatal returns a channel that receives an error when the acceptor has
+// refused this dialer because of its protocol version. Trying again cannot
+// succeed, so the process should log the error and exit.
+func (s *Service) Fatal() <-chan error {
+	return s.fatal
+}
+
+// reportIfMismatch reports err on the Fatal channel if it says that the
+// acceptor refused the protocol version of this dialer.
+func (s *Service) reportIfMismatch(err error) {
+	if !version.IsMismatch(err) {
+		return
+	}
+	select {
+	case s.fatal <- err:
+	default:
+		// Already reported, or nobody set up the channel.
+	}
 }
 
 // connectTimeoutFor returns the connect timeout for a client with the given
@@ -122,6 +147,7 @@ func New(ctx context.Context, hostname string, forwardAddress string, newTranspo
 		KeepAliveTickPeriod: tickPeriod,
 		rttHistogram:        rttHistogram,
 		connectTimeout:      defaultConnectTimeout,
+		fatal:               make(chan error, 1),
 	}
 	cm.SubscribeToRemove(s.handleConduitRemoved)
 	return s
@@ -159,8 +185,9 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 
 	// 2. Marshal protobuf metadata envelope for the SETUP frame
 	setupMeta := &dconpb.ConduitSetupMetadata{
-		Request:      req,
-		TraceContext: traceContext,
+		Request:         req,
+		TraceContext:    traceContext,
+		ProtocolVersion: version.ProtocolVersion,
 	}
 	metadata, err := proto.Marshal(setupMeta)
 	if err != nil {
@@ -172,17 +199,13 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 	// 3. Connect to the Acceptor via RSocket
 	condReady := make(chan struct{})
 	metadataPush := make(chan payload.Payload, 1)
+	errChan := make(chan error, 1)
 
-	rsClient, err := s.startRSocketClient(id, req, setup, condReady, metadataPush)
+	rsClient, err := s.startRSocketClient(id, req, setup, condReady, metadataPush, errChan)
 	if err != nil {
 		dialerSpan.End()
 		return nil, err
 	}
-
-	errChan := make(chan error, 1)
-	rsClient.OnClose(func(err error) {
-		errChan <- err
-	})
 
 	var beforeClose func()
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_REVERSE {
@@ -211,6 +234,15 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 			con.Close()
 			return nil, err
 		}
+		select {
+		case closeErr := <-errChan:
+			con.Close()
+			if closeErr != nil {
+				return nil, status.Errorf(codes.Unavailable, "rsocket connection closed with error: %v", closeErr)
+			}
+			return nil, status.Error(codes.Unavailable, "rsocket connection closed unexpectedly")
+		default:
+		}
 	} else {
 		serviceLocator, err = s.waitForReverseConduitLocator(ctx, metadataPush, errChan)
 		if err != nil {
@@ -226,19 +258,62 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 	}, nil
 }
 
-func (s *Service) reverseConduitAcceptor(id string, destinationEndpoint string, condReady <-chan struct{}, metadataPush chan<- payload.Payload) func(context.Context, rsocket.RSocket) rsocket.RSocket {
-	return func(ctx context.Context, rs rsocket.RSocket) rsocket.RSocket {
+// closeTrackingRSocket registers a single OnClose callback on the RSocket
+// ClientBuilder before Start is called. rsocket-go's BaseSocket.OnClose
+// appends to an unlocked slice and does not invoke callbacks registered after
+// the socket has already closed (for example on a fast REJECTED_SETUP).
+type closeTrackingRSocket struct {
+	rsocket.Client
+	mu      sync.Mutex
+	closed  bool
+	err     error
+	closers []func(error)
+}
+
+func (r *closeTrackingRSocket) handleClose(err error) {
+	r.mu.Lock()
+	r.closed = true
+	r.err = err
+	closers := r.closers
+	r.closers = nil
+	r.mu.Unlock()
+	for _, fn := range closers {
+		fn(err)
+	}
+}
+
+func (r *closeTrackingRSocket) OnClose(fn func(error)) {
+	if fn == nil {
+		return
+	}
+	r.mu.Lock()
+	if r.closed {
+		err := r.err
+		r.mu.Unlock()
+		go fn(err)
+		return
+	}
+	r.closers = append(r.closers, fn)
+	r.mu.Unlock()
+}
+
+func (s *Service) reverseConduitAcceptor(connCtx context.Context, id string, destinationEndpoint string, condReady <-chan struct{}, metadataPush chan<- payload.Payload) func(context.Context, rsocket.RSocket) rsocket.RSocket {
+	return func(_ context.Context, _ rsocket.RSocket) rsocket.RSocket {
 		return rsocket.NewAbstractSocket(
 			rsocket.RequestChannel(func(incoming flux.Flux) flux.Flux {
 				select {
 				case <-condReady:
 					c, err := s.Manager.Conduit(id)
 					if err != nil {
-						return flux.Error(status.Errorf(codes.Internal, "failed to get conduit: %v", err))
+						// No Flux is failed: an ERROR frame is not safe on a
+						// stream. The stream is refused with the RST marker.
+						slog.WarnContext(connCtx, "Reverse conduit is gone, refusing the stream", "id", id, "error", err)
+						return rxconn.Refuse(connCtx, incoming, nil)
 					}
 					return conduit.AcceptStream(c, destinationEndpoint, incoming)
-				case <-ctx.Done():
-					return flux.Error(status.Errorf(codes.Canceled, "connection closed before conduit was ready: %v", ctx.Err()))
+				case <-connCtx.Done():
+					slog.WarnContext(connCtx, "Connection closed before the conduit was ready, refusing the stream", "id", id)
+					return rxconn.Refuse(connCtx, incoming, nil)
 				}
 			}),
 			rsocket.MetadataPush(func(msg payload.Payload) {
@@ -248,19 +323,36 @@ func (s *Service) reverseConduitAcceptor(id string, destinationEndpoint string, 
 	}
 }
 
-func (s *Service) startRSocketClient(id string, req *dconpb.EstablishConduitRequest, setup payload.Payload, condReady chan struct{}, metadataPush chan payload.Payload) (rsocket.Client, error) {
+func (s *Service) startRSocketClient(id string, req *dconpb.EstablishConduitRequest, setup payload.Payload, condReady <-chan struct{}, metadataPush chan<- payload.Payload, errChan chan<- error) (rsocket.Client, error) {
+	connCtx, connCancel := context.WithCancel(s.ServiceCtx)
+	tracked := &closeTrackingRSocket{
+		closers: []func(error){
+			func(err error) {
+				select {
+				case errChan <- err:
+				default:
+				}
+			},
+		},
+	}
 	builder := rsocket.Connect().
+		OnClose(func(err error) {
+			connCancel()
+			s.reportIfMismatch(err)
+			tracked.handleClose(err)
+		}).
 		SetupPayload(setup).
 		ConnectTimeout(s.connectTimeoutFor(s.KeepAliveTickPeriod)).
 		KeepAlive(s.KeepAliveTickPeriod, keepAliveAckTimeout, keepAliveMissedAcks)
 
 	var starter rsocket.ToClientStarter = builder
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_REVERSE {
-		starter = builder.Acceptor(s.reverseConduitAcceptor(id, req.DestinationEndpoint, condReady, metadataPush))
+		starter = builder.Acceptor(s.reverseConduitAcceptor(connCtx, id, req.DestinationEndpoint, condReady, metadataPush))
 	}
 
 	trans, err := s.NewTransporter()
 	if err != nil {
+		connCancel()
 		return nil, status.Errorf(codes.Internal, "failed to create transport: %v", err)
 	}
 
@@ -268,9 +360,12 @@ func (s *Service) startRSocketClient(id string, req *dconpb.EstablishConduitRequ
 		Transport(trans).
 		Start(s.ServiceCtx)
 	if err != nil {
+		connCancel()
+		s.reportIfMismatch(err)
 		return nil, status.Errorf(codes.Unavailable, "failed to connect to acceptor: %v", err)
 	}
-	return rsClient, nil
+	tracked.Client = rsClient
+	return tracked, nil
 }
 
 func (s *Service) startForwardConduit(ctx context.Context, con *conduit.Conduit, entryPort uint32) (*dconpb.ServiceLocator, error) {

@@ -5,8 +5,10 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version"
 	"github.com/rsocket/rsocket-go"
 
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
@@ -63,9 +65,89 @@ type Conduit struct {
 	durationHistogram metric.Float64Histogram
 	brokenCounter     metric.Int64Counter
 
-	// Tracks active logical connections in this conduit. For each accepted TCP
-	// connection or incoming RSocket channel, one connection is added.
-	activeConnections sync.WaitGroup
+	// Tracks active logical connections in this conduit under one lock so
+	// Close never races with a newly starting stream.
+	streamsMu     sync.Mutex
+	streamsClosed bool
+	activeStreams int
+	streamsZero   chan struct{}
+	// streamWait is how long Close waits for the streams to end.
+	streamWait time.Duration
+
+	// Protocol 0 support: the DualConduit protocol the other side of the
+	// conduit speaks.
+	peerProtocol atomic.Int32
+}
+
+// SetPeerProtocol records the DualConduit protocol the other side of the
+// conduit speaks, when it is not the one of this side. It must be called
+// before the conduit carries its first stream.
+//
+// Protocol 0 support: only the acceptor calls it, for a dialer that is older
+// than itself.
+func (c *Conduit) SetPeerProtocol(protocol int32) {
+	c.peerProtocol.Store(protocol)
+}
+
+// streamStarted records a new logical connection in this conduit. It reports
+// false once Close has begun and no new streams may start.
+func (c *Conduit) streamStarted() bool {
+	c.streamsMu.Lock()
+	defer c.streamsMu.Unlock()
+	if c.streamsClosed {
+		return false
+	}
+	c.activeStreams++
+	return true
+}
+
+// streamFinished records that a logical connection has fully ended.
+func (c *Conduit) streamFinished() {
+	c.streamsMu.Lock()
+	c.activeStreams--
+	done := c.streamsClosed && c.activeStreams == 0
+	c.streamsMu.Unlock()
+	if done {
+		close(c.streamsZero)
+	}
+}
+
+// defaultStreamWait is how long a closing conduit waits for its streams to
+// end. Every stream ends when the context of its conduit ends, so this limit
+// is reached only by a stream that is stuck in a call into rsocket-go. Without
+// a limit, one such stream would keep the conduit from being removed, and a
+// session from replacing it, for good.
+const defaultStreamWait = 5 * time.Second
+
+// waitStreams marks the conduit closed to new streams and waits until all
+// counted streams have finished, for at most c.streamWait. It returns the
+// number of streams that had not finished by then. It must be called at most
+// once, from Close.
+func (c *Conduit) waitStreams() int {
+	c.streamsMu.Lock()
+	c.streamsClosed = true
+	done := c.activeStreams == 0
+	c.streamsMu.Unlock()
+	if done {
+		close(c.streamsZero)
+		return 0
+	}
+	timer := time.NewTimer(c.streamWait)
+	defer timer.Stop()
+	select {
+	case <-c.streamsZero:
+		return 0
+	case <-timer.C:
+		return c.ActiveStreams()
+	}
+}
+
+// ActiveStreams returns the number of logical connections in this conduit
+// that have not fully ended.
+func (c *Conduit) ActiveStreams() int {
+	c.streamsMu.Lock()
+	defer c.streamsMu.Unlock()
+	return c.activeStreams
 }
 
 // Context exposes the Conduit's lifecycle so streams can bind to it.
@@ -93,7 +175,11 @@ func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, r
 		telemetry:         NewTelemetry(openSpanContext),
 		durationHistogram: durationHistogram,
 		brokenCounter:     brokenCounter,
+		streamsZero:       make(chan struct{}),
+		streamWait:        defaultStreamWait,
 	}
+	// Protocol 0 support.
+	c.peerProtocol.Store(version.ProtocolVersion)
 
 	// 1. Context -> RSocket: If the IO pump context is canceled (e.g., when the parent
 	// context is canceled or someone calls cancel), we must ensure the RSocket is closed.
@@ -140,9 +226,14 @@ func (c *Conduit) Close() error {
 		// 4. Cancel the Go context (notifies all IO pumps to stop)
 		c.cancel()
 
-		// Wait for all registered stream goroutines to finish.
-		c.activeConnections.Wait()
-		slog.DebugContext(c.pumpCtx, "Conduit active connections finished", "id", c.ID)
+		// Wait for the streams to finish, but not without limit: closing the
+		// transport below releases a stream that is blocked in it, and the
+		// conduit has to be removed for its session to replace it.
+		if left := c.waitStreams(); left > 0 {
+			slog.WarnContext(c.pumpCtx, "Conduit closes although some of its streams have not ended", "id", c.ID, "streams", left, "waited", c.streamWait)
+		} else {
+			slog.DebugContext(c.pumpCtx, "Conduit active connections finished", "id", c.ID)
+		}
 
 		// 5. Close the physical transport synchronously
 		if c.rsocket != nil {

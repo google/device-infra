@@ -203,3 +203,48 @@ func (m *mockRSocket) RequestStream(msg payload.Payload) flux.Flux   { return fl
 func (m *mockRSocket) RequestChannel(msgs flux.Flux) flux.Flux {
 	return flux.Empty()
 }
+
+// TestConduitClose_DoesNotWaitForStuckStream covers a stream that never ends,
+// as one that is blocked in rsocket-go does. Close must give up waiting for
+// it, so that the conduit is removed and its session can replace it.
+func TestConduitClose_DoesNotWaitForStuckStream(t *testing.T) {
+	removed := make(chan struct{})
+	c := New(t.Context(), "stuck-stream", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() { close(removed) }, nil, trace.SpanContext{}, nil, nil)
+	c.streamWait = 50 * time.Millisecond
+	if !c.streamStarted() {
+		t.Fatalf("streamStarted() = false on an open conduit, want true")
+	}
+
+	start := time.Now()
+	closed := make(chan struct{})
+	go func() {
+		c.Close()
+		close(closed)
+	}()
+
+	select {
+	case <-closed:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("Close() did not return within 5s with one stream that never ends")
+	}
+	if waited := time.Since(start); waited < c.streamWait {
+		t.Errorf("Close() returned after %v, want it to wait %v for the stream", waited, c.streamWait)
+	}
+	select {
+	case <-removed:
+	default:
+		t.Errorf("Close() returned without removing the conduit")
+	}
+	if got := c.ActiveStreams(); got != 1 {
+		t.Errorf("ActiveStreams() after Close() = %d, want 1", got)
+	}
+	if c.streamStarted() {
+		t.Errorf("streamStarted() = true after Close(), want false")
+	}
+
+	// The stream may still end later.
+	c.streamFinished()
+	if got := c.ActiveStreams(); got != 0 {
+		t.Errorf("ActiveStreams() after the stream ended = %d, want 0", got)
+	}
+}

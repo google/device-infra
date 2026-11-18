@@ -101,7 +101,6 @@ dcon_go_imports_map = {
     "google3/third_party/golang/lumberjack/lumberjack": "gopkg.in/natefinch/lumberjack.v2",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/auth": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/auth",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/version/version": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version",
-    "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/version": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dual_conduit_service_go_grpc": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dual_conduit_go_proto": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/helloworld_service_go_grpc": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/helloworldsvcpb",

@@ -31,9 +31,8 @@ go_library(
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/version",
         "@com_github_rsocket_rsocket_go//:rsocket-go",
-        "@com_github_rsocket_rsocket_go//payload",
-        "@com_github_rsocket_rsocket_go//rx",
         "@com_github_rsocket_rsocket_go//rx/flux",
         "@io_opentelemetry_go_otel_metric//:metric",
         "@io_opentelemetry_go_otel_trace//:trace",
@@ -55,6 +54,7 @@ go_test(
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
         "@com_github_rsocket_rsocket_go//:rsocket-go",
         "@com_github_rsocket_rsocket_go//payload",
+        "@com_github_rsocket_rsocket_go//rx",
         "@com_github_rsocket_rsocket_go//rx/flux",
         "@com_github_rsocket_rsocket_go//rx/mono",
         "@io_opentelemetry_go_otel_trace//:trace",
