@@ -64,11 +64,11 @@ public abstract class AdbInitializeTemplate {
     String stockAdbPath = getStockAdbPath();
     String adbPath = getAdbPath(stockAdbPath);
 
-    manageAdbServer(adbPath, stockAdbPath);
-
     int adbServerPort = getAdbServerPort();
 
     String adbServerHost = getAdbServerHost();
+
+    manageAdbServer(adbPath, stockAdbPath, adbServerPort);
 
     boolean enableAdbLibusb = ifEnableAdbLibusb();
 
@@ -149,7 +149,7 @@ public abstract class AdbInitializeTemplate {
   protected abstract boolean ifKillAdbServer();
 
   /** The step to manage the adb server in the adb initialization process. */
-  protected abstract void manageAdbServer(String adbPath, String stockAdbPath);
+  protected abstract void manageAdbServer(String adbPath, String stockAdbPath, int adbServerPort);
 
   /** Gets the adb server port being used along with the adb. */
   protected int getAdbServerPort() {

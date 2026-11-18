@@ -44,9 +44,14 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.DoNotCall;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.sun.management.OperatingSystemMXBean;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.RuntimeMXBean;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -741,6 +746,36 @@ public class SystemUtil {
   public Set<Integer> getProcessesByPort(int port)
       throws MobileHarnessException, InterruptedException {
     return getProcessesByPortsString(String.valueOf(port));
+  }
+
+  /**
+   * Returns true if a local TCP port is accepting connections on loopback.
+   *
+   * <p>Unlike {@link #getProcessesByPort(int)}, this works across container PID namespaces when
+   * host networking ({@code --network=host}) is used.
+   */
+  public boolean isLocalPortListening(int port) {
+    if (port <= 0 || port > 65535) {
+      return false;
+    }
+    InetAddress[] loopbackAddresses;
+    try {
+      loopbackAddresses = InetAddress.getAllByName("localhost");
+    } catch (UnknownHostException e) {
+      loopbackAddresses = new InetAddress[] {InetAddress.getLoopbackAddress()};
+    }
+    for (InetAddress address : loopbackAddresses) {
+      if (!address.isLoopbackAddress()) {
+        continue;
+      }
+      try (Socket socket = new Socket()) {
+        socket.connect(new InetSocketAddress(address, port), /* timeout= */ 200);
+        return true;
+      } catch (IOException e) {
+        // Try next loopback address.
+      }
+    }
+    return false;
   }
 
   /**

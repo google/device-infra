@@ -95,12 +95,14 @@ public class AdbInitializeTemplateImpl extends AdbInitializeTemplate {
   }
 
   @Override
-  protected void manageAdbServer(String adbPath, String stockAdbPath) {
+  protected void manageAdbServer(String adbPath, String stockAdbPath, int adbServerPort) {
     CommandExecutor commandExecutor = new CommandExecutor();
     // Sets ADB path for adb.waterfall fallback.
     commandExecutor.updateBaseEnvironment("ANDROID_ADB", stockAdbPath);
+    commandExecutor.updateBaseEnvironment(
+        AdbInitializeTemplate.ANDROID_ADB_SERVER_PORT_ENV_VAR, String.valueOf(adbServerPort));
     AdbInitializerHelper.manageAdbServer(
-        adbPath, commandExecutor, localFileUtil, systemUtil, ifKillAdbServer());
+        adbPath, commandExecutor, localFileUtil, systemUtil, ifKillAdbServer(), adbServerPort);
   }
 
   @Override
