@@ -21,6 +21,7 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -83,5 +84,113 @@ public final class CallablesTest {
     assertThat(thrown).isSameInstanceAs(ex1);
     assertThat(thrown.getSuppressed()).asList().containsExactly(ex2);
     assertThat(Thread.interrupted()).isTrue();
+  }
+
+  @Test
+  public void runAllCatching_success() {
+    boolean[] executed = new boolean[2];
+    AtomicReference<Exception> handledException = new AtomicReference<>();
+
+    Callables.runAllCatching(
+        handledException::set,
+        (MobileHarnessRunnable) () -> executed[0] = true,
+        (MobileHarnessRunnable) () -> executed[1] = true);
+
+    assertThat(executed[0]).isTrue();
+    assertThat(executed[1]).isTrue();
+    assertThat(handledException.get()).isNull();
+  }
+
+  @Test
+  public void runAllCatching_exceptionHandledAndSuppressed() {
+    MobileHarnessException ex1 = new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "ex1");
+    RuntimeException ex2 = new RuntimeException("ex2");
+    boolean[] executed = new boolean[2];
+    AtomicReference<Exception> handledException = new AtomicReference<>();
+
+    Callables.runAllCatching(
+        handledException::set,
+        (MobileHarnessRunnable)
+            () -> {
+              executed[0] = true;
+              throw ex1;
+            },
+        (MobileHarnessRunnable)
+            () -> {
+              executed[1] = true;
+              throw ex2;
+            });
+
+    assertThat(executed[0]).isTrue();
+    assertThat(executed[1]).isTrue();
+    assertThat(handledException.get()).isSameInstanceAs(ex1);
+    assertThat(handledException.get().getSuppressed()).asList().containsExactly(ex2);
+  }
+
+  @Test
+  public void runAllCatching_interruptedExceptionRestored() {
+    MobileHarnessException ex1 = new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "ex1");
+    InterruptedException ex2 = new InterruptedException("interrupted");
+    AtomicReference<Exception> handledException = new AtomicReference<>();
+
+    Callables.runAllCatching(
+        handledException::set,
+        (MobileHarnessRunnable)
+            () -> {
+              throw ex1;
+            },
+        (MobileHarnessRunnable)
+            () -> {
+              throw ex2;
+            });
+
+    assertThat(handledException.get()).isSameInstanceAs(ex1);
+    assertThat(handledException.get().getSuppressed()).asList().containsExactly(ex2);
+    assertThat(Thread.interrupted()).isTrue();
+  }
+
+  @Test
+  public void callAllCatching_success() {
+    boolean[] executed = new boolean[2];
+    AtomicReference<Exception> handledException = new AtomicReference<>();
+
+    Callables.callAllCatching(
+        handledException::set,
+        () -> {
+          executed[0] = true;
+          return "res1";
+        },
+        () -> {
+          executed[1] = true;
+          return "res2";
+        });
+
+    assertThat(executed[0]).isTrue();
+    assertThat(executed[1]).isTrue();
+    assertThat(handledException.get()).isNull();
+  }
+
+  @Test
+  public void callAllCatching_exceptionHandledAndSuppressed() {
+    MobileHarnessException ex1 = new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "ex1");
+    RuntimeException ex2 = new RuntimeException("ex2");
+    boolean[] executed = new boolean[2];
+    AtomicReference<Exception> handledException = new AtomicReference<>();
+
+    Callables.callAllCatching(
+        handledException::set,
+        () -> {
+          executed[0] = true;
+          throw ex1;
+        },
+        () -> {
+          executed[1] = true;
+          throw ex2;
+        });
+
+    assertThat(executed[0]).isTrue();
+    assertThat(executed[1]).isTrue();
+    assertThat(handledException.get()).isSameInstanceAs(ex1);
+    assertThat(handledException.get().getSuppressed()).asList().containsExactly(ex2);
   }
 }
