@@ -155,6 +155,7 @@ java_library(
     name = "suite_common_util",
     srcs = ["SuiteCommonUtil.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
     ],
