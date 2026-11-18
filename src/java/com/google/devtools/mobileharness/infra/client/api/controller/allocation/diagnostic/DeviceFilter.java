@@ -20,13 +20,16 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.shared.util.dimension.ValueComparator;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DimensionFilter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,7 +63,7 @@ public final class DeviceFilter {
       JobScheduleUnit job, List<FilterType> filterTypes, SubDeviceSpec subDeviceSpec) {
     DeviceQueryFilter.Builder filter =
         DeviceQueryFilter.newBuilder().addTypeRegex(subDeviceSpec.type());
-    if (SharedPoolJobUtil.isUsingSharedPool(job)) {
+    if (isUsingSharedPool(job, subDeviceSpec)) {
       filter.addDimensionFilter(
           DimensionFilter.newBuilder()
               .setName(Ascii.toLowerCase(Name.POOL.name()))
@@ -86,7 +89,12 @@ public final class DeviceFilter {
       }
     });
     ImmutableList<DimensionFilter> dedupedDimensionFilters =
-        filter.getDimensionFilterList().stream().distinct().collect(toImmutableList());
+        filter.getDimensionFilterList().stream()
+            .distinct()
+            .sorted(
+                Comparator.comparing(DimensionFilter::getName)
+                    .thenComparing(DimensionFilter::getValueRegex))
+            .collect(toImmutableList());
     return filter.clearDimensionFilter().addAllDimensionFilter(dedupedDimensionFilters).build();
   }
 
@@ -98,15 +106,26 @@ public final class DeviceFilter {
     return filter.build();
   }
 
+  private static boolean isUsingSharedPool(JobScheduleUnit job, SubDeviceSpec subDeviceSpec) {
+    String pool = subDeviceSpec.dimensions().get(Name.POOL);
+    if (pool != null) {
+      return pool.equals(Value.POOL_SHARED);
+    }
+    SubDeviceSpecs subDeviceSpecs = job.subDeviceSpecs();
+    return (subDeviceSpecs == null || subDeviceSpecs.getAllSubDevices().size() <= 1)
+        && SharedPoolJobUtil.isUsingSharedPool(job);
+  }
+
   /**
    * Converts a dimension value in {@link JobScheduleUnit} to a value regex in {@link
    * DimensionFilter}.
    *
    * <ol>
-   *   <li>If the value is "<code>*</code>", return "<code>.*</code>";
-   *   <li>Omit the value "<code>exclude</code>" and "<code>not_regex:</code>" values because they
-   *       are not supported by device query API;
-   *   <li>Remove the "<code>regex:</code>" prefix.
+   *   <li>If the value is "{@code *}", returns "{@code .*}";
+   *   <li>Omits "{@code exclude}", "{@code not_regex:}", "{@code optional:}", "{@code
+   *       compare_int:}", and "{@code compare_str:}" values because they are not supported by the
+   *       device query API;
+   *   <li>Removes the "{@code regex:}" prefix.
    * </ol>
    */
   private static Optional<String> convertForDeviceQueryApi(String jobDimensionValue) {
@@ -120,7 +139,9 @@ public final class DeviceFilter {
       default -> {
         if (jobDimensionValue.startsWith(Value.PREFIX_REGEX)) {
           return Optional.of(jobDimensionValue.substring(Value.PREFIX_REGEX.length()));
-        } else if (jobDimensionValue.startsWith(Value.PREFIX_NOT_REGEX)) {
+        } else if (jobDimensionValue.startsWith(Value.PREFIX_NOT_REGEX)
+            || jobDimensionValue.startsWith(Value.PREFIX_OPTIONAL)
+            || ValueComparator.isComparison(jobDimensionValue)) {
           return Optional.empty();
         } else {
           return Optional.of(jobDimensionValue);

@@ -108,7 +108,7 @@ public final class Dimension {
     GCS_FAILURE,
     /** The operator of the GSM card. */
     GSM_OPERATOR_ALPHA,
-    /** The health of GCS. /** The signature of GMS Core. */
+    /** The signature of GMS Core. */
     GMSCORE_SIGNATURE,
     /** The lab location of the device. */
     LAB_LOCATION,
@@ -497,6 +497,12 @@ public final class Dimension {
      * value must not fully match.
      */
     public static final String PREFIX_NOT_REGEX = "not_regex:";
+
+    /**
+     * Dimension value prefix for a soft dimension preference that is not required when matching
+     * devices.
+     */
+    public static final String PREFIX_OPTIONAL = "optional:";
 
     /** Dimension value all for device dimension. */
     public static final String ALL_VALUE_FOR_DEVICE = "*";
