@@ -60,7 +60,7 @@ public interface AndroidLogCatSpec {
       required = false,
       help =
           "The logcat options. e.g. '-b main -v time'. See "
-              + "<a href='http://developer.android.com/tools/help/logcat.html'>logcat help</a> "
+              + "<a href='https://developer.android.com/tools/help/logcat.html'>logcat help</a> "
               + "for more detail.")
   String PARAM_LOG_OPTIONS = "log_options";
 
