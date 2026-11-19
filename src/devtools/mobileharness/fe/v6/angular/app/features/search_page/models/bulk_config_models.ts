@@ -69,3 +69,15 @@ export interface BulkDimensionConfigState {
   readonly dimensions: readonly ConfigurableDimension[];
   readonly allowCustom: boolean;
 }
+
+/** Configuration callbacks for binding `useBulkConfigActions` to a device table view. */
+export interface BulkConfigActionsOptions {
+  /** Reactive predicate indicating whether the active view is for devices on the deployment's own fleet. */
+  readonly isOwnFleetDevices: () => boolean;
+  /** Reactive predicate indicating whether at least one device is currently selected. */
+  readonly hasSelection: () => boolean;
+  /** Extracts the currently selected `DeviceTarget` items when launching a bulk config dialog. */
+  readonly getSelectedTargets: () => DeviceTarget[];
+  /** Callback invoked when a bulk configuration dialog closes with `{updated: true}`. */
+  readonly onUpdated: () => void;
+}

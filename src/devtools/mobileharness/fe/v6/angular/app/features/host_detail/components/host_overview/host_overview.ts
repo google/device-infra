@@ -23,6 +23,7 @@ import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatDialog, MatDialogModule} from '@angular/material/dialog';
+import {MatDividerModule} from '@angular/material/divider';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
@@ -31,7 +32,9 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {ActivatedRoute} from '@angular/router';
 
+import {of} from 'rxjs';
 import {map, tap} from 'rxjs/operators';
 import {ActionButton} from '../../../../shared/components/action_button/action_button';
 import {NavLink} from '../../../../shared/components/nav_link/nav_link';
@@ -45,6 +48,7 @@ import {DEVICE_VERSION_DESCRIPTION} from '../../../../core/constants/device_vers
 import {ActionButtonState} from '../../../../core/models/action_common';
 import {APP_DATA, getLegacyFeUrl} from '../../../../core/models/app_data';
 import {DeviceActions} from '../../../../core/models/device_action';
+import {DimensionList} from '../../../../core/models/device_config_models';
 import {
   HealthState,
   type DeviceDimension,
@@ -65,6 +69,7 @@ import {
 } from '../../../../core/models/host_overview';
 
 import {EnvUniverseService} from '../../../../core/services/env_universe_service';
+import {FeatureEnablementService} from '../../../../core/services/feature_enablement_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {DecommissionContent} from '../../../../shared/components/decommission_content/decommission_content';
@@ -85,6 +90,7 @@ import {ComingSoonService} from '../../../../shared/services/coming_soon_service
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
+import {useBulkConfigActions} from '../../../search_page/components/bulk_config/bulk_config_actions';
 import {FlagsDialog} from './flags_dialog/flags_dialog';
 import {LabServerActionService} from './lab_server_action_service';
 
@@ -184,6 +190,7 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     MatButtonModule,
     MatCheckboxModule,
     MatDialogModule,
+    MatDividerModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -211,10 +218,13 @@ export class HostOverviewPage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly snackBar = inject(SnackBarService);
   private readonly envUniverseService = inject(EnvUniverseService);
+  private readonly featureEnablementService = inject(FeatureEnablementService);
+  private readonly route = inject(ActivatedRoute, {optional: true});
   private readonly comingSoonService = inject(ComingSoonService);
   private readonly appData = inject(APP_DATA);
   private readonly actionService = inject(LabServerActionService);
 
+  readonly DimensionList = DimensionList;
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
   readonly versionDescription = DEVICE_VERSION_DESCRIPTION;
 
@@ -276,17 +286,45 @@ export class HostOverviewPage {
   deviceDataSource = new MatTableDataSource<DeviceSummary>();
   selection = new SelectionModel<DeviceSummary>(true, []);
 
-  decommissionMissingCount = toSignal(
-    this.selection.changed.pipe(
-      map(
-        () =>
-          this.selection.selected.filter(
-            (device) => device.deviceStatus.status === 'MISSING',
-          ).length,
-      ),
-    ),
-    {initialValue: 0},
+  readonly selectedDevices = toSignal(
+    this.selection.changed.pipe(map(() => [...this.selection.selected])),
+    {initialValue: [] as DeviceSummary[]},
   );
+
+  readonly decommissionMissingCount = computed(
+    () =>
+      this.selectedDevices().filter(
+        (device) => device.deviceStatus.status === 'MISSING',
+      ).length,
+  );
+
+  private readonly routeUniverse = toSignal(
+    this.route?.queryParamMap
+      ? this.route.queryParamMap.pipe(map((params) => params.get('universe')))
+      : of<string | null>(null),
+    {initialValue: null},
+  );
+
+  readonly bulkConfig = useBulkConfigActions({
+    isOwnFleetDevices: () => {
+      if (!this.isGoogleInternal) return true;
+      const universe = this.routeUniverse();
+      return universe
+        ? universe === 'google_1p'
+        : !this.envUniverseService.isGoogleOEM();
+    },
+    hasSelection: () => this.selectedDevices().length > 0,
+    getSelectedTargets: () => {
+      const hostName = this.localHost().hostName;
+      return this.selection.selected.map((d) =>
+        hostName ? {deviceId: d.id, hostName} : {deviceId: d.id},
+      );
+    },
+    onUpdated: () => {
+      this.selection.clear();
+      this.loadDevices();
+    },
+  });
 
   deviceFilterInput = '';
   deviceFilterValue = '';
@@ -374,7 +412,10 @@ export class HostOverviewPage {
   ];
 
   displayedColumns: string[] = [
-    ...(this.isGoogleInternal ? ['select'] : []),
+    ...(this.isGoogleInternal ||
+    this.featureEnablementService.isBulkConfigEnabled()
+      ? ['select']
+      : []),
     'expand',
     'id',
     'health',

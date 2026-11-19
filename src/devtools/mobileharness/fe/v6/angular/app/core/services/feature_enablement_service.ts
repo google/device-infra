@@ -22,8 +22,9 @@ export class FeatureEnablementService {
 
   /**
    * Whether the bulk device configuration actions (Configure Wi-Fi / Configure
-   * Dimension on the device search page) are enabled. Developer-only for now:
-   * requires `force_bulk_config_ready` (or `force_all_ready`).
+   * Dimension on the device search and host detail pages) are enabled.
+   * Developer-only for now: requires `force_bulk_config_ready` (or
+   * `force_all_ready`).
    */
   isBulkConfigEnabled(): boolean {
     return this.isForceReady('force_bulk_config_ready');

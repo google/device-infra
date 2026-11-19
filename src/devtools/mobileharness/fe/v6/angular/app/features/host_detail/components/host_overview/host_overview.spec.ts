@@ -1,9 +1,14 @@
+import {TestbedHarnessEnvironment} from '@angular/cdk/testing/testbed';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {MatCheckboxHarness} from '@angular/material/checkbox/testing';
 import {MatDialog, MatDialogRef} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {provideRouter} from '@angular/router';
-
-import {Observable, of, Subject, throwError} from 'rxjs';
+import {
+  ActivatedRoute,
+  convertToParamMap,
+  provideRouter,
+} from '@angular/router';
+import {BehaviorSubject, Observable, of, Subject, throwError} from 'rxjs';
 
 import {ActionBarAction} from '../../../../core/constants/action_bar_config';
 import {DEVICE_VERSION_DESCRIPTION} from '../../../../core/constants/device_version_constants';
@@ -13,12 +18,22 @@ import {
   GetLogcatResponse,
   TakeScreenshotResponse,
 } from '../../../../core/models/device_action';
+import {
+  ConfigurableDimension,
+  DimensionList,
+} from '../../../../core/models/device_config_models';
 import {SubDeviceInfo} from '../../../../core/models/device_overview';
 import {PreflightLabServerReleaseResponse} from '../../../../core/models/host_action';
 import {
   DeviceSummary,
   HostOverview,
 } from '../../../../core/models/host_overview';
+import {
+  CONFIG_SERVICE,
+  ConfigService,
+} from '../../../../core/services/config/config_service';
+import {EnvUniverseService} from '../../../../core/services/env_universe_service';
+import {FeatureEnablementService} from '../../../../core/services/feature_enablement_service';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
@@ -26,6 +41,8 @@ import {ComingSoonService} from '../../../../shared/services/coming_soon_service
 import {DeviceActionService} from '../../../../shared/services/device_action_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
+import {BulkConfigDimensionDialog} from '../../../search_page/components/bulk_config/dimension_dialog/bulk_config_dimension_dialog';
+import {BulkConfigWifiDialog} from '../../../search_page/components/bulk_config/wifi_dialog/bulk_config_wifi_dialog';
 import {HostOverviewPage} from './host_overview';
 import {LabServerActionService} from './lab_server_action_service';
 import {ReleaseDialog} from './release_dialog/release_dialog';
@@ -37,6 +54,8 @@ describe('HostOverview Component', () => {
   let dialogSpy: jasmine.SpyObj<MatDialog>;
   let snackBarSpy: jasmine.SpyObj<SnackBarService>;
   let comingSoonServiceSpy: jasmine.SpyObj<ComingSoonService>;
+  let configServiceSpy: jasmine.SpyObj<ConfigService>;
+  let featureEnablementSpy: jasmine.SpyObj<FeatureEnablementService>;
   let hostService: FakeHostService;
 
   beforeEach(async () => {
@@ -98,6 +117,25 @@ describe('HostOverview Component', () => {
       'showForHost',
       'showForDevice',
     ]);
+    configServiceSpy = jasmine.createSpyObj('ConfigService', [
+      'getConfigurableDimensions',
+    ]);
+    configServiceSpy.getConfigurableDimensions.and.returnValue(
+      of({
+        enabled: true,
+        dimensions: [
+          {
+            dimensionName: 'pool',
+            dimensionList: DimensionList.DIMENSION_LIST_REQUIRED,
+          },
+        ],
+        allowCustomDimensions: true,
+      }),
+    );
+    featureEnablementSpy = jasmine.createSpyObj('FeatureEnablementService', [
+      'isBulkConfigEnabled',
+    ]);
+    featureEnablementSpy.isBulkConfigEnabled.and.returnValue(false);
 
     await TestBed.configureTestingModule({
       imports: [HostOverviewPage, NoopAnimationsModule],
@@ -105,6 +143,11 @@ describe('HostOverview Component', () => {
         provideRouter([]),
         {provide: APP_DATA, useValue: {applicationId: 'arsenal'}},
         {provide: HOST_SERVICE, useClass: FakeHostService},
+        {provide: CONFIG_SERVICE, useValue: configServiceSpy},
+        {
+          provide: FeatureEnablementService,
+          useValue: featureEnablementSpy,
+        },
         {
           provide: RemoteControlService,
           useValue: jasmine.createSpyObj('RemoteControlService', [
@@ -853,5 +896,391 @@ describe('HostOverview Component', () => {
     component.expandedElement.set(emptySubDevicesRow);
     fixture.detectChanges();
     expect(compiled.querySelector('.sub-device-table')).toBeNull();
+  });
+
+  describe('bulk device configuration', () => {
+    const mockDevice1 = {
+      id: 'device-1',
+      healthState: {
+        health: 'IN_SERVICE_IDLE',
+        title: 'Idle',
+        tooltip: 'Healthy',
+      },
+      deviceStatus: {status: 'IDLE', isCritical: false},
+    } as unknown as DeviceSummary;
+    const mockDevice2 = {
+      id: 'device-2',
+      healthState: {
+        health: 'IN_SERVICE_IDLE',
+        title: 'Idle',
+        tooltip: 'Healthy',
+      },
+      deviceStatus: {status: 'IDLE', isCritical: false},
+    } as unknown as DeviceSummary;
+
+    let getHostDeviceSummariesSpy: jasmine.Spy<
+      FakeHostService['getHostDeviceSummaries']
+    >;
+
+    beforeEach(() => {
+      // FakeHostService answers after a delay and has no devices for
+      // mockHost. A test that awaits stability would see its devices replaced
+      // by that empty list, so the device list is served from this spy.
+      getHostDeviceSummariesSpy = spyOn(
+        hostService,
+        'getHostDeviceSummaries',
+      ).and.returnValue(of({deviceSummaries: []}));
+    });
+
+    function initComponentWithDevices(devices: DeviceSummary[]) {
+      getHostDeviceSummariesSpy.and.returnValue(of({deviceSummaries: devices}));
+      fixture = TestBed.createComponent(HostOverviewPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('host', mockHost);
+      fixture.detectChanges();
+      fixture.detectChanges();
+    }
+
+    it('hides bulk config actions and skips fetching dimensions when bulk config is disabled', async () => {
+      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(false);
+      initComponentWithDevices([mockDevice1]);
+      component.selection.select(mockDevice1);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeFalse();
+      expect(configServiceSpy.getConfigurableDimensions).not.toHaveBeenCalled();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).not.toContain('Configure Wi-Fi');
+      expect(
+        compiled.querySelector(
+          'button[aria-label="Configure device dimensions"]',
+        ),
+      ).toBeNull();
+
+      component.bulkConfig.openWifiDialog();
+      component.bulkConfig.openDimensionDialog('supported');
+      expect(dialogSpy.open).not.toHaveBeenCalled();
+    });
+
+    it('fetches configurable dimensions on selection and opens Wi-Fi and dimension dialogs when enabled', async () => {
+      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(true);
+      initComponentWithDevices([mockDevice1, mockDevice2]);
+      component.selection.select(mockDevice1, mockDevice2);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(
+        configServiceSpy.getConfigurableDimensions,
+      ).toHaveBeenCalledTimes(1);
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeTrue();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).toContain('Configure Wi-Fi');
+      const configureBtn = compiled.querySelector<HTMLButtonElement>(
+        'button[aria-label="Configure device dimensions"]',
+      );
+      expect(configureBtn).toBeTruthy();
+      expect(configureBtn!.getAttribute('title')).toBeNull();
+      expect(configureBtn!.textContent?.trim()).toBe(
+        'tuneConfigurearrow_drop_down',
+      );
+
+      spyOn(component, 'loadDevices');
+      dialogSpy.open.and.returnValue({
+        afterClosed: () => of({updated: true}),
+      } as unknown as MatDialogRef<unknown, unknown>);
+
+      component.bulkConfig.openWifiDialog();
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        BulkConfigWifiDialog,
+        jasmine.objectContaining({
+          autoFocus: false,
+          data: {
+            devices: [
+              {deviceId: 'device-1', hostName: mockHost.hostName},
+              {deviceId: 'device-2', hostName: mockHost.hostName},
+            ],
+          },
+        }),
+      );
+      expect(component.selection.isEmpty()).toBeTrue();
+      expect(component.loadDevices).toHaveBeenCalledTimes(1);
+
+      // Re-select and test dimension dialog without update
+      component.selection.select(mockDevice1);
+      fixture.detectChanges();
+      dialogSpy.open.calls.reset();
+      (component.loadDevices as jasmine.Spy).calls.reset();
+      dialogSpy.open.and.returnValue({
+        afterClosed: () => of({updated: false}),
+      } as unknown as MatDialogRef<unknown, unknown>);
+
+      const curatedDim: ConfigurableDimension = {
+        dimensionName: 'pool',
+        dimensionList: DimensionList.DIMENSION_LIST_REQUIRED,
+      };
+      component.bulkConfig.openDimensionDialog(curatedDim);
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        BulkConfigDimensionDialog,
+        jasmine.objectContaining({
+          autoFocus: false,
+          data: {
+            devices: [{deviceId: 'device-1', hostName: mockHost.hostName}],
+            dimension: curatedDim,
+          },
+        }),
+      );
+      expect(component.selection.isEmpty()).toBeFalse();
+      expect(component.loadDevices).not.toHaveBeenCalled();
+    });
+
+    it('hides bulk config actions on Partner OEM universes and supports retry on dimension fetch error', async () => {
+      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(true);
+      const envUniverseService = TestBed.inject(EnvUniverseService);
+      spyOn(envUniverseService, 'isGoogleInternal').and.returnValue(true);
+      const oemSpy = spyOn(envUniverseService, 'isGoogleOEM').and.returnValue(
+        true,
+      );
+
+      initComponentWithDevices([mockDevice1]);
+      component.selection.select(mockDevice1);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeFalse();
+      expect(configServiceSpy.getConfigurableDimensions).not.toHaveBeenCalled();
+
+      // Create component on own fleet with an initial RPC error, then retry
+      configServiceSpy.getConfigurableDimensions.and.returnValue(
+        throwError(() => new Error('RPC timeout')),
+      );
+      oemSpy.and.returnValue(false);
+      initComponentWithDevices([mockDevice1]);
+      component.selection.select(mockDevice1);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().error).toBe('RPC timeout');
+
+      configServiceSpy.getConfigurableDimensions.and.returnValue(
+        of({
+          enabled: true,
+          dimensions: [],
+          allowCustomDimensions: false,
+        }),
+      );
+      component.bulkConfig.retryDimensions();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().error).toBeNull();
+    });
+
+    it('computes decommissionMissingCount and renders Decommission Missing button only for selected MISSING devices', async () => {
+      const missingDevice1 = {
+        ...mockDevice1,
+        id: 'missing-1',
+        deviceStatus: {status: 'MISSING', isCritical: true},
+      } as unknown as DeviceSummary;
+      const missingDevice2 = {
+        ...mockDevice1,
+        id: 'missing-2',
+        deviceStatus: {status: 'MISSING', isCritical: true},
+      } as unknown as DeviceSummary;
+      spyOn(
+        TestBed.inject(EnvUniverseService),
+        'isGoogleInternal',
+      ).and.returnValue(true);
+      initComponentWithDevices([mockDevice1, missingDevice1, missingDevice2]);
+
+      const loader = TestbedHarnessEnvironment.loader(fixture);
+      const rowCheckboxes = await loader.getAllHarnesses(
+        MatCheckboxHarness.with({selector: 'td mat-checkbox'}),
+      );
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      await rowCheckboxes[0].check();
+      fixture.detectChanges();
+
+      expect(component.decommissionMissingCount()).toBe(0);
+      expect(compiled.textContent).toContain('1 of 3 selected');
+      expect(compiled.textContent).not.toContain('Decommission Missing');
+
+      await rowCheckboxes[1].check();
+      await rowCheckboxes[2].check();
+      fixture.detectChanges();
+
+      expect(component.decommissionMissingCount()).toBe(2);
+      expect(compiled.textContent).toContain('Decommission Missing (2)');
+
+      await rowCheckboxes[1].uncheck();
+      fixture.detectChanges();
+
+      expect(component.decommissionMissingCount()).toBe(1);
+      expect(compiled.textContent).toContain('Decommission Missing (1)');
+    });
+
+    it('keeps bulk config disabled when CONFIG_SERVICE is not provided', async () => {
+      TestBed.resetTestingModule();
+      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(true);
+      await TestBed.configureTestingModule({
+        imports: [HostOverviewPage, NoopAnimationsModule],
+        providers: [
+          provideRouter([]),
+          {provide: APP_DATA, useValue: {applicationId: 'arsenal'}},
+          {provide: HOST_SERVICE, useValue: hostService},
+          {
+            provide: FeatureEnablementService,
+            useValue: featureEnablementSpy,
+          },
+          {
+            provide: RemoteControlService,
+            useValue: jasmine.createSpyObj('RemoteControlService', [
+              'startRemoteControl',
+            ]),
+          },
+          {provide: SnackBarService, useValue: snackBarSpy},
+          {provide: ComingSoonService, useValue: comingSoonServiceSpy},
+          {
+            provide: DeviceActionService,
+            useValue: jasmine.createSpyObj('DeviceActionService', [
+              'takeScreenshot',
+              'getLogcat',
+              'flashDevice',
+              'quarantineDevice',
+            ]),
+          },
+        ],
+      })
+        .overrideComponent(HostOverviewPage, {
+          set: {
+            providers: [
+              LabServerActionService,
+              {provide: MatDialog, useValue: dialogSpy},
+            ],
+          },
+        })
+        .compileComponents();
+
+      initComponentWithDevices([mockDevice1]);
+      component.selection.select(mockDevice1);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeFalse();
+      component.bulkConfig.openWifiDialog();
+      component.bulkConfig.openDimensionDialog('supported');
+      expect(dialogSpy.open).not.toHaveBeenCalled();
+    });
+
+    it('hides the toolbar separator in OSS when bulk config returns enabled=false', async () => {
+      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(true);
+      configServiceSpy.getConfigurableDimensions.and.returnValue(
+        of({
+          enabled: false,
+          dimensions: [],
+          allowCustomDimensions: false,
+        }),
+      );
+      spyOn(
+        TestBed.inject(EnvUniverseService),
+        'isGoogleInternal',
+      ).and.returnValue(false);
+
+      initComponentWithDevices([mockDevice1]);
+      component.selection.select(mockDevice1);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeFalse();
+      expect(
+        compiled.querySelector('.device-toolbar-content.selected .separator'),
+      ).toBeNull();
+    });
+
+    it('hides bulk config when navigating via SPA to a Partner ATS universe query param', async () => {
+      const queryParamMap$ = new BehaviorSubject(
+        convertToParamMap({'universe': 'ats_partner'}),
+      );
+      const mockRoute = {
+        queryParamMap: queryParamMap$.asObservable(),
+        snapshot: {queryParamMap: queryParamMap$.value},
+      };
+      TestBed.resetTestingModule();
+      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(true);
+      await TestBed.configureTestingModule({
+        imports: [HostOverviewPage, NoopAnimationsModule],
+        providers: [
+          provideRouter([]),
+          {provide: ActivatedRoute, useValue: mockRoute},
+          {provide: APP_DATA, useValue: {applicationId: 'arsenal'}},
+          {provide: HOST_SERVICE, useValue: hostService},
+          {provide: CONFIG_SERVICE, useValue: configServiceSpy},
+          {
+            provide: FeatureEnablementService,
+            useValue: featureEnablementSpy,
+          },
+          {
+            provide: RemoteControlService,
+            useValue: jasmine.createSpyObj('RemoteControlService', [
+              'startRemoteControl',
+            ]),
+          },
+          {provide: SnackBarService, useValue: snackBarSpy},
+          {provide: ComingSoonService, useValue: comingSoonServiceSpy},
+          {
+            provide: DeviceActionService,
+            useValue: jasmine.createSpyObj('DeviceActionService', [
+              'takeScreenshot',
+              'getLogcat',
+              'flashDevice',
+              'quarantineDevice',
+            ]),
+          },
+        ],
+      })
+        .overrideComponent(HostOverviewPage, {
+          set: {
+            providers: [
+              LabServerActionService,
+              {provide: MatDialog, useValue: dialogSpy},
+            ],
+          },
+        })
+        .compileComponents();
+
+      spyOn(
+        TestBed.inject(EnvUniverseService),
+        'isGoogleInternal',
+      ).and.returnValue(true);
+      initComponentWithDevices([mockDevice1]);
+      component.selection.select(mockDevice1);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeFalse();
+      expect(configServiceSpy.getConfigurableDimensions).not.toHaveBeenCalled();
+
+      // Switching to google_1p enables bulk config
+      queryParamMap$.next(convertToParamMap({'universe': 'google_1p'}));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeTrue();
+      expect(configServiceSpy.getConfigurableDimensions).toHaveBeenCalledTimes(
+        1,
+      );
+    });
   });
 });

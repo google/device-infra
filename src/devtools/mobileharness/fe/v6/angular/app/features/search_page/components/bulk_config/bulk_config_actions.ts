@@ -16,35 +16,24 @@ import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
 import {FeatureEnablementService} from '../../../../core/services/feature_enablement_service';
 import {getErrorMessage} from '../../../../shared/utils/error_utils';
 import {
+  BulkConfigActionsOptions,
   BulkConfigDialogData,
   BulkConfigDialogResult,
   BulkDimensionConfigState,
 } from '../../models';
-import {FleetSearchStore} from '../../services/fleet_search_store';
-import {extractDeviceTarget} from '../../utils';
 import {BulkConfigDimensionDialog} from './dimension_dialog/bulk_config_dimension_dialog';
 import {BulkConfigWifiDialog} from './wifi_dialog/bulk_config_wifi_dialog';
 
 /**
  * Composable encapsulating bulk device configuration menu state, reactive
- * dimension loading, and dialog orchestration in FleetSearchResultsComponent.
+ * dimension loading, and dialog orchestration across device table views
+ * (Fleet Search Results and Host Detail Overview).
  */
-export function useBulkConfigActions() {
-  const store = inject(FleetSearchStore);
+export function useBulkConfigActions(options: BulkConfigActionsOptions) {
   const dialog = inject(MatDialog);
   const destroyRef = inject(DestroyRef);
-  const configService = inject(CONFIG_SERVICE);
+  const configService = inject(CONFIG_SERVICE, {optional: true});
   const featureEnablementService = inject(FeatureEnablementService);
-
-  /**
-   * Batch device configuration applies only to devices on the deployment's own
-   * fleet (`google_1p` in 1P and the local fleet in OSS, both represented as
-   * `store.fleet() === 'internal'`). Host views and Partner ATS views (`'ats'`)
-   * hide bulk configuration actions.
-   */
-  const isOwnFleetDevices = computed(
-    () => store.entity() === 'devices' && store.fleet() === 'internal',
-  );
 
   /**
    * Bulk configuration is not generally available yet (see
@@ -52,7 +41,10 @@ export function useBulkConfigActions() {
    * action is shown and no dimension loading is triggered.
    */
   const isBulkConfigAvailable = computed(
-    () => featureEnablementService.isBulkConfigEnabled() && isOwnFleetDevices(),
+    () =>
+      Boolean(configService) &&
+      featureEnablementService.isBulkConfigEnabled() &&
+      options.isOwnFleetDevices(),
   );
 
   /**
@@ -61,7 +53,7 @@ export function useBulkConfigActions() {
    * and tab switches.
    */
   const shouldLoadDimensions = linkedSignal<boolean, boolean>({
-    source: () => isBulkConfigAvailable() && store.selectedItems().size > 0,
+    source: () => isBulkConfigAvailable() && options.hasSelection(),
     computation: (active, previous) => active || Boolean(previous?.value),
   });
 
@@ -71,7 +63,9 @@ export function useBulkConfigActions() {
   >({
     params: shouldLoadDimensions,
     stream: ({params: shouldLoad}) =>
-      shouldLoad ? configService.getConfigurableDimensions() : of(null),
+      shouldLoad && configService
+        ? configService.getConfigurableDimensions()
+        : of(null),
   });
 
   /** Consolidated dimension configuration state for the active view. */
@@ -103,7 +97,7 @@ export function useBulkConfigActions() {
     dimensionsResource.reload();
   };
 
-  /** Opens a bulk configuration dialog for currently selected devices and refreshes search if updated. */
+  /** Opens a bulk configuration dialog for currently selected devices and refreshes the view if updated. */
   const openDialog = <T>(
     dialogComponent: Type<T>,
     extraData?: Partial<BulkConfigDialogData>,
@@ -112,10 +106,7 @@ export function useBulkConfigActions() {
     if (!dimConfig.enabled || dimConfig.isLoading || dimConfig.error) {
       return;
     }
-    const selected = Array.from(
-      store.selectedItems().values(),
-      extractDeviceTarget,
-    );
+    const selected = options.getSelectedTargets();
     if (selected.length === 0) return;
 
     dialog
@@ -130,8 +121,7 @@ export function useBulkConfigActions() {
       .pipe(takeUntilDestroyed(destroyRef))
       .subscribe((res?: BulkConfigDialogResult) => {
         if (res?.updated) {
-          store.clearSelection();
-          store.executeSearch();
+          options.onUpdated();
         }
       });
   };

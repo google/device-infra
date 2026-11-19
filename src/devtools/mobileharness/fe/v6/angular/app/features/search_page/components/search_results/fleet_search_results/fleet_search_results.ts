@@ -42,6 +42,7 @@ import {
   buildCsvString,
   buildExportFileName,
   buildTsvString,
+  extractDeviceTarget,
   getEntityNoun,
   toSelectableRows,
   triggerCsvDownload,
@@ -90,7 +91,17 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
 })
 export class FleetSearchResultsComponent {
   readonly store = inject(FleetSearchStore);
-  readonly bulkConfig = useBulkConfigActions();
+  readonly bulkConfig = useBulkConfigActions({
+    isOwnFleetDevices: () =>
+      this.store.entity() === 'devices' && this.store.fleet() === 'internal',
+    hasSelection: () => this.store.selectedItems().size > 0,
+    getSelectedTargets: () =>
+      Array.from(this.store.selectedItems().values(), extractDeviceTarget),
+    onUpdated: () => {
+      this.store.clearSelection();
+      this.store.executeSearch();
+    },
+  });
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   private readonly doc = inject(DOCUMENT);

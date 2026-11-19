@@ -205,21 +205,109 @@
                   <span class="selected-text">{{selection.selected.length}} of {{deviceDataSource.data.length}} selected</span>
                 }
 
-                <div class="separator"></div>
+                @let dimConfig = bulkConfig.dimensionConfig();
+                @if (dimConfig.enabled || isGoogleInternal) {
+                  <div class="separator"></div>
+                }
 
-                <button mat-flat-button class="action-button hidden-button" matTooltip="Configure" (click)="isDeviceActionReady(selection.selected, 'configuration') ? null : showComingSoonPopup('Configure')">
-                  <mat-icon>settings</mat-icon>
-                  <span class="action-button-text">Configure</span>
-                </button>
-                <button mat-flat-button class="action-button" matTooltip="Remote Control" (click)="isDeviceActionReady(selection.selected, 'remoteControl') ? startRemoteControl(selection.selected) : showComingSoonPopup('Remote Control')">
-                  <mat-icon>important_devices</mat-icon>
-                  <span class="action-button-text">Remote Control</span>
-                </button>
-                @if(decommissionMissingCount() > 0) {
-                  <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'" (click)="isDeviceActionReady(selection.selected, 'decommission') ? decommission(selection.selected) : showComingSoonPopup('Decommission')">
-                    <mat-icon>delete_sweep</mat-icon>
-                    <span class="action-button-text">Decommission Missing ({{decommissionMissingCount()}})</span>
+                @if (dimConfig.enabled) {
+                  <button
+                    mat-flat-button
+                    class="action-button"
+                    matTooltip="Configure Wi-Fi"
+                    [disabled]="dimConfig.isLoading || !!dimConfig.error"
+                    (click)="bulkConfig.openWifiDialog()"
+                  >
+                    <mat-icon>wifi</mat-icon>
+                    <span class="action-button-text">Configure Wi-Fi</span>
                   </button>
+                  <button
+                    mat-flat-button
+                    class="action-button"
+                    [class.is-loading]="dimConfig.isLoading"
+                    [matMenuTriggerFor]="configureMenu"
+                    [disabled]="dimConfig.isLoading"
+                    matTooltip="Configure device dimensions"
+                    aria-label="Configure device dimensions"
+                  >
+                    @if (dimConfig.isLoading) {
+                      <mat-spinner diameter="16" class="action-button-spinner"></mat-spinner>
+                    } @else {
+                      <mat-icon>tune</mat-icon>
+                    }
+                    <span class="action-button-text">Configure</span>
+                    <mat-icon iconPositionEnd class="action-button-caret">arrow_drop_down</mat-icon>
+                  </button>
+                  <mat-menu #configureMenu="matMenu" class="configure-dropdown-menu">
+                    @if (dimConfig.error) {
+                      <div class="configure-menu-error" role="alert">
+                        <mat-icon class="material-symbols-outlined">error</mat-icon>
+                        <div class="configure-menu-error-body">
+                          <span class="configure-menu-error-title">Failed to load dimensions</span>
+                          <span class="configure-menu-error-sub">{{ dimConfig.error }}</span>
+                        </div>
+                      </div>
+                      <div class="configure-menu-footer">
+                        <button
+                          mat-menu-item
+                          class="configure-menu-retry"
+                          (click)="$event.stopPropagation(); bulkConfig.retryDimensions()"
+                        >
+                          <mat-icon class="material-symbols-outlined">refresh</mat-icon>
+                          <span>Retry loading dimensions</span>
+                        </button>
+                      </div>
+                    } @else {
+                      <div class="configure-menu-items">
+                        @for (dim of dimConfig.dimensions; track dim.dimensionList + ':' + dim.dimensionName) {
+                          @let isRequired = dim.dimensionList === DimensionList.DIMENSION_LIST_REQUIRED;
+                          <button mat-menu-item (click)="bulkConfig.openDimensionDialog(dim)">
+                            <span class="dim-menu-item-row">
+                              <span class="dim-raw-key">{{ dim.dimensionName }}</span>
+                              <span
+                                class="dim-list-badge"
+                                [class.dim-list-badge-required]="isRequired"
+                                [class.dim-list-badge-supported]="!isRequired"
+                              >{{ isRequired ? 'Required Dimension' : 'Supported Dimension' }}</span>
+                            </span>
+                          </button>
+                        } @empty {
+                          @if (!dimConfig.allowCustom) {
+                            <div class="menu-empty-message">No dimensions available</div>
+                          }
+                        }
+                      </div>
+                      @if (dimConfig.allowCustom) {
+                        <mat-divider></mat-divider>
+                        <div class="configure-menu-footer">
+                          <button
+                            mat-menu-item
+                            (click)="bulkConfig.openDimensionDialog('supported')"
+                          >
+                            <span>Custom Supported Dimension…</span>
+                          </button>
+                          <button
+                            mat-menu-item
+                            (click)="bulkConfig.openDimensionDialog('required')"
+                          >
+                            <span>Custom Required Dimension…</span>
+                          </button>
+                        </div>
+                      }
+                    }
+                  </mat-menu>
+                }
+                @if (isGoogleInternal) {
+                  <button mat-flat-button class="action-button" matTooltip="Remote Control" (click)="isDeviceActionReady(selection.selected, 'remoteControl') ? startRemoteControl(selection.selected) : showComingSoonPopup('Remote Control')">
+                    <mat-icon>important_devices</mat-icon>
+                    <span class="action-button-text">Remote Control</span>
+                  </button>
+                  @if(decommissionMissingCount() > 0) {
+                    <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'" (click)="isDeviceActionReady(selection.selected, 'decommission') ? decommission(selection.selected) : showComingSoonPopup('Decommission')">
+                      <mat-icon>delete_sweep</mat-icon>
+                      <span class="action-button-text">Decommission Missing ({{decommissionMissingCount()}})</span>
+                    </button>
+                  }
                 }
               </div>
             }
