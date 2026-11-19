@@ -114,7 +114,7 @@ public final class JobInfoCreator {
       ImmutableSet.of("IosXcTest", "IosXcuiTest");
 
   private static final ImmutableSet<String> IOS_PERFORMANCE_DECORATORS =
-      ImmutableSet.of("IosPerformanceDecorator");
+      ImmutableSet.of("IosPerformanceDecorator", "IosPairedAbDecorator");
 
   private static final String SYSLOG_DECORATOR_SUFFIX = "SysLogDecorator";
 
