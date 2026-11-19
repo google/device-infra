@@ -145,6 +145,12 @@ public class TradefedTest extends BaseDriver
 
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(4L);
 
+  /** Time for Tradefed to exit by itself after being killed, before its descendants are killed. */
+  private static final Duration KILL_TF_DESCENDANTS_DELAY = Duration.ofSeconds(10L);
+
+  /** Time for Tradefed to exit after its descendants are killed, before it is killed forcibly. */
+  private static final Duration KILL_TF_FORCIBLY_DELAY = Duration.ofMinutes(1L);
+
   private static final String TF_AGENT_RESOURCE_PATH =
       "/com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar";
 
@@ -684,7 +690,11 @@ public class TradefedTest extends BaseDriver
       }
       periodicModuleResultsChecker.cancel(/* mayInterruptIfRunning= */ false);
       if (process != null && process.isAlive()) {
-        process.killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
+        // In ATS server, Tradefed runs tests in another Tradefed subprocess. Older xTS Tradefed
+        // neither kills that subprocess reliably on SIGTERM nor exits before it ends, so kill
+        // descendants if Tradefed does not exit on its own.
+        process.killWithDescendantsAndThenKillForcibly(
+            KILL_TF_DESCENDANTS_DELAY, KILL_TF_FORCIBLY_DELAY);
       }
     }
 
