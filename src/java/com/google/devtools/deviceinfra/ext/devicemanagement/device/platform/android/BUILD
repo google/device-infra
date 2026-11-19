@@ -20,10 +20,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "android_device_delegate",
     srcs = ["AndroidDeviceDelegate.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device:base_device_helper",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -60,7 +57,6 @@ java_library(
     srcs = ["AndroidDeviceDelegateImpl.java"],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
     ],
     deps = [
