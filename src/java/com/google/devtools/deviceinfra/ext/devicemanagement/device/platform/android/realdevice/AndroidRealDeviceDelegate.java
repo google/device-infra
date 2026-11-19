@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.platform.android.app.mtaastools.MtaasTo
 import com.google.devtools.mobileharness.platform.android.app.telephony.TelephonyHelper;
 import com.google.devtools.mobileharness.platform.android.connectivity.AndroidConnectivityUtil;
 import com.google.devtools.mobileharness.platform.android.connectivity.ConnectToWifiArgs;
+import com.google.devtools.mobileharness.platform.android.connectivity.UsbReverseTetheringUtil;
 import com.google.devtools.mobileharness.platform.android.device.AndroidDeviceHelper;
 import com.google.devtools.mobileharness.platform.android.deviceadmin.DeviceAdminUtil;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
@@ -160,6 +161,7 @@ public abstract class AndroidRealDeviceDelegate {
   private final AndroidFileUtil androidFileUtil;
   private final AndroidFrpUtil androidFrpUtil;
   private final AndroidConnectivityUtil connectivityUtil;
+  private UsbReverseTetheringUtil usbReverseTetheringUtil;
   private final AndroidSystemStateUtil systemStateUtil;
   private final AndroidSystemSpecUtil systemSpecUtil;
   private final AndroidPackageManagerUtil androidPkgManagerUtil;
@@ -281,6 +283,13 @@ public abstract class AndroidRealDeviceDelegate {
     this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil);
     this.gsiTool =
         new GsiTool(androidAdbInternalUtil, androidAdbUtil, adb, systemStateUtil, fastboot);
+    this.usbReverseTetheringUtil =
+        new UsbReverseTetheringUtil(adb, connectivityUtil, systemStateUtil);
+  }
+
+  @VisibleForTesting
+  void setUsbReverseTetheringUtil(UsbReverseTetheringUtil usbReverseTetheringUtil) {
+    this.usbReverseTetheringUtil = usbReverseTetheringUtil;
   }
 
   /**
@@ -498,6 +507,7 @@ public abstract class AndroidRealDeviceDelegate {
     // Ensure persist.sys.usb.config contains 'adb' on unrooted devices after TestHarness reset
     // so subsequent reboots do not lose ADB connectivity (b/452760233, b/579118590).
     mtaasToolsInstantiator.resetAdbIfNecessary(device);
+    usbReverseTetheringUtil.clearPersistedFunctionsIfSet(device);
 
     // The periodical check also applies to device initialization.
     checkOnlineModeDevice();
@@ -682,6 +692,8 @@ public abstract class AndroidRealDeviceDelegate {
       throws MobileHarnessException, InterruptedException {
     // HD Video decorator is supported by real device only.
     device.addSupportedDecorator("AndroidHdVideoDecorator");
+    // USB reverse tethering decorator is supported by real USB-connected devices only.
+    device.addSupportedDecorator("AndroidReverseUsbTetheringDecorator");
   }
 
   /** Returns {@code true} if need to enable device flash and reset decorators. */
@@ -1151,6 +1163,9 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Android real device preparations before running the test. */
   public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (usbReverseTetheringUtil.isMarkedEnabled(device)) {
+      usbReverseTetheringUtil.disableUsbReverseTethering(device, testInfo.log());
+    }
     if (!androidAdbInternalUtil.getRealDeviceSerials(/* online= */ true).contains(deviceId)) {
       testInfo
           .log()
@@ -1280,6 +1295,18 @@ public abstract class AndroidRealDeviceDelegate {
     invalidateCacheDevice(device.info().deviceId().controlId());
 
     prependedRealDeviceAfterTestProcess(testInfo);
+
+    if (usbReverseTetheringUtil.isMarkedEnabled(device)) {
+      try {
+        usbReverseTetheringUtil.disableUsbReverseTethering(device, testInfo.log());
+      } catch (MobileHarnessException e) {
+        logger.atWarning().log(
+            "Failed to disable leaked USB reverse tethering on device %s after test, scheduling"
+                + " reboot: %s",
+            deviceId, e.getMessage());
+        return PostTestDeviceOp.REBOOT;
+      }
+    }
 
     // Unlocking should be done before resetting the device with test harness.
     // TODO Unlocking failure may cause the device fail to reset with test harness

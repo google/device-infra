@@ -1,0 +1,54 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+option java_outer_classname = "AndroidReverseUsbTetheringDecoratorSpecOuterClass";
+
+// Specs for AndroidReverseUsbTetheringDecorator.
+message AndroidReverseUsbTetheringDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidReverseUsbTetheringDecoratorSpec ext = 1031;
+  }
+
+  optional bool persist_across_reboot = 1 [
+    default = true,
+    (field_detail) = {
+      help: "Whether to persist USB reverse tethering across device reboots "
+            "during the test (via svc usb setScreenUnlockedFunctions rndis and "
+            "SystemStateManager post-reboot restoration). Default is true."
+    }
+  ];
+
+  optional int64 connectivity_timeout_sec = 2 [
+    default = 30,
+    (field_detail) = {
+      help: "Timeout in seconds to verify network connectivity after enabling "
+            "USB reverse tethering. Default is 30."
+    }
+  ];
+
+  optional string connectivity_check_host = 3 [(field_detail) = {
+    help: "Optional hostname or IP to ping when verifying network connectivity. "
+          "Defaults to location-aware host (www.google.com / www.gstatic.com)."
+  }];
+}
