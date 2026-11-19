@@ -57,8 +57,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDevi
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsResponse.DeviceDimensionConfigEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsResponse.DeviceWifiConfigEntry;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetHostWifiConfigsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateHostWifiConfigsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionRequest;
@@ -71,6 +73,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceWifi;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DimensionList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigTemplateRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsResponse.CandidateDimensionValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetWifiSuggestionsRequest;
@@ -78,6 +81,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.TargetDevice
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.TargetDimensionValues;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigTemplateRequest;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.IamPermissionChecker;
@@ -468,6 +472,33 @@ public final class ConfigServiceLogicImplTest {
             configServiceLogicImpl
                 .batchUpdateDeviceWifiConfigs(
                     BatchUpdateDeviceWifiConfigsRequest.getDefaultInstance(), Optional.empty())
+                .get());
+    assertFeStatusCode(
+        Status.Code.UNIMPLEMENTED,
+        () ->
+            configServiceLogicImpl
+                .batchGetHostWifiConfigs(
+                    BatchGetHostWifiConfigsRequest.getDefaultInstance(), Optional.empty())
+                .get());
+    assertFeStatusCode(
+        Status.Code.UNIMPLEMENTED,
+        () ->
+            configServiceLogicImpl
+                .batchUpdateHostWifiConfigs(
+                    BatchUpdateHostWifiConfigsRequest.getDefaultInstance(), Optional.empty())
+                .get());
+    assertFeStatusCode(
+        Status.Code.UNIMPLEMENTED,
+        () ->
+            configServiceLogicImpl
+                .getDeviceConfigTemplate(GetDeviceConfigTemplateRequest.getDefaultInstance())
+                .get());
+    assertFeStatusCode(
+        Status.Code.UNIMPLEMENTED,
+        () ->
+            configServiceLogicImpl
+                .updateDeviceConfigTemplate(
+                    UpdateDeviceConfigTemplateRequest.getDefaultInstance(), Optional.empty())
                 .get());
   }
 
