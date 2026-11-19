@@ -69,5 +69,16 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface OlcServicesDualMode {}
 
+  /**
+   * gRPC services for clients on the same host as the OLC server, for example a gRPC-JSON
+   * transcoder.
+   *
+   * <p>They are served on a separate port that only accepts connections from localhost and has no
+   * authentication.
+   */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface OlcServicesForLocalApi {}
+
   private Annotations() {}
 }
