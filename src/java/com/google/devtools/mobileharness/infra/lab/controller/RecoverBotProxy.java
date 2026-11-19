@@ -16,10 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.lab.controller;
 
+import static com.google.common.primitives.Ints.min;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.base.VerifyException;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
@@ -30,6 +32,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.Arrays;
@@ -58,8 +61,9 @@ public class RecoverBotProxy implements Runnable {
   private static final String HELLO_SIGNATURE = "auto recovery controller";
   private static final int SOCKET_PORT = 9000;
 
-  private static final int SERIAL_READ_TIMEOUT_MS = 500;
-  private static final int SERIAL_PROBE_PAUSE_MS = 50;
+  private static final int SERIAL_READ_TIMEOUT_MS = 1000;
+  private static final Duration SERIAL_PROBE_PAUSE = Duration.ofMillis(1500);
+  private static final int SERIAL_IDLE_GAP_MS = 50;
   private static final int SOCKET_READ_TIMEOUT_MS = 2000;
   private static final int MAX_SOCKET_BYTES = 65536;
 
@@ -70,6 +74,13 @@ public class RecoverBotProxy implements Runnable {
   SerialPort serialPort;
   InputStream serialIn;
   OutputStream serialOut;
+  int socketPort = SOCKET_PORT;
+  Duration probePause = SERIAL_PROBE_PAUSE;
+  int serialReadTimeoutMs = SERIAL_READ_TIMEOUT_MS;
+
+  Enumeration<CommPortIdentifier> getPortIdentifiers() {
+    return CommPortIdentifier.getPortIdentifiers();
+  }
 
   /**
    * Main loop of the proxy server.
@@ -92,12 +103,15 @@ public class RecoverBotProxy implements Runnable {
       serialIn = serialPort.getInputStream();
       serialOut = serialPort.getOutputStream();
 
+      Sleeper.defaultSleeper().sleep(probePause);
+      drainAvailable(serialIn);
+
       logger.info("[proxy] Serial connected: " + serialPort.getName());
 
       try (ServerSocket serverSocket = new ServerSocket()) {
         serverSocket.setReuseAddress(true);
-        serverSocket.bind(new InetSocketAddress("0.0.0.0", SOCKET_PORT));
-        logger.info("[proxy] Listening on port " + SOCKET_PORT + "...");
+        serverSocket.bind(new InetSocketAddress("0.0.0.0", socketPort));
+        logger.info("[proxy] Listening on port " + socketPort + "...");
 
         while (!Thread.currentThread().isInterrupted()) {
           Socket client = serverSocket.accept();
@@ -105,6 +119,9 @@ public class RecoverBotProxy implements Runnable {
         }
       }
     } catch (Exception e) {
+      if (MoreThrowables.isInterruption(e)) {
+        Thread.currentThread().interrupt();
+      }
       logger.log(Level.SEVERE, "Fatal server error", e);
     } finally {
       try {
@@ -127,7 +144,7 @@ public class RecoverBotProxy implements Runnable {
    */
   @Nullable
   private CommPortIdentifier findSerialPort() {
-    Enumeration<CommPortIdentifier> ports = CommPortIdentifier.getPortIdentifiers();
+    Enumeration<CommPortIdentifier> ports = getPortIdentifiers();
 
     while (ports.hasMoreElements()) {
       CommPortIdentifier pid = ports.nextElement();
@@ -149,13 +166,13 @@ public class RecoverBotProxy implements Runnable {
         in = probePort.getInputStream();
         out = probePort.getOutputStream();
 
-        Thread.sleep(SERIAL_PROBE_PAUSE_MS);
+        Sleeper.defaultSleeper().sleep(probePause);
 
         drainAvailable(in);
         out.write("ping\n".getBytes(UTF_8));
         out.flush();
 
-        String line = readLineWithTimeout(in, SERIAL_READ_TIMEOUT_MS);
+        String line = readAllWithTimeout(in, serialReadTimeoutMs, HELLO_SIGNATURE);
         logger.info(String.format("Response from %s: '%s'", pid.getName(), line));
 
         if (line != null && line.toLowerCase(Locale.ROOT).contains(HELLO_SIGNATURE)) {
@@ -243,10 +260,11 @@ public class RecoverBotProxy implements Runnable {
 
       String rawResponse;
       synchronized (serialLock) {
+        drainAvailable(serialIn);
         logger.info("[proxy] Sending command: " + cmdToSend.trim());
         serialOut.write(cmdToSend.getBytes(UTF_8));
         serialOut.flush();
-        rawResponse = readLineWithTimeout(serialIn, SERIAL_READ_TIMEOUT_MS);
+        rawResponse = readAllWithTimeout(serialIn, serialReadTimeoutMs);
         if (rawResponse != null) {
           rawResponse = rawResponse.trim();
         }
@@ -319,55 +337,70 @@ public class RecoverBotProxy implements Runnable {
     return Arrays.copyOf(buf, n);
   }
 
-  /** Drain any currently available bytes from serial input (best effort). */
-  private static void drainAvailable(InputStream in) throws IOException {
-    while (in.available() > 0) {
-      int toRead = Math.min(in.available(), 4096);
-      byte[] tmp = in.readNBytes(toRead);
-      if (tmp.length == 0) {
+  /** Drain any currently available bytes from serial input (best effort, up to 64 KiB). */
+  static void drainAvailable(InputStream in) throws IOException {
+    byte[] buf = new byte[4096];
+    int drained = 0;
+    // NOMUTANTS(ROR): When available() == 0, read(buf, 0, 0) returns 0 and breaks identically.
+    while (drained < MAX_SOCKET_BYTES && in.available() > 0) {
+      int toRead = min(in.available(), 4096, MAX_SOCKET_BYTES - drained);
+      int n = in.read(buf, 0, toRead);
+      if (n <= 0) {
         break;
       }
+      drained += n;
     }
   }
 
   /**
-   * Read a line from serial like pyserial.readline(timeout=x):
-   *
-   * <ul>
-   *   <li>collect bytes until '\n' or '\r'
-   *   <li>if nothing arrives before timeout -> return null
-   *   <li>if some bytes arrive but no newline before timeout -> return partial string
-   * </ul>
+   * Reads all output from serial until idle for {@link #SERIAL_IDLE_GAP_MS} after data arrives, or
+   * until {@code timeoutMs} elapses overall. Returns {@code null} if nothing arrives.
    */
   @Nullable
-  private static String readLineWithTimeout(InputStream in, int timeoutMs) throws IOException {
-    long deadline = Instant.now().plusMillis(timeoutMs).toEpochMilli();
+  static String readAllWithTimeout(InputStream in, int timeoutMs) throws IOException {
+    return readAllWithTimeout(in, timeoutMs, /* expectedSubstring= */ null);
+  }
+
+  /**
+   * Reads all output from serial until idle for {@link #SERIAL_IDLE_GAP_MS} after data arrives
+   * (containing {@code expectedSubstring} case-insensitively when non-null), or until {@code
+   * timeoutMs} elapses overall. Returns {@code null} if nothing arrives.
+   */
+  @Nullable
+  static String readAllWithTimeout(
+      InputStream in, int timeoutMs, @Nullable String expectedSubstring) throws IOException {
+    long deadline = InstantSource.system().instant().plusMillis(timeoutMs).toEpochMilli();
+    // NOMUTANTS(AOR): Any negative sentinel (< 0) behaves identically before the first byte.
+    long lastByteMs = -1;
+    byte[] buf = new byte[8192];
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
     while (InstantSource.system().instant().isBefore(Instant.ofEpochMilli(deadline))) {
       int avail = in.available();
       if (avail <= 0) {
+        if (lastByteMs >= 0
+            && InstantSource.system().instant().minusMillis(lastByteMs).toEpochMilli()
+                >= SERIAL_IDLE_GAP_MS
+            && (expectedSubstring == null
+                || baos.toString(UTF_8).toLowerCase(Locale.ROOT).contains(expectedSubstring))) {
+          break;
+        }
         try {
           Thread.sleep(5);
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
+          break;
         }
         continue;
       }
 
-      int b = in.read();
-      if (b < 0) {
+      int toRead = Math.min(avail, 8192 - baos.size());
+      int n = in.read(buf, 0, toRead);
+      if (n <= 0) {
         break;
       }
-
-      if (b == '\n' || b == '\r') {
-        if (baos.size() == 0) {
-          continue;
-        }
-        break;
-      }
-
-      baos.write(b);
+      baos.write(buf, 0, n);
+      lastByteMs = InstantSource.system().instant().toEpochMilli();
       if (baos.size() >= 8192) {
         break;
       } // safety
