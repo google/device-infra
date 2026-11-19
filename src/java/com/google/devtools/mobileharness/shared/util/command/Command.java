@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.command;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Arrays.stream;
 
@@ -836,7 +837,7 @@ public abstract class Command {
    */
   @CheckReturnValue
   public Command input(String input) {
-    return toBuilder().input(input).build();
+    return toBuilder().input(input).inputSensitive(false).build();
   }
 
   /**
@@ -856,6 +857,36 @@ public abstract class Command {
   @CheckReturnValue
   public Command inputLn(String input) {
     return input(input + "\n");
+  }
+
+  /**
+   * Returns a command that behaves equivalently to this command, but with the specified initial
+   * sensitive input in place of the current initial input.
+   *
+   * <p>Unlike {@link #input(String)}, the raw input content is omitted from logs (for example, when
+   * writing to stdin fails).
+   *
+   * @see <a href="#input">Command Input</a>
+   */
+  @CheckReturnValue
+  public Command sensitiveInput(String input) {
+    return toBuilder().input(input).inputSensitive(true).build();
+  }
+
+  /**
+   * Returns a command that behaves equivalently to this command, but with the specified initial
+   * sensitive input followed by {@code "\n"} in place of the current initial input.
+   *
+   * <p>Short for {@linkplain #sensitiveInput(String) sensitiveInput}{@code (input + "\n")}.
+   *
+   * <p>Unlike {@link #inputLn(String)}, the raw input content is omitted from logs (for example,
+   * when writing to stdin fails).
+   *
+   * @see <a href="#input">Command Input</a>
+   */
+  @CheckReturnValue
+  public Command sensitiveInputLn(String input) {
+    return sensitiveInput(checkNotNull(input) + "\n");
   }
 
   /**
@@ -1059,8 +1090,14 @@ public abstract class Command {
   /** See {@link #successExitCodes(int, int...)}. */
   public abstract ImmutableSet<Integer> getSuccessExitCodes();
 
-  /** See {@link #input(String)} and {@link #inputLn(String)}. */
+  /**
+   * See {@link #input(String)}, {@link #inputLn(String)}, {@link #sensitiveInput(String)}, and
+   * {@link #sensitiveInputLn(String)}.
+   */
   public abstract Optional<String> getInput();
+
+  /** See {@link #sensitiveInput(String)} and {@link #sensitiveInputLn(String)}. */
+  public abstract boolean isInputSensitive();
 
   /** See {@link #closeStdinAfterInput()}. */
   public abstract boolean getShouldCloseStdinAfterInput();
@@ -1154,6 +1191,8 @@ public abstract class Command {
 
     abstract Builder input(String input);
 
+    abstract Builder inputSensitive(boolean inputSensitive);
+
     abstract Builder shouldCloseStdinAfterInput(boolean shouldCloseStdinAfterInput);
 
     abstract Builder workDirectory(Path workDirectory);
@@ -1181,6 +1220,7 @@ public abstract class Command {
         .needStderrInResult(DEFAULT_NEED_STDERR_IN_RESULT)
         .stderrPath(Optional.empty())
         .stdoutPath(Optional.empty())
+        .inputSensitive(false)
         .shouldCloseStdinAfterInput(false)
         .showFullResultInException(DEFAULT_SHOW_FULL_RESULT_IN_EXCEPTION);
   }

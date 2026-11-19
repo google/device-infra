@@ -501,16 +501,23 @@ public class CommandExecutor {
   }
 
   private static void writeToStdin(CommandProcess commandProcess, @Nullable String input) {
-    if (input != null) {
-      try {
-        commandProcess.stdinWriter().write(input);
-        commandProcess.stdinWriter().flush();
-      } catch (IOException e) {
+    if (input == null) {
+      return;
+    }
+    try {
+      commandProcess.stdinWriter().write(input);
+      commandProcess.stdinWriter().flush();
+    } catch (IOException e) {
+      if (commandProcess.command().isInputSensitive()) {
+        logger.atWarning().withCause(e).log(
+            "Failed to write sensitive input to stdin of command [%s], kill it",
+            commandProcess.command());
+      } else {
         logger.atWarning().withCause(e).log(
             "Failed to write [%s] to stdin of command [%s], kill it",
             input, commandProcess.command());
-        commandProcess.kill();
       }
+      commandProcess.kill();
     }
   }
 
