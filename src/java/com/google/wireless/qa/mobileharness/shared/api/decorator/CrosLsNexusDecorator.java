@@ -273,7 +273,7 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
         .alsoTo(logger)
         .log("Starting LSNexus with command: %s", String.join(" ", args));
 
-    return commandExecutor.start(Command.of(args));
+    return commandExecutor.start(Command.of(args).timeout(testInfo.timer()));
   }
 
   /**

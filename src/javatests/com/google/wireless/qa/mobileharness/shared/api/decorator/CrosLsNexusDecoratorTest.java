@@ -43,6 +43,8 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.devtools.mobileharness.shared.util.command.Timeout;
+import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -101,6 +103,7 @@ public class CrosLsNexusDecoratorTest {
   @Mock private CommandProcess commandProcess;
   @Mock private JobInfo jobInfo;
   @Mock private Params params;
+  @Mock private CountDownTimer testTimer;
 
   private CrosLsNexusDecorator decorator;
 
@@ -110,6 +113,7 @@ public class CrosLsNexusDecoratorTest {
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
     when(device.getDeviceUuid()).thenReturn(DEVICE_UUID);
     when(testInfo.log()).thenReturn(testLogger);
+    when(testInfo.timer()).thenReturn(testTimer);
     when(testLogger.atInfo()).thenReturn(atInfo);
     when(testLogger.atWarning()).thenReturn(atInfo);
     when(atInfo.alsoTo(any(FluentLogger.class))).thenReturn(atInfo);
@@ -221,6 +225,7 @@ public class CrosLsNexusDecoratorTest {
             "-labservice",
             INVENTORY_SERVICE_ADDRESS)
         .inOrder();
+    assertThat(commandCaptor.getValue().getTimeout()).hasValue(Timeout.deadline(testTimer));
   }
 
   @Test
