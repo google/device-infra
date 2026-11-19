@@ -8,7 +8,9 @@ DCON_BUILD_FILES = [
 ]
 
 GOOGLE3_DCON_EXCLUDES = [
+    "src/devtools/mobileharness/shared/util/comm/dualconduit/conduit/design.md",  # Internal design doc.
     "src/devtools/mobileharness/shared/util/comm/dualconduit/release.md",  # Internal release note.
+    "src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn/design.md",  # Internal design doc.
     "src/devtools/mobileharness/shared/util/comm/dualconduit/tests/BUILD",
     "src/devtools/mobileharness/shared/util/comm/dualconduit/tests/integration_test.go",
 ]
