@@ -4,6 +4,7 @@ import {
   Component,
 } from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {MatDialog} from '@angular/material/dialog';
 import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
@@ -13,6 +14,7 @@ import {DEVICE_VERSION_DESCRIPTION} from '../../../../core/constants/device_vers
 import {DeviceOverview} from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 
+import {DeviceErrorDialog} from '../../../../shared/components/device_error_dialog/device_error_dialog';
 import {IS_ASSISTANT_ENABLED} from '../../../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {DeviceActionService} from '../../../../shared/services/device_action_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
@@ -137,6 +139,7 @@ describe('DeviceOverviewTab Component', () => {
           provide: DEVICE_SERVICE,
           useValue: {
             getTestbedConfig: () => of({yamlContent: '', codeSearchLink: ''}),
+            getDeviceErrors: () => of({deviceErrors: []}),
           },
         },
         {
@@ -575,6 +578,28 @@ describe('DeviceOverviewTab Component', () => {
     expect(chip).not.toBeNull();
     expect(chip.getAttribute('href')).toContain(
       'q=Why%20is%20device%201234567890%20on%20host-a-1.prod.example.com%20quarantined%20and%20unavailable%20for%20tests%3F',
+    );
+  });
+
+  it('openDeviceErrorDialog opens DeviceErrorDialog immediately without pre-fetching device errors', () => {
+    const dialogOpenSpy = spyOn(TestBed.inject(MatDialog), 'open');
+    const getDeviceErrorsSpy = spyOn(
+      TestBed.inject(DEVICE_SERVICE),
+      'getDeviceErrors',
+    );
+
+    component.openDeviceErrorDialog();
+
+    expect(getDeviceErrorsSpy).not.toHaveBeenCalled();
+    expect(dialogOpenSpy).toHaveBeenCalledWith(
+      DeviceErrorDialog,
+      jasmine.objectContaining({
+        data: {
+          deviceId: mockDevice.id,
+          hostName: mockDevice.host.name,
+        },
+        autoFocus: false,
+      }),
     );
   });
 });

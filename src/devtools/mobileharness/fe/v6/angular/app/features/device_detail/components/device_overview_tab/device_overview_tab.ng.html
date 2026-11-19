@@ -98,13 +98,24 @@
               <span class="no-types">No types detected</span>
             }
           </dd>
-          <dt>Status</dt>
-          <dd>
+          <dt class="status-label">Status</dt>
+          <dd class="status-value">
             <div
               [class]="'type-chip ' + (device.healthAndActivity.deviceStatus.isCritical ? 'type-chip-critical-status' : 'type-chip-normal')"
             >
               {{ device.healthAndActivity.deviceStatus.status }}
             </div>
+            @if (device.healthAndActivity.hasDeviceError) {
+              <button
+                mat-icon-button
+                class="device-error-button"
+                matTooltip="View device errors"
+                aria-label="View device errors"
+                (click)="openDeviceErrorDialog()"
+              >
+                <mat-icon>warning</mat-icon>
+              </button>
+            }
           </dd>
 
           <!-- TODO: remove the link once the taskId and jobId are available and clickable. -->

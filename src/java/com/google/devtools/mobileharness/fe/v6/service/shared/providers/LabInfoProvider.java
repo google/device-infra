@@ -16,10 +16,14 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
+
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 
@@ -31,4 +35,16 @@ public interface LabInfoProvider {
   /** Fetches all device dimension names and their device counts from the given universe. */
   ListenableFuture<GetAllDeviceDimensionsResponse> getAllDeviceDimensionsAsync(
       GetAllDeviceDimensionsRequest request, UniverseScope universe);
+
+  /**
+   * Fetches the errors of a device from the given universe.
+   *
+   * <p>Returns a failed future with {@link UnsupportedOperationException} unless overridden, so
+   * that existing implementations that do not need device errors (e.g. test fakes) keep compiling.
+   */
+  default ListenableFuture<GetDeviceErrorsResponse> getDeviceErrorsAsync(
+      GetDeviceErrorsRequest request, UniverseScope universe) {
+    return immediateFailedFuture(
+        new UnsupportedOperationException("getDeviceErrorsAsync is not implemented"));
+  }
 }

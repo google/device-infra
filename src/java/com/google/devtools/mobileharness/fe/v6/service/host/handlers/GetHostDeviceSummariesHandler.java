@@ -131,7 +131,8 @@ public final class GetHostDeviceSummariesHandler {
             .setRequiredDims(requiredDims)
             .setModel(dimensions.getOrDefault(DIMENSION_MODEL, ""))
             .setVersion(DeviceInfoUtil.getVersion(dimensions))
-            .setActions(createDeviceActions(deviceInfo, universe));
+            .setActions(createDeviceActions(deviceInfo, universe))
+            .setHasDeviceError(healthAndActivityInfo.getHasDeviceError());
 
     // If it is a testbed device, decode sub-device information.
     boolean isTestbed = deviceInfo.getDeviceFeature().getTypeList().contains("TestbedDevice");

@@ -27,45 +27,113 @@
 
     <!-- Main Layout: Visible after data is loaded -->
     @if (!isLoading() && debugInfo()) {
-      <div class="host-debug-dialog__layout">
-        <!-- Commands Sidebar: Left pane for quick navigation -->
-        <aside class="host-debug-dialog__sidebar">
-          <div class="host-debug-dialog__sidebar-header">
-            <span class="host-debug-dialog__sidebar-title">Commands</span>
-            <div class="host-debug-dialog__sidebar-actions">
-              <button mat-button class="host-debug-dialog__action-btn" (click)="toggleExpandAll()">
-                {{ allExpanded() ? 'Collapse All' : 'Expand All' }}
+      <div
+        #dialogLayout
+        class="host-debug-dialog__layout"
+        [class.host-debug-dialog__layout--resizing]="sidebar.isResizing()"
+      >
+        <!-- Commands Sidebar: Left pane (Full Mode or 56px Icon Rail) -->
+        <aside
+          #sidebarEl
+          class="host-debug-dialog__sidebar"
+          [class.host-debug-dialog__sidebar--compact]="sidebar.isCompact()"
+          [style.width.px]="sidebar.width()"
+        >
+          @if (sidebar.isCompact()) {
+            <div class="host-debug-dialog__rail-header">
+              <button
+                type="button"
+                class="host-debug-dialog__rail-icon-btn host-debug-dialog__rail-icon-btn--secondary"
+                (click)="sidebar.expand()"
+                matTooltip="Expand sidebar"
+                matTooltipPosition="right"
+                aria-label="Expand sidebar"
+              >
+                <mat-icon>last_page</mat-icon>
+              </button>
+              <button
+                type="button"
+                class="host-debug-dialog__rail-icon-btn"
+                (click)="toggleExpandAll()"
+                [matTooltip]="(allExpanded() ? 'Collapse All' : 'Expand All') + ' (' + (debugInfo()?.results?.length ?? 0) + ')'"
+                matTooltipPosition="right"
+                [attr.aria-label]="allExpanded() ? 'Collapse All' : 'Expand All'"
+              >
+                <mat-icon>{{ allExpanded() ? 'unfold_less' : 'unfold_more' }}</mat-icon>
               </button>
             </div>
-          </div>
-          <!-- Sidebar navigation: clicking an item scrolls to the corresponding command section -->
-          <nav class="host-debug-dialog__sidebar-nav">
-            @for (result of debugInfo()?.results; track result.command) {
-              <div
-                class="host-debug-dialog__sidebar-item"
-                [class.host-debug-dialog__sidebar-item--error]="result.stderr"
-                (click)="navigateToCommand(result.command)"
-                role="button"
-                tabindex="0"
-              >
-                @if (result.stderr) {
-                  <mat-icon class="host-debug-dialog__sidebar-error-icon">error_outline</mat-icon>
-                }
-                <span
-                  class="host-debug-dialog__sidebar-command-name"
-                  [matTooltip]="result.command"
+
+            <nav class="host-debug-dialog__rail-nav">
+              @for (result of debugInfo()?.results; track result.command; let i = $index) {
+                <button
+                  type="button"
+                  class="host-debug-dialog__rail-item-btn"
+                  [class.host-debug-dialog__rail-item-btn--error]="result.stderr"
+                  [class.host-debug-dialog__rail-item-btn--active]="activeCommand() === result.command"
+                  (click)="navigateToCommand(result.command)"
+                  [matTooltip]="'#' + (i + 1) + ' · ' + result.command + (result.stderr ? ' (STDERR)' : '')"
                   matTooltipPosition="right"
-                  matTooltipPositionAtOrigin="true"
-                  matTooltipShowDelay="500"
-                  tooltipIfTruncated
-                >{{ result.command }}</span>
+                  [attr.aria-label]="'Jump to command #' + (i + 1) + ': ' + result.command"
+                >
+                  <mat-icon class="host-debug-dialog__rail-item-icon">
+                    {{ result.stderr ? 'error_outline' : 'code' }}
+                  </mat-icon>
+                  <span class="host-debug-dialog__rail-item-badge">{{ i + 1 }}</span>
+                </button>
+              }
+            </nav>
+          } @else {
+            <div class="host-debug-dialog__sidebar-header">
+              <span class="host-debug-dialog__sidebar-title">Commands</span>
+              <div class="host-debug-dialog__sidebar-actions">
+                <button mat-button class="host-debug-dialog__action-btn" (click)="toggleExpandAll()">
+                  {{ allExpanded() ? 'Collapse All' : 'Expand All' }}
+                </button>
               </div>
-            }
-          </nav>
+            </div>
+            <!-- Sidebar navigation: clicking an item scrolls to the corresponding command section -->
+            <nav class="host-debug-dialog__sidebar-nav">
+              @for (result of debugInfo()?.results; track result.command) {
+                <div
+                  class="host-debug-dialog__sidebar-item"
+                  [class.host-debug-dialog__sidebar-item--error]="result.stderr"
+                  [class.host-debug-dialog__sidebar-item--active]="activeCommand() === result.command"
+                  (click)="navigateToCommand(result.command)"
+                  role="button"
+                  tabindex="0"
+                >
+                  @if (result.stderr) {
+                    <mat-icon class="host-debug-dialog__sidebar-error-icon">error_outline</mat-icon>
+                  }
+                  <span
+                    class="host-debug-dialog__sidebar-command-name"
+                    [matTooltip]="result.command"
+                    matTooltipPosition="right"
+                    matTooltipPositionAtOrigin="true"
+                    matTooltipShowDelay="500"
+                    tooltipIfTruncated
+                  >{{ result.command }}</span>
+                </div>
+              }
+            </nav>
+          }
         </aside>
 
+        <div
+          class="host-debug-dialog__resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          [class.host-debug-dialog__resizer--active]="sidebar.isResizing()"
+          (mousedown)="sidebar.startResize($event)"
+        ></div>
+
         <!-- Main Content: Right pane displaying command details in accordions -->
-        <main #mainContent class="host-debug-dialog__main">
+        <main
+          #mainContent
+          class="host-debug-dialog__main"
+          (scroll)="onMainScroll()"
+        >
           <mat-accordion multi class="host-debug-dialog__accordion-group">
             @for (result of debugInfo()?.results; track result.command) {
               <mat-expansion-panel
@@ -86,8 +154,9 @@
                       <mat-icon class="host-debug-dialog__accordion-code-icon">code</mat-icon>
                     }
                     <span class="host-debug-dialog__accordion-command-text" [class.host-debug-dialog__accordion-command-text--error]="result.stderr" [title]="result.command">{{ result.command }}</span>
-                    <button mat-icon-button class="host-debug-dialog__copy-cmd-btn" (click)="$event.stopPropagation(); copyToClipboard(result.command, 'Command copied')" matTooltip="Copy command">
-                      <mat-icon>content_copy</mat-icon>
+                    @let commandCopied = clipboard.isCopied('cmd:' + result.command);
+                    <button mat-icon-button class="host-debug-dialog__copy-cmd-btn" [class.host-debug-dialog__copy-cmd-btn--copied]="commandCopied" (click)="$event.stopPropagation(); clipboard.copy(result.command, 'Command copied', 'cmd:' + result.command)" [matTooltip]="commandCopied ? 'Copied!' : 'Copy command'">
+                      <mat-icon>{{ commandCopied ? 'check' : 'content_copy' }}</mat-icon>
                     </button>
                   </div>
                   <div class="host-debug-dialog__accordion-actions">
@@ -95,7 +164,8 @@
                   </div>
                 </mat-expansion-panel-header>
 
-                @if (expandedCommands()[result.command]) {
+                <!-- Rendered lazily on first expand and kept afterwards, so collapsing still animates. -->
+                <ng-template matExpansionPanelContent>
                   <div class="host-debug-dialog__accordion-content">
                     <!-- Tabs if both stdout and stderr -->
                     @if (result.stdout && result.stderr) {
@@ -108,20 +178,26 @@
                     <!-- STDOUT -->
                     @if (result.stdout) {
                       <div class="host-debug-dialog__output host-debug-dialog__output--stdout host-debug-dialog__terminal-theme" [class.host-debug-dialog__output--hidden]="result.stderr && activeTabs()[result.command] !== 'stdout'">
-                        <button mat-icon-button class="host-debug-dialog__copy-btn" (click)="copyToClipboard(result.stdout, 'STDOUT copied')" matTooltip="Copy STDOUT">
-                          <mat-icon>content_copy</mat-icon>
-                        </button>
                         <pre class="host-debug-dialog__output-content">{{ result.stdout }}</pre>
+                        <div class="host-debug-dialog__copy-track">
+                          @let stdoutCopied = clipboard.isCopied('stdout:' + result.command);
+                          <button mat-icon-button class="host-debug-dialog__copy-btn" [class.host-debug-dialog__copy-btn--copied]="stdoutCopied" (click)="clipboard.copy(result.stdout, 'STDOUT copied', 'stdout:' + result.command)" [matTooltip]="stdoutCopied ? 'Copied!' : 'Copy STDOUT'">
+                            <mat-icon>{{ stdoutCopied ? 'check' : 'content_copy' }}</mat-icon>
+                          </button>
+                        </div>
                       </div>
                     }
 
                     <!-- STDERR -->
                     @if (result.stderr) {
                       <div class="host-debug-dialog__output host-debug-dialog__output--stderr host-debug-dialog__error-theme" [class.host-debug-dialog__output--hidden]="result.stdout && activeTabs()[result.command] !== 'stderr'">
-                        <button mat-icon-button class="host-debug-dialog__copy-btn" (click)="copyToClipboard(result.stderr, 'STDERR copied')" matTooltip="Copy STDERR">
-                          <mat-icon>content_copy</mat-icon>
-                        </button>
                         <pre class="host-debug-dialog__output-content">{{ result.stderr }}</pre>
+                        <div class="host-debug-dialog__copy-track">
+                          @let stderrCopied = clipboard.isCopied('stderr:' + result.command);
+                          <button mat-icon-button class="host-debug-dialog__copy-btn" [class.host-debug-dialog__copy-btn--copied]="stderrCopied" (click)="clipboard.copy(result.stderr, 'STDERR copied', 'stderr:' + result.command)" [matTooltip]="stderrCopied ? 'Copied!' : 'Copy STDERR'">
+                            <mat-icon>{{ stderrCopied ? 'check' : 'content_copy' }}</mat-icon>
+                          </button>
+                        </div>
                       </div>
                     }
 
@@ -132,7 +208,7 @@
                       </div>
                     }
                   </div>
-                }
+                </ng-template>
               </mat-expansion-panel>
             }
           </mat-accordion>

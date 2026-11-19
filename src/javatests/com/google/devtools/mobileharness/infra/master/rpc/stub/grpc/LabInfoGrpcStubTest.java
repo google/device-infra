@@ -23,9 +23,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceError;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import org.junit.Before;
@@ -105,6 +108,34 @@ public final class LabInfoGrpcStubTest {
             GetAllDeviceDimensionsRequest.getDefaultInstance());
 
     GetAllDeviceDimensionsResponse actualResponse = actualFuture.get(5, SECONDS);
+    assertThat(actualResponse).isEqualTo(expectedResponse);
+  }
+
+  @Test
+  public void getDeviceErrors_success() throws Exception {
+    GetDeviceErrorsResponse response =
+        GetDeviceErrorsResponse.newBuilder()
+            .addDeviceErrors(DeviceError.newBuilder().setTimestampMs(12345L))
+            .build();
+    when(blockingInterface.getDeviceErrors(any(GetDeviceErrorsRequest.class))).thenReturn(response);
+
+    assertThat(labInfoGrpcStub.getDeviceErrors(GetDeviceErrorsRequest.getDefaultInstance()))
+        .isEqualTo(response);
+  }
+
+  @Test
+  public void getDeviceErrorsAsync_success() throws Exception {
+    GetDeviceErrorsResponse expectedResponse =
+        GetDeviceErrorsResponse.newBuilder()
+            .addDeviceErrors(DeviceError.newBuilder().setTimestampMs(12345L))
+            .build();
+    when(futureInterface.getDeviceErrors(any(GetDeviceErrorsRequest.class)))
+        .thenReturn(immediateFuture(expectedResponse));
+
+    ListenableFuture<GetDeviceErrorsResponse> actualFuture =
+        labInfoGrpcStub.getDeviceErrorsAsync(GetDeviceErrorsRequest.getDefaultInstance());
+
+    GetDeviceErrorsResponse actualResponse = actualFuture.get(5, SECONDS);
     assertThat(actualResponse).isEqualTo(expectedResponse);
   }
 }

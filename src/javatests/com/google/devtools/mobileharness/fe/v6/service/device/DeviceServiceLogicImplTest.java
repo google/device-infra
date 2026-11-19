@@ -40,6 +40,8 @@ import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceTes
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceErrorsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceErrorsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetTestbedConfigRequest;
@@ -55,6 +57,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoP
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -192,5 +195,17 @@ public final class DeviceServiceLogicImplTest {
             ExecutionException.class,
             () -> deviceServiceLogicImpl.getDeviceOverview(request).get());
     assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void getDeviceErrors_success() throws Exception {
+    GetDeviceErrorsRequest request =
+        GetDeviceErrorsRequest.newBuilder().setId("device").setHostName("host").build();
+    when(labInfoProvider.getDeviceErrorsAsync(any(), any(UniverseScope.class)))
+        .thenReturn(
+            immediateFuture(LabInfoServiceProto.GetDeviceErrorsResponse.getDefaultInstance()));
+
+    assertThat(deviceServiceLogicImpl.getDeviceErrors(request).get())
+        .isEqualTo(GetDeviceErrorsResponse.getDefaultInstance());
   }
 }

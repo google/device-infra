@@ -20,6 +20,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.grpc.FeGrpcInvoker;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceServiceGrpc;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceErrorsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceErrorsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceRecoveryTaskStatsRequest;
@@ -190,5 +192,17 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
         executor,
         DeviceServiceGrpc.getServiceDescriptor(),
         DeviceServiceGrpc.getPrepareDeviceMethod());
+  }
+
+  @Override
+  public void getDeviceErrors(
+      GetDeviceErrorsRequest request, StreamObserver<GetDeviceErrorsResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::getDeviceErrors,
+        executor,
+        DeviceServiceGrpc.getServiceDescriptor(),
+        DeviceServiceGrpc.getGetDeviceErrorsMethod());
   }
 }

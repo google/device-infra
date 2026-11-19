@@ -23,6 +23,7 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_info",
         "@maven//:com_google_guava_guava",

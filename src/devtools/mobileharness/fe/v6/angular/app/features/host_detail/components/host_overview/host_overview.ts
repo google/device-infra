@@ -68,6 +68,7 @@ import {EnvUniverseService} from '../../../../core/services/env_universe_service
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {DecommissionContent} from '../../../../shared/components/decommission_content/decommission_content';
+import {DeviceErrorDialog} from '../../../../shared/components/device_error_dialog/device_error_dialog';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   MasterDetailLayout,
@@ -506,6 +507,14 @@ export class HostOverviewPage {
       isSpinning: config?.isSpinning ?? false,
       tooltip: releaseStatus.tooltip,
     };
+  }
+
+  /** Opens the dialog listing the errors reported for `element`. */
+  openDeviceErrorDialog(element: DeviceSummary) {
+    DeviceErrorDialog.open(this.dialog, {
+      deviceId: element.id,
+      hostName: this.localHost().hostName,
+    });
   }
 
   // Flags editing
