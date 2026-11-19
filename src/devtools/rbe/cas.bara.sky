@@ -11,6 +11,7 @@ GOOGLE3_CAS_EXCLUDES = [
     "src/devtools/rbe/casdownloader/config.json",  # Internal information, no plan to open source.
     "src/devtools/rbe/common/monitoring/monitoring_google3.go",  # Internal metrics implementation, no plan to open source.
     "src/devtools/rbe/rbeclient/auth_google3.go",  # Internal auth implementation, no plan to open source.
+    "src/devtools/rbe/rbeclient/rbeclient_google3_test.go",  # Internal compression config tests, no plan to open source.
     "src/devtools/rbe/casproxy/**",  # Internal CAS proxy implementation, no plan to open source.
     "src/devtools/rbe/AGENTIC_REVIEW",  # Internal code review agent config, not meaningful outside google3.
 ]
