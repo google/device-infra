@@ -651,6 +651,7 @@ public class Adb {
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
+  @CanIgnoreReturnValue
   public String runShellWithRetry(String serial, String command)
       throws MobileHarnessException, InterruptedException {
     return runShellWithRetry(serial, command, /* timeout= */ null, /* lineCallback= */ null);
@@ -718,6 +719,51 @@ public class Adb {
               String.format(
                   "adb shell command succeed after retry %s times, last error:%n%s",
                   i, error.getMessage()));
+        }
+        return output;
+      } catch (MobileHarnessException e) {
+        error = e;
+      }
+      sleeper.sleep(RETRY_INTERVAL);
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.ANDROID_ADB_CMD_RETRY_ERROR,
+        String.format(
+            "Abort adb shell command after attempting %d times:%n%s",
+            DEFAULT_RETRY_ATTEMPTS, error.getMessage()),
+        error);
+  }
+
+  /**
+   * Runs an adb shell command with retry, piping {@code stdinInput} as a line to standard input and
+   * closing stdin immediately afterward so sensitive values do not appear in command arguments.
+   *
+   * @param serial device serial number
+   * @param command the shell command
+   * @param stdinInput single-line input piped to the shell command's standard input
+   * @return command std output
+   * @throws MobileHarnessException if fails to execute the command or timeout
+   * @throws InterruptedException if the thread executing the command is interrupted
+   */
+  @CanIgnoreReturnValue
+  public String runShellWithStdinWithRetry(String serial, String command, String stdinInput)
+      throws MobileHarnessException, InterruptedException {
+    if (StrUtil.isEmptyOrWhitespace(command)) {
+      return "";
+    }
+    Command adbCommand =
+        getAdbCommand()
+            .args("-s", serial, "shell", command)
+            .inputLn(stdinInput)
+            .closeStdinAfterInput();
+    MobileHarnessException error = null;
+    for (int i = 0; i < DEFAULT_RETRY_ATTEMPTS; i++) {
+      try {
+        String output = syncCommand(adbCommand).stdoutWithoutTrailingLineTerminator();
+        if (error != null) {
+          logger.atWarning().log(
+              "adb shell command succeed after retry %s times, last error:%n%s",
+              i, error.getMessage());
         }
         return output;
       } catch (MobileHarnessException e) {

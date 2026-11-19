@@ -26,6 +26,8 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:lite_device_info_factory",
         "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:android_connectivity_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/networkconnector",

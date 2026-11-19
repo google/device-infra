@@ -28,6 +28,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.hash.Hashing;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.app.AndroidAppVersion;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.bundletool.Bundletool;
@@ -395,13 +396,37 @@ public class ApkInstaller {
   @CanIgnoreReturnValue
   public String installApk(Device device, ApkInstallArgs installArgs, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
+    return installApk(device.info(), installArgs, log);
+  }
+
+  /**
+   * Installs the APK into the android device using {@link DeviceInfo}.
+   *
+   * <p>Once installed, it will set the device property to avoid installing the same apk again when
+   * flag {@link Flags#cacheInstalledApks} is set to {@code true}.
+   *
+   * <p>NOTE: Do NOT use this method and {@link #installApkIfVersionMismatched} both for one APK.
+   *
+   * @param deviceInfo the device info of the device that the APK is installed to
+   * @param installArgs arguments wrapper for apk installation
+   * @return the package name of the apk
+   */
+  @CanIgnoreReturnValue
+  public String installApk(DeviceInfo deviceInfo, ApkInstallArgs installArgs)
+      throws MobileHarnessException, InterruptedException {
+    return installApk(deviceInfo, installArgs, /* log= */ null);
+  }
+
+  private String installApk(
+      DeviceInfo deviceInfo, ApkInstallArgs installArgs, @Nullable LogCollector<?> log)
+      throws MobileHarnessException, InterruptedException {
     String firstApkFile = installArgs.apkPaths().get(0);
     boolean clearAppData = installArgs.clearAppData().orElse(false);
     boolean skipIfDowngrade = installArgs.skipDowngrade().orElse(false);
     boolean skipIfCached = installArgs.skipIfCached().orElse(true);
     boolean skipIfVersionMatch = installArgs.skipIfVersionMatch().orElse(false);
 
-    String deviceId = device.getDeviceId();
+    String deviceId = deviceInfo.deviceId().controlId();
     int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
     String userId = MULTI_USER_DEFAULT_ID;
     if (isMultiUserSupported(deviceSdkVersion)) {
@@ -417,7 +442,7 @@ public class ApkInstaller {
       logger.atInfo().log("Md5 for apk %s is: %s", firstApkFile, apkMd5);
       if (skipIfCached
           && checkApkInstalledByMd5(
-              device, deviceSdkVersion, apkMd5, apkName, packageName, userId, log)) {
+              deviceInfo, deviceSdkVersion, apkMd5, apkName, packageName, userId, log)) {
         return packageName;
       }
     }
@@ -465,7 +490,7 @@ public class ApkInstaller {
       String apkVersionName = aapt.getApkVersionName(firstApkFile);
       if (!installArgs.skipGmsCompatCheck().orElse(false)) {
         checkGmsCompatibility(
-            device, deviceSdkVersion, firstApkFile, apkVersionCode, apkVersionName, log);
+            deviceInfo, deviceSdkVersion, firstApkFile, apkVersionCode, apkVersionName, log);
       } else {
         SharedLogUtil.logMsg(
             logger,
@@ -521,9 +546,13 @@ public class ApkInstaller {
           logger, log, "Successfully installed package %s on device %s", packageName, deviceId);
     } finally {
       if (Flags.cacheInstalledApks.get()) {
-        device.setProperty(
-            String.format(DEVICE_PROP_INSTALLED_APK_KEY_TEMPLATE, userId) + packageName,
-            success ? apkMd5 : null);
+        String propertyName =
+            String.format(DEVICE_PROP_INSTALLED_APK_KEY_TEMPLATE, userId) + packageName;
+        if (success && apkMd5 != null) {
+          deviceInfo.properties().put(propertyName, apkMd5);
+        } else {
+          deviceInfo.properties().remove(propertyName);
+        }
       }
     }
 
@@ -536,7 +565,7 @@ public class ApkInstaller {
 
     if (isGms) {
       // Update Dimension "gms_version" after installation (b/30948987)
-      updateGmsDimension(device, log);
+      updateGmsDimension(deviceInfo, log);
     }
 
     if (clearAppData) {
@@ -589,7 +618,29 @@ public class ApkInstaller {
       Device device, ApkInstallArgs installArgs, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     return installApk(
-        device, installArgs.withSkipIfCached(true).withSkipIfVersionMatch(false), log);
+        device.info(), installArgs.withSkipIfCached(true).withSkipIfVersionMatch(false), log);
+  }
+
+  /**
+   * Installs the APK into the android device using {@link DeviceInfo}, only if there is no apk with
+   * the same MD5 and package name installed before.
+   *
+   * <p>Once installed, it will set the device property to avoid installing the same apk again when
+   * flag {@link Flags#cacheInstalledApks} is set to {@code true}.
+   *
+   * <p>NOTE: Do NOT use this method and {@link #installApkIfVersionMismatched} both for one APK.
+   *
+   * @param deviceInfo the device info of the device that the APK is installed to
+   * @param installArgs arguments wrapper for apk installation
+   * @return the package name of the apk
+   */
+  @CanIgnoreReturnValue
+  public String installApkIfNotExist(DeviceInfo deviceInfo, ApkInstallArgs installArgs)
+      throws MobileHarnessException, InterruptedException {
+    return installApk(
+        deviceInfo,
+        installArgs.withSkipIfCached(true).withSkipIfVersionMatch(false),
+        /* log= */ null);
   }
 
   /**
@@ -722,7 +773,7 @@ public class ApkInstaller {
           logger, log, "Successfully uninstalled: %s for user: %s", packageName, userId);
 
       if (packageName.equals(PackageConstants.PACKAGE_NAME_GMS)) {
-        updateGmsDimension(device, log);
+        updateGmsDimension(device.info(), log);
       }
     } catch (MobileHarnessException e) {
       if (logFailures) {
@@ -762,7 +813,7 @@ public class ApkInstaller {
 
   /** Checks whether the exact same apk has been installed before or not by comparing MD5s. */
   private boolean checkApkInstalledByMd5(
-      Device device,
+      DeviceInfo deviceInfo,
       int sdkVersion,
       String apkMd5,
       String apkName,
@@ -771,12 +822,12 @@ public class ApkInstaller {
       @Nullable LogCollector<?> log)
       throws InterruptedException {
     // Tries to get md5 from device property, if failed, calculates it from the installed apk file.
-    String deviceId = device.getDeviceId();
+    String deviceId = deviceInfo.deviceId().controlId();
     String installedApkMd5 = null;
     String propertyName =
         String.format(DEVICE_PROP_INSTALLED_APK_KEY_TEMPLATE, userId) + packageName;
     if (Flags.cacheInstalledApks.get()) {
-      installedApkMd5 = device.getProperty(propertyName);
+      installedApkMd5 = deviceInfo.properties().get(propertyName).orElse(null);
       SharedLogUtil.logMsg(
           logger,
           log,
@@ -810,8 +861,8 @@ public class ApkInstaller {
     // Skips installation if MD5s match.
     if (apkMd5.equals(installedApkMd5)) {
       if (Flags.cacheInstalledApks.get()
-          && Strings.isNullOrEmpty(device.getProperty(propertyName))) {
-        device.setProperty(propertyName, apkMd5);
+          && Strings.isNullOrEmpty(deviceInfo.properties().get(propertyName).orElse(null))) {
+        deviceInfo.properties().put(propertyName, apkMd5);
       }
       SharedLogUtil.logMsg(
           logger, log, "Skip installing %s which has been installed before", apkName);
@@ -851,7 +902,7 @@ public class ApkInstaller {
    */
   @VisibleForTesting
   void checkGmsCompatibility(
-      Device device,
+      DeviceInfo deviceInfo,
       int deviceSdkVersion,
       String apkPath,
       int apkVersionCode,
@@ -1050,13 +1101,17 @@ public class ApkInstaller {
    * @return {@code True} only if dimension update successfully
    */
   @CanIgnoreReturnValue
-  private boolean updateGmsDimension(Device device, @Nullable LogCollector<?> log)
+  private boolean updateGmsDimension(DeviceInfo deviceInfo, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
-    String deviceId = device.getDeviceId();
+    String deviceId = deviceInfo.deviceId().controlId();
     try {
       String version =
           androidPackageManagerUtil.getAppVersionName(deviceId, PackageConstants.PACKAGE_NAME_GMS);
-      if ((version != null) && device.updateDimension(Dimension.Name.GMS_VERSION, version)) {
+      if ((version != null)
+          && deviceInfo
+              .dimensions()
+              .supported()
+              .replace(Dimension.Name.GMS_VERSION, ImmutableList.of(version))) {
         SharedLogUtil.logMsg(
             logger,
             log,

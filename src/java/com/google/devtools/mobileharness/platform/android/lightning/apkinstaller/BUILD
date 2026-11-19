@@ -32,6 +32,7 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/app:version",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/bundletool",

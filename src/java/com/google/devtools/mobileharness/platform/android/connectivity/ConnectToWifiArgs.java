@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.connectivity;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.MoreObjects;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -50,6 +51,19 @@ public abstract class ConnectToWifiArgs {
    * discoverd by the device before command timeout.
    */
   public abstract Optional<Boolean> forceTryConnect();
+
+  @Override
+  public final String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("serial", serial())
+        .add("sdkVersion", sdkVersion())
+        .add("wifiSsid", wifiSsid())
+        .add("wifiPsk", wifiPsk().map(psk -> psk.isEmpty() ? "" : "<redacted>"))
+        .add("scanSsid", scanSsid())
+        .add("waitTimeout", waitTimeout())
+        .add("forceTryConnect", forceTryConnect())
+        .toString();
+  }
 
   public static Builder builder() {
     return new AutoValue_ConnectToWifiArgs.Builder();

@@ -88,22 +88,33 @@ public class AndroidConnectivityUtil {
           + "-w com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
 
   /**
-   * ADB shell template for connecting to wifi with password. Should fill with: wifi ssid, password.
+   * ADB shell template for connecting to wifi without password and with scan_ssid. Should fill
+   * with: wifi ssid, and scan_ssid.
    */
   @VisibleForTesting
-  static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_PASSWORD =
-      "am instrument -e method connectToNetwork -e ssid %s -e psk %s "
+  static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITHOUT_PASSWORD_AND_SCAN_SSID =
+      "am instrument -e method connectToNetwork -e ssid %s -e scan_ssid %s "
           + "-e disableMacRandomization true "
           + "-w com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
 
   /**
-   * ADB shell template for connecting to wifi with password and scan_ssid. Should fill with: wifi
-   * ssid, password, and scan_ssid.
+   * ADB shell template for connecting to wifi with password read from stdin so the raw PSK is not
+   * exposed in command-line arguments. Should fill with: wifi ssid.
    */
   @VisibleForTesting
-  static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_PASSWORD_AND_SCAN_SSID =
-      "am instrument -e method connectToNetwork -e ssid %s -e psk %s -e scan_ssid %s "
-          + "-e disableMacRandomization true "
+  static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_STDIN_PASSWORD =
+      "IFS= read -r wifi_psk && am instrument -e method connectToNetwork -e ssid %s "
+          + "-e psk \"$wifi_psk\" -e disableMacRandomization true "
+          + "-w com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
+
+  /**
+   * ADB shell template for connecting to wifi with password read from stdin and scan_ssid so the
+   * raw PSK is not exposed in command-line arguments. Should fill with: wifi ssid, and scan_ssid.
+   */
+  @VisibleForTesting
+  static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_STDIN_PASSWORD_AND_SCAN_SSID =
+      "IFS= read -r wifi_psk && am instrument -e method connectToNetwork -e ssid %s "
+          + "-e psk \"$wifi_psk\" -e scan_ssid %s -e disableMacRandomization true "
           + "-w com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
 
   /** ADB shell template for dumpsys. Should fill with: type. */
@@ -323,52 +334,15 @@ public class AndroidConnectivityUtil {
     Duration waitTimeout = args.waitTimeout().orElse(DEFAULT_CONNECT_SSID_TIMEOUT);
     boolean forceTryConnect = args.forceTryConnect().orElse(false);
 
-    wifiSsid = ShellUtils.shellEscape(wifiSsid);
-    if (!Strings.isNullOrEmpty(wifiPsk)) {
-      wifiPsk = ShellUtils.shellEscape(wifiPsk);
+    if (!Strings.isNullOrEmpty(wifiPsk)
+        && (wifiPsk.indexOf('\n') >= 0 || wifiPsk.indexOf('\r') >= 0)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_CONNECTIVITY_FAIL_CONNECT_TO_WIFI,
+          "Failed to connect to Wifi: password must not contain newline characters");
     }
-    if (canConnectToWifi(serial, sdkVersion, wifiSsid, wifiPsk, scanSsid, forceTryConnect, log)) {
-      String cmd = null;
-      if (scanSsid) {
-        cmd =
-            String.format(
-                ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_PASSWORD_AND_SCAN_SSID,
-                wifiSsid,
-                Strings.nullToEmpty(wifiPsk),
-                String.valueOf(scanSsid));
-      } else if (Strings.isNullOrEmpty(wifiPsk)) {
-        cmd = String.format(ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITHOUT_PASSWORD, wifiSsid);
-      } else {
-        cmd = String.format(ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_PASSWORD, wifiSsid, wifiPsk);
-      }
-      try {
-        String unused = adb.runShellWithRetry(serial, cmd);
-      } catch (MobileHarnessException e) {
-        String errorMessage = "Failed to connect to Wifi(SSID = " + wifiSsid + ")";
-        if (scanSsid) {
-          errorMessage += " with scanning for hidden SSID and";
-        }
-        if (Strings.isNullOrEmpty(wifiPsk)) {
-          errorMessage += " without password";
-        } else {
-          errorMessage += " with password";
-        }
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_CONNECTIVITY_FAIL_CONNECT_TO_WIFI, errorMessage, e);
-      }
 
-      if (waitForNetwork(serial, sdkVersion, wifiSsid, waitTimeout)) {
-        return true;
-      }
-      SharedLogUtil.logMsg(
-          logger,
-          Level.WARNING,
-          log,
-          /* cause= */ null,
-          "Failed to connect device %s to ssid '%s'",
-          serial,
-          wifiSsid);
-    } else {
+    wifiSsid = ShellUtils.shellEscape(wifiSsid);
+    if (!canConnectToWifi(serial, sdkVersion, wifiSsid, wifiPsk, scanSsid, forceTryConnect, log)) {
       SharedLogUtil.logMsg(
           logger,
           Level.WARNING,
@@ -377,7 +351,54 @@ public class AndroidConnectivityUtil {
           "Skip connecting device %s to ssid '%s', check prior logs for reasons.",
           serial,
           wifiSsid);
+      return false;
     }
+
+    try {
+      if (Strings.isNullOrEmpty(wifiPsk)) {
+        String cmd =
+            scanSsid
+                ? String.format(
+                    ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITHOUT_PASSWORD_AND_SCAN_SSID,
+                    wifiSsid,
+                    String.valueOf(scanSsid))
+                : String.format(ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITHOUT_PASSWORD, wifiSsid);
+        adb.runShellWithRetry(serial, cmd);
+      } else {
+        String cmd =
+            scanSsid
+                ? String.format(
+                    ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_STDIN_PASSWORD_AND_SCAN_SSID,
+                    wifiSsid,
+                    String.valueOf(scanSsid))
+                : String.format(ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_STDIN_PASSWORD, wifiSsid);
+        adb.runShellWithStdinWithRetry(serial, cmd, wifiPsk);
+      }
+    } catch (MobileHarnessException e) {
+      String errorMessage = "Failed to connect to Wifi(SSID = " + wifiSsid + ")";
+      if (scanSsid) {
+        errorMessage += " with scanning for hidden SSID and";
+      }
+      if (Strings.isNullOrEmpty(wifiPsk)) {
+        errorMessage += " without password";
+      } else {
+        errorMessage += " with password";
+      }
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_CONNECTIVITY_FAIL_CONNECT_TO_WIFI, errorMessage, e);
+    }
+
+    if (waitForNetwork(serial, sdkVersion, wifiSsid, waitTimeout)) {
+      return true;
+    }
+    SharedLogUtil.logMsg(
+        logger,
+        Level.WARNING,
+        log,
+        /* cause= */ null,
+        "Failed to connect device %s to ssid '%s'",
+        serial,
+        wifiSsid);
     return false;
   }
 
