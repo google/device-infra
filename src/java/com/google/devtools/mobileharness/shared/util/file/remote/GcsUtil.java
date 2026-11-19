@@ -58,6 +58,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 /** Utility class for operating with files using Google Cloud Storage. */
@@ -872,7 +876,13 @@ public abstract class GcsUtil {
       Path localFile, Path gcsFile, long shardSize, String contentType)
       throws MobileHarnessException, InterruptedException {
     long fileSize = getFileSize(localFile);
-    if (fileSize < shardSize) {
+    if (shardSize <= 0) {
+      logger.atWarning().log(
+          "The shard size %s should be positive. Uploading with a single stream", shardSize);
+      copyFileToCloud(localFile, gcsFile, contentType);
+      return;
+    }
+    if (fileSize <= shardSize) {
       copyFileToCloud(localFile, gcsFile, contentType);
       return;
     }
@@ -903,23 +913,47 @@ public abstract class GcsUtil {
 
     List<ListenableFuture<?>> results = new ArrayList<>();
     List<Path> gcsShards = new ArrayList<>();
-    for (int i = 0; i < shardCount; i++) {
-      long from = (long) i * shardSize;
-      long size = i < shardCount - 1 ? shardSize : fileSize - from;
-      Path gcsShard = gcsFile.resolveSibling(String.format("%s.%s", gcsShardNamePrefix, i));
-
-      gcsShards.add(gcsShard);
-
-      results.add(
-          Holder.copyFileToCloudThreadpool.submit(() -> {
-            partialCopyFileToCloud(localFile, from, size, gcsShard);
-            return null;
-          }));
-    }
-
-    ListenableFuture<?> future = Futures.whenAllSucceed(results).call(() -> null, directExecutor());
+    Set<Path> startedShards = ConcurrentHashMap.newKeySet();
+    AtomicBoolean cancelled = new AtomicBoolean();
+    boolean shardsUploaded = false;
     try {
+      for (int i = 0; i < shardCount; i++) {
+        long from = (long) i * shardSize;
+        long size = i < shardCount - 1 ? shardSize : fileSize - from;
+        Path gcsShard = gcsFile.resolveSibling(String.format("%s.%s", gcsShardNamePrefix, i));
+
+        gcsShards.add(gcsShard);
+
+        long finalShardSize = size;
+        results.add(
+            Holder.copyFileToCloudThreadpool.submit(() -> {
+              if (cancelled.get() || Thread.currentThread().isInterrupted()) {
+                return null;
+              }
+              startedShards.add(gcsShard);
+              try {
+                if (cancelled.get()) {
+                  return null;
+                }
+                partialCopyFileToCloud(localFile, from, finalShardSize, gcsShard);
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw e;
+              } finally {
+                // Blocking I/O in partialCopyFileToCloud may finish after cancellation
+                // interrupts the worker thread, so clean up any shard finalized late.
+                if (cancelled.get() || Thread.currentThread().isInterrupted()) {
+                  tryDeleteCloudFile(gcsShard);
+                }
+              }
+              return null;
+            }));
+      }
+
+      ListenableFuture<?> future =
+          Futures.whenAllSucceed(results).call(() -> null, directExecutor());
       future.get();
+      shardsUploaded = true;
 
       compose(gcsFile, true, gcsShards, contentType);
       logger.atInfo().log(
@@ -929,23 +963,74 @@ public abstract class GcsUtil {
           gcsFile,
           shardCount,
           Duration.between(startTime, currentTime()));
-
     } catch (InterruptedException e) {
-      // Cancelling the aggregate future returned by whenAllSucceed will propagate
-      // cancellation to all component shard upload futures, ensuring no orphaned tasks are left.
-      future.cancel(true);
+      if (!shardsUploaded) {
+        cancelAndCleanupShards(results, gcsShards, startedShards, cancelled);
+      }
       throw e;
-    } catch (Throwable e) {
-      throw new MobileHarnessException(
-          BasicErrorId.GCS_UPLOAD_FILE_ERROR,
-          String.format(
-              "Failed to upload local %s to GCS file gs://%s/%s in %s shards after %s",
-              localFile,
-              storageParams.bucketName,
-              gcsFile,
-              shardCount,
-              Duration.between(startTime, currentTime())),
-          e);
+    } catch (ExecutionException e) {
+      if (!shardsUploaded) {
+        cancelAndCleanupShards(results, gcsShards, startedShards, cancelled);
+      }
+      if (e.getCause() instanceof Error error) {
+        throw error;
+      }
+      throw wrapParallelUploadException(localFile, gcsFile, shardCount, startTime, e);
+    } catch (MobileHarnessException | RuntimeException e) {
+      if (!shardsUploaded) {
+        cancelAndCleanupShards(results, gcsShards, startedShards, cancelled);
+      }
+      throw wrapParallelUploadException(localFile, gcsFile, shardCount, startTime, e);
+    } catch (Error e) {
+      if (!shardsUploaded) {
+        cancelAndCleanupShards(results, gcsShards, startedShards, cancelled);
+      }
+      throw e;
+    }
+  }
+
+  // Interrupts shard upload tasks submitted by copyFileToCloudInParallel on failure or abort.
+  @SuppressWarnings("Interruption")
+  private void cancelAndCleanupShards(
+      List<ListenableFuture<?>> results,
+      List<Path> gcsShards,
+      Set<Path> startedShards,
+      AtomicBoolean cancelled) {
+    cancelled.set(true);
+    for (ListenableFuture<?> res : results) {
+      res.cancel(true);
+    }
+    for (Path gcsShard : gcsShards) {
+      if (startedShards.contains(gcsShard)) {
+        tryDeleteCloudFile(gcsShard);
+      }
+    }
+  }
+
+  private MobileHarnessException wrapParallelUploadException(
+      Path localFile, Path gcsFile, int shardCount, Instant startTime, Exception cause) {
+    return new MobileHarnessException(
+        BasicErrorId.GCS_UPLOAD_FILE_ERROR,
+        String.format(
+            "Failed to upload local %s to GCS file gs://%s/%s in %s shards after %s",
+            localFile,
+            storageParams.bucketName,
+            gcsFile,
+            shardCount,
+            Duration.between(startTime, currentTime())),
+        cause);
+  }
+
+  private void tryDeleteCloudFile(Path gcsShard) {
+    boolean interrupted = Thread.interrupted();
+    try {
+      deleteCloudFile(gcsShard.toString());
+    } catch (MobileHarnessException | RuntimeException e) {
+      logger.atWarning().withCause(e).log("Failed to remove temporary GCS shard: %s", gcsShard);
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 
