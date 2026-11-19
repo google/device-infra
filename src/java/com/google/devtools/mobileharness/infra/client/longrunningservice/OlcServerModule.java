@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.EnableDatabase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcDatabaseConnections;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesDualMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForLocalApi;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForNonWorker;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForWorker;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
@@ -50,6 +51,7 @@ import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLaunche
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.NoOpServerUtils;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtils;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
@@ -75,6 +77,8 @@ class OlcServerModule extends AbstractModule {
       "com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode";
   private static final String ATS_MODE_MODULE_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule";
+  private static final String ATS_SERVER_CONFIG_MODULE_CLASS_NAME =
+      "com.google.devtools.mobileharness.infra.ats.server.config.AtsServerConfigModule";
   private static final String SERVER_UTILS_IMPL_CLASS_NAME =
       "com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtilsImpl";
 
@@ -148,6 +152,13 @@ class OlcServerModule extends AbstractModule {
     Multibinder<BindableService> dualModeServices =
         Multibinder.newSetBinder(binder(), BindableService.class, OlcServicesDualMode.class);
     dualModeServices.addBinding().to(VersionService.class);
+
+    Multibinder.newSetBinder(binder(), BindableService.class, OlcServicesForLocalApi.class);
+    if (Flags.atsLocalApiPort.getNonNull() > 0) {
+      // The module adds the configuration services of ATS server to OlcServicesForLocalApi. It is
+      // loaded by name because only ATS server binaries have it in their runtime dependencies.
+      installByClassName(ATS_SERVER_CONFIG_MODULE_CLASS_NAME);
+    }
   }
 
   @Provides
