@@ -28,6 +28,8 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
@@ -46,6 +48,8 @@ public class LabInfoGrpcStub implements LabInfoStub {
     DiagnoseJobResponse diagnoseJob(DiagnoseJobRequest request);
 
     GetAllDeviceDimensionsResponse getAllDeviceDimensions(GetAllDeviceDimensionsRequest request);
+
+    GetDeviceErrorsResponse getDeviceErrors(GetDeviceErrorsRequest request);
   }
 
   /** Future interface for {@link LabInfoGrpcStub}. */
@@ -54,6 +58,8 @@ public class LabInfoGrpcStub implements LabInfoStub {
 
     ListenableFuture<GetAllDeviceDimensionsResponse> getAllDeviceDimensions(
         GetAllDeviceDimensionsRequest request);
+
+    ListenableFuture<GetDeviceErrorsResponse> getDeviceErrors(GetDeviceErrorsRequest request);
   }
 
   private final BlockingInterface blockingInterface;
@@ -135,5 +141,25 @@ public class LabInfoGrpcStub implements LabInfoStub {
         InfraErrorId.MASTER_RPC_STUB_LAB_INFO_GET_DEVICE_DIMENSIONS_ERROR,
         String.format(
             "Failed to get all device dimensions, request=%s", shortDebugString(request)));
+  }
+
+  @Override
+  public GetDeviceErrorsResponse getDeviceErrors(GetDeviceErrorsRequest request)
+      throws GrpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        blockingInterface::getDeviceErrors,
+        request,
+        InfraErrorId.MASTER_RPC_STUB_LAB_INFO_GET_DEVICE_ERRORS_ERROR,
+        String.format("Failed to get device errors, request=%s", shortDebugString(request)));
+  }
+
+  @Override
+  public ListenableFuture<GetDeviceErrorsResponse> getDeviceErrorsAsync(
+      GetDeviceErrorsRequest request) {
+    return GrpcStubUtil.invokeAsync(
+        futureInterface::getDeviceErrors,
+        request,
+        InfraErrorId.MASTER_RPC_STUB_LAB_INFO_GET_DEVICE_ERRORS_ERROR,
+        String.format("Failed to get device errors, request=%s", shortDebugString(request)));
   }
 }
