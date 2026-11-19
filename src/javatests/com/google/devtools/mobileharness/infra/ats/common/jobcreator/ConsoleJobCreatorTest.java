@@ -426,6 +426,24 @@ public final class ConsoleJobCreatorTest {
   }
 
   @Test
+  public void
+      createXtsTradefedTestJob_ctsDesktopPlanWithPreloadedMainlineModules_createsDynamicMctsJob()
+          throws Exception {
+    SessionRequestInfo sessionRequestInfo = dynamicDownloadSessionRequestInfo("cts-desktop");
+    stubDynamicDownloadTradefedJob(sessionRequestInfo);
+
+    ImmutableList<JobInfo> jobInfos =
+        jobCreator.createXtsTradefedTestJob(
+            sessionRequestInfo, ImmutableSet.of("mcts_module"), /* skipDynamicMctsJob= */ false);
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
+    assertThat(jobInfos.get(1).properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+  }
+
+  @Test
   public void createXtsTradefedTestJob_runnerShardingWithStaticModuleOnly_skipsDynamicMctsJob()
       throws Exception {
     SessionRequestInfo sessionRequestInfo =
@@ -466,10 +484,15 @@ public final class ConsoleJobCreatorTest {
   }
 
   private static SessionRequestInfo dynamicDownloadSessionRequestInfo() throws Exception {
+    return dynamicDownloadSessionRequestInfo("cts");
+  }
+
+  private static SessionRequestInfo dynamicDownloadSessionRequestInfo(String testPlan)
+      throws Exception {
     return SessionRequestInfoUtil.buildAndValidate(
         SessionRequestInfo.newBuilder()
-            .setTestPlan("cts")
-            .setCommandLineArgs("cts")
+            .setTestPlan(testPlan)
+            .setCommandLineArgs(testPlan)
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setIsXtsDynamicDownloadEnabled(true));
