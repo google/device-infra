@@ -21,16 +21,20 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfigResolver;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
@@ -56,6 +60,7 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentMatchers;
@@ -67,6 +72,7 @@ import org.mockito.junit.MockitoRule;
 public final class AndroidAtsDynamicConfigPusherDecoratorTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Mock private Driver decorated;
   @Mock private TestInfo testInfo;
@@ -77,6 +83,7 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
   @Mock private AndroidSystemSettingUtil androidSystemSettingUtil;
   @Mock private ApkInstaller apkInstaller;
   @Mock private ResUtil resUtil;
+  @Mock private DynamicConfigResolver dynamicConfigResolver;
 
   private Properties properties;
   private AndroidAtsDynamicConfigPusherSetupOnlyDecorator setupDecorator;
@@ -113,11 +120,12 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
         new AndroidAtsDynamicConfigPusherSetupOnlyDecorator(
             decorated,
             testInfo,
-            new DynamicConfigResolver(localFileUtil),
+            localFileUtil,
             androidFileUtil,
             androidSystemSettingUtil,
             apkInstaller,
-            resUtil);
+            resUtil,
+            dynamicConfigResolver);
 
     teardownDecorator =
         new AndroidAtsDynamicConfigPusherTeardownOnlyDecorator(
@@ -223,6 +231,44 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
 
     setupDecorator.setUp(SetupContext.create(testInfo));
 
+    verify(androidFileUtil).push(eq("device_id"), anyInt(), any(), any());
+  }
+
+  @Test
+  public void skippableSetUp_withServerConfig_passesSessionIdAndFetchesConfig() throws Exception {
+    when(resUtil.getResourceFile(any(), any())).thenReturn("apk_path");
+    when(apkInstaller.installApkIfNotExist(any(), any(), any())).thenReturn("content_provider_pkg");
+
+    File configFile = tmpFolder.newFile("gts.dynamic");
+    Files.writeString(configFile.toPath(), "<dynamicConfig></dynamicConfig>", UTF_8);
+    when(localFileUtil.listFiles(any(), eq(true))).thenReturn(ImmutableList.of(configFile));
+    when(dynamicConfigResolver.fetchServerConfig(
+            anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+        .thenReturn(ImmutableMap.of("key1", ImmutableList.of("v1")));
+
+    spec =
+        AndroidAtsDynamicConfigPusherDecoratorSpec.newBuilder()
+            .setXtsSuiteInfo("suite_name=gts,suite_version=1.0")
+            .setTarget(TestTarget.DEVICE)
+            .setHasServerSideConfig(true)
+            .build();
+    when(jobInfo.combinedSpec(
+            ArgumentMatchers.<SpecConfigable<AndroidAtsDynamicConfigPusherDecoratorSpec>>any(),
+            eq("device_id")))
+        .thenReturn(spec);
+
+    properties.add(Job.SESSION_ID, "pusher_session_1");
+    setupDecorator.setUp(SetupContext.create(testInfo));
+
+    verify(dynamicConfigResolver)
+        .fetchServerConfig(
+            spec.getConfigUrl(),
+            spec.getApiKey(),
+            "gts",
+            "gts",
+            "1.0",
+            "pusher_session_1",
+            /* timeout= */ null);
     verify(androidFileUtil).push(eq("device_id"), anyInt(), any(), any());
   }
 }

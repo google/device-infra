@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.toCollection;
 
+import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.base.Splitter.MapSplitter;
 import com.google.common.base.Strings;
@@ -40,6 +41,9 @@ import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSyst
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogic;
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicExecutor;
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicFetcher;
+import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfig;
+import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfigResolver;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
@@ -47,13 +51,19 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidBusinessLogicSkipModuleDecoratorSpec;
+import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import org.xmlpull.v1.XmlPullParserException;
 
 /**
  * Decorator that skips module execution based on xTS business logic rules. Only supports release
@@ -68,6 +78,15 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
   private static final String SUITE_PLACEHOLDER = "{suite-name}";
 
   private static final String FEATURE_PREFIX = "feature:";
+
+  private static final String DYNAMIC_CONFIG_FEATURES_KEY = "business_logic_device_features";
+  private static final String DYNAMIC_CONFIG_PROPERTIES_KEY = "business_logic_device_properties";
+  private static final String DYNAMIC_CONFIG_PACKAGES_KEY = "business_logic_device_packages";
+
+  /** Dynamic config values are used in adb shell commands, so only plain names are accepted. */
+  private static final Pattern VALID_DYNAMIC_CONFIG_VALUE = Pattern.compile("[A-Za-z0-9_.-]+");
+
+  private static final String XTS_TEST_DIR_PARAM = "xts_test_dir";
 
   private static final ImmutableSet<String> BUSINESS_LOGIC_DEVICE_FEATURES =
       ImmutableSet.of(
@@ -110,6 +129,7 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
   private final AndroidAdbUtil androidAdbUtil;
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final BusinessLogicFetcher businessLogicFetcher;
+  private final DynamicConfigResolver dynamicConfigResolver;
 
   @Inject
   AndroidBusinessLogicSkipModuleDecorator(
@@ -118,12 +138,14 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
       AndroidSystemSpecUtil androidSystemSpecUtil,
       AndroidAdbUtil androidAdbUtil,
       AndroidPackageManagerUtil androidPackageManagerUtil,
-      BusinessLogicFetcher businessLogicFetcher) {
+      BusinessLogicFetcher businessLogicFetcher,
+      DynamicConfigResolver dynamicConfigResolver) {
     super(decoratedDriver, testInfo);
     this.androidSystemSpecUtil = androidSystemSpecUtil;
     this.androidAdbUtil = androidAdbUtil;
     this.androidPackageManagerUtil = androidPackageManagerUtil;
     this.businessLogicFetcher = businessLogicFetcher;
+    this.dynamicConfigResolver = dynamicConfigResolver;
   }
 
   /**
@@ -146,12 +168,11 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
               ? ImmutableMap.copyOf(xtsSuiteInfoSplitter.split(spec.getXtsSuiteInfo()))
               : ImmutableMap.of();
 
-      ImmutableSetMultimap<String, String> params =
-          buildRequestParams(testInfo, deviceId, xtsSuiteInfoMap);
-
       String formattedUrl = formatBusinessLogicUrl(spec.getBusinessLogicUrl(), xtsSuiteInfoMap);
 
       try {
+        ImmutableSetMultimap<String, String> params =
+            buildRequestParams(testInfo, spec, deviceId, xtsSuiteInfoMap);
         String json =
             businessLogicFetcher.fetchBusinessLogic(
                 formattedUrl,
@@ -257,8 +278,11 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
   }
 
   private ImmutableSetMultimap<String, String> buildRequestParams(
-      TestInfo testInfo, String deviceId, Map<String, String> xtsSuiteInfoMap)
-      throws InterruptedException {
+      TestInfo testInfo,
+      AndroidBusinessLogicSkipModuleDecoratorSpec spec,
+      String deviceId,
+      Map<String, String> xtsSuiteInfoMap)
+      throws MobileHarnessException, InterruptedException {
     ImmutableSetMultimap.Builder<String, String> paramsBuilder = ImmutableSetMultimap.builder();
 
     String suiteVersion = xtsSuiteInfoMap.getOrDefault("suite_version", "");
@@ -280,19 +304,32 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
           .log("Failed to get device manufacturer");
     }
 
+    ImmutableMap<String, List<String>> dynamicConfig =
+        getSuiteDynamicConfig(testInfo, spec, xtsSuiteInfoMap);
+    ImmutableSet<String> businessLogicDeviceFeatures =
+        union(testInfo, BUSINESS_LOGIC_DEVICE_FEATURES, dynamicConfig, DYNAMIC_CONFIG_FEATURES_KEY);
+    ImmutableSet<String> businessLogicDeviceProperties =
+        union(
+            testInfo,
+            BUSINESS_LOGIC_DEVICE_PROPERTIES,
+            dynamicConfig,
+            DYNAMIC_CONFIG_PROPERTIES_KEY);
+    ImmutableSet<String> businessLogicDevicePackages =
+        union(testInfo, BUSINESS_LOGIC_DEVICE_PACKAGES, dynamicConfig, DYNAMIC_CONFIG_PACKAGES_KEY);
+
     try {
       Set<String> deviceFeatures = androidSystemSpecUtil.getSystemFeatures(deviceId);
       Set<String> strippedFeatures =
           deviceFeatures.stream()
               .map(f -> f.substring(FEATURE_PREFIX.length()))
-              .filter(f -> BUSINESS_LOGIC_DEVICE_FEATURES.contains(f))
+              .filter(businessLogicDeviceFeatures::contains)
               .collect(toCollection(HashSet::new));
       paramsBuilder.putAll("features", strippedFeatures);
     } catch (MobileHarnessException e) {
       testInfo.log().atWarning().alsoTo(logger).withCause(e).log("Failed to get device features");
     }
 
-    for (String propertyName : BUSINESS_LOGIC_DEVICE_PROPERTIES) {
+    for (String propertyName : businessLogicDeviceProperties) {
       try {
         String propertyValue = androidAdbUtil.getProperty(deviceId, ImmutableList.of(propertyName));
         if (!Strings.isNullOrEmpty(propertyValue)) {
@@ -311,13 +348,107 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
     try {
       Set<String> installedPackages =
           new HashSet<>(androidPackageManagerUtil.listPackages(deviceId, PackageType.ALL));
-      installedPackages.retainAll(BUSINESS_LOGIC_DEVICE_PACKAGES);
+      installedPackages.retainAll(businessLogicDevicePackages);
       paramsBuilder.putAll("packages", installedPackages);
     } catch (MobileHarnessException e) {
       testInfo.log().atWarning().alsoTo(logger).withCause(e).log("Failed to list device packages");
     }
 
     return paramsBuilder.build();
+  }
+
+  /** Returns the suite dynamic config, or an empty map if suite name or version is missing. */
+  private ImmutableMap<String, List<String>> getSuiteDynamicConfig(
+      TestInfo testInfo,
+      AndroidBusinessLogicSkipModuleDecoratorSpec spec,
+      Map<String, String> xtsSuiteInfoMap)
+      throws MobileHarnessException {
+    String suiteName = xtsSuiteInfoMap.getOrDefault("suite_name", "");
+    String suiteVersion = xtsSuiteInfoMap.getOrDefault("suite_version", "");
+    if (suiteName.isEmpty() || suiteVersion.isEmpty()) {
+      return ImmutableMap.of();
+    }
+    String xtsTestDir = testInfo.jobInfo().params().getOptional(XTS_TEST_DIR_PARAM).orElse("");
+    Map<String, List<String>> config =
+        new HashMap<>(getLocalSuiteDynamicConfig(testInfo, suiteName, xtsTestDir));
+    String sessionId = testInfo.jobInfo().properties().getOptional(Job.SESSION_ID).orElse("");
+    Duration timeout = Duration.ofMillis(spec.getBusinessLogicTimeoutMs());
+    try {
+      config.putAll(
+          dynamicConfigResolver.fetchServerConfig(suiteName, suiteVersion, sessionId, timeout));
+    } catch (MobileHarnessException e) {
+      if (!spec.getIgnoreBusinessLogicFailure()) {
+        throw e;
+      }
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log(
+              "Failed to fetch dynamic config of %s from server, using local config only",
+              suiteName);
+    }
+    return ImmutableMap.copyOf(config);
+  }
+
+  private ImmutableMap<String, List<String>> getLocalSuiteDynamicConfig(
+      TestInfo testInfo, String suiteName, String xtsTestDir) {
+    // The JAR is not available on, e.g., remote runners of ATS Server, where xts_test_dir is a
+    // path on the server. In that case only the server config is used.
+    File localConfigFile =
+        dynamicConfigResolver.extractFromTradefedJar(
+            suiteName, xtsTestDir, Ascii.toLowerCase(suiteName) + "-tradefed");
+    if (localConfigFile == null) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("No dynamic config of %s found in the suite tradefed JAR", suiteName);
+      return ImmutableMap.of();
+    }
+    try {
+      return ImmutableMap.copyOf(DynamicConfig.createConfigMap(localConfigFile));
+    } catch (IOException | XmlPullParserException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to parse %s", localConfigFile);
+      return ImmutableMap.of();
+    } finally {
+      if (!localConfigFile.delete()) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log("Failed to delete temp dynamic config file %s", localConfigFile);
+      }
+    }
+  }
+
+  /**
+   * Returns {@code builtInValues} extended with the values of {@code key} in the dynamic config.
+   */
+  private static ImmutableSet<String> union(
+      TestInfo testInfo,
+      ImmutableSet<String> builtInValues,
+      Map<String, List<String>> dynamicConfig,
+      String key) {
+    ImmutableSet.Builder<String> values = ImmutableSet.<String>builder().addAll(builtInValues);
+    for (String value : dynamicConfig.getOrDefault(key, ImmutableList.of())) {
+      if (VALID_DYNAMIC_CONFIG_VALUE.matcher(value).matches()) {
+        values.add(value);
+      } else {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log("Ignored invalid value '%s' of %s in dynamic config", value, key);
+      }
+    }
+    return values.build();
   }
 
   private String formatBusinessLogicUrl(String url, Map<String, String> xtsSuiteInfoMap) {

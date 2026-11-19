@@ -16,6 +16,9 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static com.google.common.truth.Truth.assertThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -25,6 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.flogger.FluentLogger;
@@ -39,20 +43,26 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicFetcher;
+import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfigResolver;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidBusinessLogicSkipModuleDecoratorSpec;
+import java.io.File;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentMatchers;
@@ -66,6 +76,7 @@ import org.mockito.junit.MockitoRule;
 public final class AndroidBusinessLogicSkipModuleDecoratorTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Mock private Driver decoratedDriver;
   @Mock private TestInfo testInfo;
@@ -77,11 +88,13 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
   @Mock private TestLocator testLocator;
   @Mock private Properties testProperties;
   @Mock private Properties jobProperties;
+  @Mock private Params jobParams;
   @Mock private Result testResultWithCause;
   @Mock private AndroidAdbUtil mockAndroidAdbUtil;
   @Mock private AndroidSystemSpecUtil mockAndroidSystemSpecUtil;
   @Mock private AndroidPackageManagerUtil mockAndroidPackageManagerUtil;
   @Mock private BusinessLogicFetcher mockFetcher;
+  @Mock private DynamicConfigResolver mockDynamicConfigResolver;
 
   private AndroidBusinessLogicSkipModuleDecorator decorator;
 
@@ -103,12 +116,15 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
     when(testLocator.getName()).thenReturn("test_module");
     when(testInfo.properties()).thenReturn(testProperties);
     when(jobInfo.properties()).thenReturn(jobProperties);
+    when(jobInfo.params()).thenReturn(jobParams);
     when(testInfo.resultWithCause()).thenReturn(testResultWithCause);
     when(testInfo.getRootTest()).thenReturn(testInfo);
 
     when(mockAndroidAdbUtil.getProperty(anyString(), any(AndroidProperty.class))).thenReturn("");
     when(mockAndroidAdbUtil.getProperty(anyString(), ArgumentMatchers.<ImmutableList<String>>any()))
         .thenReturn("");
+    when(mockDynamicConfigResolver.fetchServerConfig(anyString(), anyString(), anyString(), any()))
+        .thenReturn(ImmutableMap.of());
 
     decorator =
         new AndroidBusinessLogicSkipModuleDecorator(
@@ -117,7 +133,8 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             mockAndroidSystemSpecUtil,
             mockAndroidAdbUtil,
             mockAndroidPackageManagerUtil,
-            mockFetcher);
+            mockFetcher,
+            mockDynamicConfigResolver);
   }
 
   @Test
@@ -529,5 +546,195 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
                     .put("properties", "ro.soc.model:SM8850")
                     .put("packages", "com.google.android.gms")
                     .build()));
+  }
+
+  @Test
+  public void run_withSuiteDynamicConfig_mergesJarAndServerAndFiltersInvalidValues()
+      throws Exception {
+    AndroidBusinessLogicSkipModuleDecoratorSpec spec =
+        AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
+            .setBusinessLogicUrl("http://fake-url/logic")
+            .setXtsSuiteInfo("suite_name=GTS,suite_version=16.1")
+            .setBusinessLogicTimeoutMs(15000)
+            .build();
+    when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
+    when(jobProperties.getOptional(Job.SESSION_ID)).thenReturn(Optional.of("session_id"));
+    when(jobParams.getOptional("xts_test_dir")).thenReturn(Optional.of("/xts/testcases"));
+
+    File localDynamicFile =
+        writeLocalDynamicXml(
+            "<dynamicConfig>"
+                + "<entry key=\"business_logic_device_properties\">"
+                + "<value>ro.local.only</value></entry>"
+                + "<entry key=\"business_logic_device_packages\">"
+                + "<value>com.android.settings</value></entry>"
+                + "</dynamicConfig>");
+    when(mockDynamicConfigResolver.extractFromTradefedJar("GTS", "/xts/testcases", "gts-tradefed"))
+        .thenReturn(localDynamicFile);
+    when(mockDynamicConfigResolver.fetchServerConfig(
+            "GTS", "16.1", "session_id", Duration.ofSeconds(15)))
+        .thenReturn(
+            ImmutableMap.of(
+                "business_logic_device_features",
+                ImmutableList.of("android.hardware.wifi", "bad;feature"),
+                "business_logic_device_properties",
+                ImmutableList.of("ro.vendor.extra", "bad prop")));
+
+    when(mockAndroidSystemSpecUtil.getSystemFeatures("fake_device_id"))
+        .thenReturn(
+            ImmutableSet.of(
+                "feature:android.hardware.type.television", "feature:android.hardware.wifi"));
+    when(mockAndroidAdbUtil.getProperty("fake_device_id", ImmutableList.of("ro.build.version.sdk")))
+        .thenReturn("30");
+    when(mockAndroidAdbUtil.getProperty("fake_device_id", ImmutableList.of("ro.vendor.extra")))
+        .thenReturn("extra");
+    when(mockAndroidPackageManagerUtil.listPackages("fake_device_id", PackageType.ALL))
+        .thenReturn(
+            ImmutableSet.of(
+                "com.google.android.gms", "com.android.settings", "com.example.unlisted"));
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
+
+    decorator.run(testInfo);
+
+    assertThat(localDynamicFile.exists()).isFalse();
+    verify(mockAndroidAdbUtil, never())
+        .getProperty("fake_device_id", ImmutableList.of("ro.local.only"));
+    verify(mockFetcher)
+        .fetchBusinessLogic(
+            eq("http://fake-url/logic"),
+            eq(""),
+            eq(""),
+            eq(System.getenv("APE_API_KEY")),
+            eq(Duration.ofSeconds(15)),
+            eq(
+                ImmutableSetMultimap.<String, String>builder()
+                    .put("suite_version", "16.1")
+                    .putAll("features", "android.hardware.type.television", "android.hardware.wifi")
+                    .putAll("properties", "ro.build.version.sdk:30", "ro.vendor.extra:extra")
+                    .putAll("packages", "com.google.android.gms", "com.android.settings")
+                    .build()));
+  }
+
+  @Test
+  public void run_withSuiteDynamicConfigMissingJar_usesServerConfigWithDefaults() throws Exception {
+    AndroidBusinessLogicSkipModuleDecoratorSpec spec =
+        AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
+            .setBusinessLogicUrl("http://fake-url/logic")
+            .setXtsSuiteInfo("suite_name=GTS,suite_version=16.1")
+            .build();
+    when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
+    when(mockDynamicConfigResolver.fetchServerConfig("GTS", "16.1", "", Duration.ofSeconds(60)))
+        .thenReturn(
+            ImmutableMap.of(
+                "business_logic_device_properties", ImmutableList.of("ro.vendor.extra")));
+    when(mockAndroidAdbUtil.getProperty("fake_device_id", ImmutableList.of("ro.vendor.extra")))
+        .thenReturn("extra");
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
+
+    decorator.run(testInfo);
+
+    verify(mockFetcher)
+        .fetchBusinessLogic(
+            eq("http://fake-url/logic"),
+            eq(""),
+            eq(""),
+            eq(System.getenv("APE_API_KEY")),
+            eq(Duration.ofSeconds(60)),
+            eq(
+                ImmutableSetMultimap.of(
+                    "suite_version", "16.1", "properties", "ro.vendor.extra:extra")));
+  }
+
+  @Test
+  public void run_noSuiteVersion_skipsSuiteDynamicConfig() throws Exception {
+    AndroidBusinessLogicSkipModuleDecoratorSpec spec =
+        AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
+            .setBusinessLogicUrl("http://fake-url/logic")
+            .setXtsSuiteInfo("suite_name=GTS")
+            .build();
+    when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
+
+    decorator.run(testInfo);
+
+    verify(mockDynamicConfigResolver, never())
+        .extractFromTradefedJar(anyString(), anyString(), anyString());
+    verify(mockDynamicConfigResolver, never())
+        .fetchServerConfig(anyString(), anyString(), anyString(), any());
+  }
+
+  @Test
+  public void run_suiteDynamicConfigServerFails_throws() throws Exception {
+    when(mockDynamicConfigResolver.fetchServerConfig(anyString(), anyString(), anyString(), any()))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARTNER_SERVER_ERROR,
+                "Failed"));
+    AndroidBusinessLogicSkipModuleDecoratorSpec spec =
+        AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
+            .setBusinessLogicUrl("http://fake-url/logic")
+            .setXtsSuiteInfo("suite_name=GTS,suite_version=16.1")
+            .build();
+    when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
+
+    MobileHarnessException e =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+
+    assertThat(e.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_BUSINESS_LOGIC_SKIP_MODULE_DECORATOR_FAIL);
+    verify(decoratedDriver, never()).run(testInfo);
+  }
+
+  @Test
+  public void run_suiteDynamicConfigServerFailsAndIgnored_usesJarConfig() throws Exception {
+    when(mockDynamicConfigResolver.fetchServerConfig(anyString(), anyString(), anyString(), any()))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARTNER_SERVER_ERROR,
+                "Failed"));
+    AndroidBusinessLogicSkipModuleDecoratorSpec spec =
+        AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
+            .setBusinessLogicUrl("http://fake-url/logic")
+            .setXtsSuiteInfo("suite_name=GTS,suite_version=16.1")
+            .setIgnoreBusinessLogicFailure(true)
+            .build();
+    when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
+    when(jobParams.getOptional("xts_test_dir")).thenReturn(Optional.of("/xts/testcases"));
+    File localDynamicFile =
+        writeLocalDynamicXml(
+            "<dynamicConfig><entry key=\"business_logic_device_properties\">"
+                + "<value>ro.local.only</value></entry></dynamicConfig>");
+    when(mockDynamicConfigResolver.extractFromTradefedJar("GTS", "/xts/testcases", "gts-tradefed"))
+        .thenReturn(localDynamicFile);
+    when(mockAndroidAdbUtil.getProperty("fake_device_id", ImmutableList.of("ro.local.only")))
+        .thenReturn("local_val");
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
+
+    decorator.run(testInfo);
+
+    verify(mockFetcher)
+        .fetchBusinessLogic(
+            eq("http://fake-url/logic"),
+            eq(""),
+            eq(""),
+            eq(System.getenv("APE_API_KEY")),
+            eq(Duration.ofSeconds(60)),
+            eq(
+                ImmutableSetMultimap.of(
+                    "suite_version", "16.1", "properties", "ro.local.only:local_val")));
+  }
+
+  private File writeLocalDynamicXml(String xml) throws Exception {
+    File file = tmpFolder.newFile();
+    Files.writeString(file.toPath(), xml, UTF_8);
+    return file;
   }
 }
