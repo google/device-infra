@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
@@ -41,6 +42,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Manager of Downloaded GcsFile. It caches files for multiple use. */
@@ -64,6 +67,16 @@ public class GcsFileManager {
    */
   private static final Cache<Path, ExecutionInfo> fileUploadCache =
       CacheBuilder.newBuilder().expireAfterWrite(Duration.ofMinutes(3)).build();
+
+  private static final int CLEANUP_THREAD_POOL_MAX_SIZE = 4;
+
+  /**
+   * Thread pool for removing the home directories that new instances replace. Shared and bounded,
+   * since callers create an instance per file transfer client and nobody waits on the removal.
+   */
+  private static final ExecutorService cleanupThreadPool =
+      ThreadPools.createStandardThreadPoolWithMaxSize(
+          "gcs-file-manager-cleanup", CLEANUP_THREAD_POOL_MAX_SIZE);
 
   /** Home directory of output file. */
   private final Path homeDir;
@@ -134,6 +147,30 @@ public class GcsFileManager {
       Optional<Long> downloadShardSize,
       Ticker localCacheTicker)
       throws MobileHarnessException, InterruptedException {
+    this(
+        homeDir,
+        gcsUtil,
+        localFileUtil,
+        cloudCacheTtl,
+        localCacheTtl,
+        uploadShardSize,
+        downloadShardSize,
+        localCacheTicker,
+        cleanupThreadPool);
+  }
+
+  @VisibleForTesting
+  GcsFileManager(
+      Path homeDir,
+      GcsUtil gcsUtil,
+      LocalFileUtil localFileUtil,
+      Optional<Duration> cloudCacheTtl,
+      Duration localCacheTtl,
+      Optional<Long> uploadShardSize,
+      Optional<Long> downloadShardSize,
+      Ticker localCacheTicker,
+      Executor cleanupExecutor)
+      throws MobileHarnessException, InterruptedException {
     this.homeDir = homeDir;
     this.gcsUtil = gcsUtil;
     this.localFileUtil = localFileUtil;
@@ -150,17 +187,18 @@ public class GcsFileManager {
                   + "_"
                   + random.nextLong());
       localFileUtil.moveFileOrDir(homeDir, tmpDirToDelete);
-      new Thread(
-              () -> {
-                try {
-                  removeFileOrDir(tmpDirToDelete);
-                } catch (MobileHarnessException | InterruptedException e) {
-                  logger.atWarning().withCause(e).log(
-                      "Failed to remove old cache directory: %s", tmpDirToDelete);
-                }
-              },
-              "gcs-file-manager-cleanup")
-          .start();
+      cleanupExecutor.execute(() -> {
+        try {
+          removeFileOrDir(localFileUtil, tmpDirToDelete);
+        } catch (InterruptedException e) {
+          logger.atWarning().withCause(e).log(
+              "Interrupted while removing old cache directory: %s", tmpDirToDelete);
+          Thread.currentThread().interrupt();
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to remove old cache directory: %s", tmpDirToDelete);
+        }
+      });
     }
     localFileUtil.prepareDir(homeDir);
 
@@ -558,7 +596,7 @@ public class GcsFileManager {
       logger.atInfo().log("Ignore non existing cached file: %s", fileInfo);
     }
     try {
-      removeFileOrDir(fileOrDir);
+      removeFileOrDir(localFileUtil, fileOrDir);
       logger.atInfo().log("Removed cached file: %s", fileInfo);
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log("Failed to remove cached file :%s", fileInfo);
@@ -585,7 +623,8 @@ public class GcsFileManager {
     }
   }
 
-  private void removeFileOrDir(Path fileOrDir) throws MobileHarnessException, InterruptedException {
+  private static void removeFileOrDir(LocalFileUtil localFileUtil, Path fileOrDir)
+      throws MobileHarnessException, InterruptedException {
     if (localFileUtil.isDirExist(fileOrDir)) {
       localFileUtil.grantFileOrDirFullAccessRecursively(fileOrDir);
     } else if (localFileUtil.isFileExist(fileOrDir)) {

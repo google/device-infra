@@ -71,16 +71,20 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 
 /** FileTransfer Client based on {@code mobileharness.shared.CloudFileTransferService}. */
 public class CloudFileTransferClient extends WatchableFileTransferClient {
@@ -94,8 +98,14 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   private static final ImmutableSet<RemoteFileType> NON_LOCAL_WRITABLE_FILE_TYPE =
       ImmutableSet.of();
 
-  /** Thread pool to sending/receiving file from peer side. */
-  private final ExecutorService threadPool =
+  /**
+   * Thread pool for sending and receiving files from the peer.
+   *
+   * <p>Shared by all clients, since callers create a client per test and a pool per client starts
+   * new threads for every one of them. Unbounded, since a task holds its thread until the peer
+   * finishes the file, and time spent in a queue would count against the transfer timeout.
+   */
+  private static final ExecutorService threadPool =
       ThreadPools.createStandardThreadPool("cloud-file-transfer-client");
 
   /** Random generator for creating tmp files. */
@@ -116,6 +126,14 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
   /** The impersonation user for the file transfer stub. */
   @Nullable private final String impersonationUser;
+
+  private final Object shutdownLock = new Object();
+
+  @GuardedBy("shutdownLock")
+  private final Set<Future<?>> inFlightFutures = new HashSet<>();
+
+  @GuardedBy("shutdownLock")
+  private boolean isShutdown = false;
 
   /**
    * Creates a file transfer client based on cloud file transfer stub {@code stub}.
@@ -716,12 +734,20 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       Callable<ResponseT> func, String msg, boolean isUploadFile)
       throws InterruptedException, MobileHarnessException {
     logger.atInfo().log("Start to %s", msg);
-    Future<ResponseT> future = threadPool.submit(func);
+    Future<ResponseT> future;
+    synchronized (shutdownLock) {
+      if (isShutdown) {
+        throw new MobileHarnessException(
+            InfraErrorId.FT_GENERAL_ERROR, String.format("Client is shut down; cannot %s", msg));
+      }
+      future = threadPool.submit(func);
+      inFlightFutures.add(future);
+    }
     try {
       ResponseT response = future.get(params.timeout().toMillis(), MILLISECONDS);
       logger.atInfo().log("Finish to %s", msg);
       return response;
-    } catch (ExecutionException e) {
+    } catch (ExecutionException | CancellationException e) {
       throw new MobileHarnessException(InfraErrorId.FT_GENERAL_ERROR, "Failed to " + msg, e);
     } catch (TimeoutException e) {
       // Cancel the worker future on timeout to prevent the thread from leaking.
@@ -736,6 +762,10 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       // Propagate interruption to the worker thread to stop the task immediately.
       future.cancel(true);
       throw e;
+    } finally {
+      synchronized (shutdownLock) {
+        inFlightFutures.remove(future);
+      }
     }
   }
 
@@ -772,9 +802,18 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
   /** {@inheritDoc} */
   @Override
+  @SuppressWarnings("Interruption")
   public void shutdown() {
+    ImmutableList<Future<?>> futuresToCancel;
+    synchronized (shutdownLock) {
+      isShutdown = true;
+      futuresToCancel = ImmutableList.copyOf(inFlightFutures);
+      inFlightFutures.clear();
+    }
+    for (Future<?> future : futuresToCancel) {
+      future.cancel(true);
+    }
     stub.shutdown();
-    threadPool.shutdownNow();
   }
 
   private boolean fileOrDirExists(String path) {
