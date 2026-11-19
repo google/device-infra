@@ -30,6 +30,7 @@ import {
   ConfigService,
 } from '../../../../../core/services/config/config_service';
 import {HostConfigStateService} from '../../../../../core/services/config/host_config_state_service';
+import {Environment} from '../../../../../core/services/environment';
 import {ActionErrorContent} from '../../../../../shared/components/action_error_content/action_error_content';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
 
@@ -46,6 +47,7 @@ describe('HostSettings Component', () => {
   let comp: HostSettings;
   let mockHostConfigStateService: jasmine.SpyObj<HostConfigStateService>;
   let hostConfigResponse: GetHostConfigResult;
+  let isGoogleInternalSpy: jasmine.Spy;
 
   beforeEach(async () => {
     mockConfigService = jasmine.createSpyObj<ConfigService>('ConfigService', [
@@ -157,6 +159,11 @@ describe('HostSettings Component', () => {
         },
       ],
     }).compileComponents();
+
+    isGoogleInternalSpy = spyOn(
+      TestBed.inject(Environment),
+      'isGoogleInternal',
+    ).and.returnValue(true);
   });
 
   function setupDialogData(
@@ -2046,5 +2053,54 @@ describe('HostSettings Component', () => {
     TestBed.inject(ApplicationRef).tick();
 
     expect(dialogRef.close).not.toHaveBeenCalled();
+  });
+
+  it('renders single-pane Default Wi-Fi editor without sidebar or reset menu in ATS', async () => {
+    isGoogleInternalSpy.and.returnValue(false);
+    mockHostConfigStateService.getUiStatus.and.throwError('not cached yet');
+    dialogData.hostName = 'ats-host';
+    dialogData.config = undefined;
+
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+    dialogOpener.detectChanges();
+
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    expect(comp.activeSection()).toBe('wifi');
+    expect(document.querySelector('.nav-bar')).toBeNull();
+    expect(document.querySelector('.settings-title')?.textContent?.trim()).toBe(
+      'Default Wi-Fi',
+    );
+
+    comp.updateDeviceWifi({
+      type: 'custom',
+      ssid: 'PartnerNet-5G',
+      psk: 'secret',
+      scanSsid: false,
+    });
+    expect(comp.isCategoryDirty('wifi')).toBeTrue();
+
+    comp.save();
+    expect(mockConfigService.updateHostConfig).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        hostName: 'ats-host',
+        scope: {updateMask: {paths: ['device_config.wifi']}},
+        config: jasmine.objectContaining({
+          deviceConfig: jasmine.objectContaining({
+            wifi: {
+              type: 'custom',
+              ssid: 'PartnerNet-5G',
+              psk: 'secret',
+              scanSsid: false,
+            },
+          }),
+        }),
+      }),
+    );
   });
 });

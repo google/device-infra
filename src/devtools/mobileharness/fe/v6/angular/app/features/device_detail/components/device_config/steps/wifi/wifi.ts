@@ -117,15 +117,28 @@ export class Wifi implements OnInit, OnChanges {
     this.wifiEnabled.set(!this.wifiEnabled());
     // Default to 'custom' when enabling, as we now use a unified manual input UI
     this.wifi.type = this.wifiEnabled() ? 'custom' : 'none';
+    this.emitWifiChange();
   }
 
   // No longer used in new UI, but kept for compatibility or strict mode if needed
   onWifiTypeChange(event: MatButtonToggleChange) {
     this.wifi.type = event.value;
+    this.emitWifiChange();
   }
 
   onWifiScanSsidChange(enabled: boolean) {
     this.wifi.scanSsid = enabled;
+    this.emitWifiChange();
+  }
+
+  onSsidChange(ssid: string) {
+    this.wifi.ssid = ssid;
+    this.emitWifiChange();
+  }
+
+  onPskChange(psk: string) {
+    this.wifi.psk = psk;
+    this.emitWifiChange();
   }
 
   toggleRecommendations() {
@@ -136,6 +149,7 @@ export class Wifi implements OnInit, OnChanges {
     this.wifi.type = 'custom';
     this.wifi.ssid = net.ssid;
     this.wifi.psk = net.psk;
+    this.emitWifiChange();
   }
 
   togglePasswordVisibility() {
@@ -145,5 +159,10 @@ export class Wifi implements OnInit, OnChanges {
   clearSsid() {
     this.wifi.ssid = '';
     this.wifi.psk = '';
+    this.emitWifiChange();
+  }
+
+  private emitWifiChange() {
+    this.wifiChange.emit({...this.wifi});
   }
 }

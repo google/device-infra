@@ -9,6 +9,7 @@ import {
   input,
   OnInit,
   signal,
+  ViewChild,
 } from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {FormsModule} from '@angular/forms';
@@ -39,6 +40,7 @@ import {
 } from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {DeviceConfigStateService} from '../../../../../core/services/config/device_config_state_service';
+import {Environment} from '../../../../../core/services/environment';
 import {
   clearEmptyDimensions,
   hasEmptyDimensions,
@@ -55,6 +57,7 @@ import {
   getErrorMessage,
 } from '../../../../../shared/utils/error_utils';
 import {objectUtils} from '../../../../../shared/utils/object_utils';
+import {AtsDimensions} from '../steps/dimensions/ats_dimensions';
 import {Dimensions} from '../steps/dimensions/dimensions';
 import {Permissions} from '../steps/permissions/permissions';
 import {Stability} from '../steps/stability/stability';
@@ -84,6 +87,7 @@ import {Wifi} from '../steps/wifi/wifi';
     Footer,
     Permissions,
     Wifi,
+    AtsDimensions,
     Dimensions,
     Stability,
   ],
@@ -126,6 +130,13 @@ export class DeviceSettings implements OnInit {
 
   private readonly configService = inject(CONFIG_SERVICE);
   private readonly deviceConfigStateService = inject(DeviceConfigStateService);
+  private readonly environment = inject(Environment);
+
+  @ViewChild(AtsDimensions) atsDimensions?: AtsDimensions;
+
+  get isAts(): boolean {
+    return !this.environment.isGoogleInternal();
+  }
 
   readonly deviceIdInput = input<string>('', {alias: 'deviceId'});
   readonly universeInput = input<string>('', {alias: 'universe'});
@@ -313,9 +324,21 @@ export class DeviceSettings implements OnInit {
       this.config = this.dialogData.config;
     }
 
-    this.uiStatusInternal.set(
-      this.deviceConfigStateService.getUiStatus(this.deviceId()),
-    );
+    try {
+      this.uiStatusInternal.set(
+        this.deviceConfigStateService.getUiStatus(this.deviceId()),
+      );
+    } catch (err) {
+      if (!this.isAts) {
+        throw err;
+      }
+      this.uiStatusInternal.set({
+        permissions: {visible: false, editability: {editable: false}},
+        wifi: {visible: false, editability: {editable: false}},
+        dimensions: {visible: true, editability: {editable: true}},
+        settings: {visible: false, editability: {editable: false}},
+      });
+    }
     this.adjustActiveSection();
 
     this.originalConfig = objectUtils.deepCopy(this.config) as DeviceConfig;
@@ -381,6 +404,14 @@ export class DeviceSettings implements OnInit {
   }
 
   isCategoryDirty(category: ConfigSection) {
+    if (
+      category === ConfigSection.DIMENSIONS &&
+      this.isAts &&
+      this.atsDimensions?.hasPendingDraft()
+    ) {
+      return true;
+    }
+
     const newDimensions = {
       supported: this.newConfig().dimensions?.supported,
       required: this.newConfig().dimensions?.required,
@@ -410,6 +441,10 @@ export class DeviceSettings implements OnInit {
 
   save(selfLockout = false, forceSave = false) {
     const section = this.activeSection();
+
+    if (section === ConfigSection.DIMENSIONS && this.isAts) {
+      this.atsDimensions?.commitAllDrafts();
+    }
 
     if (
       section === ConfigSection.DIMENSIONS &&
@@ -500,6 +535,7 @@ export class DeviceSettings implements OnInit {
   }
 
   discard() {
+    this.atsDimensions?.discardDrafts();
     this.newConfig.set(
       objectUtils.deepCopy(this.originalConfig) as DeviceConfig,
     );

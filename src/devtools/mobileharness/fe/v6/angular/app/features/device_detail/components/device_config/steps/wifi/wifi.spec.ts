@@ -105,4 +105,57 @@ describe('Wifi Component', () => {
       expect(ssidInput.disabled).toBeTrue();
     });
   });
+
+  it('emits wifiChange on toggle, field edits, recommendation selection, and clear', async () => {
+    const emitted: Array<Record<string, unknown>> = [];
+    component.wifiChange.subscribe((val: Record<string, unknown>) => {
+      emitted.push(val);
+    });
+
+    component.wifi = {type: 'none', ssid: '', psk: '', scanSsid: false};
+    component.wifiEnabled.set(false);
+    component.onWifiEnabledChange();
+    expect(emitted[emitted.length - 1]).toEqual({
+      type: 'custom',
+      ssid: '',
+      psk: '',
+      scanSsid: false,
+    });
+
+    component.onSsidChange('PartnerNet-5G');
+    component.onPskChange('ats-secret');
+    component.onWifiScanSsidChange(true);
+    expect(emitted[emitted.length - 1]).toEqual({
+      type: 'custom',
+      ssid: 'PartnerNet-5G',
+      psk: 'ats-secret',
+      scanSsid: true,
+    });
+
+    component.applyRecommendation({ssid: 'GoogleGuest', psk: ''});
+    expect(emitted[emitted.length - 1]).toEqual({
+      type: 'custom',
+      ssid: 'GoogleGuest',
+      psk: '',
+      scanSsid: true,
+    });
+
+    component.clearSsid();
+    expect(emitted[emitted.length - 1]).toEqual({
+      type: 'custom',
+      ssid: '',
+      psk: '',
+      scanSsid: true,
+    });
+
+    component.showRecommendations.set(true);
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const recTitle = fixture.nativeElement.querySelector(
+      '.rec-title',
+    ) as HTMLElement;
+    expect(recTitle.textContent?.trim()).toBe('Select network');
+    expect(getComputedStyle(recTitle).textTransform).toBe('none');
+  });
 });

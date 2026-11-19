@@ -1,0 +1,213 @@
+@use '../../../../../../shared/styles/configuration' as config;
+
+:host {
+  display: block;
+  @include config.default-overrides();
+}
+
+.ats-dim-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ats-dim-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ats-dim-heading {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.ats-dim-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #4b5563;
+}
+
+.ats-dim-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.ats-dim-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+}
+
+.ats-dim-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ats-dim-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ats-dim-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f1f1f;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.ats-dim-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+
+  &.is-required {
+    background: #fce8e6;
+    color: #b3261e;
+  }
+
+  &.is-supported {
+    background: #e6f4ea;
+    color: #137333;
+  }
+}
+
+.ats-dim-desc {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  color: #4b5563;
+}
+
+.ats-clear-btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #0b57d0;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(11, 87, 208, 0.08);
+  }
+}
+
+.ats-chip-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: #f8fafd;
+  border: 1px solid #cac4d0;
+
+  &:focus-within {
+    border-color: #0b57d0;
+    box-shadow: 0 0 0 1px #0b57d0;
+    background: #fff;
+  }
+
+  &.is-disabled {
+    opacity: 0.65;
+    background: #f3f4f6;
+  }
+}
+
+.ats-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 10px;
+  border-radius: 999px;
+  background: #d3e3fd;
+  color: #041e49;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.ats-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #041e49;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    background: rgba(4, 30, 73, 0.12);
+  }
+}
+
+.ats-chip-input {
+  flex: 1;
+  min-width: 160px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #1f1f1f;
+}
+
+.ats-suggestions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ats-suggestions-label {
+  font-size: 0.75rem;
+  color: #49454f;
+}
+
+.ats-suggestion-pill {
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid #cac4d0;
+  background: #fff;
+  color: #0b57d0;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(11, 87, 208, 0.08);
+    border-color: #0b57d0;
+  }
+}

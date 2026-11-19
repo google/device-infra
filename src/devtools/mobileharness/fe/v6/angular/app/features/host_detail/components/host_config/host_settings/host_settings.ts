@@ -36,6 +36,7 @@ import {
 } from '../../../../../core/models/host_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {HostConfigStateService} from '../../../../../core/services/config/host_config_state_service';
+import {Environment} from '../../../../../core/services/environment';
 import {
   clearEmptyDimensions,
   hasEmptyDimensions,
@@ -136,6 +137,11 @@ export class HostSettings implements OnInit {
   private readonly configService = inject(CONFIG_SERVICE);
   private readonly hostConfigStateService = inject(HostConfigStateService);
   private readonly snackBar = inject(SnackBarService);
+  private readonly environment = inject(Environment);
+
+  get isAts(): boolean {
+    return !this.environment.isGoogleInternal();
+  }
 
   @Input() hostName = '';
   @Input() config?: HostConfig;
@@ -573,7 +579,30 @@ export class HostSettings implements OnInit {
       this.config = this.dialogData.config;
     }
 
-    this.uiStatus.set(this.hostConfigStateService.getUiStatus(this.hostName));
+    try {
+      this.uiStatus.set(this.hostConfigStateService.getUiStatus(this.hostName));
+    } catch (err) {
+      if (!this.isAts) {
+        throw err;
+      }
+      this.uiStatus.set({
+        hostAdmins: {visible: false, editability: {editable: false}},
+        deviceConfigMode: {visible: false, editability: {editable: false}},
+        deviceConfig: {
+          sectionStatus: {visible: true, editability: {editable: true}},
+          subSections: {
+            permissions: {visible: false, editability: {editable: false}},
+            wifi: {visible: true, editability: {editable: true}},
+            dimensions: {visible: false, editability: {editable: false}},
+            settings: {visible: false, editability: {editable: false}},
+          },
+        },
+        hostProperties: {
+          sectionStatus: {visible: false, editability: {editable: false}},
+        },
+        deviceDiscovery: {visible: false, editability: {editable: false}},
+      });
+    }
 
     // If there is no visible section, set the active section to default.
     if (this.visibleSections().length === 0) {
@@ -655,16 +684,28 @@ export class HostSettings implements OnInit {
 
   initializeData() {
     if (this.config) {
+      const defaults = this.deviceConfig();
+      const incoming = this.config.deviceConfig;
+      const hostAdmins = this.config.permissions?.hostAdmins ?? [];
       this.deviceConfig.set(
         objectUtils.deepCopy({
-          ...this.config.deviceConfig!,
+          ...defaults,
+          ...(incoming ?? {}),
+          wifi: incoming?.wifi ?? defaults.wifi,
+          dimensions: incoming?.dimensions ?? defaults.dimensions,
+          settings: incoming?.settings ?? defaults.settings,
           permissions: {
-            owners: this.config.permissions.hostAdmins,
-            executors: this.config.deviceConfig?.permissions?.executors || [],
+            owners: hostAdmins,
+            executors: incoming?.permissions?.executors || [],
           },
         }) as DeviceConfig,
       );
-      this.hostConfig.set(objectUtils.deepCopy(this.config) as HostConfig);
+      this.hostConfig.set(
+        objectUtils.deepCopy({
+          ...this.hostConfig(),
+          ...this.config,
+        }) as HostConfig,
+      );
     }
 
     this.originalDeviceConfig = objectUtils.deepCopy(
