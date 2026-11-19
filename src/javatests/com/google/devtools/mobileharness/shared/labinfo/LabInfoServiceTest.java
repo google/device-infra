@@ -80,7 +80,6 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
 import com.google.devtools.mobileharness.shared.util.filter.CompiledLabInfoMask;
 import com.google.devtools.mobileharness.shared.util.filter.MaskUtils;
-import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -100,7 +99,6 @@ import org.mockito.junit.MockitoRule;
 public class LabInfoServiceTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
-  @Rule public final SetFlags flags = new SetFlags();
 
   private static final FieldScope FIELD_SCOPE =
       FieldScopes.ignoringFieldDescriptors(
@@ -238,62 +236,6 @@ public class LabInfoServiceTest {
             any(CompiledLabInfoMask.class),
             any(CompiledDeviceInfoMask.class));
     verify(labInfoProvider, never()).getLabInfos(any(Filter.class));
-    assertThat(response)
-        .withPartialScope(FIELD_SCOPE)
-        .isEqualTo(
-            GetLabInfoResponse.newBuilder()
-                .setLabQueryResult(
-                    LabQueryResult.newBuilder()
-                        .setLabView(
-                            LabView.newBuilder()
-                                .setLabTotalCount(1)
-                                .addLabData(
-                                    LabData.newBuilder()
-                                        .setLabInfo(
-                                            LabInfo.newBuilder()
-                                                .setLabLocator(
-                                                    LabLocator.newBuilder()
-                                                        .setHostName("fake_lab_host_name")))
-                                        .setDeviceList(
-                                            DeviceList.newBuilder()
-                                                .setDeviceTotalCount(2)
-                                                .addDeviceInfo(
-                                                    DeviceInfo.newBuilder()
-                                                        .setDeviceStatus(DeviceStatus.BUSY))
-                                                .addDeviceInfo(
-                                                    DeviceInfo.newBuilder()
-                                                        .setDeviceStatus(DeviceStatus.IDLE))))))
-                .build());
-  }
-
-  @Test
-  public void
-      getLabInfo_maskedQueryWithProjectionPushdownDisabled_usesUnmaskedProviderAndTrimsPostBuild()
-          throws Exception {
-    flags.set("enable_get_lab_info_projection_pushdown", "false");
-
-    GetLabInfoResponse response =
-        labInfoService.doGetLabInfo(
-            GetLabInfoRequest.newBuilder()
-                .setLabQuery(
-                    LabQuery.newBuilder()
-                        .setMask(
-                            Mask.newBuilder()
-                                .setLabInfoMask(
-                                    LabInfoMask.newBuilder()
-                                        .setFieldMask(
-                                            FieldMask.newBuilder()
-                                                .addPaths("lab_locator.host_name")))
-                                .setDeviceInfoMask(
-                                    DeviceInfoMask.newBuilder()
-                                        .setFieldMask(
-                                            FieldMask.newBuilder().addPaths("device_status")))))
-                .build());
-
-    verify(labInfoProvider).getLabInfos(Filter.getDefaultInstance());
-    verify(labInfoProvider, never())
-        .getLabInfos(
-            any(Filter.class), any(CompiledLabInfoMask.class), any(CompiledDeviceInfoMask.class));
     assertThat(response)
         .withPartialScope(FIELD_SCOPE)
         .isEqualTo(
