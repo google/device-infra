@@ -4,6 +4,7 @@ import {
   CommonParamsService,
   CommonQueryParamKey,
 } from './common_params_service';
+import {Environment} from './environment';
 
 /**
  * Service answering whether a frontend feature is enabled for the current
@@ -14,20 +15,26 @@ import {
  * opened to developers through the `force_*_ready` common query parameters
  * captured by {@link CommonParamsService}; `force_all_ready` is the master
  * switch implying every feature-specific flag. Graduating a feature to general
- * availability only requires its method here to stop consulting the flags.
+ * availability only requires its method here to stop consulting the flags,
+ * for every build or only for the Google-internal one.
  */
 @Injectable({providedIn: 'root'})
 export class FeatureEnablementService {
   private readonly commonParamsService = inject(CommonParamsService);
+  private readonly environment = inject(Environment);
 
   /**
    * Whether the bulk device configuration actions (Configure Wi-Fi / Configure
    * Dimension on the device search and host detail pages) are enabled.
-   * Developer-only for now: requires `force_bulk_config_ready` (or
+   * Generally available in the Google-internal build; developer-only in the
+   * OSS build, where they require `force_bulk_config_ready` (or
    * `force_all_ready`).
    */
   isBulkConfigEnabled(): boolean {
-    return this.isForceReady('force_bulk_config_ready');
+    return (
+      this.environment.isGoogleInternal() ||
+      this.isForceReady('force_bulk_config_ready')
+    );
   }
 
   /**

@@ -36,9 +36,9 @@ export function useBulkConfigActions(options: BulkConfigActionsOptions) {
   const featureEnablementService = inject(FeatureEnablementService);
 
   /**
-   * Bulk configuration is not generally available yet (see
-   * `FeatureEnablementService`): when it is disabled, no bulk configuration
-   * action is shown and no dimension loading is triggered.
+   * Bulk configuration availability is gated by `FeatureEnablementService`:
+   * when it is disabled, no bulk configuration action is shown and no dimension
+   * loading is triggered.
    */
   const isBulkConfigAvailable = computed(
     () =>
