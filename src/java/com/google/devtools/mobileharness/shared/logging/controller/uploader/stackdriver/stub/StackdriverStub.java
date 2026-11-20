@@ -16,20 +16,20 @@
 
 package com.google.devtools.mobileharness.shared.logging.controller.uploader.stackdriver.stub;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.shared.logging.annotation.Annotations.StackdriverSecretFileName;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ClientInterceptorFactory;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Inject;
@@ -40,49 +40,66 @@ import com.google.logging.v2.WriteLogEntriesResponse;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
 
 /** Stub of Mobile Harness Stackdriver Logging. */
 public class StackdriverStub {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private static final String LOGGING_SERVICE_TARGET = "logging.googleapis.com";
 
-  private static final ImmutableSet<String> WRITE_SCOPES =
+  @VisibleForTesting
+  static final ImmutableSet<String> WRITE_SCOPES =
       ImmutableSet.of("https://www.googleapis.com/auth/logging.write");
 
   private final AtomicBoolean isInitialized = new AtomicBoolean();
-
-  private final String secretFileName;
-
-  private final ResUtil resUtil;
+  private final AtomicBoolean isUploadSkipped = new AtomicBoolean();
 
   private final LocalFileUtil fileUtil;
+  private final ApplicationDefaultCredentialsProvider adcProvider;
 
-  @VisibleForTesting volatile LoggingServiceV2BlockingStub loggingServiceV2BlockingStub;
+  @VisibleForTesting @Nullable volatile LoggingServiceV2BlockingStub loggingServiceV2BlockingStub;
 
   @Inject
-  StackdriverStub(ResUtil resUtil, @StackdriverSecretFileName String secretFileName) {
-    this(resUtil, secretFileName, new LocalFileUtil());
+  StackdriverStub(LocalFileUtil fileUtil) {
+    this(fileUtil, GoogleCredentials::getApplicationDefault);
   }
 
-  StackdriverStub(ResUtil resUtil, String secretFileName, LocalFileUtil fileUtil) {
-    this.resUtil = resUtil;
-    this.secretFileName = secretFileName;
+  @VisibleForTesting
+  StackdriverStub(LocalFileUtil fileUtil, ApplicationDefaultCredentialsProvider adcProvider) {
     this.fileUtil = fileUtil;
+    this.adcProvider = adcProvider;
+  }
+
+  @VisibleForTesting
+  interface ApplicationDefaultCredentialsProvider {
+    GoogleCredentials get() throws IOException;
   }
 
   public void init() throws MobileHarnessException {
     checkState(!isInitialized.getAndSet(true), "StackdriverStub has already been initialized");
-    String clientSecretFilePath = getCredentialFromFlag().orElse(null);
-    checkNotNull(
-        clientSecretFilePath, "Please provide the credential key via flag stackdriver_cred_file.");
     List<ClientInterceptor> interceptors = Lists.newArrayList();
     interceptors.add(ClientInterceptorFactory.authorityInterceptor(LOGGING_SERVICE_TARGET));
-    interceptors.add(
-        ClientInterceptorFactory.credentialInterceptor(
-            new File(clientSecretFilePath), WRITE_SCOPES));
+    Optional<String> clientSecretFilePath = getCredentialFromFlag();
+    if (clientSecretFilePath.isPresent()) {
+      logger.atInfo().log(
+          "Using local credential file for Stackdriver logging: %s", clientSecretFilePath.get());
+      interceptors.add(
+          ClientInterceptorFactory.credentialInterceptor(
+              new File(clientSecretFilePath.get()), WRITE_SCOPES));
+    } else {
+      Optional<GoogleCredentials> adc = loadApplicationDefaultCredentials();
+      if (adc.isEmpty()) {
+        isUploadSkipped.set(true);
+        return;
+      }
+      interceptors.add(ClientInterceptorFactory.credentialInterceptor(adc.get()));
+    }
 
     this.loggingServiceV2BlockingStub =
         LoggingServiceV2Grpc.newBlockingStub(
@@ -93,7 +110,7 @@ public class StackdriverStub {
 
   private Optional<String> getCredentialFromFlag() throws MobileHarnessException {
     String credentialFilePath = Flags.stackdriverCredentialFile.get();
-    if (credentialFilePath != null) {
+    if (!Strings.isNullOrEmpty(credentialFilePath)) {
       if (!fileUtil.isFileExist(credentialFilePath)) {
         throw new MobileHarnessException(
             InfraErrorId.LOGGER_STACKDRIVER_CLIENT_SECRET_FILE_ERROR,
@@ -104,14 +121,38 @@ public class StackdriverStub {
     return Optional.empty();
   }
 
+  private Optional<GoogleCredentials> loadApplicationDefaultCredentials() {
+    try {
+      GoogleCredentials credentials = adcProvider.get();
+      logApplicationDefaultCredentials(credentials);
+      return Optional.of(credentials.createScoped(WRITE_SCOPES));
+    } catch (IOException e) {
+      logger.atWarning().withCause(e).log(
+          "Skipping Stackdriver logging upload because Application Default Credentials could not"
+              + " be loaded. Provide --stackdriver_cred_file or configure Application Default"
+              + " Credentials.");
+      return Optional.empty();
+    }
+  }
+
+  private static void logApplicationDefaultCredentials(GoogleCredentials credentials) {
+    logger.atInfo().log(
+        "Using Application Default Credentials (%s) for Stackdriver logging.",
+        credentials.getClass().getSimpleName());
+  }
+
   /** Writes the log entries to Stackdriver. */
   @CanIgnoreReturnValue
   public WriteLogEntriesResponse writeLogEntries(WriteLogEntriesRequest writeLogEntriesRequest)
       throws MobileHarnessException {
-    checkNotNull(loggingServiceV2BlockingStub);
+    LoggingServiceV2BlockingStub stub = loggingServiceV2BlockingStub;
+    if (stub == null) {
+      checkState(isUploadSkipped.get(), "StackdriverStub has not been initialized");
+      return WriteLogEntriesResponse.getDefaultInstance();
+    }
     try {
       return GrpcStubUtil.invoke(
-          loggingServiceV2BlockingStub::writeLogEntries,
+          stub::writeLogEntries,
           writeLogEntriesRequest,
           InfraErrorId.LOGGER_STACKDRIVER_WRITE_RPC_ERROR,
           "Failed to call WriteLogEntries.");
