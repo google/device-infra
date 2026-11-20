@@ -346,6 +346,7 @@ export abstract class SearchPageStore<
   abstract resolveChipsFromBackend(
     parsedFilters: FilterChip[],
     groupByKeys: string[],
+    source?: string,
   ): Observable<FilterChip[]>;
   /** Builds the ValuePicker configuration for the specified filter key. */
   abstract buildPickerConfig(

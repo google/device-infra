@@ -39,6 +39,7 @@ export interface SearchUrlSyncHost {
   resolveChipsFromBackend(
     parsedFilters: FilterChip[],
     groupByKeys: string[],
+    source?: string,
   ): Observable<FilterChip[]>;
   restoreDefaultState(updateUrl?: boolean): void;
 }

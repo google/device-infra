@@ -324,6 +324,7 @@ export function buildFleetChipResolverInput(
   groupByKeys: readonly string[],
   entity: EntityType,
   fleet: string,
+  source?: string,
 ): {
   filterPairs: Array<FilterPair<Filter>>;
   req: FleetChipResolverRequest;
@@ -341,6 +342,7 @@ export function buildFleetChipResolverInput(
       groupByKeys: groupByKeys.length > 0 ? [...groupByKeys] : undefined,
       entity: toSearchEntityProto(entity),
       fleet: toFleetProto(fleet),
+      source: source || undefined,
     },
   };
 }

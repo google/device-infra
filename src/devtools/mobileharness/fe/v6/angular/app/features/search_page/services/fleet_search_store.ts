@@ -47,7 +47,6 @@ import {
   buildFleetKeyMetadataMap,
   buildFleetPickerConfig,
   computeFleetRangeText,
-  createGroupByChip,
   extractAppliedFleetPickerChips,
   extractChipsFromFleetSuggestion,
   getStoredPageSize,
@@ -488,12 +487,14 @@ export class FleetSearchStore extends SearchPageStore<FleetSuggestion, Filter> {
   override resolveChipsFromBackend(
     parsedFilters: FilterChip[],
     groupByKeys: string[],
+    source?: string,
   ): Observable<FilterChip[]> {
     const {filterPairs, req} = buildFleetChipResolverInput(
       parsedFilters,
       groupByKeys,
       this.entity(),
       this.fleet(),
+      source,
     );
     return this.searchService.resolveFleetChips(req).pipe(
       map((res) => {
@@ -505,9 +506,6 @@ export class FleetSearchStore extends SearchPageStore<FleetSuggestion, Filter> {
         if (warningText) this.snackBarService.showWarning(warningText);
         return chips;
       }),
-      catchError(() =>
-        of([...parsedFilters, ...groupByKeys.map((k) => createGroupByChip(k))]),
-      ),
     );
   }
 

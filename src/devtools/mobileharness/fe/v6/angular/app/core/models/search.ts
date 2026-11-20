@@ -95,6 +95,7 @@ export declare interface FleetChipResolverRequest {
   groupByKeys?: string[];
   entity?: SearchEntity;
   fleet?: Fleet;
+  source?: string;
 }
 
 /** Fleet chip resolver response. */

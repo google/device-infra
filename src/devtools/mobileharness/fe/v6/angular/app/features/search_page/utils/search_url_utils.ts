@@ -250,6 +250,7 @@ export function buildOutgoingUrlQueryParams(
     'gb': groupBys.length > 0 ? groupBys.join(',') : null,
     'fleet': fleet !== 'internal' ? fleet : null,
     'q': null,
+    'src': null,
   };
   for (const key of legacyKeys) {
     queryParams[key] = null;

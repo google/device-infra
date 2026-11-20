@@ -27,6 +27,8 @@ export function useSearchUrlSync(host: SearchUrlSyncHost) {
   const resolveFiltersSubject = new Subject<{
     parsedFilters: FilterChip[];
     gbKeys: string[];
+    source?: string;
+    baseKey?: string;
   } | null>();
 
   /** Cancels any in-flight backend chip resolution request and clears the resolving indicator. */
@@ -52,7 +54,7 @@ export function useSearchUrlSync(host: SearchUrlSyncHost) {
     );
   }
 
-  /** Parses incoming URL query parameters (`f`, `gb`, `fleet`, `q`) and triggers backend chip resolution. */
+  /** Parses incoming URL query parameters (`f`, `gb`, `fleet`, `q`, `src`) and triggers backend chip resolution. */
   function syncFromQueryParams(
     params: Record<string, unknown> | null | undefined,
   ): void {
@@ -70,9 +72,11 @@ export function useSearchUrlSync(host: SearchUrlSyncHost) {
     const fParams = getQueryParamAsArray(params['f']);
     const {parsedFilters, groupByKeys, initialChips} = parseUrlChips(params);
     const qParam = getQueryParamAsArray(params['q'])[0] || '';
+    const srcParam = getQueryParamAsArray(params['src'])[0] || '';
 
-    const baseKey = buildUrlParamKey(fParams, groupByKeys, fleetParam);
-    const incomingKey = qParam ? `${baseKey}|q:${qParam}` : baseKey;
+    const urlKey = buildUrlParamKey(fParams, groupByKeys, fleetParam);
+    const baseKey = qParam ? `${urlKey}|q:${qParam}` : urlKey;
+    const incomingKey = srcParam ? `${baseKey}|src:${srcParam}` : baseKey;
     if (incomingKey === lastSyncedUrlKey) return;
     lastSyncedUrlKey = incomingKey;
     host.cancelPendingLegacyTranslation();
@@ -80,10 +84,23 @@ export function useSearchUrlSync(host: SearchUrlSyncHost) {
     if (fParams.length === 0 && groupByKeys.length === 0) {
       cancelPendingChipResolution();
       host.restoreDefaultState(false);
+      if (srcParam) {
+        resolveFiltersSubject.next({
+          parsedFilters: [],
+          gbKeys: [],
+          source: srcParam,
+          baseKey,
+        });
+      }
     } else {
       host.activeChips.set(initialChips);
       isResolvingChips.set(true);
-      resolveFiltersSubject.next({parsedFilters, gbKeys: groupByKeys});
+      resolveFiltersSubject.next({
+        parsedFilters,
+        gbKeys: groupByKeys,
+        source: srcParam || undefined,
+        baseKey,
+      });
     }
 
     if (qParam) {
@@ -124,22 +141,70 @@ export function useSearchUrlSync(host: SearchUrlSyncHost) {
       });
   }
 
+  /** Strips only the transient `src` query parameter from the browser URL in-place. */
+  function stripSourceQueryParam(baseKey?: string): void {
+    if (!host.isCurrentRouteActive() || host.router.currentNavigation()) {
+      return;
+    }
+    if (baseKey !== undefined) {
+      lastSyncedUrlKey = baseKey;
+    }
+    isInternalUrlSync = true;
+    host.router
+      .navigate([], {
+        relativeTo: host.route,
+        queryParams: {'src': null},
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      })
+      .then(() => {
+        setTimeout(() => {
+          isInternalUrlSync = false;
+        }, 0);
+      });
+  }
+
   resolveFiltersSubject
     .pipe(
       switchMap((req) => {
         if (!req) return EMPTY;
-        const {parsedFilters, gbKeys} = req;
-        if (parsedFilters.length === 0 && gbKeys.length === 0) return of([]);
-        return host.resolveChipsFromBackend(parsedFilters, gbKeys).pipe(
-          map((resolvedChips) => resolvedChips || []),
-          catchError(() => of([])),
+        const {parsedFilters, gbKeys, source, baseKey} = req;
+        const hasChipsToResolve = parsedFilters.length > 0 || gbKeys.length > 0;
+        if (!hasChipsToResolve && !source) {
+          return of({
+            chips: [] as FilterChip[],
+            updateChips: false,
+            stripSource: false,
+            baseKey,
+          });
+        }
+        return host.resolveChipsFromBackend(parsedFilters, gbKeys, source).pipe(
+          map((resolvedChips) => ({
+            chips: resolvedChips || [],
+            updateChips: hasChipsToResolve,
+            stripSource: Boolean(source),
+            baseKey,
+          })),
+          catchError(() =>
+            of({
+              chips: [] as FilterChip[],
+              updateChips: false,
+              stripSource: false,
+              baseKey,
+            }),
+          ),
         );
       }),
       takeUntilDestroyed(host.destroyRef),
     )
-    .subscribe((updatedChips) => {
-      host.activeChips.set(updatedChips || []);
+    .subscribe(({chips, updateChips, stripSource, baseKey}) => {
+      if (updateChips) {
+        host.activeChips.set(chips);
+      }
       isResolvingChips.set(false);
+      if (stripSource) {
+        stripSourceQueryParam(baseKey);
+      }
     });
 
   host.route.queryParams
@@ -173,7 +238,13 @@ export function useSearchUrlSync(host: SearchUrlSyncHost) {
           host.fleet.set(fleetParam);
         }
       }
-      if (qp?.['f'] || qp?.['gb'] || qp?.['q'] || hasLegacyParams) {
+      if (
+        qp?.['f'] ||
+        qp?.['gb'] ||
+        qp?.['q'] ||
+        qp?.['src'] ||
+        hasLegacyParams
+      ) {
         syncFromQueryParams(qp);
         return;
       }

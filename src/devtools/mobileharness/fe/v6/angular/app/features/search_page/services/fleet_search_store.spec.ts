@@ -3407,5 +3407,115 @@ describe('FleetSearchStore', () => {
       expect(store.isResolvingChips()).toBeFalse();
       expect(store.isLoading()).toBeFalse();
     });
+
+    it('forwards src query parameter as source in resolveFleetChips and strips src from the URL', async () => {
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [
+            {valid: {pillKey: 'Type', pillCondition: 'AndroidRealDevice'}},
+          ],
+          groupByChips: [{valid: {pillKey: 'Status', displayName: 'Status'}}],
+        }),
+      );
+      const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+
+      await createStoreAt({
+        'f': 'device_field::type~AndroidRealDevice',
+        'gb': 'device_field::status',
+        'src': 'alloc_diag',
+      });
+      await flushAsync();
+
+      expect(mockSearchService.resolveFleetChips).toHaveBeenCalledOnceWith({
+        filters: [
+          {
+            key: 'device_field::type',
+            simple: {
+              values: [{value: 'AndroidRealDevice'}],
+              negated: false,
+            },
+          },
+        ],
+        groupByKeys: ['device_field::status'],
+        entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+        fleet: Fleet.FLEET_SELF,
+        source: 'alloc_diag',
+      });
+      expect(navigateSpy).toHaveBeenCalledWith(
+        [],
+        jasmine.objectContaining({
+          queryParams: {'src': null},
+          replaceUrl: true,
+        }),
+      );
+      expect(router.url).not.toContain('src=');
+    });
+
+    it('keeps src in the URL and preserves initial chips when resolveFleetChips fails with an RPC error', async () => {
+      mockSearchService.resolveFleetChips.and.returnValue(
+        throwError(() => new Error('RPC failed')),
+      );
+      const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+
+      const store = await createStoreAt({
+        'f': 'device_field::type~AndroidRealDevice',
+        'gb': 'device_field::status',
+        'src': 'alloc_diag',
+      });
+      await flushAsync();
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+      expect(router.url).toContain('src=alloc_diag');
+      expect(store.activeChips().length).toBe(2);
+    });
+
+    it('forwards src query parameter and strips src even when f and gb are absent', async () => {
+      mockSearchService.resolveFleetChips.and.returnValue(of({}));
+      const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+
+      await createStoreAt({'src': 'cli'});
+      await flushAsync();
+
+      expect(mockSearchService.resolveFleetChips).toHaveBeenCalledOnceWith({
+        filters: undefined,
+        groupByKeys: undefined,
+        entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+        fleet: Fleet.FLEET_SELF,
+        source: 'cli',
+      });
+      expect(navigateSpy).toHaveBeenCalledWith(
+        [],
+        jasmine.objectContaining({
+          queryParams: {'src': null},
+          replaceUrl: true,
+        }),
+      );
+      expect(router.url).not.toContain('src=');
+    });
+
+    it('skips stripping src when another router navigation is already in flight', async () => {
+      const resolveSubject = new Subject<FleetChipResolverResponse>();
+      mockSearchService.resolveFleetChips.and.returnValue(resolveSubject);
+
+      await createStoreAt({
+        'f': 'device_field::type~AndroidRealDevice',
+        'src': 'alloc_diag',
+      });
+
+      const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+      spyOn(router, 'currentNavigation').and.returnValue(
+        {} as ReturnType<Router['currentNavigation']>,
+      );
+
+      resolveSubject.next({
+        filterChips: [
+          {valid: {pillKey: 'Type', pillCondition: 'AndroidRealDevice'}},
+        ],
+        groupByChips: [],
+      });
+      await flushAsync();
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
   });
 });
