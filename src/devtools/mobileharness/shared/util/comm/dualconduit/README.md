@@ -86,6 +86,25 @@ docker run -d --name dialer --network dualconduit-net dualconduit/dialer:latest 
 Example: `-L 8080:localhost:80` This will forward traffic arriving at port
 `8080` on the Dialer side to `localhost:80` on the Acceptor side.
 
+> [!NOTE] A connection through a conduit is opened towards the destination only
+> when the client sends its first bytes. Protocols in which the client speaks
+> first, such as HTTP and gRPC, work as usual. A protocol in which the server
+> speaks first (for example one that starts with a server greeting) does not
+> work through a conduit: the client waits for data that the destination is
+> never asked for.
+
+> [!NOTE] If a client closes its connection while nothing is being sent to it,
+> the destination is not told that the client is gone. TCP itself cannot tell
+> that case from a client that only finished sending. The destination's
+> connection is reset as soon as data for the client arrives and is refused.
+
+> [!NOTE] A connection to the entry port always succeeds, because it is accepted
+> before the destination is contacted. If the destination cannot be reached, the
+> client's connection is reset after its first bytes. More generally, a client
+> or a destination sees a clean end of its connection only when the other one
+> finished sending cleanly; every other end, such as a lost tunnel connection,
+> shows as a connection reset.
+
 #### 2. Via gRPC
 
 The Dialer exposes a gRPC service (`DualConduitService`) that allows you to
@@ -147,6 +166,25 @@ Example using `socat`:
 ```bash
 socat TCP-LISTEN:local-port,reuseaddr,fork OPENSSL:envoy-proxy:port,verify=0,sni=SNI_VALUE
 ```
+
+## Compatibility between Dialer and Acceptor
+
+The Dialer and the Acceptor of a conduit should speak the same protocol version
+(`ProtocolVersion` in `version/version.go`). Versions 0.1.2 and older speak
+protocol version 0, and version 0.2.0 speaks protocol version 1. The Dialer
+sends its protocol version when it sets up a conduit, and the Acceptor compares
+it with its own:
+
+*   A Dialer of an older protocol version that the Acceptor still serves is
+    served in that version, and the Acceptor logs a warning. A Dialer of version
+    0.1.2 or older keeps working as it did before the Acceptor was upgraded, and
+    gets the behavior of 0.2.0 when it is upgraded itself.
+*   Any other Dialer whose protocol version differs is refused with an error
+    that says which side to upgrade. The Dialer logs the error and exits.
+
+When upgrading across a protocol version, upgrade the Acceptor first and then
+its Dialers. An Acceptor of version 0.1.2 or older does not compare versions, so
+a newer Dialer that connects to it is not told about the mismatch.
 
 ## Tearing Down a Conduit or a Session
 

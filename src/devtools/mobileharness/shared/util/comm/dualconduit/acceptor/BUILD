@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -31,6 +31,7 @@ go_library(
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/conduit",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/mesh",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/version",
         "@com_github_rsocket_rsocket_go//:rsocket-go",
         "@com_github_rsocket_rsocket_go//core/transport",
         "@com_github_rsocket_rsocket_go//payload",
@@ -41,6 +42,21 @@ go_library(
         "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel//codes",
         "@io_opentelemetry_go_otel//propagation",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "acceptor_test",
+    srcs = ["acceptor_test.go"],
+    embed = [":acceptor"],
+    deps = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/mesh",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/version",
+        "@com_github_rsocket_rsocket_go//:rsocket-go",
+        "@com_github_rsocket_rsocket_go//core/transport",
+        "@com_github_rsocket_rsocket_go//payload",
         "@org_golang_google_protobuf//proto",
     ],
 )

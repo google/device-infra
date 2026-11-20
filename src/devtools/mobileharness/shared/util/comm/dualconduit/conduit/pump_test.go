@@ -8,12 +8,14 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/rsocket/rsocket-go/payload"
 	"github.com/rsocket/rsocket-go"
 	"github.com/rsocket/rsocket-go/rx/flux"
+	"github.com/rsocket/rsocket-go/rx"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -23,6 +25,32 @@ type mockCloseable struct {
 
 func (m mockCloseable) Close() error          { return nil }
 func (m mockCloseable) OnClose(f func(error)) {}
+
+// echoChannel answers a stream by sending back every payload of the
+// Requester, markers included. It requests payloads the way rsocket-go and a
+// Responder do between them: one payload first, the one that opens the
+// stream, and the rest once that payload has arrived.
+func echoChannel(msgs flux.Flux) flux.Flux {
+	out := flux.CreateProcessor()
+	var su rx.Subscription
+	confirmed := false
+	msgs.Subscribe(context.Background(),
+		rx.OnSubscribe(func(_ context.Context, s rx.Subscription) {
+			su = s
+			s.Request(1)
+		}),
+		rx.OnNext(func(p payload.Payload) error {
+			out.Next(payload.Clone(p))
+			if !confirmed {
+				confirmed = true
+				su.Request(rx.RequestMax)
+			}
+			return nil
+		}),
+		rx.OnComplete(func() { out.Complete() }),
+	)
+	return out
+}
 
 // freePort returns a random available TCP port.
 func freePort() int {
@@ -67,8 +95,7 @@ func TestStartListeningLoop_MultipleStreams(t *testing.T) {
 	fakeRSocket := rsocket.NewAbstractSocket(
 		rsocket.RequestChannel(func(msgs flux.Flux) flux.Flux {
 			streamCounter.Add(1)
-			// We copy the msgs flux to act as an echo
-			return msgs
+			return echoChannel(msgs)
 		}),
 	)
 
@@ -133,17 +160,13 @@ func TestStartListeningLoop_MultipleStreams(t *testing.T) {
 		t.Fatalf("Client 2 ReadFull() = %q, %v, want %q, %v", string(buf), err, "ping", nil)
 	}
 
-	// 3. Cancel Conduit, verify all clients get disconnected
+	// 3. Cancel the conduit. It closes in the middle of the streams that are
+	// still open, so their clients must see a reset, not a clean end.
 	cancel()
 
-	_, err = clients[2].Write([]byte("ping"))
-	if err == nil {
-		// Even if write succeeds due to OS buffer, next read should fail due to close
-		clients[2].SetReadDeadline(time.Now().Add(500 * time.Millisecond))
-		_, err = clients[2].Read(buf)
-		if err == nil {
-			t.Errorf("Client 2 connection: got no error, want error indicating connection closure after conduit cancel")
-		}
+	clients[2].SetReadDeadline(time.Now().Add(5 * time.Second))
+	if _, err := io.Copy(io.Discard, clients[2]); !errors.Is(err, syscall.ECONNRESET) {
+		t.Errorf("client connection ended with %v after the conduit was cancelled, want %v", err, syscall.ECONNRESET)
 	}
 }
 
@@ -282,9 +305,7 @@ func TestCombinedLoopAndAccept(t *testing.T) {
 	defer cancel()
 
 	fakeRSocket := rsocket.NewAbstractSocket(
-		rsocket.RequestChannel(func(msgs flux.Flux) flux.Flux {
-			return msgs
-		}),
+		rsocket.RequestChannel(echoChannel),
 	)
 	c := New(ctx, "test", nil, mockCloseable{fakeRSocket}, func() {}, nil, trace.SpanContext{}, nil, nil)
 
@@ -340,12 +361,14 @@ func TestHalfClose_Ingress_ClientCloseWrite(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
+	// The echo sends the FIN marker of the client back, so both directions
+	// of the stream end and the Requester completes it.
 	completed := make(chan struct{})
 	fakeRSocket := rsocket.NewAbstractSocket(
 		rsocket.RequestChannel(func(msgs flux.Flux) flux.Flux {
-			return msgs.DoOnComplete(func() {
+			return echoChannel(msgs.DoOnComplete(func() {
 				close(completed)
-			})
+			}))
 		}),
 	)
 
@@ -372,22 +395,21 @@ func TestHalfClose_Ingress_ClientCloseWrite(t *testing.T) {
 	// Trigger half-close
 	tcpConn.CloseWrite()
 
-	// Wait for downstream push
-	buf := make([]byte, 100)
-	n, err := tcpConn.Read(buf)
-	if err != nil && err != io.EOF {
-		t.Fatalf("Unexpected read error: %v", err)
+	// Wait for echoed request and clean EOF (echoChannel echoes client's FIN marker).
+	tcpConn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	gotReq, err := io.ReadAll(tcpConn)
+	if err != nil {
+		t.Fatalf("io.ReadAll(tcpConn) unexpected error: %v", err)
 	}
-
-	if string(buf[:n]) != "req" {
-		t.Fatalf("During half-close read got %q, want %q", string(buf[:n]), "req")
+	if string(gotReq) != "req" {
+		t.Fatalf("io.ReadAll(tcpConn) = %q, want %q", string(gotReq), "req")
 	}
 
 	select {
 	case <-completed:
 		// Success
 	case <-time.After(5 * time.Second):
-		t.Fatalf("Upstream stream was not completed upon Client CloseWrite")
+		t.Fatalf("Upstream stream was not completed after the client half-closed and the remote side finished")
 	}
 }
 
@@ -442,15 +464,117 @@ func TestHalfClose_Egress_ServerCloseWrite(t *testing.T) {
 
 	outFlux := AcceptStream(c, fmt.Sprintf("localhost:%d", port), f)
 
-	res, err := outFlux.BlockLast(ctx)
-	if err != nil {
-		t.Fatalf("outFlux blockFirst error: %v", err)
+	// Collect data and verify the FIN marker payload is emitted.
+	var got []byte
+	var sawFinMarker bool
+	collect := func(p payload.Payload) error {
+		if meta, ok := p.Metadata(); ok && string(meta) == "dcon:fin" && len(p.Data()) == 0 {
+			sawFinMarker = true
+		}
+		got = append(got, p.Data()...)
+		return nil
 	}
-	if string(res.Data()) != "response" {
-		t.Fatalf("outFlux data got %q, want %q", string(res.Data()), "response")
+	if _, err := outFlux.DoOnNext(collect).BlockLast(ctx); err != nil {
+		t.Fatalf("outFlux BlockLast error: %v", err)
+	}
+	if string(got) != "response" {
+		t.Fatalf("outFlux data got %q, want %q", string(got), "response")
+	}
+	if !sawFinMarker {
+		t.Errorf("outFlux did not emit dcon:fin marker on server CloseWrite")
 	}
 
 	// Since f completed, and rxconn mirrors EOF locally (CloseWrite on the dialed connection)
 	// the server should have read an EOF.
 	<-serverDone // Wait for server to finish reading EOF and close
+}
+
+func TestAcceptStream_UnreachableDestinationRefusesWithRST(t *testing.T) {
+	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+	if err != nil {
+		t.Fatalf("syscall.Socket unexpected error: %v", err)
+	}
+	t.Cleanup(func() { _ = syscall.Close(fd) })
+	if err := syscall.Bind(fd, &syscall.SockaddrInet4{Addr: [4]byte{127, 0, 0, 1}}); err != nil {
+		t.Fatalf("syscall.Bind unexpected error: %v", err)
+	}
+	sa, err := syscall.Getsockname(fd)
+	if err != nil {
+		t.Fatalf("syscall.Getsockname unexpected error: %v", err)
+	}
+	unreachable := fmt.Sprintf("127.0.0.1:%d", sa.(*syscall.SockaddrInet4).Port)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	c := New(ctx, "test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() {}, nil, trace.SpanContext{}, nil, nil)
+
+	in := flux.CreateProcessor()
+	out := AcceptStream(c, unreachable, in)
+	if got := c.ActiveStreams(); got != 1 {
+		t.Errorf("ActiveStreams() while refused stream open = %d, want 1", got)
+	}
+
+	var markers []string
+	outDone := make(chan struct{})
+	out.Subscribe(ctx,
+		rx.OnSubscribe(func(_ context.Context, su rx.Subscription) { su.Request(rx.RequestMax) }),
+		rx.OnNext(func(p payload.Payload) error {
+			meta, _ := p.Metadata()
+			markers = append(markers, string(meta))
+			return nil
+		}),
+		rx.OnComplete(func() { close(outDone) }),
+	)
+
+	select {
+	case <-outDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("AcceptStream() outgoing Flux did not complete within 5s")
+	}
+	if len(markers) != 1 || markers[0] != "dcon:rst" {
+		t.Errorf("AcceptStream() markers = %q, want [\"dcon:rst\"]", markers)
+	}
+
+	in.Complete()
+	for deadline := time.Now().Add(5 * time.Second); c.ActiveStreams() != 0 && time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
+	}
+	if got := c.ActiveStreams(); got != 0 {
+		t.Errorf("ActiveStreams() after inbound Complete = %d, want 0", got)
+	}
+}
+
+func TestConduitClose_ConcurrentWithStreamStart(t *testing.T) {
+	for range 20 {
+		ctx, cancel := context.WithCancel(t.Context())
+		c := New(ctx, "race-test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() {}, nil, trace.SpanContext{}, nil, nil)
+		lis, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			cancel()
+			t.Fatalf("net.Listen unexpected error: %v", err)
+		}
+		addr := lis.Addr().String()
+		go StartListeningLoop(c, func() (net.Listener, error) { return lis, nil })
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			for range 5 {
+				if conn, err := net.Dial("tcp", addr); err == nil {
+					conn.Close()
+				}
+				in := flux.Just(payload.New([]byte("x"), nil))
+				_ = AcceptStream(c, addr, in)
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			_ = c.Close()
+		}()
+		wg.Wait()
+		if got := c.ActiveStreams(); got != 0 {
+			t.Errorf("ActiveStreams() after Close() = %d, want 0", got)
+		}
+		cancel()
+	}
 }
