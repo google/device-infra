@@ -47,4 +47,13 @@ message AndroidEmulatorVideoDecoratorSpec {
     help: "Maximum time limit to record video for. If not set, "
           "will use the decorator default."
   }];
+
+  // Whether to keep the recorded video when the test passes.
+  optional bool video_on_pass = 4 [
+    default = true,
+    (field_detail) = {
+      help: "Whether to keep the recorded video when the test passes. "
+            "Defaults to true."
+    }
+  ];
 }

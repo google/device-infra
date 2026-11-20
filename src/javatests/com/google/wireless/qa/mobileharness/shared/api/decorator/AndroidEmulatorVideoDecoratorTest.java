@@ -21,12 +21,19 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -67,6 +74,8 @@ public class AndroidEmulatorVideoDecoratorTest {
   @Mock private Adb adb;
   @Mock private Clock clock;
   @Mock private Properties properties;
+  @Mock private Result resultWithCause;
+  @Mock private LocalFileUtil localFileUtil;
 
   private AndroidEmulatorVideoDecorator decorator;
   private File genFileDir;
@@ -89,7 +98,7 @@ public class AndroidEmulatorVideoDecoratorTest {
 
     decorator =
         new AndroidEmulatorVideoDecorator(
-            decoratedDriver, testInfo, adb, Sleeper.noOpSleeper(), clock);
+            decoratedDriver, testInfo, adb, Sleeper.noOpSleeper(), clock, localFileUtil);
   }
 
   @Test
@@ -235,6 +244,8 @@ public class AndroidEmulatorVideoDecoratorTest {
   public void onEnd_stopsRecordingAndValidatesFiles() throws Exception {
     AndroidEmulatorVideoDecoratorSpec spec = AndroidEmulatorVideoDecoratorSpec.getDefaultInstance();
     when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(testInfo.resultWithCause()).thenReturn(resultWithCause);
+    when(resultWithCause.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, null));
     decorator.onStart(testInfo);
 
     // Start recording so we have generatedFiles populated
@@ -247,6 +258,7 @@ public class AndroidEmulatorVideoDecoratorTest {
 
     decorator.onEnd(testInfo);
 
+    verify(localFileUtil, never()).removeFileOrDir(any(Path.class));
     String expectedStopPath =
         Path.of(genFileDir.getAbsolutePath()).resolve("video-1.webm").toString();
     verify(adb)
@@ -289,5 +301,91 @@ public class AndroidEmulatorVideoDecoratorTest {
         assertThrows(MobileHarnessException.class, () -> decorator.onEnd(testInfo));
     assertThat(e.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_EMULATOR_VIDEO_DECORATOR_VIDEO_FILE_EMPTY);
+  }
+
+  @Test
+  public void onEnd_videoOnPassFalseAndTestPass_deletesGeneratedFiles() throws Exception {
+    AndroidEmulatorVideoDecoratorSpec spec =
+        AndroidEmulatorVideoDecoratorSpec.newBuilder().setVideoOnPass(false).build();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(testInfo.resultWithCause()).thenReturn(resultWithCause);
+    when(resultWithCause.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, null));
+    decorator.onStart(testInfo);
+
+    decorator.runTimerTask(testInfo);
+    decorator.runTimerTask(testInfo);
+
+    decorator.onEnd(testInfo);
+
+    verify(localFileUtil)
+        .removeFileOrDir(Path.of(genFileDir.getAbsolutePath()).resolve("video-1.webm"));
+    verify(localFileUtil)
+        .removeFileOrDir(Path.of(genFileDir.getAbsolutePath()).resolve("video-2.webm"));
+  }
+
+  @Test
+  public void onEnd_videoOnPassFalseAndTestFail_keepsGeneratedFiles() throws Exception {
+    AndroidEmulatorVideoDecoratorSpec spec =
+        AndroidEmulatorVideoDecoratorSpec.newBuilder().setVideoOnPass(false).build();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(testInfo.resultWithCause()).thenReturn(resultWithCause);
+    when(resultWithCause.get())
+        .thenReturn(
+            ResultTypeWithCause.create(
+                TestResult.FAIL,
+                new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "test failed")));
+    decorator.onStart(testInfo);
+
+    decorator.runTimerTask(testInfo);
+
+    File videoFile = new File(genFileDir, "video-1.webm");
+    Files.writeString(videoFile.toPath(), "video data");
+
+    decorator.onEnd(testInfo);
+
+    verify(localFileUtil, never()).removeFileOrDir(any(Path.class));
+  }
+
+  @Test
+  public void onEnd_videoOnPassTrueAndTestPass_keepsGeneratedFiles() throws Exception {
+    AndroidEmulatorVideoDecoratorSpec spec =
+        AndroidEmulatorVideoDecoratorSpec.newBuilder().setVideoOnPass(true).build();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(testInfo.resultWithCause()).thenReturn(resultWithCause);
+    when(resultWithCause.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, null));
+    decorator.onStart(testInfo);
+
+    decorator.runTimerTask(testInfo);
+
+    File videoFile = new File(genFileDir, "video-1.webm");
+    Files.writeString(videoFile.toPath(), "video data");
+
+    decorator.onEnd(testInfo);
+
+    verify(localFileUtil, never()).removeFileOrDir(any(Path.class));
+  }
+
+  @Test
+  public void onEnd_videoOnPassFalseAndDeleteFails_continuesDeletingRemainingFiles()
+      throws Exception {
+    AndroidEmulatorVideoDecoratorSpec spec =
+        AndroidEmulatorVideoDecoratorSpec.newBuilder().setVideoOnPass(false).build();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(testInfo.resultWithCause()).thenReturn(resultWithCause);
+    when(resultWithCause.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, null));
+    doThrow(new MobileHarnessException(BasicErrorId.LOCAL_FILE_OR_DIR_REMOVE_ERROR, "rm failed"))
+        .when(localFileUtil)
+        .removeFileOrDir(any(Path.class));
+    decorator.onStart(testInfo);
+
+    decorator.runTimerTask(testInfo);
+    decorator.runTimerTask(testInfo);
+
+    decorator.onEnd(testInfo);
+
+    verify(localFileUtil)
+        .removeFileOrDir(Path.of(genFileDir.getAbsolutePath()).resolve("video-1.webm"));
+    verify(localFileUtil)
+        .removeFileOrDir(Path.of(genFileDir.getAbsolutePath()).resolve("video-2.webm"));
   }
 }

@@ -25,6 +25,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.AsyncTimerDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -52,21 +54,29 @@ public class AndroidEmulatorVideoDecorator extends AsyncTimerDecorator
   private final Adb adb;
   private final Sleeper sleeper;
   private final Clock clock;
+  private final LocalFileUtil localFileUtil;
   private final AtomicInteger videoCount = new AtomicInteger(0);
 
   private final AtomicBoolean running = new AtomicBoolean(false);
 
   private final Set<Path> generatedFiles = Sets.newConcurrentHashSet();
 
-  private AndroidEmulatorVideoDecoratorSpec emulatorVideoDecoratorSpec;
+  private AndroidEmulatorVideoDecoratorSpec emulatorVideoDecoratorSpec =
+      AndroidEmulatorVideoDecoratorSpec.getDefaultInstance();
 
   @Inject
   AndroidEmulatorVideoDecorator(
-      Driver decorated, TestInfo testInfo, Adb adb, Sleeper sleeper, Clock clock) {
+      Driver decorated,
+      TestInfo testInfo,
+      Adb adb,
+      Sleeper sleeper,
+      Clock clock,
+      LocalFileUtil localFileUtil) {
     super(decorated, testInfo);
     this.adb = adb;
     this.sleeper = sleeper;
     this.clock = clock;
+    this.localFileUtil = localFileUtil;
   }
 
   @Override
@@ -163,6 +173,12 @@ public class AndroidEmulatorVideoDecorator extends AsyncTimerDecorator
         .alsoTo(logger)
         .log("------- Stopped Android Emulator Video Decorator --------");
 
+    if (!emulatorVideoDecoratorSpec.getVideoOnPass()
+        && testInfo.resultWithCause().get().type() == TestResult.PASS) {
+      cleanupVideoFiles(testInfo);
+      return;
+    }
+
     var missingFiles =
         generatedFiles.stream()
             .filter(videoFile -> !videoFile.toFile().exists())
@@ -180,6 +196,26 @@ public class AndroidEmulatorVideoDecorator extends AsyncTimerDecorator
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_EMULATOR_VIDEO_DECORATOR_VIDEO_FILE_EMPTY,
           "Generated video files empty. Empty files: " + Joiner.on(",").join(emptyFiles));
+    }
+  }
+
+  private void cleanupVideoFiles(TestInfo testInfo) throws InterruptedException {
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("Test passed and video_on_pass is false, deleting video files.");
+    for (Path videoFile : generatedFiles) {
+      try {
+        localFileUtil.removeFileOrDir(videoFile);
+      } catch (MobileHarnessException e) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .withCause(e)
+            .log("Failed to delete video file %s", videoFile);
+      }
     }
   }
 }
