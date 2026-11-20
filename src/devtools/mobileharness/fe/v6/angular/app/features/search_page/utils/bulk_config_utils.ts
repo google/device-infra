@@ -105,20 +105,31 @@ export function formatWizardSupportText(
   return stepSupportText;
 }
 
-/** Formats the informational banner text when `willUpdateCount === 0` in the review step. */
+/**
+ * Formats the informational banner text when `willUpdateCount === 0` in the
+ * review step. `allMatchPhrase` gives the verb phrase for devices that already
+ * match in both numbers (e.g. 'already uses this Wi-Fi configuration' and
+ * 'already use this Wi-Fi configuration'), so a single device reads correctly.
+ */
 export function formatNothingToUpdateMessage(
   summary: {alreadyMatchCount: number; readOnlyCount: number},
-  allMatchPhrase: string,
+  allMatchPhrase: {singular: string; plural: string},
   targetLabel: string,
 ): string {
   const {alreadyMatchCount: same, readOnlyCount: skipped} = summary;
   if (same > 0 && skipped === 0) {
-    return `All ${formatDeviceCount(same)} ${allMatchPhrase}. No update is needed.`;
+    return same === 1
+      ? `The selected device ${allMatchPhrase.singular}. No update is needed.`
+      : `All ${formatDeviceCount(same)} ${allMatchPhrase.plural}. No update is needed.`;
   }
   if (same > 0 && skipped > 0) {
-    return `${formatDeviceCount(same)} already match this ${targetLabel} and ${formatDeviceCount(skipped)} are read-only. No devices can be updated.`;
+    const matchVerb = same === 1 ? 'matches' : 'match';
+    const readOnlyVerb = skipped === 1 ? 'is' : 'are';
+    return `${formatDeviceCount(same)} already ${matchVerb} this ${targetLabel} and ${formatDeviceCount(skipped)} ${readOnlyVerb} read-only. No devices can be updated.`;
   }
-  return `All ${formatDeviceCount(skipped)} are read-only and cannot be updated.`;
+  return skipped === 1
+    ? 'The selected device is read-only and cannot be updated.'
+    : `All ${formatDeviceCount(skipped)} are read-only and cannot be updated.`;
 }
 
 /**

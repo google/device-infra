@@ -262,8 +262,14 @@ export class BulkConfigDimensionDialog {
     return formatNothingToUpdateMessage(
       this.wizard.reviewSummary(),
       this.isClearDimension()
-        ? `already have ${dn} unset`
-        : `already have this ${dn} value`,
+        ? {
+            singular: `already has ${dn} unset`,
+            plural: `already have ${dn} unset`,
+          }
+        : {
+            singular: `already has this ${dn} value`,
+            plural: `already have this ${dn} value`,
+          },
       `${dn} value`,
     );
   });

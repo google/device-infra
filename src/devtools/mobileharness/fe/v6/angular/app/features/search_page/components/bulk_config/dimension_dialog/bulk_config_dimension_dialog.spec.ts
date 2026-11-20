@@ -330,6 +330,11 @@ describe('BulkConfigDimensionDialog', () => {
       expect(component.wizard.reviewSummary().alreadyMatchCount).toBe(1); // device-1
       expect(component.wizard.reviewSummary().readOnlyCount).toBe(1); // device-2
       expect(component.expandedDeviceValues().size).toBe(0);
+
+      detectChanges();
+      expect(
+        document.body.querySelector('.bw-count-chip-same')?.textContent?.trim(),
+      ).toBe('1 device already matches');
     });
 
     it('toggles expansion state for device values in review table using composite key and renders hostName', () => {
@@ -653,6 +658,33 @@ describe('BulkConfigDimensionDialog', () => {
       component.clearTargetDimension();
       expect(component.nothingToUpdateMessage()).toContain(
         'already have Supported Dimension: recovery unset',
+      );
+    });
+
+    it('uses singular wording in the nothing-to-update message for one device', () => {
+      mockConfigService.batchGetDeviceDimensionConfigs.and.returnValue(
+        of({
+          entries: [
+            {
+              deviceId: 'device-1',
+              values: ['true'],
+              status:
+                DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
+            },
+          ],
+        }),
+      );
+
+      component.targetValues.set(['true']);
+      component.goToReview();
+
+      expect(component.nothingToUpdateMessage()).toBe(
+        'The selected device already has this Supported Dimension: recovery value. No update is needed.',
+      );
+
+      component.clearTargetDimension();
+      expect(component.nothingToUpdateMessage()).toBe(
+        'The selected device already has Supported Dimension: recovery unset. No update is needed.',
       );
     });
   });
