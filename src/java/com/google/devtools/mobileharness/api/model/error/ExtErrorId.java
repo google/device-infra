@@ -211,6 +211,8 @@ public enum ExtErrorId implements ErrorId {
 
   // AiEdgeMacModelEval: 92_151 ~ 92_200
 
+  // AiEdgeLinuxModelEval: 92_201 ~ 92_250
+
   // AiEdgeWindowsModelEval: 92_251 ~ 92_300
   EXT_PLACE_HOLDER_TO_BE_RENAMED(100_000, ErrorType.UNDETERMINED);
 
