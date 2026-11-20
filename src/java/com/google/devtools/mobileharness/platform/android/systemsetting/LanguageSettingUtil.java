@@ -18,10 +18,12 @@ package com.google.devtools.mobileharness.platform.android.systemsetting;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationSetting;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
@@ -32,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSettings;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil.AppOpsMode;
@@ -133,6 +136,22 @@ public class LanguageSettingUtil {
     this.sleeper = sleeper;
   }
 
+  /** Switches the language and optional country/region on the specified device. */
+  public void switchLanguage(DeviceInfo deviceInfo, String language, @Nullable String country)
+      throws MobileHarnessException, InterruptedException {
+    Preconditions.checkNotNull(deviceInfo);
+    Preconditions.checkArgument(
+        !StrUtil.isEmptyOrWhitespace(language), "Language must be provided.");
+    switchLanguageInternal(
+        /* device= */ null,
+        deviceInfo,
+        deviceInfo.deviceId().controlId(),
+        language,
+        country,
+        DEFAULT_LOG_SIGNAL_TIMEOUT,
+        /* log= */ null);
+  }
+
   /**
    * Switches the language and optional country/region on a managed {@link Device}, returning a
    * {@link LocaleRestoreState} if a switch was performed or {@link Optional#empty()} if skipped.
@@ -145,9 +164,26 @@ public class LanguageSettingUtil {
       Duration logSignalTimeout,
       @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
-    String deviceId = device.getDeviceId();
+    return switchLanguageInternal(
+        device,
+        /* deviceInfo= */ null,
+        device.getDeviceId(),
+        language,
+        country,
+        logSignalTimeout,
+        log);
+  }
 
-    int sdkVersion = systemSettingManager.getDeviceSdkVersion(device);
+  @CanIgnoreReturnValue
+  private Optional<LocaleRestoreState> switchLanguageInternal(
+      @Nullable Device device,
+      @Nullable DeviceInfo deviceInfo,
+      String deviceId,
+      String language,
+      @Nullable String country,
+      Duration logSignalTimeout,
+      @Nullable LogCollector<?> log)
+      throws MobileHarnessException, InterruptedException {
     String originalLanguage = adbUtil.getProperty(deviceId, AndroidProperty.LANGUAGE);
     String originalCountry = adbUtil.getProperty(deviceId, AndroidProperty.REGION);
 
@@ -166,6 +202,11 @@ public class LanguageSettingUtil {
       return Optional.empty();
     }
 
+    int sdkVersion =
+        device != null
+            ? systemSettingManager.getDeviceSdkVersion(device)
+            : androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
+
     SharedLogUtil.logMsg(
         logger,
         log,
@@ -175,11 +216,11 @@ public class LanguageSettingUtil {
         language,
         Strings.nullToEmpty(country));
 
-    boolean switchRegion = !Strings.isNullOrEmpty(country);
+    boolean switchRegion = !StrUtil.isEmptyOrWhitespace(country);
 
     // Gets the resource file, installs the apk and gets the permission.
     String apkPath = resUtil.getResourceFile(getClass(), SWITCH_LANGUAGE_APK_RES_PATH);
-    installApkAndGrantPermission(log, device, sdkVersion, apkPath);
+    installApkAndGrantPermission(log, device, deviceInfo, deviceId, sdkVersion, apkPath);
 
     // Switch the language and country.
     try {
@@ -220,17 +261,24 @@ public class LanguageSettingUtil {
   }
 
   private void installApkAndGrantPermission(
-      @Nullable LogCollector<?> log, Device device, int sdkVersion, String apkPath)
+      @Nullable LogCollector<?> log,
+      @Nullable Device device,
+      @Nullable DeviceInfo deviceInfo,
+      String deviceId,
+      int sdkVersion,
+      String apkPath)
       throws MobileHarnessException, InterruptedException {
-    String deviceId = device.getDeviceId();
     String packageName = AndroidPackages.MH_SWITCH_LANGUAGE.getPackageName();
     var currentUserId = sdkVersion >= 23 ? androidUserUtil.getCurrentUser(deviceId, sdkVersion) : 0;
+    ApkInstallArgs installArgs =
+        ApkInstallArgs.builder().addApkPaths(apkPath).setBypassLowTargetSdkBlock(true).build();
 
     for (int i = 1; i <= MAX_ATTEMPTS; i++) {
-      apkInstaller.installApkIfNotExist(
-          device,
-          ApkInstallArgs.builder().addApkPaths(apkPath).setBypassLowTargetSdkBlock(true).build(),
-          log);
+      if (device != null) {
+        apkInstaller.installApkIfNotExist(device, installArgs, log);
+      } else {
+        apkInstaller.installApkIfNotExist(Preconditions.checkNotNull(deviceInfo), installArgs);
+      }
       if (sdkVersion < 17) {
         break;
       }
@@ -242,7 +290,12 @@ public class LanguageSettingUtil {
       // In API >= 17, an explicitly permission grant to change config is needed via pm
       // since this permission is for system/dev only.
       try {
-        var utilArgs = UtilArgs.builder().setSerial(deviceId).setSdkVersion(sdkVersion).build();
+        UtilArgs.Builder utilArgsBuilder =
+            UtilArgs.builder().setSerial(deviceId).setSdkVersion(sdkVersion);
+        if (sdkVersion >= AndroidVersion.NOUGAT.getStartSdkVersion()) {
+          utilArgsBuilder.setUserId(String.valueOf(currentUserId));
+        }
+        UtilArgs utilArgs = utilArgsBuilder.build();
 
         androidPackageManagerUtil.grantPermission(
             utilArgs, packageName, SWITCH_LANGUAGE_PKG_EXTRA_PERMISSION);
@@ -273,7 +326,12 @@ public class LanguageSettingUtil {
               log,
               "Failed to grant permission to package %s, uninstall and retry",
               packageName);
-          apkInstaller.uninstallApk(device, packageName, /* logFailures= */ true, log);
+          if (device != null) {
+            apkInstaller.uninstallApk(device, packageName, /* logFailures= */ true, log);
+          } else {
+            apkInstaller.uninstallApk(
+                Preconditions.checkNotNull(deviceInfo), packageName, /* logFailures= */ true);
+          }
         } else {
           throw new MobileHarnessException(
               AndroidErrorId.ANDROID_SWITCH_LANGUAGE_DECORATOR_GRANT_PERMISSION_ERROR,

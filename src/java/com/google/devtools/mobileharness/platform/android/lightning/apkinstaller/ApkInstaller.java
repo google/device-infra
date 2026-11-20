@@ -687,7 +687,29 @@ public class ApkInstaller {
   public void uninstallApk(
       Device device, String packageName, boolean logFailures, @Nullable LogCollector<?> log)
       throws InterruptedException {
-    String deviceId = device.getDeviceId();
+    uninstallApk(device.info(), packageName, logFailures, log);
+  }
+
+  /**
+   * Uninstalls the given package from the android device using {@link DeviceInfo}.
+   *
+   * <p>If failed, logs the message without throwing out any exceptions. No matter whether the
+   * uninstallation is successful or not, the device property of the package will always be cleaned,
+   * so the APK will be reinstalled in future tests.
+   *
+   * @param deviceInfo the device info of the Android device
+   * @param packageName the package of the APK to uninstall
+   * @param logFailures whether to log any failure during uninstallation
+   */
+  public void uninstallApk(DeviceInfo deviceInfo, String packageName, boolean logFailures)
+      throws InterruptedException {
+    uninstallApk(deviceInfo, packageName, logFailures, /* log= */ null);
+  }
+
+  private void uninstallApk(
+      DeviceInfo deviceInfo, String packageName, boolean logFailures, @Nullable LogCollector<?> log)
+      throws InterruptedException {
+    String deviceId = deviceInfo.deviceId().controlId();
     try {
       int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
       // Get user id if specified in params.
@@ -697,7 +719,7 @@ public class ApkInstaller {
       if (isMultiUserSupported(deviceSdkVersion)) {
         userId = getCurrentUser(deviceId, deviceSdkVersion);
       }
-      uninstallApk(device, userId, deviceSdkVersion, packageName, logFailures, log);
+      uninstallApk(deviceInfo, userId, deviceSdkVersion, packageName, logFailures, log);
     } catch (MobileHarnessException e) {
       if (logFailures) {
         SharedLogUtil.logMsg(
@@ -726,18 +748,15 @@ public class ApkInstaller {
       boolean logFailures,
       @Nullable LogCollector<?> log)
       throws InterruptedException {
+    DeviceInfo deviceInfo = device.info();
+    String deviceId = deviceInfo.deviceId().controlId();
     try {
-      int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(device.getDeviceId());
-      uninstallApk(device, userId, deviceSdkVersion, packageName, logFailures, log);
+      int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
+      uninstallApk(deviceInfo, userId, deviceSdkVersion, packageName, logFailures, log);
     } catch (MobileHarnessException e) {
       if (logFailures) {
         SharedLogUtil.logMsg(
-            logger,
-            Level.WARNING,
-            log,
-            e,
-            "Failed to get device %s sdk version.",
-            device.getDeviceId());
+            logger, Level.WARNING, log, e, "Failed to get device %s sdk version.", deviceId);
       }
     }
   }
@@ -749,7 +768,7 @@ public class ApkInstaller {
    * any exceptions. No matter the uninstallation is successful or not, the device property of the
    * package will always be cleaned, so force to reinstall the APK in future tests.
    *
-   * @param device the Android device
+   * @param deviceInfo the device info of the Android device
    * @param userId the user id to uninstall APK
    * @param deviceSdkVersion the target device sdk version
    * @param packageName the package of the APK to uninstall
@@ -757,14 +776,14 @@ public class ApkInstaller {
    * @param log log collector for APK uninstallation
    */
   private void uninstallApk(
-      Device device,
+      DeviceInfo deviceInfo,
       String userId,
       int deviceSdkVersion,
       String packageName,
       boolean logFailures,
       @Nullable LogCollector<?> log)
       throws InterruptedException {
-    String deviceId = device.getDeviceId();
+    String deviceId = deviceInfo.deviceId().controlId();
     try {
       SharedLogUtil.logMsg(logger, log, "Start to uninstall: %s for user: %s", packageName, userId);
       androidPackageManagerUtil.uninstallApk(
@@ -773,7 +792,7 @@ public class ApkInstaller {
           logger, log, "Successfully uninstalled: %s for user: %s", packageName, userId);
 
       if (packageName.equals(PackageConstants.PACKAGE_NAME_GMS)) {
-        updateGmsDimension(device.info(), log);
+        updateGmsDimension(deviceInfo, log);
       }
     } catch (MobileHarnessException e) {
       if (logFailures) {
@@ -793,8 +812,9 @@ public class ApkInstaller {
       if (Flags.cacheInstalledApks.get()) {
         SharedLogUtil.logMsg(
             logger, log, "Clear device property for cached installed apk: %s", packageName);
-        device.setProperty(
-            String.format(DEVICE_PROP_INSTALLED_APK_KEY_TEMPLATE, userId) + packageName, null);
+        deviceInfo
+            .properties()
+            .remove(String.format(DEVICE_PROP_INSTALLED_APK_KEY_TEMPLATE, userId) + packageName);
       }
     }
   }

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -30,6 +31,8 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
+import com.google.devtools.mobileharness.api.model.lab.LiteDeviceInfoFactory;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationSetting;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
@@ -38,7 +41,9 @@ import com.google.devtools.mobileharness.platform.android.lightning.systemsettin
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSettings;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil.AppOpsMode;
 import com.google.devtools.mobileharness.platform.android.systemsetting.LanguageSettingUtil.LocaleRestoreState;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
@@ -54,6 +59,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -83,10 +89,12 @@ public final class LanguageSettingUtilTest {
   @Mock private Sleeper sleeper;
 
   private final Log log = new Log(new Timing());
+  private DeviceInfo deviceInfo;
   private LanguageSettingUtil languageSettingUtil;
 
   @Before
   public void setUp() throws Exception {
+    deviceInfo = LiteDeviceInfoFactory.create(DEVICE_ID);
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
     when(resUtil.getResourceFile(
             LanguageSettingUtil.class, LanguageSettingUtil.SWITCH_LANGUAGE_APK_RES_PATH))
@@ -103,6 +111,154 @@ public final class LanguageSettingUtilTest {
             androidUserUtil,
             adbUtil,
             sleeper);
+  }
+
+  @Test
+  public void switchLanguage_byDeviceInfoWithCountryOnApi30_installsGrantsInstrumentsAndSetsProps()
+      throws Exception {
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("US");
+    when(androidSystemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(30);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 30)).thenReturn(10);
+
+    languageSettingUtil.switchLanguage(deviceInfo, "zh", "CN");
+
+    UtilArgs utilArgs =
+        UtilArgs.builder().setSerial(DEVICE_ID).setSdkVersion(30).setUserId("10").build();
+    InOrder order =
+        inOrder(
+            apkInstaller,
+            androidPackageManagerUtil,
+            adbUtil,
+            androidSystemSettingUtil,
+            instrumentationUtil,
+            sleeper);
+    order
+        .verify(apkInstaller)
+        .installApkIfNotExist(
+            deviceInfo,
+            ApkInstallArgs.builder()
+                .addApkPaths(APK_PATH)
+                .setBypassLowTargetSdkBlock(true)
+                .build());
+    order.verify(sleeper).sleep(Duration.ofSeconds(3));
+    order
+        .verify(androidPackageManagerUtil)
+        .grantPermission(
+            utilArgs, PACKAGE_NAME, LanguageSettingUtil.SWITCH_LANGUAGE_PKG_EXTRA_PERMISSION);
+    order
+        .verify(adbUtil)
+        .settings(
+            utilArgs,
+            AndroidSettings.Spec.create(
+                AndroidSettings.Command.PUT,
+                AndroidSettings.NameSpace.GLOBAL,
+                "hidden_api_blacklist_exemptions \"\\*\"")); // InclusiveLanguage:ignore
+    order
+        .verify(androidSystemSettingUtil)
+        .setAppOpsPermission(DEVICE_ID, PACKAGE_NAME, "WRITE_SETTINGS", AppOpsMode.ALLOW, "10");
+    order.verify(sleeper).sleep(Duration.ofSeconds(1));
+    order
+        .verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            30,
+            createInstrumentSetting(
+                ImmutableMap.of("language", "zh", "country", "CN", "sdk_version", "30")),
+            Duration.ofMinutes(1));
+    order
+        .verify(adbUtil)
+        .waitForSignalInLog(
+            DEVICE_ID,
+            LanguageSettingUtil.LOG_SIGNAL,
+            LanguageSettingUtil.DEFAULT_LOG_SIGNAL_TIMEOUT);
+    verify(adbUtil).setProperty(DEVICE_ID, AndroidProperty.REGION.getPropertyKeys().get(0), "CN");
+    verify(adbUtil).setProperty(DEVICE_ID, AndroidProperty.LANGUAGE.getPropertyKeys().get(0), "zh");
+    verify(adbUtil)
+        .setProperty(DEVICE_ID, AndroidProperty.LOCALE.getPropertyKeys().get(0), "zh-CN");
+  }
+
+  @Test
+  public void switchLanguage_byDeviceInfoWithoutCountryOnApi23_omitsGrantUserIdAndSkipsRegionProp()
+      throws Exception {
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("US");
+    when(androidSystemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(23);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 23)).thenReturn(0);
+
+    languageSettingUtil.switchLanguage(deviceInfo, "ja", /* country= */ "");
+
+    verify(apkInstaller)
+        .installApkIfNotExist(
+            deviceInfo,
+            ApkInstallArgs.builder()
+                .addApkPaths(APK_PATH)
+                .setBypassLowTargetSdkBlock(true)
+                .build());
+    verify(androidPackageManagerUtil)
+        .grantPermission(
+            UtilArgs.builder().setSerial(DEVICE_ID).setSdkVersion(23).build(),
+            PACKAGE_NAME,
+            LanguageSettingUtil.SWITCH_LANGUAGE_PKG_EXTRA_PERMISSION);
+    verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            23,
+            createInstrumentSetting(ImmutableMap.of("language", "ja", "sdk_version", "23")),
+            Duration.ofMinutes(1));
+    verify(adbUtil, never())
+        .setProperty(
+            eq(DEVICE_ID), eq(AndroidProperty.REGION.getPropertyKeys().get(0)), any(String.class));
+    verify(adbUtil).setProperty(DEVICE_ID, AndroidProperty.LOCALE.getPropertyKeys().get(0), "ja");
+  }
+
+  @Test
+  public void switchLanguage_byDeviceInfoSameLocaleIgnoreCase_skipsSwitch() throws Exception {
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("zh");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("cn");
+
+    languageSettingUtil.switchLanguage(deviceInfo, "ZH", "CN");
+
+    verifyNoInteractions(apkInstaller, androidPackageManagerUtil, instrumentationUtil);
+  }
+
+  @Test
+  public void switchLanguage_byDeviceInfoEmptyLanguage_throwsIllegalArgumentException() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> languageSettingUtil.switchLanguage(deviceInfo, "   ", "US"));
+
+    assertThat(exception).hasMessageThat().ignoringCase().contains("language");
+  }
+
+  @Test
+  public void switchLanguage_byDeviceInfoUnknownPackageOnFirstGrant_uninstallsAndRetries()
+      throws Exception {
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("US");
+    when(androidSystemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(30);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 30)).thenReturn(0);
+    UtilArgs utilArgs =
+        UtilArgs.builder().setSerial(DEVICE_ID).setSdkVersion(30).setUserId("0").build();
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_PKG_MNGR_UTIL_GRANT_PERMISSION_ERROR, "Unknown package"))
+        .doNothing()
+        .when(androidPackageManagerUtil)
+        .grantPermission(
+            utilArgs, PACKAGE_NAME, LanguageSettingUtil.SWITCH_LANGUAGE_PKG_EXTRA_PERMISSION);
+
+    languageSettingUtil.switchLanguage(deviceInfo, "fr", "FR");
+
+    verify(apkInstaller, times(2))
+        .installApkIfNotExist(
+            deviceInfo,
+            ApkInstallArgs.builder()
+                .addApkPaths(APK_PATH)
+                .setBypassLowTargetSdkBlock(true)
+                .build());
+    verify(apkInstaller).uninstallApk(deviceInfo, PACKAGE_NAME, /* logFailures= */ true);
   }
 
   @Test
