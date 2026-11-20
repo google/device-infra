@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
@@ -33,6 +34,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
+import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
@@ -95,7 +97,8 @@ public class LocalLabInfoProviderTest {
     when(localDeviceManager.getAllDeviceStatus(false))
         .thenReturn(ImmutableMap.of(device, deviceStatusInfo));
 
-    DeviceFeature feature = DeviceFeature.getDefaultInstance();
+    DeviceFeature feature = DeviceFeature.newBuilder().addType("AndroidRealDevice").build();
+    when(device.getDeviceTypes()).thenReturn(ImmutableSet.of("AndroidRealDevice"));
     when(device.toFeature()).thenReturn(feature);
 
     DeviceKey deviceKey = new DeviceKey(LabLocator.LOCALHOST.hostName(), deviceUuid);
@@ -113,6 +116,7 @@ public class LocalLabInfoProviderTest {
 
     DeviceInfo deviceInfo = labView.getLabData(0).getDeviceList().getDeviceInfo(0);
     assertThat(deviceInfo.getDeviceStatus()).isEqualTo(DeviceStatus.IDLE);
+    assertThat(deviceInfo.getHealthCategory()).isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
 
     // Verify condition
     DeviceCondition condition = deviceInfo.getDeviceCondition();
@@ -191,5 +195,30 @@ public class LocalLabInfoProviderTest {
     verify(tempRequiredDimensionManager, never()).getDimensions(any());
     assertThat(labView.getLabData(0).getDeviceList().getDeviceTotalCount()).isEqualTo(1);
     assertThat(labView.getLabData(0).getDeviceList().getDeviceInfoList()).isEmpty();
+  }
+
+  @Test
+  public void getLabInfos_healthCategoryMaskWithoutDeviceFeature_skipsToFeature() throws Exception {
+    when(deviceStatusInfo.getDeviceStatusWithTimestamp())
+        .thenReturn(DeviceStatusWithTimestamp.newBuilder().setStatus(DeviceStatus.IDLE).build());
+    when(device.getDeviceTypes()).thenReturn(ImmutableSet.of("AndroidRealDevice"));
+    when(localDeviceManager.getAllDeviceStatus(false))
+        .thenReturn(ImmutableMap.of(device, deviceStatusInfo));
+
+    CompiledDeviceInfoMask healthCategoryOnlyMask =
+        CompiledDeviceInfoMask.of(
+            DeviceInfoMask.newBuilder()
+                .setFieldMask(FieldMask.newBuilder().addPaths("health_category"))
+                .build());
+
+    LabView labView =
+        localLabInfoProvider.getLabInfos(
+            Filter.getDefaultInstance(), CompiledLabInfoMask.retainAll(), healthCategoryOnlyMask);
+
+    verify(device, never()).toFeature();
+    verify(tempRequiredDimensionManager, never()).getDimensions(any());
+    assertThat(labView.getLabData(0).getDeviceList().getDeviceInfoCount()).isEqualTo(1);
+    assertThat(labView.getLabData(0).getDeviceList().getDeviceInfo(0).getHealthCategory())
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
   }
 }

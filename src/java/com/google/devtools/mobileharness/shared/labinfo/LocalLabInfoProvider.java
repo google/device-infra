@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -37,6 +38,7 @@ import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceMana
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceTempRequiredDimensions;
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
+import com.google.devtools.mobileharness.shared.util.device.DeviceHealthUtil;
 import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
 import com.google.devtools.mobileharness.shared.util.filter.CompiledLabInfoMask;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -116,6 +118,14 @@ public class LocalLabInfoProvider implements LabInfoProvider {
                 DeviceLocator.newBuilder().setId(currentDevice.getDeviceUuid()).build())
         .setMaskedDeviceStatus(
             deviceStatusInfo, statusInfo -> statusInfo.getDeviceStatusWithTimestamp().getStatus())
+        .setMaskedHealthCategory(
+            deviceStatusInfo,
+            statusInfo ->
+                Optional.of(
+                        DeviceHealthUtil.calculateHealthCategory(
+                            statusInfo.getDeviceStatusWithTimestamp().getStatus(),
+                            device.getDeviceTypes()))
+                    .filter(category -> category != HealthCategory.HEALTH_CATEGORY_UNSPECIFIED))
         .setMaskedDeviceCondition(tempDimensions, LocalLabInfoProvider::toDeviceCondition)
         .setMaskedDeviceFeature(
             device,
