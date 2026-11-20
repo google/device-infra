@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportUtil.TestCounts;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.moblytestentryconverter.DefaultMoblyTestEntryConverter;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.moblytestentryconverter.MoblyTestEntryConverter;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
@@ -195,23 +196,12 @@ public class MoblyReportParser {
           .addAllTestCase(getTestCases(testEntriesMapBuilder.build(), converter));
       if (moblyReportInfo.moblyTestEntryConverterClass().isPresent()) {
         // Recalculate counts in module if the converter is specified.
-        int passedTests = 0;
-        int failedTests = 0;
-        int warningTests = 0;
-        for (TestCase testCase : moduleBuilder.getTestCaseList()) {
-          for (Test test : testCase.getTestList()) {
-            switch (test.getResult()) {
-              case "pass" -> passedTests++;
-              case "fail" -> failedTests++;
-              case "warning" -> warningTests++;
-              default -> {}
-            }
-          }
-        }
+        TestCounts counts =
+            CompatibilityReportUtil.countModuleTests(moduleBuilder.getTestCaseList());
         moduleBuilder
-            .setPassed(passedTests)
-            .setFailedTests(failedTests)
-            .setWarningTests(warningTests);
+            .setPassed(counts.passed())
+            .setFailedTests(counts.failed())
+            .setWarningTests(counts.warning());
       }
       Module module = moduleBuilder.build();
       resultBuilder

@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordWriter;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestReportPropertiesUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -72,17 +73,17 @@ public class CompatibilityReportCreator {
 
   private static final String ENCODING = "UTF-8";
 
-  // The maximum size of a stack trace saved in the report.
-  private static final int STACK_TRACE_MAX_SIZE = 1024 * 1024;
+  @VisibleForTesting
+  static final String TEST_RESULT_FILE_NAME = SuiteCommon.TEST_RESULT_XML_FILE_NAME;
 
-  @VisibleForTesting static final String TEST_RESULT_FILE_NAME = "test_result.xml";
   @VisibleForTesting static final String HTML_REPORT_NAME = "test_result.html";
   @VisibleForTesting static final String REPORT_XSL_FILE_NAME = "compatibility_result.xsl";
   @VisibleForTesting static final String FAILURE_REPORT_NAME = "test_result_failures_suite.html";
   @VisibleForTesting static final String FAILURE_XSL_FILE_NAME = "compatibility_failures.xsl";
   @VisibleForTesting static final String TEST_RECORD_PROTO_FILE_NAME = "test-record.pb";
 
-  @VisibleForTesting static final String TEST_RESULT_PB_FILE_NAME = "test_result.pb";
+  @VisibleForTesting
+  static final String TEST_RESULT_PB_FILE_NAME = SuiteCommon.TEST_RESULT_PB_FILE_NAME;
 
   @VisibleForTesting
   static final ImmutableList<String> RESULT_RESOURCES =
@@ -459,12 +460,11 @@ public class CompatibilityReportCreator {
   @VisibleForTesting
   static String truncateStackTrace(String fullStackTrace, boolean inNonTfModule) {
     // If it's in a non-TF module, we need to truncate the full stack trace with maximum {@link
-    // STACK_TRACE_MAX_SIZE} characters like how TF does. If it's in a TF module, we don't need to
-    // additionally truncate the full stack trace as TF has done so.
-    if (inNonTfModule && fullStackTrace.length() > STACK_TRACE_MAX_SIZE) {
-      return fullStackTrace.substring(0, STACK_TRACE_MAX_SIZE);
-    }
-    return fullStackTrace;
+    // CompatibilityReportUtil#STACK_TRACE_MAX_SIZE} characters like how TF does. If it's in a TF
+    // module, we don't need to additionally truncate the full stack trace as TF has done so.
+    return inNonTfModule
+        ? CompatibilityReportUtil.truncateStackTrace(fullStackTrace)
+        : fullStackTrace;
   }
 
   private static String sanitizeXmlContent(String s, boolean inNonTfModule) {
