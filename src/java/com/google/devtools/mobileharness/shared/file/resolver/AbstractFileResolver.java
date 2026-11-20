@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.file.resolver;
 import static com.google.common.collect.Comparators.max;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
@@ -41,7 +42,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -78,7 +81,12 @@ public abstract class AbstractFileResolver implements FileResolver {
     return ImmutableSet.of();
   }
 
-  /** Resolve multiple files synchronously. */
+  /**
+   * Resolves multiple files synchronously.
+   *
+   * <p>If any file fails to resolve, unfinished resolutions in the same batch are cancelled with
+   * interruption and any remaining unsubmitted files are skipped.
+   */
   @Override
   @SuppressWarnings("Interruption")
   public final List<Optional<ResolveResult>> resolve(List<ResolveSource> resolveSources)
@@ -148,7 +156,12 @@ public abstract class AbstractFileResolver implements FileResolver {
     return executorService.submit(() -> resolve(resolveSource));
   }
 
-  /** Resolves multiple files asynchronously. */
+  /**
+   * Resolves multiple files asynchronously.
+   *
+   * <p>If any file fails to resolve, unfinished resolutions in the same batch are cancelled with
+   * interruption and any remaining unsubmitted files are skipped.
+   */
   @Override
   public final ListenableFuture<List<Optional<ResolveResult>>> resolveAsync(
       List<ResolveSource> resolveSources) {
@@ -164,12 +177,63 @@ public abstract class AbstractFileResolver implements FileResolver {
               "Start to resolve files: %s",
               resolveSources.stream().map(ResolveSource::path).collect(joining(", ")));
 
-          for (ResolveSource source : resolveSources) {
-            fileResolveFutures.add(resolveAsync(source));
+          AtomicBoolean batchFailed = new AtomicBoolean();
+          try {
+            for (ResolveSource source : resolveSources) {
+              if (batchFailed.get()) {
+                break;
+              }
+              ListenableFuture<Optional<ResolveResult>> future = resolveAsync(source);
+              fileResolveFutures.add(future);
+              future.addListener(
+                  () -> {
+                    if (isFailedOrCancelled(future)) {
+                      batchFailed.set(true);
+                    }
+                  },
+                  directExecutor());
+            }
+          } catch (RuntimeException | Error e) {
+            cancelUnfinished(resolveSources, fileResolveFutures);
+            throw e;
           }
-          return Futures.allAsList(fileResolveFutures);
+          ListenableFuture<List<Optional<ResolveResult>>> allFilesFuture =
+              Futures.allAsList(fileResolveFutures);
+          // Futures.allAsList fails fast without cancelling the other input futures.
+          allFilesFuture.addListener(
+              () -> cancelUnfinished(resolveSources, fileResolveFutures), directExecutor());
+          return allFilesFuture;
         },
         executorService);
+  }
+
+  private static boolean isFailedOrCancelled(Future<?> future) {
+    if (!future.isDone()) {
+      return false;
+    }
+    try {
+      Futures.getDone(future);
+      return false;
+    } catch (ExecutionException | CancellationException e) {
+      return true;
+    }
+  }
+
+  @SuppressWarnings("Interruption") // A resolver stops resolving only when it is interrupted.
+  private static void cancelUnfinished(
+      List<ResolveSource> resolveSources, List<? extends Future<?>> futures) {
+    List<String> cancelledPaths = new ArrayList<>();
+    for (int i = 0; i < futures.size(); i++) {
+      Future<?> future = futures.get(i);
+      if (!future.isDone() && future.cancel(/* mayInterruptIfRunning= */ true)) {
+        cancelledPaths.add(resolveSources.get(i).path());
+      }
+    }
+    if (!cancelledPaths.isEmpty()) {
+      logger.atInfo().log(
+          "Cancelled %d unfinished file resolution(s) after batch resolution ended: %s",
+          cancelledPaths.size(), String.join(", ", cancelledPaths));
+    }
   }
 
   /**

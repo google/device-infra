@@ -18,20 +18,32 @@ package com.google.devtools.mobileharness.shared.file.resolver;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ForwardingListeningExecutorService;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolvedFile;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import org.junit.Rule;
 import org.junit.Test;
@@ -132,6 +144,272 @@ public class FileResolverTest {
                     ImmutableList.of(ResolvedFile.create("/a/c", null, "/a/c")),
                     ImmutableMap.of(),
                     ResolveSource.create("/a/c", ImmutableMap.of(), "/", "/"))));
+  }
+
+  @Test
+  public void batchResolve_oneFileFails_interruptsFilesStillBeingResolved() throws Exception {
+    CountDownLatch otherFileResolving = new CountDownLatch(1);
+    CountDownLatch otherFileInterrupted = new CountDownLatch(1);
+    CountDownLatch neverCountedDown = new CountDownLatch(1);
+    ListeningExecutorService threadPool =
+        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+    AbstractFileResolver failingResolver =
+        new AbstractFileResolver(threadPool) {
+          @Override
+          protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
+            return true;
+          }
+
+          @Override
+          protected ResolveResult actuallyResolve(ResolveSource resolveSource)
+              throws MobileHarnessException, InterruptedException {
+            if (resolveSource.path().equals("/a/failing")) {
+              otherFileResolving.await();
+              throw new MobileHarnessException(
+                  BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Failed to resolve file");
+            }
+            otherFileResolving.countDown();
+            try {
+              neverCountedDown.await();
+            } catch (InterruptedException e) {
+              otherFileInterrupted.countDown();
+              throw e;
+            }
+            return ResolveResult.of(ImmutableList.of(), ImmutableMap.of(), resolveSource);
+          }
+        };
+
+    try {
+      ListenableFuture<List<Optional<ResolveResult>>> unused =
+          failingResolver.resolveAsync(
+              ImmutableList.of(
+                  ResolveSource.create("/a/failing", ImmutableMap.of(), "/", "/"),
+                  ResolveSource.create("/a/other", ImmutableMap.of(), "/", "/")));
+
+      assertThat(otherFileInterrupted.await(10, SECONDS)).isTrue();
+    } finally {
+      threadPool.shutdownNow();
+    }
+  }
+
+  @Test
+  public void batchResolve_oneFileFails_throwsFailingFileException() {
+    MobileHarnessException failure =
+        new MobileHarnessException(
+            BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Failed to resolve /a/failing");
+    CountDownLatch otherFileResolving = new CountDownLatch(1);
+    CountDownLatch neverCountedDown = new CountDownLatch(1);
+    ListeningExecutorService threadPool =
+        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+    AbstractFileResolver failingResolver =
+        new AbstractFileResolver(threadPool) {
+          @Override
+          protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
+            return true;
+          }
+
+          @Override
+          protected ResolveResult actuallyResolve(ResolveSource resolveSource)
+              throws MobileHarnessException, InterruptedException {
+            if (resolveSource.path().equals("/a/failing")) {
+              otherFileResolving.await();
+              throw failure;
+            }
+            otherFileResolving.countDown();
+            neverCountedDown.await();
+            return ResolveResult.of(ImmutableList.of(), ImmutableMap.of(), resolveSource);
+          }
+        };
+
+    try {
+      MobileHarnessException thrown =
+          assertThrows(
+              MobileHarnessException.class,
+              () ->
+                  failingResolver.resolve(
+                      ImmutableList.of(
+                          ResolveSource.create("/a/failing", ImmutableMap.of(), "/", "/"),
+                          ResolveSource.create("/a/other", ImmutableMap.of(), "/", "/"))));
+
+      assertThat(thrown).isSameInstanceAs(failure);
+    } finally {
+      threadPool.shutdownNow();
+    }
+  }
+
+  @Test
+  public void batchResolve_submitFailsMidBatch_interruptsAlreadySubmittedFiles() throws Exception {
+    CountDownLatch firstFileResolving = new CountDownLatch(1);
+    CountDownLatch firstFileInterrupted = new CountDownLatch(1);
+    CountDownLatch neverCountedDown = new CountDownLatch(1);
+    AtomicInteger submitCalls = new AtomicInteger();
+    ListeningExecutorService rawThreadPool =
+        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+    ListeningExecutorService rejectingThreadPool =
+        new ForwardingListeningExecutorService() {
+          @Override
+          protected ListeningExecutorService delegate() {
+            return rawThreadPool;
+          }
+
+          @Override
+          public <T> ListenableFuture<T> submit(Callable<T> task) {
+            // Submission 1 is preBatchProcess, 2 is the first file, 3 is the second file.
+            if (submitCalls.incrementAndGet() == 3) {
+              try {
+                if (!firstFileResolving.await(10, SECONDS)) {
+                  throw new AssertionError("First file did not start resolving");
+                }
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(e);
+              }
+              throw new RejectedExecutionException("Executor full");
+            }
+            return super.submit(task);
+          }
+        };
+    AbstractFileResolver partialSubmitResolver =
+        new AbstractFileResolver(rejectingThreadPool) {
+          @Override
+          protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
+            return true;
+          }
+
+          @Override
+          protected ResolveResult actuallyResolve(ResolveSource resolveSource)
+              throws InterruptedException {
+            firstFileResolving.countDown();
+            try {
+              neverCountedDown.await();
+            } catch (InterruptedException e) {
+              firstFileInterrupted.countDown();
+              throw e;
+            }
+            return ResolveResult.of(ImmutableList.of(), ImmutableMap.of(), resolveSource);
+          }
+        };
+
+    try {
+      ListenableFuture<List<Optional<ResolveResult>>> unused =
+          partialSubmitResolver.resolveAsync(
+              ImmutableList.of(
+                  ResolveSource.create("/a/first", ImmutableMap.of(), "/", "/"),
+                  ResolveSource.create("/a/second", ImmutableMap.of(), "/", "/")));
+
+      assertThat(firstFileInterrupted.await(10, SECONDS)).isTrue();
+    } finally {
+      rawThreadPool.shutdownNow();
+    }
+  }
+
+  @Test
+  public void batchResolve_directExecutor_oneFileFails_skipsRemainingFiles() {
+    List<String> resolvedPaths = new ArrayList<>();
+    AbstractFileResolver failingResolver =
+        new AbstractFileResolver(MoreExecutors.newDirectExecutorService()) {
+          @Override
+          protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
+            return true;
+          }
+
+          @Override
+          protected ResolveResult actuallyResolve(ResolveSource resolveSource)
+              throws MobileHarnessException {
+            resolvedPaths.add(resolveSource.path());
+            if (resolveSource.path().equals("/a/failing")) {
+              throw new MobileHarnessException(
+                  BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Failed to resolve file");
+            }
+            return ResolveResult.of(ImmutableList.of(), ImmutableMap.of(), resolveSource);
+          }
+        };
+
+    ListenableFuture<List<Optional<ResolveResult>>> unused =
+        failingResolver.resolveAsync(
+            ImmutableList.of(
+                ResolveSource.create("/a/failing", ImmutableMap.of(), "/", "/"),
+                ResolveSource.create("/a/other", ImmutableMap.of(), "/", "/")));
+
+    assertThat(resolvedPaths).containsExactly("/a/failing");
+  }
+
+  @Test
+  public void batchResolve_earlierFileFailsMidSubmission_skipsLaterFiles() throws Exception {
+    CountDownLatch allowFirstToFail = new CountDownLatch(1);
+    CountDownLatch firstFailureHandled = new CountDownLatch(1);
+    CountDownLatch neverCountedDown = new CountDownLatch(1);
+    AtomicInteger submitCalls = new AtomicInteger();
+    AtomicReference<ListenableFuture<?>> firstFileFuture = new AtomicReference<>();
+    ListeningExecutorService rawThreadPool =
+        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+    ListeningExecutorService coordinatedThreadPool =
+        new ForwardingListeningExecutorService() {
+          @Override
+          protected ListeningExecutorService delegate() {
+            return rawThreadPool;
+          }
+
+          @Override
+          public <T> ListenableFuture<T> submit(Callable<T> task) {
+            int call = submitCalls.incrementAndGet();
+            if (call == 2) {
+              ListenableFuture<T> future = super.submit(task);
+              firstFileFuture.set(future);
+              return future;
+            }
+            if (call == 3) {
+              // Registered after AbstractFileResolver's listener so FIFO completion guarantees the
+              // batch-failure flag is set before the third file is checked.
+              firstFileFuture.get().addListener(firstFailureHandled::countDown, directExecutor());
+              allowFirstToFail.countDown();
+              try {
+                if (!firstFailureHandled.await(10, SECONDS)) {
+                  throw new AssertionError("First file failure listener did not run");
+                }
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(e);
+              }
+            }
+            return super.submit(task);
+          }
+        };
+    AbstractFileResolver failingResolver =
+        new AbstractFileResolver(coordinatedThreadPool) {
+          @Override
+          protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
+            return true;
+          }
+
+          @Override
+          protected ResolveResult actuallyResolve(ResolveSource resolveSource)
+              throws MobileHarnessException, InterruptedException {
+            if (resolveSource.path().equals("/a/failing")) {
+              allowFirstToFail.await();
+              throw new MobileHarnessException(
+                  BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Failed to resolve file");
+            }
+            neverCountedDown.await();
+            return ResolveResult.of(ImmutableList.of(), ImmutableMap.of(), resolveSource);
+          }
+        };
+
+    try {
+      CountDownLatch batchDone = new CountDownLatch(1);
+      ListenableFuture<List<Optional<ResolveResult>>> batchFuture =
+          failingResolver.resolveAsync(
+              ImmutableList.of(
+                  ResolveSource.create("/a/failing", ImmutableMap.of(), "/", "/"),
+                  ResolveSource.create("/a/second", ImmutableMap.of(), "/", "/"),
+                  ResolveSource.create("/a/third", ImmutableMap.of(), "/", "/")));
+      batchFuture.addListener(batchDone::countDown, directExecutor());
+
+      assertThat(batchDone.await(10, SECONDS)).isTrue();
+      assertThat(submitCalls.get()).isEqualTo(3);
+    } finally {
+      rawThreadPool.shutdownNow();
+    }
   }
 
   @Test
