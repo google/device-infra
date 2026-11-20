@@ -16,8 +16,6 @@
 
 package com.google.devtools.mobileharness.shared.util.device;
 
-import static com.google.devtools.mobileharness.shared.constant.device.DeviceConstants.UNHEALTHY_DEVICE_TYPES;
-
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
@@ -25,6 +23,24 @@ import java.util.Collection;
 
 /** Shared utility for calculating {@link HealthCategory} of a device. */
 public final class DeviceHealthUtil {
+
+  /** The device types that are considered unhealthy. */
+  public static final ImmutableSet<String> UNHEALTHY_DEVICE_TYPES =
+      ImmutableSet.of(
+          "AbnormalTestbedDevice",
+          "AndroidFastbootDevice",
+          "AndroidFastbootdModeDevice",
+          "AndroidOfflineDevice",
+          "AndroidRecoveryDevice",
+          "AndroidUnauthorizedDevice",
+          "DisconnectedDevice",
+          "FailedDevice",
+          "FuchsiaOfflineDevice",
+          "FuchsiaRecoveringDevice");
+
+  /** Statuses in which the device is eligible to be healthy (in service) when types are healthy. */
+  public static final ImmutableSet<DeviceStatus> HEALTHY_STATUS =
+      ImmutableSet.of(DeviceStatus.IDLE, DeviceStatus.BUSY);
 
   /** Statuses in which the device is temporarily unavailable and in transition. */
   public static final ImmutableSet<DeviceStatus> TRANSIT_STATUSES =
@@ -47,8 +63,7 @@ public final class DeviceHealthUtil {
    *       DIRTY}, {@code DYING}) returns {@link HealthCategory#HEALTH_CATEGORY_IN_TRANSITION}.
    *   <li>Empty {@code types} returns {@link HealthCategory#HEALTH_CATEGORY_UNSPECIFIED}.
    *   <li>{@link DeviceStatus#IDLE} or {@link DeviceStatus#BUSY} with no type in {@link
-   *       com.google.devtools.mobileharness.shared.constant.device.DeviceConstants#UNHEALTHY_DEVICE_TYPES}
-   *       returns {@link HealthCategory#HEALTH_CATEGORY_IN_SERVICE}.
+   *       #UNHEALTHY_DEVICE_TYPES} returns {@link HealthCategory#HEALTH_CATEGORY_IN_SERVICE}.
    *   <li>{@link DeviceStatus#BUSY} with any type in {@code UNHEALTHY_DEVICE_TYPES} returns {@link
    *       HealthCategory#HEALTH_CATEGORY_IN_AUTO_RECOVERY}.
    *   <li>Any other status with a type in {@code UNHEALTHY_DEVICE_TYPES} (such as {@code IDLE})
@@ -74,7 +89,7 @@ public final class DeviceHealthUtil {
 
     boolean hasUnhealthyType = types.stream().anyMatch(UNHEALTHY_DEVICE_TYPES::contains);
 
-    if ((status == DeviceStatus.IDLE || status == DeviceStatus.BUSY) && !hasUnhealthyType) {
+    if (HEALTHY_STATUS.contains(status) && !hasUnhealthyType) {
       return HealthCategory.HEALTH_CATEGORY_IN_SERVICE;
     }
 

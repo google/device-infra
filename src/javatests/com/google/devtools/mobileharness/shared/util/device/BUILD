@@ -26,7 +26,6 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/constant/device:device_constants",
         "//src/java/com/google/devtools/mobileharness/shared/util/device:device_health_util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
