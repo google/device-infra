@@ -23,10 +23,13 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
+import com.google.devtools.mobileharness.api.model.lab.LiteDeviceInfoFactory;
 import com.google.devtools.mobileharness.platform.android.connectivity.AndroidConnectivityUtil;
 import com.google.devtools.mobileharness.platform.android.connectivity.ConnectToWifiArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
@@ -60,6 +63,7 @@ public final class NetworkConnectorTest {
 
   private NetworkConnector networkConnector;
   private FakeLogCollector testLog;
+  private DeviceInfo deviceInfo;
 
   @Mock private Device device;
   @Mock private WifiUtil wifiUtil;
@@ -70,9 +74,11 @@ public final class NetworkConnectorTest {
   @Before
   public void setUp() throws Exception {
     testLog = new FakeLogCollector();
+    deviceInfo = LiteDeviceInfoFactory.create(DEVICE_ID);
     networkConnector =
         new NetworkConnector(wifiUtil, connectivityUtil, apkInstaller, systemSettingUtil);
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
+    when(device.info()).thenReturn(deviceInfo);
     when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(DEFAULT_SDK_VERSION);
   }
 
@@ -394,5 +400,81 @@ public final class NetworkConnectorTest {
         .isTrue();
     InOrder order = inOrder(connectivityUtil);
     order.verify(connectivityUtil, times(1)).connectToWifi(wifiArgs, testLog);
+  }
+
+  @Test
+  public void connectToWifi_withDeviceInfo_installsWifiUtilAndConnects() throws Exception {
+    when(connectivityUtil.getNetworkSsid(DEVICE_ID, DEFAULT_SDK_VERSION)).thenReturn("");
+    when(wifiUtil.getWifiUtilApkPath()).thenReturn(PATH_TO_WIFI_UTIL_APK);
+    ConnectToWifiArgs wifiArgs =
+        ConnectToWifiArgs.builder()
+            .setSerial(DEVICE_ID)
+            .setSdkVersion(DEFAULT_SDK_VERSION)
+            .setWifiSsid("ssid")
+            .setWifiPsk("psk")
+            .setScanSsid(false)
+            .setWaitTimeout(Duration.ofMinutes(1))
+            .build();
+    when(connectivityUtil.connectToWifi(wifiArgs, null)).thenReturn(true);
+
+    networkConnector.connectToWifi(
+        deviceInfo,
+        WifiConnectArgs.builder()
+            .setWifiSsid("ssid")
+            .setWifiPsk("psk")
+            .setWaitTimeout(Duration.ofMinutes(1))
+            .build());
+
+    InOrder order = inOrder(apkInstaller, connectivityUtil);
+    order
+        .verify(apkInstaller)
+        .installApkIfNotExist(
+            deviceInfo,
+            ApkInstallArgs.builder()
+                .addApkPaths(PATH_TO_WIFI_UTIL_APK)
+                .setGrantPermissions(true)
+                .build());
+    order.verify(connectivityUtil).connectToWifi(wifiArgs, /* log= */ null);
+  }
+
+  @Test
+  public void connectToWifi_withDeviceInfo_returnsTrueWhenConnected() throws Exception {
+    when(connectivityUtil.getNetworkSsid(DEVICE_ID, DEFAULT_SDK_VERSION)).thenReturn("");
+    when(wifiUtil.getWifiUtilApkPath()).thenReturn(PATH_TO_WIFI_UTIL_APK);
+    ConnectToWifiArgs wifiArgs =
+        ConnectToWifiArgs.builder()
+            .setSerial(DEVICE_ID)
+            .setSdkVersion(DEFAULT_SDK_VERSION)
+            .setWifiSsid("ssid")
+            .setWifiPsk("psk")
+            .setScanSsid(false)
+            .setWaitTimeout(Duration.ofMinutes(1))
+            .build();
+    when(connectivityUtil.connectToWifi(wifiArgs, null)).thenReturn(true);
+
+    boolean connected =
+        networkConnector.connectToWifi(
+            deviceInfo,
+            WifiConnectArgs.builder()
+                .setWifiSsid("ssid")
+                .setWifiPsk("psk")
+                .setWaitTimeout(Duration.ofMinutes(1))
+                .build());
+
+    assertThat(connected).isTrue();
+  }
+
+  @Test
+  public void connectToWifi_withDeviceInfoAlreadyConnected_skipsInstallAndConnect()
+      throws Exception {
+    when(connectivityUtil.getNetworkSsid(DEVICE_ID, DEFAULT_SDK_VERSION))
+        .thenReturn("connected-ssid");
+
+    networkConnector.connectToWifi(
+        deviceInfo,
+        WifiConnectArgs.builder().setWifiSsid("connected-ssid").setWifiPsk("psk").build());
+
+    verifyNoInteractions(wifiUtil, apkInstaller);
+    verify(connectivityUtil, never()).connectToWifi(any(), any());
   }
 }
