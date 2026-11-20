@@ -34,6 +34,10 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.ListDeviceConfigsRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.ListDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.ListLabConfigsRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.ListLabConfigsResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateGlobalConfigRequest;
@@ -68,6 +72,14 @@ public interface DeviceConfigStub {
   /** Gets the configuration of a lab asynchronously. */
   ListenableFuture<GetLabConfigResponse> getLabConfigAsync(
       GetLabConfigRequest request, boolean useClientRpcAuthority);
+
+  /** Lists one page of the configurations of all devices asynchronously. */
+  ListenableFuture<ListDeviceConfigsResponse> listDeviceConfigsAsync(
+      ListDeviceConfigsRequest request, boolean useClientRpcAuthority);
+
+  /** Lists one page of the configurations of all labs asynchronously. */
+  ListenableFuture<ListLabConfigsResponse> listLabConfigsAsync(
+      ListLabConfigsRequest request, boolean useClientRpcAuthority);
 
   /** Gets the global configuration. Only supported in ATS. */
   GetGlobalConfigResponse getGlobalConfig(GetGlobalConfigRequest request)
