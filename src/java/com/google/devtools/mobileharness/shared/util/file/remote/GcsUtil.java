@@ -40,7 +40,6 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -105,25 +104,16 @@ public abstract class GcsUtil {
     MISSING,
   }
 
-  /** Thread pool for uploading/downloading GSC file in parellel. */
+  /** Thread pools for uploading/downloading GCS files in parallel. */
   protected static final class Holder {
+    // Daemon threads do not block JVM exit; do not shut these pools down in a JVM shutdown hook,
+    // which runs on SIGTERM while graceful server drain still needs in-flight shard transfers.
     static final ListeningExecutorService copyFileToCloudThreadpool =
         ThreadPools.createStandardThreadPoolWithMaxSize(
             "gcs-util-copy-file-to-cloud", Flags.gcsUtilThreads.getNonNull());
     static final ListeningExecutorService copyFileToLocalThreadpool =
         ThreadPools.createStandardThreadPoolWithMaxSize(
             "gcs-util-copy-file-to-local", Flags.gcsUtilThreads.getNonNull());
-
-    static {
-      ShutdownHookManager.getInstance()
-          .addShutdownHook(
-              () -> {
-                logger.atInfo().log("Shutting down GcsUtil thread pool.");
-                copyFileToCloudThreadpool.shutdownNow();
-                copyFileToLocalThreadpool.shutdownNow();
-              },
-              "gcs-util-shutdown");
-    }
 
     private Holder() {}
   }
