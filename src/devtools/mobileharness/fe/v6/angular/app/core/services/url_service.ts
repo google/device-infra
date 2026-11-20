@@ -84,12 +84,24 @@ export interface EmbeddedHeaderSlotRequest {
   type: 'EMBEDDED_HEADER_SLOT_REQUEST';
 }
 
+/**
+ * Interface for the message sent to the parent window when the backdrop of the
+ * app's dialogs is shown or hidden, so that the host can dim the rest of its
+ * page as well.
+ */
+export interface EmbeddedBackdropChangedMessage {
+  type: 'EMBEDDED_BACKDROP_CHANGED';
+  /** Whether the backdrop of a dialog is shown. */
+  visible: boolean;
+}
+
 /** Messages this app posts to the host window. */
 type HostMessage =
   | ExternalUrlRequest
   | NavigatedMessage
   | SearchStateChangedMessage
-  | EmbeddedHeaderSlotRequest;
+  | EmbeddedHeaderSlotRequest
+  | EmbeddedBackdropChangedMessage;
 
 /**
  * Service to handle URL generation and cross-window communication for navigation.
@@ -293,6 +305,29 @@ export class UrlService implements OnDestroy {
 
     const message: EmbeddedHeaderSlotRequest = {
       type: 'EMBEDDED_HEADER_SLOT_REQUEST',
+    };
+
+    this.postMessageToHost(message);
+  }
+
+  /**
+   * Tells the host window whether the backdrop of a dialog is shown.
+   *
+   * @param visible Whether the backdrop of a dialog is shown.
+   *
+   * Explanation: When embedded in the ATS host (MTT UI2), a dialog's backdrop
+   * only covers the iframe. With this message the host dims the rest of its
+   * page (side navigation, header, footer) as well, so that the whole page is
+   * covered while a dialog is open. No-op outside ATS embedded mode.
+   */
+  notifyEmbeddedBackdropChanged(visible: boolean): void {
+    if (!this.isInAtsEmbeddedMode() || !this.win) {
+      return;
+    }
+
+    const message: EmbeddedBackdropChangedMessage = {
+      type: 'EMBEDDED_BACKDROP_CHANGED',
+      visible,
     };
 
     this.postMessageToHost(message);

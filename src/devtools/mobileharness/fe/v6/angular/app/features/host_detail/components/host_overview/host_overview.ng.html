@@ -113,7 +113,11 @@
         <dt>Version</dt>
         <dd>
           {{ host.labServer.version || 'N/A' }}
-          @if (host.canUpgrade) {
+          <!--
+            Lab server release (upgrade) is not supported in OSS (ATS), so never render the upgrade
+            affordances there, even if canUpgrade is forced on (e.g. by force_all_ready).
+          -->
+          @if (isGoogleInternal && host.canUpgrade) {
             <button
               class="upgrade-version-button"
               [matTooltip]="host.labServer.actions?.release?.tooltip || ''"
