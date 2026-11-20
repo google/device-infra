@@ -239,6 +239,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_format",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",

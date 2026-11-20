@@ -145,6 +145,39 @@ public class XtsConstants {
   /** Name of the incremental result store dir under a session result dir. */
   public static final String INCREMENTAL_STORE_DIR_NAME = "incremental";
 
+  /**
+   * Name of the invocation record file in a per-job incremental result store dir (written by AOSP
+   * Tradefed's {@code IncrementalProtoResultReporter}).
+   */
+  public static final String INCREMENTAL_INVOCATION_FILE_NAME = "invocation.pb";
+
+  /**
+   * Name of the completion marker file in a per-job incremental result store dir (written by AOSP
+   * Tradefed's {@code IncrementalProtoResultReporter}).
+   */
+  public static final String INCREMENTAL_COMPLETE_FILE_NAME = "complete.pb";
+
+  /** Name of the retry baseline report file in a session incremental result store dir. */
+  public static final String INCREMENTAL_BASELINE_FILE_NAME = "baseline.pb";
+
+  /**
+   * Invocation context attribute key for the planned modules and unit counts.
+   *
+   * <p>Keep in sync with AOSP Tradefed's {@code
+   * com.android.tradefed.testtype.suite.ITestSuite.PLANNED_MODULES}; no automated cross-repo sync
+   * guard exists, so any future key rename must preserve backward-compatible read support.
+   */
+  public static final String PLANNED_MODULES_ATTR = "planned-modules";
+
+  /**
+   * Module invocation context attribute key for the number of completed test units.
+   *
+   * <p>Keep in sync with AOSP Tradefed's {@code
+   * com.android.tradefed.testtype.suite.ITestSuite.MODULE_UNITS_RUN}; no automated cross-repo sync
+   * guard exists, so any future key rename must preserve backward-compatible read support.
+   */
+  public static final String MODULE_UNITS_RUN_ATTR = "module-units-run";
+
   /** Lowercase xTS types declaring the Tradefed incremental result reporter. */
   public static final ImmutableSet<String> INCREMENTAL_RESULT_REPORTING_XTS_TYPES =
       ImmutableSet.of("cts");
