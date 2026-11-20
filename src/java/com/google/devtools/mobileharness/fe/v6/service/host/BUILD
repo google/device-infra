@@ -37,6 +37,7 @@ java_library(
         ":host_service_logic",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/errors",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",
