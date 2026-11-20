@@ -615,8 +615,20 @@ public interface PropertyName {
        */
       ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES,
 
-      /** A comma separated list of test targets (package.class#method) to retry. */
+      /**
+       * Legacy comma-separated list of test targets (package.class#method) to retry. Kept for
+       * backward compatibility with older Lab Servers; prefer {@link
+       * #ANDROID_INSTRUMENTATION_RETRY_TEST_TARGET_LIST}.
+       *
+       * <p>TODO: baisheng - Remove this property once all labs migrate to the new property.
+       */
       ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS,
+
+      /** A JSON array of test targets (package.class#method) to retry. */
+      ANDROID_INSTRUMENTATION_RETRY_TEST_TARGET_LIST,
+
+      /** Android instrumentation check retry test targets time in milliseconds. */
+      ANDROID_INSTRUMENTATION_CHECK_RETRY_TEST_TARGETS_TIME_MS,
     }
 
     /** AndroidFlashstationDecorator property name constants. */

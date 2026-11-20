@@ -67,12 +67,19 @@ public final class AndroidInstrumentationTestRetryProcessorTest {
     test.resultWithCause().setPass();
     test.properties()
         .add(
+            PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGET_LIST,
+            "[\"com.google.example.MyClass#testOne\"]");
+    test.properties()
+        .add(
             PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS,
             "com.google.example.MyClass#testOne");
 
     assertThat(testRetryProcessor.generateRetryTestTargetsProperty(test))
         .containsExactly(
-            "android_instrumentation_retry_test_targets", "com.google.example.MyClass#testOne");
+            "android_instrumentation_retry_test_target_list",
+            "[\"com.google.example.MyClass#testOne\"]",
+            "android_instrumentation_retry_test_targets",
+            "com.google.example.MyClass#testOne");
   }
 
   @Test
@@ -161,7 +168,7 @@ public final class AndroidInstrumentationTestRetryProcessorTest {
                         TestCase.newBuilder()
                             .setTestPackage("com.google.example")
                             .setTestClass("OtherClass")
-                            .setTestMethod("testFour")
+                            .setTestMethod("Display, \"Quoted\" [count=4]")
                             .build())
                     .build())
             .build();
@@ -169,8 +176,13 @@ public final class AndroidInstrumentationTestRetryProcessorTest {
 
     assertThat(testRetryProcessor.generateRetryTestTargetsProperty(test))
         .containsExactly(
+            "android_instrumentation_retry_test_target_list",
+            "[\"com.google.example.MyClass#testOne\","
+                + "\"com.google.example.OtherClass#testThree\","
+                + "\"com.google.example.OtherClass#Display, \\\"Quoted\\\" [count=4]\"]",
             "android_instrumentation_retry_test_targets",
-            "com.google.example.MyClass#testOne,com.google.example.OtherClass#testThree,"
-                + "com.google.example.OtherClass#testFour");
+            "com.google.example.MyClass#testOne,"
+                + "com.google.example.OtherClass#testThree,"
+                + "com.google.example.OtherClass#Display, \"Quoted\" [count=4]");
   }
 }

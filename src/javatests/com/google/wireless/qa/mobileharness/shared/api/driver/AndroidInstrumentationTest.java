@@ -63,6 +63,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidInstrumentationDriverSpec;
@@ -92,7 +93,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
 import org.mockito.Mock;
@@ -100,7 +100,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-@RunWith(JUnit4.class)
+@RunWith(TestParameterInjector.class)
 public class AndroidInstrumentationTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();

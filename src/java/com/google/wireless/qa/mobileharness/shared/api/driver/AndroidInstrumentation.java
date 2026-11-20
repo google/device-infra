@@ -26,7 +26,6 @@ import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.
 import static java.lang.String.format;
 
 import com.google.common.base.Ascii;
-import com.google.common.base.Splitter;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Utf8;
 import com.google.common.collect.ImmutableList;
@@ -298,12 +297,16 @@ public class AndroidInstrumentation extends BaseDriver
     prepareTestArgs(testInfo, externalStoragePath.orElse(null));
 
     // Finalizes the test target.
-    @Nullable String testTarget = getTestTarget(testInfo, optionMaps);
+    TestTargetPlan targetPlan = getTestTarget(testInfo);
+    @Nullable String testTarget = targetPlan.testTarget();
 
     // Sets the test properties.
     testInfo.properties().add(AndroidInstrumentationDriverSpec.PROPERTY_PACKAGE, testPackageName);
     testInfo.properties().add(AndroidInstrumentationDriverSpec.PROPERTY_RUNNER, runnerName);
 
+    // Populate locator-derived size even on retries so upgraded retry targets retain it (with
+    // extraOptions in updateOptionMaps still overriding it), while non-upgraded retries strip it.
+    populateSizeOptionIfNeeded(testInfo, optionMaps);
     if (isUniformSharding(testInfo)) {
       populateOptionMapsForUniformSharding(testInfo, optionMaps);
     }
@@ -1037,78 +1040,77 @@ public class AndroidInstrumentation extends BaseDriver
     return optionMaps;
   }
 
-  private void cleanUpOptionMapsExplicitTestTargets(
-      TestInfo testInfo, List<Map<String, String>> optionMaps) {
-    for (Map<String, String> optionMap : optionMaps) {
-      if (optionMap.isEmpty()) {
-        continue;
-      }
-      optionMap
-          .entrySet()
-          .removeIf(entry -> {
-            String key = entry.getKey();
-            if (TEST_TARGET_KEYS.contains(key) || TEST_FILTER_KEYS.contains(key)) {
-              testInfo
-                  .log()
-                  .atInfo()
-                  .alsoTo(logger)
-                  .log(
-                      "Removed test target/filter key %s (value = %s) from option map.",
-                      key, entry.getValue());
-              return true;
-            }
-            return false;
-          });
+  /**
+   * Resolved {@code -e class} target selection for the current instrumentation run.
+   *
+   * @param testTarget comma-separated test target(s) to pass to {@code -e class}, or {@code null}
+   *     when targeting is driven solely by {@code optionMaps} (such as running all tests, uniform
+   *     shards, or size-filtered suites)
+   * @param usesRetryTargets whether {@code testTarget} was resolved from explicit retry test
+   *     targets ({@code false} both on initial attempts and on retries that fall back to re-running
+   *     the first attempt's suite)
+   * @param hasUpgradedTargets whether any retry target was upgraded to a broader root-method or
+   *     class target ({@code false} when {@code usesRetryTargets} is {@code false})
+   */
+  private record TestTargetPlan(
+      @Nullable String testTarget, boolean usesRetryTargets, boolean hasUpgradedTargets) {
+    private static TestTargetPlan withoutRetryTargets(@Nullable String testTarget) {
+      return new TestTargetPlan(
+          testTarget, /* usesRetryTargets= */ false, /* hasUpgradedTargets= */ false);
     }
   }
 
   /** Get test target from either test name or user input. */
-  private String getTestTarget(TestInfo testInfo, List<Map<String, String>> optionMaps) {
+  private TestTargetPlan getTestTarget(TestInfo testInfo) {
 
     String testName = testInfo.locator().getName();
-    String testTarget;
     if (Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_ALL)) {
-      testTarget = null;
       testInfo.log().atInfo().alsoTo(logger).log("Running all tests");
-    } else if (isUniformSharding(testInfo)) {
-      testTarget = null;
+      return TestTargetPlan.withoutRetryTargets(/* testTarget= */ null);
+    }
+    if (isUniformSharding(testInfo)) {
       testInfo
           .log()
           .atInfo()
           .alsoTo(logger)
           .log("Running %s tests with uniform sharding", testName);
-    } else if (testInfo.properties().has(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES)) {
-      testTarget = testInfo.properties().get(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES);
-    } else if (Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_SMALL)
-        || Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_MEDIUM)
-        || Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_LARGE)) {
-      testTarget = null;
-      String size = Ascii.toLowerCase(testName);
-      for (Map<String, String> optionMap : optionMaps) {
-        optionMap.put("size", size);
-      }
-      testInfo.log().atInfo().alsoTo(logger).log("Running all %s tests", size);
-    } else {
-      testTarget = testName;
+      return TestTargetPlan.withoutRetryTargets(/* testTarget= */ null);
     }
-    return testTarget;
+    if (testInfo.properties().has(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES)) {
+      return TestTargetPlan.withoutRetryTargets(
+          testInfo.properties().get(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES));
+    }
+    if (isSizeTargetName(testName)) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Running all %s tests", Ascii.toLowerCase(testName));
+      return TestTargetPlan.withoutRetryTargets(/* testTarget= */ null);
+    }
+    return TestTargetPlan.withoutRetryTargets(testName);
   }
 
-  private String getTestTargetForRetryTest(TestInfo testInfo) {
+  @SuppressWarnings("ReferenceEquality")
+  private void populateSizeOptionIfNeeded(TestInfo testInfo, List<Map<String, String>> optionMaps) {
     String testName = testInfo.locator().getName();
-    String retryTestTargets =
-        testInfo
-            .properties()
-            .getOptional(Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS)
-            .orElse("");
-    testInfo
-        .log()
-        .atInfo()
-        .alsoTo(logger)
-        .log(
-            "Running test %s with retry test targets:\n%s",
-            testName, String.join("\n", Splitter.on(',').split(retryTestTargets)));
-    return retryTestTargets;
+    if (isUniformSharding(testInfo)
+        || testInfo.properties().has(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES)
+        || !isSizeTargetName(testName)) {
+      return;
+    }
+    String size = Ascii.toLowerCase(testName);
+    for (Map<String, String> optionMap : optionMaps) {
+      if (optionMap != SKIPPED_OPTION_MAP) {
+        optionMap.put(ARGUMENT_TEST_SIZE, size);
+      }
+    }
+  }
+
+  private static boolean isSizeTargetName(String testName) {
+    return Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_SMALL)
+        || Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_MEDIUM)
+        || Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_LARGE);
   }
 
   private boolean isUniformSharding(TestInfo testInfo) {

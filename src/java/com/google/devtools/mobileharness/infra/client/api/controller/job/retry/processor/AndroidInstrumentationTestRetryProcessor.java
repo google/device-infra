@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
@@ -28,6 +27,8 @@ import com.google.devtools.mobileharness.platform.android.instrumentation.result
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestResult;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestStatus;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Optional;
@@ -37,6 +38,17 @@ import javax.inject.Inject;
 class AndroidInstrumentationTestRetryProcessor {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  // TestInfo properties are protobuf strings rather than HTML, so HTML escaping is unnecessary.
+  // Disabling it avoids turning '=', '<', '>', and '\'' in parameterized test names (e.g.
+  // "[alpha,count=10]") into "\\u003d"-style Unicode escapes in logs, test properties, and unit
+  // test assertions.
+  private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
+  private static final String RETRY_TEST_TARGETS_KEY =
+      Ascii.toLowerCase(
+          Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS.name());
+  private static final String RETRY_TEST_TARGET_LIST_KEY =
+      Ascii.toLowerCase(
+          Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGET_LIST.name());
 
   private final TestSuiteResultLoader testSuiteResultLoader;
 
@@ -58,20 +70,22 @@ class AndroidInstrumentationTestRetryProcessor {
         currentTestInfo.resultWithCause().get().type();
     if (currentTestResult
         != com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL) {
-      // If test result of current test is NOT fail but caller still wants to retry it, test
-      // property ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS will be inherited from the current test
-      // if any.
-      Optional<String> retryTestTargets =
-          currentTestInfo
-              .properties()
-              .getOptional(Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS);
-      if (retryTestTargets.isPresent() && !retryTestTargets.get().isEmpty()) {
-        return ImmutableMap.of(
-            Ascii.toLowerCase(
-                Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS.name()),
-            retryTestTargets.get());
-      }
-      return ImmutableMap.of();
+      // If test result of current test is NOT fail but caller still wants to retry it, retry
+      // target properties are inherited from the current test if any.
+      ImmutableMap.Builder<String, String> inherited = ImmutableMap.builder();
+      currentTestInfo
+          .properties()
+          .getOptional(Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGET_LIST)
+          .filter(value -> !value.isEmpty())
+          .ifPresent(value -> inherited.put(RETRY_TEST_TARGET_LIST_KEY, value));
+      // TODO: baisheng - Remove RETRY_TEST_TARGETS_KEY once all labs migrate to the new property
+      // ANDROID_INSTRUMENTATION_RETRY_TEST_TARGET_LIST.
+      currentTestInfo
+          .properties()
+          .getOptional(Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS)
+          .filter(value -> !value.isEmpty())
+          .ifPresent(value -> inherited.put(RETRY_TEST_TARGETS_KEY, value));
+      return inherited.buildOrThrow();
     }
 
     Optional<TestSuiteResult> testSuiteResult =
@@ -94,16 +108,15 @@ class AndroidInstrumentationTestRetryProcessor {
           "No failed or error test cases found for test %s.", currentTestInfo.locator().getId());
       return ImmutableMap.of();
     }
-    String failedOrErrorTestTargets =
+    ImmutableList<String> failedOrErrorTargets =
         failedOrErrorTestCases.stream()
             .map(testCase ->
                 String.format(
                     "%s.%s#%s",
                     testCase.getTestPackage(), testCase.getTestClass(), testCase.getTestMethod()))
-            .collect(joining(","));
+            .collect(toImmutableList());
     return ImmutableMap.of(
-        Ascii.toLowerCase(
-            Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS.name()),
-        failedOrErrorTestTargets);
+        RETRY_TEST_TARGET_LIST_KEY, GSON.toJson(failedOrErrorTargets),
+        RETRY_TEST_TARGETS_KEY, String.join(",", failedOrErrorTargets));
   }
 }
