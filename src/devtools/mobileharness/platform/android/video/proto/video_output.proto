@@ -44,6 +44,7 @@ message VideoOutput {
     MPEGTS = 2;
     PNG = 3;
     MP4 = 4;
+    JPEG = 5;
   }
   optional ContainerFormat container_format = 5;
 }
