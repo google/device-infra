@@ -18,13 +18,17 @@ package com.google.devtools.mobileharness.platform.android.shared.emulator;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
+import java.util.Optional;
 
-/** Configuration for virtual device / CVD hardware and runtime specs. */
+/**
+ * Configuration overrides for virtual device / CVD hardware and runtime specs.
+ *
+ * <p>All fields are optional; unset fields are omitted from the Cuttlefish environment config so
+ * Cuttlefish uses the build's device defaults (e.g. {@code android-info.txt} and {@code
+ * etc/cvd_config/cvd_config_<preset>.json}).
+ */
 @AutoValue
 public abstract class VirtualDeviceConfig {
-
-  public static final int DEFAULT_CPUS = 4;
-  public static final int DEFAULT_MEMORY_MB = 8192;
 
   /** A regular SIM, sufficient for most tests. */
   public static final int SIM_TYPE_NORMAL = 1;
@@ -32,28 +36,21 @@ public abstract class VirtualDeviceConfig {
   /** A SIM with carrier privileges, required by {@code CtsCarrierApiTestCases}. */
   public static final int SIM_TYPE_CTS_CARRIER_API = 2;
 
-  public static final int DEFAULT_MODEM_SIMULATOR_SIM_TYPE = SIM_TYPE_NORMAL;
-  public static final boolean DEFAULT_USE_SDCARD = true;
+  public abstract Optional<Integer> cpus();
 
-  public abstract int cpus();
-
-  public abstract int memoryMb();
+  public abstract Optional<Integer> memoryMb();
 
   /**
    * The SIM the modem simulator emulates, either {@link #SIM_TYPE_NORMAL} or {@link
    * #SIM_TYPE_CTS_CARRIER_API}.
    */
-  public abstract int modemSimulatorSimType();
+  public abstract Optional<Integer> modemSimulatorSimType();
 
   /** Whether to create a blank SD card image and expose it to the guest. */
-  public abstract boolean useSdcard();
+  public abstract Optional<Boolean> useSdcard();
 
   public static Builder builder() {
-    return new AutoValue_VirtualDeviceConfig.Builder()
-        .setCpus(DEFAULT_CPUS)
-        .setMemoryMb(DEFAULT_MEMORY_MB)
-        .setModemSimulatorSimType(DEFAULT_MODEM_SIMULATOR_SIM_TYPE)
-        .setUseSdcard(DEFAULT_USE_SDCARD);
+    return new AutoValue_VirtualDeviceConfig.Builder();
   }
 
   public static VirtualDeviceConfig getDefaultInstance() {
@@ -80,15 +77,22 @@ public abstract class VirtualDeviceConfig {
 
     public VirtualDeviceConfig build() {
       VirtualDeviceConfig config = autoBuild();
-      Preconditions.checkArgument(config.cpus() > 0, "cpus must be > 0: %s", config.cpus());
-      Preconditions.checkArgument(
-          config.memoryMb() > 0, "memoryMb must be > 0: %s", config.memoryMb());
-      Preconditions.checkArgument(
-          isValidModemSimulatorSimType(config.modemSimulatorSimType()),
-          "modemSimulatorSimType must be %s or %s: %s",
-          SIM_TYPE_NORMAL,
-          SIM_TYPE_CTS_CARRIER_API,
-          config.modemSimulatorSimType());
+      config
+          .cpus()
+          .ifPresent(cpus -> Preconditions.checkArgument(cpus > 0, "cpus must be > 0: %s", cpus));
+      config
+          .memoryMb()
+          .ifPresent(memoryMb ->
+              Preconditions.checkArgument(memoryMb > 0, "memoryMb must be > 0: %s", memoryMb));
+      config
+          .modemSimulatorSimType()
+          .ifPresent(simType ->
+              Preconditions.checkArgument(
+                  isValidModemSimulatorSimType(simType),
+                  "modemSimulatorSimType must be %s or %s: %s",
+                  SIM_TYPE_NORMAL,
+                  SIM_TYPE_CTS_CARRIER_API,
+                  simType));
       return config;
     }
   }

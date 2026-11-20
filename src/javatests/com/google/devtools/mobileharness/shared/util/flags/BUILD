@@ -27,7 +27,6 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flag",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:junit_junit",
     ],

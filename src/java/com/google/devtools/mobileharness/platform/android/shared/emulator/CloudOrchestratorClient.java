@@ -511,28 +511,20 @@ public class CloudOrchestratorClient {
   /**
    * Creates the Cuttlefish instance configuration map for a CVD.
    *
-   * <p>Note: We explicitly specify the instance configuration parameters manually rather than using
-   * {@code "@import": "phone"} because Cuttlefish's template expansion will override our custom
-   * configuration instead of merging with it (for example, {@code kPhoneInstanceTemplate} sets
-   * {@code "vm": {"memory_mb": 4096}}, which overrides custom VM configurations).
+   * <p>Only explicitly configured overrides from {@code virtualDeviceConfig} and required
+   * orchestrator plumbing fields are included; display and unset hardware settings are omitted so
+   * Cuttlefish honors the build's device defaults (e.g. {@code android-info.txt} and {@code
+   * etc/cvd_config/cvd_config_<preset>.json}).
    */
   private Map<String, Object> createInstanceConfigMap(
       String cvdId, @Nullable String target, VirtualDeviceConfig virtualDeviceConfig) {
     Map<String, Object> instance = new HashMap<>();
 
-    Map<String, Object> display = new HashMap<>();
-    display.put("width", 720);
-    display.put("height", 1280);
-    display.put("dpi", 320);
-    Map<String, Object> graphics = new HashMap<>();
-    graphics.put("displays", ImmutableList.of(display));
-    instance.put("graphics", graphics);
-
     Map<String, Object> vm = new HashMap<>();
-    vm.put("memory_mb", virtualDeviceConfig.memoryMb());
+    virtualDeviceConfig.memoryMb().ifPresent(memoryMb -> vm.put("memory_mb", memoryMb));
     vm.put("setupwizard_mode", "OPTIONAL");
-    vm.put("cpus", virtualDeviceConfig.cpus());
-    vm.put("use_sdcard", virtualDeviceConfig.useSdcard());
+    virtualDeviceConfig.cpus().ifPresent(cpus -> vm.put("cpus", cpus));
+    virtualDeviceConfig.useSdcard().ifPresent(useSdcard -> vm.put("use_sdcard", useSdcard));
     if (isX86Target(target)) {
       Map<String, Object> crosvm = new HashMap<>();
       crosvm.put("vhost_user_vsock", "true");
@@ -540,9 +532,13 @@ public class CloudOrchestratorClient {
     }
     instance.put("vm", vm);
 
-    Map<String, Object> connectivity = new HashMap<>();
-    connectivity.put("modem_simulator_sim_type", virtualDeviceConfig.modemSimulatorSimType());
-    instance.put("connectivity", connectivity);
+    virtualDeviceConfig
+        .modemSimulatorSimType()
+        .ifPresent(simType -> {
+          Map<String, Object> connectivity = new HashMap<>();
+          connectivity.put("modem_simulator_sim_type", simType);
+          instance.put("connectivity", connectivity);
+        });
 
     Map<String, Object> streaming = new HashMap<>();
     streaming.put("device_id", cvdId);

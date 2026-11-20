@@ -190,14 +190,14 @@ public class Flags {
       name = "android_jit_emulator_cpus",
       help =
           "The number of CPUs for each android Just-in-time emulator instance. If not set or 0,"
-              + " defaults to 4.")
+              + " uses Cuttlefish's device default.")
   public static final Flag<Integer> androidJitEmulatorCpus = Flag.nonnegativeValue(0);
 
   @FlagSpec(
       name = "android_jit_emulator_memory_mb",
       help =
           "The memory in MB for each android Just-in-time emulator instance. If not set or 0,"
-              + " defaults to 8192.")
+              + " uses Cuttlefish's device default.")
   public static final Flag<Integer> androidJitEmulatorMemoryMb = Flag.nonnegativeValue(0);
 
   @FlagSpec(
@@ -205,7 +205,7 @@ public class Flags {
       help =
           "The SIM the modem simulator emulates for each android Just-in-time emulator instance: 1"
               + " for a regular SIM, 2 for a SIM with carrier privileges (required by"
-              + " CtsCarrierApiTestCases). If not set or 0, defaults to 1.")
+              + " CtsCarrierApiTestCases). If not set or 0, uses Cuttlefish's device default.")
   public static final Flag<Integer> androidJitEmulatorModemSimulatorSimType =
       Flag.nonnegativeValue(0);
 
@@ -220,8 +220,8 @@ public class Flags {
       name = "android_jit_emulator_use_sdcard",
       help =
           "Whether to create a blank SD card image and expose it to the guest for each android"
-              + " Just-in-time emulator instance.")
-  public static final Flag<Boolean> androidJitEmulatorUseSdcard = Flag.value(true);
+              + " Just-in-time emulator instance. If not set, uses Cuttlefish's device default.")
+  public static final Flag<Boolean> androidJitEmulatorUseSdcard = Flag.nullBoolean();
 
   @FlagSpec(name = "api_config", help = "Path of the text format protobuf API config file.")
   public static final Flag<String> apiConfigFile = Flag.value("");

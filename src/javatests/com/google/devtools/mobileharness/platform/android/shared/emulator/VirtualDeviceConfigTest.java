@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.shared.emulator;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -27,14 +28,13 @@ import org.junit.runners.JUnit4;
 public final class VirtualDeviceConfigTest {
 
   @Test
-  public void getDefaultInstance_returnsStandardDefaults() {
+  public void getDefaultInstance_allFieldsEmpty() {
     VirtualDeviceConfig config = VirtualDeviceConfig.getDefaultInstance();
 
-    assertThat(config.cpus()).isEqualTo(VirtualDeviceConfig.DEFAULT_CPUS);
-    assertThat(config.memoryMb()).isEqualTo(VirtualDeviceConfig.DEFAULT_MEMORY_MB);
-    assertThat(config.modemSimulatorSimType())
-        .isEqualTo(VirtualDeviceConfig.DEFAULT_MODEM_SIMULATOR_SIM_TYPE);
-    assertThat(config.useSdcard()).isEqualTo(VirtualDeviceConfig.DEFAULT_USE_SDCARD);
+    assertThat(config.cpus()).isEqualTo(Optional.empty());
+    assertThat(config.memoryMb()).isEqualTo(Optional.empty());
+    assertThat(config.modemSimulatorSimType()).isEqualTo(Optional.empty());
+    assertThat(config.useSdcard()).isEqualTo(Optional.empty());
   }
 
   @Test
@@ -47,11 +47,11 @@ public final class VirtualDeviceConfigTest {
             .setUseSdcard(false)
             .build();
 
-    assertThat(config.cpus()).isEqualTo(8);
-    assertThat(config.memoryMb()).isEqualTo(16384);
+    assertThat(config.cpus()).isEqualTo(Optional.of(8));
+    assertThat(config.memoryMb()).isEqualTo(Optional.of(16384));
     assertThat(config.modemSimulatorSimType())
-        .isEqualTo(VirtualDeviceConfig.SIM_TYPE_CTS_CARRIER_API);
-    assertThat(config.useSdcard()).isFalse();
+        .isEqualTo(Optional.of(VirtualDeviceConfig.SIM_TYPE_CTS_CARRIER_API));
+    assertThat(config.useSdcard()).isEqualTo(Optional.of(false));
   }
 
   @Test

@@ -434,8 +434,7 @@ public class CloudOrchestratorClientTest {
   }
 
   @Test
-  public void createCvdWithEnvConfigAndWait_defaultConfig_setsDefaultSdcardAndSimType()
-      throws Exception {
+  public void createCvdWithEnvConfigAndWait_defaultConfig_usesDeviceDefaults() throws Exception {
     server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
     server.enqueue(
         new MockResponse()
@@ -446,8 +445,16 @@ public class CloudOrchestratorClientTest {
 
     assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
     String body = server.takeRequest().getBody().readUtf8();
-    assertThat(body).contains("\"use_sdcard\":true");
-    assertThat(body).contains("\"modem_simulator_sim_type\":1");
+    assertThat(body).contains("\"setupwizard_mode\":\"OPTIONAL\"");
+    assertThat(body).contains("\"device_id\":\"cvd-1\"");
+    assertThat(body).doesNotContain("\"graphics\"");
+    assertThat(body).doesNotContain("\"displays\"");
+    assertThat(body).doesNotContain("\"cpus\"");
+    assertThat(body).doesNotContain("\"memory_mb\"");
+    assertThat(body).doesNotContain("\"use_sdcard\"");
+    assertThat(body).doesNotContain("\"connectivity\"");
+    assertThat(body).doesNotContain("\"modem_simulator_sim_type\"");
+    assertThat(body).doesNotContain("\"@import\"");
   }
 
   @Test
@@ -785,9 +792,15 @@ public class CloudOrchestratorClientTest {
     String body = req.getBody().readUtf8();
     assertThat(body).contains("\"host_package\":\"@image_dirs/dir-host\"");
     assertThat(body).contains("\"default_build\":\"@image_dirs/dir-device\"");
-    assertThat(body).contains("\"width\":720");
-    assertThat(body).contains("\"height\":1280");
-    assertThat(body).contains("\"dpi\":320");
+    assertThat(body).contains("\"setupwizard_mode\":\"OPTIONAL\"");
+    assertThat(body).contains("\"device_id\":\"cvd-1\"");
+    assertThat(body).doesNotContain("\"graphics\"");
+    assertThat(body).doesNotContain("\"displays\"");
+    assertThat(body).doesNotContain("\"cpus\"");
+    assertThat(body).doesNotContain("\"memory_mb\"");
+    assertThat(body).doesNotContain("\"use_sdcard\"");
+    assertThat(body).doesNotContain("\"connectivity\"");
+    assertThat(body).doesNotContain("\"modem_simulator_sim_type\"");
     assertThat(body).doesNotContain("\"@import\"");
   }
 

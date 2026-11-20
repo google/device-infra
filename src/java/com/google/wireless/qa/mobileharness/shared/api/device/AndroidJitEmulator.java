@@ -309,14 +309,17 @@ public class AndroidJitEmulator extends AndroidDevice {
   }
 
   /**
-   * Builds the virtual device config from the lab server flags, falling back to the {@link
-   * VirtualDeviceConfig} defaults for any flag that is unset. Flag values are validated when the
-   * lab server starts, see {@code Flags#checkConstraints}.
+   * Builds the virtual device config overrides from the lab server flags, leaving unset flags empty
+   * so Cuttlefish uses the build's device defaults. Flag values are validated when the lab server
+   * starts, see {@code Flags#checkConstraints}.
    */
   private static VirtualDeviceConfig virtualDeviceConfigFromFlags() {
-    VirtualDeviceConfig.Builder configBuilder =
-        VirtualDeviceConfig.builder().setUseSdcard(Flags.androidJitEmulatorUseSdcard.getNonNull());
-    // 0 means the flag is unset, in which case the VirtualDeviceConfig default applies.
+    VirtualDeviceConfig.Builder configBuilder = VirtualDeviceConfig.builder();
+    Boolean useSdcard = Flags.androidJitEmulatorUseSdcard.get();
+    if (useSdcard != null) {
+      configBuilder.setUseSdcard(useSdcard);
+    }
+    // 0 means the flag is unset, in which case Cuttlefish's device default applies.
     int cpus = Flags.androidJitEmulatorCpus.getNonNull();
     if (cpus != 0) {
       configBuilder.setCpus(cpus);
