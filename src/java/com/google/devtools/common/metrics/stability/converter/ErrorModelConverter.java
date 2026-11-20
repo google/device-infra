@@ -119,9 +119,7 @@ public class ErrorModelConverter {
         ExceptionDetail.newBuilder().setSummary(exceptionDetail.getSummary());
     ExceptionDetail.Builder current = root;
     for (ExceptionSummary causeSummary : exceptionDetail.getCauseList()) {
-      ExceptionDetail.Builder cause = ExceptionDetail.newBuilder().setSummary(causeSummary);
-      current.setCause(cause);
-      current = cause;
+      current = current.getCauseBuilder().setSummary(causeSummary);
     }
     return root.build();
   }
