@@ -55,7 +55,7 @@ public final class BatchDeviceConfigUtilTest {
 
   @Test
   public void ossBatchDeviceConfigPolicy_exposesAtsCurationAndSystemDimensions() {
-    assertThat(OSS_POLICY.allowCustomDimensions()).isFalse();
+    assertThat(OSS_POLICY.allowCustomDimensions()).isTrue();
     assertThat(OSS_POLICY.discoverFleetDimensionsFromDeviceConfigs()).isTrue();
     assertThat(OSS_POLICY.getCuratedDimensions())
         .containsExactly(
@@ -160,11 +160,43 @@ public final class BatchDeviceConfigUtilTest {
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
                 "label", DimensionList.DIMENSION_LIST_SUPPORTED, OSS_POLICY))
-        .hasValue("Dimension \"label\" in DIMENSION_LIST_SUPPORTED is not configurable in ATS.");
+        .isEmpty();
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "pool", DimensionList.DIMENSION_LIST_SUPPORTED, OSS_POLICY))
-        .hasValue("Dimension \"pool\" in DIMENSION_LIST_SUPPORTED is not configurable in ATS.");
+                "rack", DimensionList.DIMENSION_LIST_REQUIRED, OSS_POLICY))
+        .isEmpty();
+    assertThat(
+            BatchDeviceConfigUtil.checkDimensionTarget(
+                "model", DimensionList.DIMENSION_LIST_SUPPORTED, OSS_POLICY))
+        .hasValue(
+            "\"model\" is automatically detected by OmniLab and cannot be configured manually.");
+    // Detected or checked by OSS lab servers too (AndroidProperty, AndroidDeviceDelegate,
+    // AndroidRealDeviceDelegate, LabDimensionManager, LocalDeviceRunner), so ATS operators cannot
+    // configure them by hand either.
+    for (String detected :
+        ImmutableList.of(
+            "cloudrpc_failure",
+            "gms_version",
+            "launcher_gel",
+            "mtaas_device_checkin_group",
+            "nonsec_ar",
+            "omni_mode_usage",
+            "ping_google_stability",
+            "sbdp_allow",
+            "sec_ar",
+            "soc_rev")) {
+      assertThat(
+              BatchDeviceConfigUtil.checkDimensionTarget(
+                  detected, DimensionList.DIMENSION_LIST_SUPPORTED, OSS_POLICY))
+          .hasValue(
+              "\""
+                  + detected
+                  + "\" is automatically detected by OmniLab and cannot be configured manually.");
+    }
+    assertThat(
+            BatchDeviceConfigUtil.checkDimensionTarget(
+                "subdevice_dimensions", DimensionList.DIMENSION_LIST_REQUIRED, OSS_POLICY))
+        .hasValue("Invalid dimension name: subdevice_dimensions");
 
     BatchDeviceConfigPolicy defaultRestrictedPolicy =
         new BatchDeviceConfigPolicy() {

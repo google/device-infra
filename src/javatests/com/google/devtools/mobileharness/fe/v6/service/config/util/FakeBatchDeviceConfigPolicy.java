@@ -22,12 +22,11 @@ import com.google.common.collect.Sets;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.ConfigurableDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DimensionList;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 
 /**
- * Switchable {@link BatchDeviceConfigPolicy} test double supporting both a custom-allowing policy
- * (with curated {@code pool}, {@code label}, and {@code cluster} plus {@code LabInfoService} index
+ * Switchable {@link BatchDeviceConfigPolicy} test double supporting both a 1P-style policy (with
+ * curated {@code pool}, {@code label}, and {@code cluster} plus {@code LabInfoService} index
  * discovery) and {@link OssBatchDeviceConfigPolicy}.
  */
 public final class FakeBatchDeviceConfigPolicy implements BatchDeviceConfigPolicy {
@@ -73,7 +72,7 @@ public final class FakeBatchDeviceConfigPolicy implements BatchDeviceConfigPolic
 
   @Override
   public boolean allowCustomDimensions() {
-    return !ossMode;
+    return !ossMode || OSS_POLICY.allowCustomDimensions();
   }
 
   @Override
@@ -86,17 +85,9 @@ public final class FakeBatchDeviceConfigPolicy implements BatchDeviceConfigPolic
     if (extraSystemDetectedDimensions.isEmpty()) {
       return BatchDeviceConfigUtil.COMMON_SYSTEM_DETECTED_DIMENSION_NAMES;
     }
-    return ImmutableSet.copyOf(
-        Sets.union(
+    return Sets.union(
             BatchDeviceConfigUtil.COMMON_SYSTEM_DETECTED_DIMENSION_NAMES,
-            extraSystemDetectedDimensions));
-  }
-
-  @Override
-  public Optional<String> checkPolicyDimensionTarget(
-      String dimensionName, DimensionList dimensionList) {
-    return ossMode
-        ? OSS_POLICY.checkPolicyDimensionTarget(dimensionName, dimensionList)
-        : BatchDeviceConfigPolicy.super.checkPolicyDimensionTarget(dimensionName, dimensionList);
+            extraSystemDetectedDimensions)
+        .immutableCopy();
   }
 }

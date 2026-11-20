@@ -16,11 +16,11 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.config.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.ConfigurableDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DimensionList;
-import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -51,6 +51,7 @@ public final class OssBatchDeviceConfigPolicy implements BatchDeviceConfigPolicy
       ImmutableList.sortedCopyOf(BatchDeviceConfigUtil.COMMON_SYSTEM_DETECTED_DIMENSION_NAMES);
 
   @Inject
+  @VisibleForTesting
   public OssBatchDeviceConfigPolicy() {}
 
   @Override
@@ -60,7 +61,7 @@ public final class OssBatchDeviceConfigPolicy implements BatchDeviceConfigPolicy
 
   @Override
   public boolean allowCustomDimensions() {
-    return false;
+    return true;
   }
 
   @Override
@@ -76,16 +77,5 @@ public final class OssBatchDeviceConfigPolicy implements BatchDeviceConfigPolicy
   @Override
   public ImmutableList<String> getSortedSystemDetectedDimensionNames() {
     return SORTED_SYSTEM_DETECTED_DIMENSION_NAMES;
-  }
-
-  @Override
-  public Optional<String> checkPolicyDimensionTarget(
-      String dimensionName, DimensionList dimensionList) {
-    if (!getDefaultConfigurableKeys(dimensionList).contains(dimensionName)) {
-      return Optional.of(
-          String.format(
-              "Dimension \"%s\" in %s is not configurable in ATS.", dimensionName, dimensionList));
-    }
-    return Optional.empty();
   }
 }

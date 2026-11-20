@@ -189,7 +189,7 @@ public final class BatchDimensionConfigHandlersTest {
   }
 
   @Test
-  public void getConfigurableDimensions_ats_returnsFourFixedAndDisallowsCustom() throws Exception {
+  public void getConfigurableDimensions_ats_returnsFourCuratedAndAllowsCustom() throws Exception {
     enterAtsMode();
 
     GetConfigurableDimensionsResponse response =
@@ -198,7 +198,7 @@ public final class BatchDimensionConfigHandlersTest {
             .get();
 
     assertThat(response.getEnabled()).isTrue();
-    assertThat(response.getAllowCustomDimensions()).isFalse();
+    assertThat(response.getAllowCustomDimensions()).isTrue();
     assertThat(response.getDimensionsList()).hasSize(4);
     assertThat(response.getDimensions(0).getDimensionName()).isEqualTo("recovery");
     assertThat(response.getDimensions(1).getDimensionName()).isEqualTo("skip_suw_app");
@@ -324,8 +324,8 @@ public final class BatchDimensionConfigHandlersTest {
         .getAllDeviceDimensionsAsync(
             GetAllDeviceDimensionsRequest.getDefaultInstance(), SELF_UNIVERSE);
 
-    // 2. ATS mode returns ONLY ATS curated keys (never leaking 1P defaults or non-curated custom
-    // keys present in stored ATS DeviceConfigs)
+    // 2. ATS mode returns ATS curated keys plus custom keys present in stored ATS DeviceConfigs,
+    // never 1P curated defaults.
     when(labInfoProvider.getLabInfoAsync(any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
     enterAtsMode();
@@ -368,11 +368,15 @@ public final class BatchDimensionConfigHandlersTest {
                     .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
                     .build())
             .get();
-    assertThat(atsPopulatedResponse.getCandidateKeysList()).hasSize(2);
-    assertThat(atsPopulatedResponse.getCandidateKeys(0).getDimensionName()).isEqualTo("pool");
+    assertThat(atsPopulatedResponse.getCandidateKeysList()).hasSize(3);
+    assertThat(atsPopulatedResponse.getCandidateKeys(0).getDimensionName())
+        .isEqualTo("non_curated_custom");
     assertThat(atsPopulatedResponse.getCandidateKeys(0).getSelectedDeviceCount()).isEqualTo(1);
-    assertThat(atsPopulatedResponse.getCandidateKeys(1).getDimensionName())
+    assertThat(atsPopulatedResponse.getCandidateKeys(1).getDimensionName()).isEqualTo("pool");
+    assertThat(atsPopulatedResponse.getCandidateKeys(1).getSelectedDeviceCount()).isEqualTo(1);
+    assertThat(atsPopulatedResponse.getCandidateKeys(2).getDimensionName())
         .isEqualTo("persist_test_harness");
+    assertThat(atsPopulatedResponse.getCandidateKeys(2).getSelectedDeviceCount()).isEqualTo(0);
 
     // 3. Unspecified dimensionList and >1000 devices -> INVALID_ARGUMENT
     assertInvalidArgument(
@@ -671,14 +675,26 @@ public final class BatchDimensionConfigHandlersTest {
     assertThat(atsResp.getCandidateValuesList()).hasSize(1);
     assertThat(atsResp.getCandidateValues(0).getValuesList()).containsExactly("fastboot");
 
-    // Non-curated dimension in ATS -> INVALID_ARGUMENT
+    // Custom dimension in ATS -> suggestions from stored DeviceConfigs (none hold "label")
+    assertThat(
+            getDimensionValueSuggestionsHandler
+                .getDimensionValueSuggestions(
+                    GetDimensionValueSuggestionsRequest.newBuilder()
+                        .setDimensionName("label")
+                        .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
+                        .build())
+                .get()
+                .getCandidateValuesList())
+        .isEmpty();
+
+    // System-detected dimension in ATS -> INVALID_ARGUMENT
     assertInvalidArgument(
         getDimensionValueSuggestionsHandler.getDimensionValueSuggestions(
             GetDimensionValueSuggestionsRequest.newBuilder()
-                .setDimensionName("label")
+                .setDimensionName("model")
                 .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
                 .build()),
-        "not configurable in ATS");
+        "automatically detected by OmniLab");
 
     // Unspecified dimensionList -> INVALID_ARGUMENT
     assertInvalidArgument(
@@ -1069,11 +1085,11 @@ public final class BatchDimensionConfigHandlersTest {
     assertInvalidArgument(
         batchGetDeviceDimensionConfigsHandler.batchGetDeviceDimensionConfigs(
             poolGetRequest("dev1")
-                .setDimensionName("label")
+                .setDimensionName("model")
                 .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
                 .build(),
             Optional.empty()),
-        "not configurable in ATS");
+        "automatically detected by OmniLab");
 
     flags.set("fe_connect_to_config_server", "false");
     assertFailedPrecondition(
@@ -1227,11 +1243,12 @@ public final class BatchDimensionConfigHandlersTest {
     assertInvalidArgument(
         batchUpdateDeviceDimensionConfigsHandler.batchUpdateDeviceDimensionConfigs(
             valid.toBuilder()
-                .setDimensionName("pool")
+                .setDimensionName("subdevice_dimensions")
                 .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
+                .clearDevices()
                 .build(),
             Optional.empty()),
-        "not configurable in ATS");
+        "Invalid dimension name");
 
     verify(configurationProvider, never()).updateDeviceConfigs(any(), any());
   }
