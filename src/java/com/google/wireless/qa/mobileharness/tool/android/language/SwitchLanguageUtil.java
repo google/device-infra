@@ -27,7 +27,6 @@ import android.content.res.Configuration;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
-import android.os.RemoteException;
 import android.util.Log;
 import com.google.common.base.Strings;
 import java.util.Locale;
@@ -107,9 +106,10 @@ public class SwitchLanguageUtil extends Instrumentation {
     // Parses parameters.
     String language = Strings.nullToEmpty(arguments.getString("language"));
     String country = Strings.nullToEmpty(arguments.getString("country"));
-    Locale locale = new Locale.Builder().setLanguage(language).setRegion(country).build();
 
     try {
+      Locale locale = new Locale.Builder().setLanguage(language).setRegion(country).build();
+
       if (isSameAsSystemLocale(locale)) {
         Log.i(LOG_TAG, "System locale same as supplied locale.");
         finishSuccessfully(result);
@@ -117,23 +117,15 @@ public class SwitchLanguageUtil extends Instrumentation {
       }
 
       // Switches language and country.
-      Log.i(LOG_TAG, "Change locale to [" + locale.getDisplayName() + "]");
+      Log.i(LOG_TAG, "Change locale to [" + locale.toLanguageTag() + "]");
       IActivityManager am = getActivityManager();
       Configuration config = am.getConfiguration();
       config.setLocale(locale);
 
-      if (VERSION.SDK_INT >= VERSION_CODES.N /* API Level 24 */) {
-        // For Android N device, updateConfiguration was deperacated, check bug 28448266 for detail
-        // information
-        am.updatePersistentConfiguration(config);
-      } else {
-        am.updateConfiguration(config);
-      }
+      am.updatePersistentConfiguration(config);
       finishSuccessfully(result);
-    } catch (NumberFormatException | RemoteException e) {
-      fail("Change locale error: " + e);
     } catch (Exception e) {
-      fail(e.toString());
+      fail("Change locale error: " + e);
     } finally {
       // Clean up and drop the shell identity before exiting
       if (uiAutomation.isPresent()
@@ -152,15 +144,9 @@ public class SwitchLanguageUtil extends Instrumentation {
     finish(Activity.RESULT_OK, result);
   }
 
-  @SuppressWarnings("Deprecation")
   private boolean isSameAsSystemLocale(Locale suppliedLocale) {
-    Locale currentSystemLocale;
-    if (VERSION.SDK_INT < VERSION_CODES.N) {
-      currentSystemLocale = getContext().getResources().getConfiguration().locale;
-    } else {
-      currentSystemLocale = getContext().getResources().getConfiguration().getLocales().get(0);
-    }
-    Log.i(LOG_TAG, "Current system locale is [" + currentSystemLocale.getDisplayName() + "]");
+    Locale currentSystemLocale = getContext().getResources().getConfiguration().getLocales().get(0);
+    Log.i(LOG_TAG, "Current system locale is [" + currentSystemLocale.toLanguageTag() + "]");
     return currentSystemLocale.getCountry().equals(suppliedLocale.getCountry())
         && currentSystemLocale.getLanguage().equals(suppliedLocale.getLanguage());
   }

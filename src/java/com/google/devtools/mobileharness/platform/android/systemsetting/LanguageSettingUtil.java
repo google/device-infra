@@ -34,12 +34,12 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSettings;
-import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil.AppOpsMode;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.MobileHarnessRunnable;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -73,9 +73,6 @@ public class LanguageSettingUtil {
   @VisibleForTesting
   static final String SWITCH_LANGUAGE_PKG_EXTRA_PERMISSION =
       "android.permission.CHANGE_CONFIGURATION";
-
-  /** The sdkVersion of the extra for switching language. */
-  @VisibleForTesting static final String EXTRA_NAME_SDK_VERSION = "sdk_version";
 
   /** The name of the extra for switching language. */
   @VisibleForTesting static final String EXTRA_NAME_LANGUAGE = "language";
@@ -223,18 +220,8 @@ public class LanguageSettingUtil {
     installApkAndGrantPermission(log, device, deviceInfo, deviceId, sdkVersion, apkPath);
 
     // Switch the language and country.
-    try {
-      switchLocale(log, sdkVersion, deviceId, language, country, switchRegion, logSignalTimeout);
-    } catch (MobileHarnessException e) {
-      if (e.getErrorId()
-          == AndroidErrorId.ANDROID_SWITCH_LANGUAGE_DECORATOR_WAIT_SIGNAL_IN_LOGCAT_TIMEOUT) {
-        // Sleep for 500 ms to avoid race condition. Context: b/320747279
-        sleeper.sleep(Duration.ofMillis(500));
-        switchLocale(log, sdkVersion, deviceId, language, country, switchRegion, logSignalTimeout);
-      } else {
-        throw e;
-      }
-    }
+    runWithLogcatTimeoutRetry(() ->
+        switchLocale(log, sdkVersion, deviceId, language, country, switchRegion, logSignalTimeout));
     return Optional.of(
         new LocaleRestoreState(originalLanguage, originalCountry, sdkVersion, switchRegion));
   }
@@ -269,7 +256,7 @@ public class LanguageSettingUtil {
       String apkPath)
       throws MobileHarnessException, InterruptedException {
     String packageName = AndroidPackages.MH_SWITCH_LANGUAGE.getPackageName();
-    var currentUserId = sdkVersion >= 23 ? androidUserUtil.getCurrentUser(deviceId, sdkVersion) : 0;
+    var currentUserId = androidUserUtil.getCurrentUser(deviceId, sdkVersion);
     ApkInstallArgs installArgs =
         ApkInstallArgs.builder().addApkPaths(apkPath).setBypassLowTargetSdkBlock(true).build();
 
@@ -279,23 +266,20 @@ public class LanguageSettingUtil {
       } else {
         apkInstaller.installApkIfNotExist(Preconditions.checkNotNull(deviceInfo), installArgs);
       }
-      if (sdkVersion < 17) {
-        break;
-      }
 
       // Needed, otherwise setting appops permission success is flaky but the command still
       // succeeds without an error (b/505022628#comment16).
       sleeper.sleep(Duration.ofSeconds(3));
 
-      // In API >= 17, an explicitly permission grant to change config is needed via pm
-      // since this permission is for system/dev only.
+      // A explicitly permission grant to change config is needed via pm since this permission is
+      // for system/dev only.
       try {
-        UtilArgs.Builder utilArgsBuilder =
-            UtilArgs.builder().setSerial(deviceId).setSdkVersion(sdkVersion);
-        if (sdkVersion >= AndroidVersion.NOUGAT.getStartSdkVersion()) {
-          utilArgsBuilder.setUserId(String.valueOf(currentUserId));
-        }
-        UtilArgs utilArgs = utilArgsBuilder.build();
+        UtilArgs utilArgs =
+            UtilArgs.builder()
+                .setSerial(deviceId)
+                .setSdkVersion(sdkVersion)
+                .setUserId(String.valueOf(currentUserId))
+                .build();
 
         androidPackageManagerUtil.grantPermission(
             utilArgs, packageName, SWITCH_LANGUAGE_PKG_EXTRA_PERMISSION);
@@ -305,15 +289,13 @@ public class LanguageSettingUtil {
                 AndroidSettings.Command.PUT,
                 AndroidSettings.NameSpace.GLOBAL,
                 "hidden_api_blacklist_exemptions \"\\*\"")); // InclusiveLanguage:ignore
-        if (sdkVersion >= 23) {
-          androidSystemSettingUtil.setAppOpsPermission(
-              deviceId,
-              packageName,
-              "WRITE_SETTINGS",
-              AppOpsMode.ALLOW,
-              String.valueOf(currentUserId));
-          sleeper.sleep(Duration.ofSeconds(1));
-        }
+        androidSystemSettingUtil.setAppOpsPermission(
+            deviceId,
+            packageName,
+            "WRITE_SETTINGS",
+            AppOpsMode.ALLOW,
+            String.valueOf(currentUserId));
+        sleeper.sleep(Duration.ofSeconds(1));
         break;
       } catch (MobileHarnessException e) {
         // "pm grant" may failed to find the package even it has already installed on device.
@@ -357,18 +339,28 @@ public class LanguageSettingUtil {
       return;
     }
 
-    String sdkVersionStr = String.valueOf(sdkVersion);
-    Map<String, String> extras = new HashMap<>(3);
-    if (!StrUtil.isEmptyOrWhitespace(sdkVersionStr)) {
-      extras.put(EXTRA_NAME_SDK_VERSION, sdkVersionStr);
-    }
-    if (!StrUtil.isEmptyOrWhitespace(language)) {
-      extras.put(EXTRA_NAME_LANGUAGE, language);
-    }
+    Map<String, String> extras = new HashMap<>();
+    extras.put(EXTRA_NAME_LANGUAGE, language);
     if (!StrUtil.isEmptyOrWhitespace(country)) {
       extras.put(EXTRA_NAME_COUNTRY, country);
     }
 
+    runSwitchInstrumentation(log, sdkVersion, deviceId, extras, timeout);
+
+    Locale locale =
+        StrUtil.isEmptyOrWhitespace(country)
+            ? Locale.forLanguageTag(language.replace('_', '-'))
+            : Locale.forLanguageTag(language.replace('_', '-') + "-" + country.trim());
+    setLocaleProperties(log, deviceId, language, country, switchRegion, locale);
+  }
+
+  private void runSwitchInstrumentation(
+      @Nullable LogCollector<?> log,
+      int sdkVersion,
+      String deviceId,
+      Map<String, String> extras,
+      Duration timeout)
+      throws MobileHarnessException, InterruptedException {
     // Starts the instrumentation.
     String instrumentOutput =
         instrumentationUtil.instrument(
@@ -407,31 +399,45 @@ public class LanguageSettingUtil {
           errorMessage,
           e);
     }
+  }
 
-    // Sets the properties, ignore the error and log down.
+  private void runWithLogcatTimeoutRetry(MobileHarnessRunnable action)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      action.run();
+    } catch (MobileHarnessException e) {
+      if (e.getErrorId()
+          == AndroidErrorId.ANDROID_SWITCH_LANGUAGE_DECORATOR_WAIT_SIGNAL_IN_LOGCAT_TIMEOUT) {
+        // Sleep for 500 ms to avoid race condition. Context: b/320747279
+        sleeper.sleep(Duration.ofMillis(500));
+        action.run();
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  private void setLocaleProperties(
+      @Nullable LogCollector<?> log,
+      String deviceId,
+      String language,
+      @Nullable String country,
+      boolean switchRegion,
+      Locale locale)
+      throws InterruptedException {
     if (switchRegion) {
-      for (String property : AndroidProperty.REGION.getPropertyKeys()) {
-        try {
-          adbUtil.setProperty(deviceId, property, Strings.nullToEmpty(country));
-        } catch (MobileHarnessException e) {
-          SharedLogUtil.logMsg(logger, log, "%s", e.getMessage());
-        }
-      }
+      trySetProperties(log, deviceId, AndroidProperty.REGION, Strings.nullToEmpty(country));
     }
-    for (String property : AndroidProperty.LANGUAGE.getPropertyKeys()) {
+    trySetProperties(log, deviceId, AndroidProperty.LANGUAGE, language);
+    trySetProperties(log, deviceId, AndroidProperty.LOCALE, locale.toLanguageTag());
+  }
+
+  private void trySetProperties(
+      @Nullable LogCollector<?> log, String deviceId, AndroidProperty property, String value)
+      throws InterruptedException {
+    for (String key : property.getPropertyKeys()) {
       try {
-        adbUtil.setProperty(deviceId, property, language);
-      } catch (MobileHarnessException e) {
-        SharedLogUtil.logMsg(logger, log, "%s", e.getMessage());
-      }
-    }
-    Locale locale =
-        StrUtil.isEmptyOrWhitespace(country)
-            ? Locale.forLanguageTag(language.replace('_', '-'))
-            : Locale.forLanguageTag(language.replace('_', '-') + "-" + country.trim());
-    for (String property : AndroidProperty.LOCALE.getPropertyKeys()) {
-      try {
-        adbUtil.setProperty(deviceId, property, locale.toLanguageTag());
+        adbUtil.setProperty(deviceId, key, value);
       } catch (MobileHarnessException e) {
         SharedLogUtil.logMsg(logger, log, "%s", e.getMessage());
       }

@@ -163,8 +163,7 @@ public final class LanguageSettingUtilTest {
         .instrument(
             DEVICE_ID,
             30,
-            createInstrumentSetting(
-                ImmutableMap.of("language", "zh", "country", "CN", "sdk_version", "30")),
+            createInstrumentSetting(ImmutableMap.of("language", "zh", "country", "CN")),
             Duration.ofMinutes(1));
     order
         .verify(adbUtil)
@@ -176,40 +175,6 @@ public final class LanguageSettingUtilTest {
     verify(adbUtil).setProperty(DEVICE_ID, AndroidProperty.LANGUAGE.getPropertyKeys().get(0), "zh");
     verify(adbUtil)
         .setProperty(DEVICE_ID, AndroidProperty.LOCALE.getPropertyKeys().get(0), "zh-CN");
-  }
-
-  @Test
-  public void switchLanguage_byDeviceInfoWithoutCountryOnApi23_omitsGrantUserIdAndSkipsRegionProp()
-      throws Exception {
-    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
-    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("US");
-    when(androidSystemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(23);
-    when(androidUserUtil.getCurrentUser(DEVICE_ID, 23)).thenReturn(0);
-
-    languageSettingUtil.switchLanguage(deviceInfo, "ja", /* country= */ "");
-
-    verify(apkInstaller)
-        .installApkIfNotExist(
-            deviceInfo,
-            ApkInstallArgs.builder()
-                .addApkPaths(APK_PATH)
-                .setBypassLowTargetSdkBlock(true)
-                .build());
-    verify(androidPackageManagerUtil)
-        .grantPermission(
-            UtilArgs.builder().setSerial(DEVICE_ID).setSdkVersion(23).build(),
-            PACKAGE_NAME,
-            LanguageSettingUtil.SWITCH_LANGUAGE_PKG_EXTRA_PERMISSION);
-    verify(instrumentationUtil)
-        .instrument(
-            DEVICE_ID,
-            23,
-            createInstrumentSetting(ImmutableMap.of("language", "ja", "sdk_version", "23")),
-            Duration.ofMinutes(1));
-    verify(adbUtil, never())
-        .setProperty(
-            eq(DEVICE_ID), eq(AndroidProperty.REGION.getPropertyKeys().get(0)), any(String.class));
-    verify(adbUtil).setProperty(DEVICE_ID, AndroidProperty.LOCALE.getPropertyKeys().get(0), "ja");
   }
 
   @Test
@@ -262,25 +227,24 @@ public final class LanguageSettingUtilTest {
   }
 
   @Test
-  public void switchLanguage_byDeviceWithCountryOnApi23_returnsLocaleRestoreState()
-      throws Exception {
+  public void switchLanguage_byDeviceWithCountry_returnsLocaleRestoreState() throws Exception {
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("us");
-    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(23);
-    when(androidUserUtil.getCurrentUser(DEVICE_ID, 23)).thenReturn(0);
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(24);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 24)).thenReturn(0);
 
     Optional<LocaleRestoreState> result =
         languageSettingUtil.switchLanguage(device, "zh", "cn", TIMEOUT, log);
 
-    assertThat(result).hasValue(new LocaleRestoreState("en", "us", 23, true));
+    assertThat(result).hasValue(new LocaleRestoreState("en", "us", 24, true));
   }
 
   @Test
-  public void switchLanguage_byDeviceWithCountryOnApi23_installsViaApkInstaller() throws Exception {
+  public void switchLanguage_byDeviceWithCountry_installsViaApkInstaller() throws Exception {
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("us");
-    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(23);
-    when(androidUserUtil.getCurrentUser(DEVICE_ID, 23)).thenReturn(0);
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(24);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 24)).thenReturn(0);
 
     languageSettingUtil.switchLanguage(device, "zh", "cn", TIMEOUT, log);
 
@@ -314,35 +278,17 @@ public final class LanguageSettingUtilTest {
   }
 
   @Test
-  public void switchLanguage_byDeviceOnApi16_skipsPermissionGrant() throws Exception {
-    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
-    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("us");
-    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(16);
-
-    languageSettingUtil.switchLanguage(device, "zh", "cn", TIMEOUT, log);
-
-    verifyNoInteractions(androidPackageManagerUtil, androidSystemSettingUtil, androidUserUtil);
-    verify(instrumentationUtil)
-        .instrument(
-            DEVICE_ID,
-            16,
-            createInstrumentSetting(
-                ImmutableMap.of("language", "zh", "country", "cn", "sdk_version", "16")),
-            Duration.ofMinutes(1));
-  }
-
-  @Test
   public void switchLanguage_byDeviceGrantPermissionFailsTwice_throwsGrantPermissionError()
       throws Exception {
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("us");
-    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(17);
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(24);
     doThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_PKG_MNGR_UTIL_GRANT_PERMISSION_ERROR, "Unknown package"))
         .when(androidPackageManagerUtil)
         .grantPermission(
-            UtilArgs.builder().setSerial(DEVICE_ID).setSdkVersion(17).build(),
+            UtilArgs.builder().setSerial(DEVICE_ID).setSdkVersion(24).setUserId("0").build(),
             PACKAGE_NAME,
             LanguageSettingUtil.SWITCH_LANGUAGE_PKG_EXTRA_PERMISSION);
 
@@ -360,7 +306,7 @@ public final class LanguageSettingUtilTest {
   public void switchLanguage_byDeviceSignalTimeoutOnce_retriesAfterSleep() throws Exception {
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("us");
-    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(17);
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(24);
     doThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_UTIL_WAIT_FOR_SIGNAL_IN_LOG_ERROR, "Signal timeout"))
@@ -374,9 +320,8 @@ public final class LanguageSettingUtilTest {
     verify(instrumentationUtil, times(2))
         .instrument(
             DEVICE_ID,
-            17,
-            createInstrumentSetting(
-                ImmutableMap.of("language", "zh", "country", "cn", "sdk_version", "17")),
+            24,
+            createInstrumentSetting(ImmutableMap.of("language", "zh", "country", "cn")),
             Duration.ofMinutes(1));
   }
 
@@ -385,9 +330,9 @@ public final class LanguageSettingUtilTest {
       throws Exception {
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("us");
-    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(17);
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(24);
     when(instrumentationUtil.instrument(
-            eq(DEVICE_ID), eq(17), any(AndroidInstrumentationSetting.class), any(Duration.class)))
+            eq(DEVICE_ID), eq(24), any(AndroidInstrumentationSetting.class), any(Duration.class)))
         .thenReturn("INSTRUMENTATION_FAILURE_DETAILS");
     doThrow(
             new MobileHarnessException(
@@ -410,12 +355,12 @@ public final class LanguageSettingUtilTest {
       throws Exception {
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("us");
-    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(17);
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(24);
     MobileHarnessException cause =
         new MobileHarnessException(
             AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_START_ERROR, "Abort adb shell");
     when(instrumentationUtil.instrument(
-            eq(DEVICE_ID), eq(17), any(AndroidInstrumentationSetting.class), any(Duration.class)))
+            eq(DEVICE_ID), eq(24), any(AndroidInstrumentationSetting.class), any(Duration.class)))
         .thenThrow(cause);
 
     MobileHarnessException exception =
@@ -429,16 +374,15 @@ public final class LanguageSettingUtilTest {
   @Test
   public void restoreLanguage_withRestoreRegionTrue_restoresLanguageCountryAndRegionProperties()
       throws Exception {
-    LocaleRestoreState state = new LocaleRestoreState("en", "us", 23, true);
+    LocaleRestoreState state = new LocaleRestoreState("en", "us", 24, true);
 
     languageSettingUtil.restoreLanguage(DEVICE_ID, state, TIMEOUT, log);
 
     verify(instrumentationUtil)
         .instrument(
             DEVICE_ID,
-            23,
-            createInstrumentSetting(
-                ImmutableMap.of("language", "en", "country", "us", "sdk_version", "23")),
+            24,
+            createInstrumentSetting(ImmutableMap.of("language", "en", "country", "us")),
             Duration.ofMinutes(1));
     verify(adbUtil).setProperty(DEVICE_ID, AndroidProperty.REGION.getPropertyKeys().get(0), "us");
     verify(adbUtil).setProperty(DEVICE_ID, AndroidProperty.LANGUAGE.getPropertyKeys().get(0), "en");
@@ -448,16 +392,15 @@ public final class LanguageSettingUtilTest {
 
   @Test
   public void restoreLanguage_withRestoreRegionFalse_skipsRegionProperty() throws Exception {
-    LocaleRestoreState state = new LocaleRestoreState("en", "us", 17, false);
+    LocaleRestoreState state = new LocaleRestoreState("en", "us", 24, false);
 
     languageSettingUtil.restoreLanguage(DEVICE_ID, state, TIMEOUT, log);
 
     verify(instrumentationUtil)
         .instrument(
             DEVICE_ID,
-            17,
-            createInstrumentSetting(
-                ImmutableMap.of("language", "en", "country", "us", "sdk_version", "17")),
+            24,
+            createInstrumentSetting(ImmutableMap.of("language", "en", "country", "us")),
             Duration.ofMinutes(1));
     verify(adbUtil, never())
         .setProperty(

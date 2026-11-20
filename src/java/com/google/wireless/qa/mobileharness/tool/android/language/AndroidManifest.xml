@@ -2,11 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.google.wireless.qa.mobileharness.tool.android.language"
-    android:versionCode="6"
-    android:versionName="1.0.6" >
+    android:versionCode="7"
+    android:versionName="1.0.7">
 
     <uses-sdk
-        android:minSdkVersion="21"
+        android:minSdkVersion="24"
         android:targetSdkVersion="34"/>
 
     <!-- Needed to change the current configuration -->

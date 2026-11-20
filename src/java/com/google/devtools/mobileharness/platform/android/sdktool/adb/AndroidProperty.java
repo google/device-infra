@@ -67,7 +67,7 @@ public enum AndroidProperty {
   @DoNotAddToDimension
   KAIOS_RUNTIME_TOKEN("kaios.services.runtime.token"),
   LANGUAGE("persist.sys.language", "ro.product.locale.language"),
-  LOCALE("persist.sys.locale"),
+  LOCALE("persist.sys.locale", "ro.product.locale"),
   MANUFACTURER("ro.product.manufacturer"),
   MEMORY_CLASS("dalvik.vm.heapgrowthlimit", "dalvik.vm.heapsize"),
   MODEL("ro.product.model"),

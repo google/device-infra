@@ -49,7 +49,6 @@ public class AndroidSwitchLanguageDecoratorJobValidator
       if (Strings.isNullOrEmpty(language)) {
         errors.add("Missing required parameter [language] for AndroidSwitchLanguageDecorator");
       }
-      continue;
     }
 
     return errors.build();
