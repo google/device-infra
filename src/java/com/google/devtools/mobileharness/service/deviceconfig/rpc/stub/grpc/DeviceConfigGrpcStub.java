@@ -40,6 +40,10 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetGlobalConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.ListDeviceConfigsRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.ListDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.ListLabConfigsRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.ListLabConfigsResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateDeviceConfigsResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateGlobalConfigRequest;
@@ -119,6 +123,35 @@ final class DeviceConfigGrpcStub implements DeviceConfigStub {
         request,
         InfraErrorId.DEVICE_CONFIG_RPC_STUB_GET_LAB_CONFIG_ERROR,
         String.format("Failed to get config for lab %s", request.getLabHost()));
+  }
+
+  @Override
+  public ListenableFuture<ListDeviceConfigsResponse> listDeviceConfigsAsync(
+      ListDeviceConfigsRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return GrpcStubUtil.invokeAsync(
+        deviceConfigServiceFutureStub::listDeviceConfigs,
+        request,
+        InfraErrorId.DEVICE_CONFIG_RPC_STUB_LIST_DEVICE_CONFIGS_ERROR,
+        String.format(
+            "Failed to list device configs after page token [%s]", request.getPageToken()));
+  }
+
+  @Override
+  public ListenableFuture<ListLabConfigsResponse> listLabConfigsAsync(
+      ListLabConfigsRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return GrpcStubUtil.invokeAsync(
+        deviceConfigServiceFutureStub::listLabConfigs,
+        request,
+        InfraErrorId.DEVICE_CONFIG_RPC_STUB_LIST_LAB_CONFIGS_ERROR,
+        String.format("Failed to list lab configs after page token [%s]", request.getPageToken()));
   }
 
   @Override

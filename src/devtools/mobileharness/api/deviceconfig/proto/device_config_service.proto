@@ -175,6 +175,46 @@ message UpdateGlobalConfigRequest {
 
 message UpdateGlobalConfigResponse {}
 
+message ListDeviceConfigsRequest {
+  // The maximum number of configs to return. The server uses 1000 when it is 0
+  // and returns at most 5000.
+  int32 page_size = 1;
+
+  // The next_page_token of the previous response, or empty for the first page.
+  string page_token = 2;
+}
+
+message ListDeviceConfigsResponse {
+  // The device configs of the page, in the order of their device UUIDs.
+  // Credentials (Wi-Fi PSKs) and Any typed payloads are cleared. Owners and
+  // executors are returned as stored; where an IAM policy manages them, use
+  // GetDeviceConfigs or the lab's device info for the current ones.
+  repeated DeviceConfig device_config = 1;
+
+  // The token of the next page, or empty when this is the last page.
+  string next_page_token = 2;
+}
+
+message ListLabConfigsRequest {
+  // The maximum number of configs to return. The server uses 1000 when it is 0
+  // and returns at most 5000.
+  int32 page_size = 1;
+
+  // The next_page_token of the previous response, or empty for the first page.
+  string page_token = 2;
+}
+
+message ListLabConfigsResponse {
+  // The lab configs of the page, in the order of their host names. Credentials
+  // (SSH passwords and Wi-Fi PSKs) are cleared. Owners and executors of default
+  // device configs are returned as stored; where an IAM policy manages them,
+  // use GetLabConfig for the current ones.
+  repeated LabConfig lab_config = 1;
+
+  // The token of the next page, or empty when this is the last page.
+  string next_page_token = 2;
+}
+
 // Stubby service for managing the DeviceConfig/LabConfig of Mobile Harness.
 service DeviceConfigService {
   // Gets a list of configurations of devices.
@@ -222,4 +262,11 @@ service DeviceConfigService {
   // Updates the global configuration.
   rpc UpdateGlobalConfig(UpdateGlobalConfigRequest)
       returns (UpdateGlobalConfigResponse) {}
+
+  // Lists the configurations of all devices, one page at a time.
+  rpc ListDeviceConfigs(ListDeviceConfigsRequest)
+      returns (ListDeviceConfigsResponse) {}
+
+  // Lists the configurations of all labs, one page at a time.
+  rpc ListLabConfigs(ListLabConfigsRequest) returns (ListLabConfigsResponse) {}
 }
