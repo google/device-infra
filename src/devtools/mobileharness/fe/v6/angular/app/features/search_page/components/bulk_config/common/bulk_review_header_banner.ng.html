@@ -30,7 +30,8 @@
     }
     @if (s.alreadyMatchCount > 0) {
       <span class="bw-count-chip bw-count-chip-same">
-        {{ s.alreadyMatchLabel }} already match
+        {{ s.alreadyMatchLabel }} already
+        {{ s.alreadyMatchCount === 1 ? 'matches' : 'match' }}
       </span>
     }
     @if (s.readOnlyCount > 0) {

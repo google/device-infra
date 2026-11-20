@@ -174,11 +174,16 @@ describe('bulk_config_utils', () => {
   });
 
   describe('formatNothingToUpdateMessage', () => {
+    const wifiMatchPhrase = {
+      singular: 'already uses this Wi-Fi configuration',
+      plural: 'already use this Wi-Fi configuration',
+    };
+
     it('formats all-match, mixed match+read-only, and all-read-only messages', () => {
       expect(
         formatNothingToUpdateMessage(
           {alreadyMatchCount: 3, readOnlyCount: 0},
-          'already use this Wi-Fi configuration',
+          wifiMatchPhrase,
           'Wi-Fi configuration',
         ),
       ).toBe(
@@ -187,21 +192,61 @@ describe('bulk_config_utils', () => {
 
       expect(
         formatNothingToUpdateMessage(
-          {alreadyMatchCount: 1, readOnlyCount: 2},
-          'already use this Wi-Fi configuration',
+          {alreadyMatchCount: 2, readOnlyCount: 3},
+          wifiMatchPhrase,
           'Wi-Fi configuration',
         ),
       ).toBe(
-        '1 device already match this Wi-Fi configuration and 2 devices are read-only. No devices can be updated.',
+        '2 devices already match this Wi-Fi configuration and 3 devices are read-only. No devices can be updated.',
       );
 
       expect(
         formatNothingToUpdateMessage(
           {alreadyMatchCount: 0, readOnlyCount: 3},
-          'already use this Wi-Fi configuration',
+          wifiMatchPhrase,
           'Wi-Fi configuration',
         ),
       ).toBe('All 3 devices are read-only and cannot be updated.');
+    });
+
+    it('uses singular wording for a single device', () => {
+      expect(
+        formatNothingToUpdateMessage(
+          {alreadyMatchCount: 1, readOnlyCount: 0},
+          wifiMatchPhrase,
+          'Wi-Fi configuration',
+        ),
+      ).toBe(
+        'The selected device already uses this Wi-Fi configuration. No update is needed.',
+      );
+
+      expect(
+        formatNothingToUpdateMessage(
+          {alreadyMatchCount: 0, readOnlyCount: 1},
+          wifiMatchPhrase,
+          'Wi-Fi configuration',
+        ),
+      ).toBe('The selected device is read-only and cannot be updated.');
+
+      expect(
+        formatNothingToUpdateMessage(
+          {alreadyMatchCount: 1, readOnlyCount: 2},
+          wifiMatchPhrase,
+          'Wi-Fi configuration',
+        ),
+      ).toBe(
+        '1 device already matches this Wi-Fi configuration and 2 devices are read-only. No devices can be updated.',
+      );
+
+      expect(
+        formatNothingToUpdateMessage(
+          {alreadyMatchCount: 2, readOnlyCount: 1},
+          wifiMatchPhrase,
+          'Wi-Fi configuration',
+        ),
+      ).toBe(
+        '2 devices already match this Wi-Fi configuration and 1 device is read-only. No devices can be updated.',
+      );
     });
   });
 

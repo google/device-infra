@@ -767,6 +767,31 @@ describe('BulkConfigWifiDialog', () => {
         'already use this Wi-Fi configuration. No update is needed.',
       );
     });
+
+    it('should use singular wording when a single device already matches', () => {
+      component.clearTargetWifi();
+      component.wizard.loadReview(
+        () =>
+          of({
+            entries: [
+              {
+                deviceId: 'dev1',
+                status:
+                  DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
+              },
+            ],
+          }),
+        '',
+      );
+      expect(component.nothingToUpdateMessage()).toBe(
+        'The selected device already has no default Wi-Fi configured. No update is needed.',
+      );
+
+      component.updateTargetWifi({ssid: 'TargetNet'});
+      expect(component.nothingToUpdateMessage()).toBe(
+        'The selected device already uses this Wi-Fi configuration. No update is needed.',
+      );
+    });
   });
 
   describe('apply lifecycle and error handling', () => {

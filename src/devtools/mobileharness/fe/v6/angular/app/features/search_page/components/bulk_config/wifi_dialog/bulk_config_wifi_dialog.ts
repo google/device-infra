@@ -176,8 +176,14 @@ export class BulkConfigWifiDialog {
     formatNothingToUpdateMessage(
       this.wizard.reviewSummary(),
       this.isClearWifi()
-        ? 'already have no default Wi-Fi configured'
-        : 'already use this Wi-Fi configuration',
+        ? {
+            singular: 'already has no default Wi-Fi configured',
+            plural: 'already have no default Wi-Fi configured',
+          }
+        : {
+            singular: 'already uses this Wi-Fi configuration',
+            plural: 'already use this Wi-Fi configuration',
+          },
       'Wi-Fi configuration',
     ),
   );
