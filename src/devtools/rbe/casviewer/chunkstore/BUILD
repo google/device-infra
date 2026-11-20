@@ -29,7 +29,7 @@ go_library(
     importpath = "github.com/google/device-infra/src/devtools/rbe/casviewer/chunkstore",
     visibility = ["//src/devtools/rbe/casviewer:__subpackages__"],
     deps = [
-        "//src/devtools/rbe/casuploader/chunker",
+        "//src/devtools/rbe/common/chunker",
         "@com_github_golang_glog//:glog",
         "@com_github_hanwen_go_fuse_v2//fuse",
     ],
@@ -44,7 +44,7 @@ go_test(
     ],
     embed = [":chunkstore"],
     deps = [
-        "//src/devtools/rbe/casuploader/chunker",
+        "//src/devtools/rbe/common/chunker",
         "@com_github_hanwen_go_fuse_v2//fuse",
     ],
 )

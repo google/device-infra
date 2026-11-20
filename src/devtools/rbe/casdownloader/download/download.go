@@ -25,7 +25,7 @@ import (
 	"github.com/google/device-infra/src/devtools/rbe/casdownloader/cache"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
+	"github.com/google/device-infra/src/devtools/rbe/common/chunkerutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"go.chromium.org/luci/common/data/text/units"

@@ -13,7 +13,7 @@ import (
 	log "github.com/golang/glog"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
+	"github.com/google/device-infra/src/devtools/rbe/common/chunkerutil"
 )
 
 // maxNameLen is the longest file name, NAME_MAX, that Linux filesystems

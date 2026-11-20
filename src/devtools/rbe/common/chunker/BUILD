@@ -21,20 +21,17 @@ package(
 )
 
 go_library(
-    name = "chunkerutil",
+    name = "chunker",
     srcs = [
-        "chunkerutil.go",
+        "chunker.go",
     ],
-    importpath = "github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil",
-    deps = [
-        "//src/devtools/rbe/casuploader/chunker",
-        "@com_github_golang_glog//:glog",
-    ],
+    importpath = "github.com/google/device-infra/src/devtools/rbe/common/chunker",
+    deps = ["@com_github_jotfs_fastcdc_go//:fastcdc-go"],
 )
 
 go_test(
-    name = "chunkerutil_test",
-    srcs = ["chunkerutil_test.go"],
-    embed = [":chunkerutil"],
-    deps = ["//src/devtools/rbe/casuploader/chunker"],
+    name = "chunker_test",
+    srcs = ["chunker_test.go"],
+    embed = [":chunker"],
+    deps = ["@com_github_google_uuid//:uuid"],
 )
