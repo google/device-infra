@@ -23,23 +23,15 @@ package(
 go_library(
     name = "common",
     srcs = [
-        "envelope.go",
         "multistringflag.go",
         "signal.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/common",
-    deps = [
-        "@com_github_golang_glog//:glog",
-    ],
+    deps = ["@com_github_golang_glog//:glog"],
 )
 
 go_test(
     name = "common_test",
-    srcs = [
-        "envelope_test.go",
-        "signal_test.go",
-    ],
+    srcs = ["signal_test.go"],
     embed = [":common"],
-    deps = [
-    ],
 )

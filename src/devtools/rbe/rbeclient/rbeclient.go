@@ -25,6 +25,11 @@ type Opts struct {
 	CASConcurrency int
 	// RPCTimeouts is default RPC timeout.
 	RPCTimeouts map[string]time.Duration
+	// ExternalPerRPCCreds, if set, authenticates direct connections to RBE
+	// instead of ServiceAccountJSON or UseApplicationDefault. It lets callers
+	// supply credentials that this package does not provide itself. It is not
+	// used for connections to ProxyAddress.
+	ExternalPerRPCCreds *client.PerRPCCreds
 	// NoSecurity indicates that insecure/plaintext credentials should be used (e.g. in tests or local proxy).
 	NoSecurity bool
 	// ProxyAddress is the address of the local caching proxy (optional).
@@ -64,14 +69,22 @@ func New(ctx context.Context, clientOpts Opts) (*client.Client, error) {
 		client.RPCTimeouts(clientOpts.RPCTimeouts),
 	}
 
-	newClient, err := client.NewClient(ctx, clientOpts.Instance, client.DialParams{
+	newClient, err := client.NewClient(ctx, clientOpts.Instance, directDialParams(clientOpts), opts...)
+	log.InfoContextf(ctx, "created RBE client, took %s", time.Since(start))
+	return newClient, err
+}
+
+// directDialParams returns the parameters to dial RBE directly, rather than
+// through ProxyAddress.
+func directDialParams(clientOpts Opts) client.DialParams {
+	return client.DialParams{
 		Service:               clientOpts.ServiceAddress,
 		CredFile:              clientOpts.ServiceAccountJSON,
 		UseApplicationDefault: clientOpts.UseApplicationDefault,
 		NoSecurity:            clientOpts.NoSecurity,
 		MaxConcurrentRequests: client.DefaultMaxConcurrentRequests,
 		DialOpts:              clientOpts.DialOpts,
-	}, opts...)
-	log.InfoContextf(ctx, "created RBE client, took %s", time.Since(start))
-	return newClient, err
+		UseExternalAuthToken:  clientOpts.ExternalPerRPCCreds != nil,
+		ExternalPerRPCCreds:   clientOpts.ExternalPerRPCCreds,
+	}
 }

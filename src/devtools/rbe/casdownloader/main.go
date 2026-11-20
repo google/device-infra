@@ -352,28 +352,6 @@ func ContextWithMetadata(ctx context.Context) (context.Context, error) {
 	return metadata.NewOutgoingContext(ctx, mdPair), nil
 }
 
-var envelopeCandidatePaths = []string{
-	"/usr/envelope/start_envelope",
-	"/google/data/ro/teams/envelope/start_envelope",
-}
-
-// envelopeExists checks if the envelope executable physically exists and is executable.
-// This is used to determine if envelope should be enabled by default.
-func envelopeExists() bool {
-	return envelopeExistsAt(envelopeCandidatePaths)
-}
-
-func envelopeExistsAt(paths []string) bool {
-	for _, path := range paths {
-		if info, err := os.Stat(path); err == nil {
-			if info.Mode().IsRegular() && (info.Mode().Perm()&0111 != 0) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func main() {
 	os.Exit(runMain())
 }
@@ -387,16 +365,6 @@ func runMain() int {
 	flag.Set("logtostderr", "true")
 	flag.Set("stderrthreshold", "INFO")
 	flag.Set("logtostderr", "true")
-	// Disable envelope and svelte by default when the envelope binary is not available
-	// on the host to avoid startup crashes during `flag.Parse()`.
-	if !envelopeExists() {
-		if f := flag.Lookup("envelope_enabled"); f != nil {
-			f.Value.Set("false")
-		}
-		if f := flag.Lookup("disable_svelte"); f != nil {
-			f.Value.Set("true")
-		}
-	}
 	flag.Parse()
 
 	if *printVersion == true {
@@ -537,8 +505,7 @@ func run(ctx context.Context) error {
 
 	// 2. Direct connection (Fallback / Default path if proxy was not set or failed to connect)
 	if !useProxy {
-		clientOpts.ProxyAddress = "" // Force direct RBE connection
-		rbeClient, err = rbeclient.New(ctx, clientOpts)
+		rbeClient, err = newDirectClient(ctx, clientOpts)
 		if err != nil {
 			if strings.Contains(err.Error(), "rpc error: code = PermissionDenied") && *useADC == true {
 				logAdcCredentials()
@@ -620,8 +587,7 @@ func run(ctx context.Context) error {
 		// up to ~2x DownloadTimeout. We preserve this behavior for simplicity during fallback.
 
 		// Re-initialize direct RBE client (ignoring proxy)
-		clientOpts.ProxyAddress = ""
-		rbeClient, err = rbeclient.New(ctx, clientOpts)
+		rbeClient, err = newDirectClient(ctx, clientOpts)
 		if err != nil {
 			return fmt.Errorf("direct RBE fallback client initialization failed: %w", err)
 		}
@@ -668,6 +634,12 @@ func run(ctx context.Context) error {
 
 	reportMemoryStats()
 	return err
+}
+
+// newDirectClient connects to RBE directly, ignoring opts.ProxyAddress.
+func newDirectClient(ctx context.Context, opts rbeclient.Opts) (*client.Client, error) {
+	opts.ProxyAddress = ""
+	return rbeclient.New(ctx, opts)
 }
 
 func logAdcCredentials() {
