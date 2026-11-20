@@ -213,8 +213,8 @@ export class App implements OnDestroy {
       // reset all query parameters except the common ones.
       ...this.commonParamsService.getCommonParams(),
     };
-    if (this.isAssistantFeatureEnabled()) {
-      qParams['enable_assistant'] = 'true';
+    if (this.route.snapshot.queryParamMap.get('enable_assistant') === 'false') {
+      qParams['enable_assistant'] = 'false';
     }
     return qParams;
   }
