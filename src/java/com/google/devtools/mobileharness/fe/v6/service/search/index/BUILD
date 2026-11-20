@@ -52,6 +52,7 @@ java_library(
     srcs = ["DeviceEnrichment.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

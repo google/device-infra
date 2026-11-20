@@ -145,6 +145,17 @@ java_library(
 )
 
 java_library(
+    name = "int_sort_keys",
+    srcs = ["IntSortKeys.java"],
+    deps = [
+        ":fleet_filter_engine",
+        ":search_corpus",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "fleet_cell_mapper",
     srcs = ["FleetCellMapper.java"],
     deps = [
@@ -178,6 +189,7 @@ java_library(
     srcs = ["FleetFlatSearcher.java"],
     deps = [
         ":fleet_filter_engine",
+        ":int_sort_keys",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
@@ -458,6 +470,7 @@ java_library(
     deps = [
         ":fleet_filter_engine",
         ":fleet_flat_searcher",
+        ":int_sort_keys",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",

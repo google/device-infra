@@ -245,6 +245,46 @@ public final class FleetFlatSearcherTest {
   }
 
   @Test
+  public void sortByIntComparableKey_ordersIntegersNumerically() {
+    FleetSnapshot sdkSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(sdkFleet(), BUILD_TIME);
+    DeviceCorpus sdkCorpus =
+        new DeviceCorpus(sdkSnapshot, new LazyPostings(sdkSnapshot.devices()), null);
+    ImmutableList<String> columns =
+        ImmutableList.of("device_field::uuid", "dimension::sdk_version");
+
+    FleetFlatResults ascending =
+        searcher.searchFlat(
+            sdkCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder()
+                .setKey("dimension::sdk_version")
+                .setAscending(true)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    FleetFlatResults descending =
+        searcher.searchFlat(
+            sdkCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder()
+                .setKey("dimension::sdk_version")
+                .setAscending(false)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+
+    // String order would put "10" and "35" before "9". Integers sort numerically, text sorts
+    // after them, and a device without a value still sorts first.
+    assertThat(rowIds(ascending))
+        .containsExactly("device-none", "device-9", "device-10", "device-35", "device-preview")
+        .inOrder();
+    assertThat(rowIds(descending))
+        .containsExactly("device-preview", "device-35", "device-10", "device-9", "device-none")
+        .inOrder();
+  }
+
+  @Test
   public void pagination_walksPagesWithTokens() {
     FleetPageRequest firstPage = FleetPageRequest.newBuilder().setPageSize(2).build();
     FleetFlatResults page1 =
@@ -926,6 +966,38 @@ public final class FleetFlatSearcherTest {
                 .setCompositeDimension(
                     DeviceCompositeDimension.newBuilder()
                         .addSupportedDimension(dimension("os", "ios"))))
+        .build();
+  }
+
+  // A single-host fleet whose devices carry sdk_version values that string order would misplace.
+  private static LabQueryResult sdkFleet() {
+    return LabQueryResult.newBuilder()
+        .setLabView(
+            LabQueryResult.LabView.newBuilder()
+                .setLabTotalCount(1)
+                .addLabData(
+                    labData(
+                        "lab1",
+                        "1.1.1.1",
+                        deviceWithSdk("device-10", "10"),
+                        deviceWithSdk("device-35", "35"),
+                        deviceWithSdk("device-9", "9"),
+                        deviceWithSdk("device-none", ""),
+                        deviceWithSdk("device-preview", "preview"))))
+        .build();
+  }
+
+  private static DeviceInfo deviceWithSdk(String id, String sdkVersion) {
+    DeviceCompositeDimension.Builder dims =
+        DeviceCompositeDimension.newBuilder().addSupportedDimension(dimension("os", "android"));
+    if (!sdkVersion.isEmpty()) {
+      dims.addSupportedDimension(dimension("sdk_version", sdkVersion));
+    }
+    return DeviceInfo.newBuilder()
+        .setDeviceLocator(DeviceLocator.newBuilder().setId(id))
+        .setDeviceStatus(DeviceStatus.IDLE)
+        .setDeviceFeature(
+            DeviceFeature.newBuilder().addType("AndroidRealDevice").setCompositeDimension(dims))
         .build();
   }
 
