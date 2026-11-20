@@ -368,6 +368,7 @@ public final class FleetIndexBuilder {
         .flatMap(DeviceEnrichment::wifiSsid)
         .filter(s -> !s.isEmpty())
         .ifPresent(s -> values.put(AtsDeviceKeys.WIFI_SSID.id(), ImmutableList.of(s)));
+    enrichment.map(DeviceEnrichment::configValues).ifPresent(values::putAll);
 
     return DeviceRecord.create(deviceId, values.buildKeepingLast());
   }

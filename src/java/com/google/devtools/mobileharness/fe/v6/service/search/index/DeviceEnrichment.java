@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.util.Optional;
 
 /**
@@ -36,15 +38,28 @@ public abstract class DeviceEnrichment {
    */
   public abstract Optional<String> wifiSsid();
 
+  /**
+   * Device config values keyed by canonical key id (for example {@code
+   * device_config::max_consecutive_fail}), for keys that only the data source's own deployment
+   * defines. The data source resolves these values, and the shared {@link FleetIndexBuilder}
+   * indexes them as given without interpreting them.
+   */
+  public abstract ImmutableMap<String, ImmutableList<String>> configValues();
+
   /** Creates a new builder. */
   public static Builder builder() {
-    return new AutoValue_DeviceEnrichment.Builder().setWifiSsid(Optional.empty());
+    return new AutoValue_DeviceEnrichment.Builder()
+        .setWifiSsid(Optional.empty())
+        .setConfigValues(ImmutableMap.of());
   }
 
   /** Builder for {@link DeviceEnrichment}. */
   @AutoValue.Builder
   public abstract static class Builder {
     public abstract Builder setWifiSsid(Optional<String> wifiSsid);
+
+    public abstract Builder setConfigValues(
+        ImmutableMap<String, ImmutableList<String>> configValues);
 
     public abstract DeviceEnrichment build();
   }
