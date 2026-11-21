@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.infra.controller.plugin.provider.Plugin
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.PluginModuleClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryPluginClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryPluginModuleClassProvider;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.inject.Module;
@@ -238,6 +239,23 @@ public class PluginCreator implements AutoCloseable {
         return false;
       }
       isLoaded = true;
+      if (pluginType == PluginType.LAB
+          && !Flags.enableLabPluginJarFromJob.getNonNull()
+          && (!jarUris.isEmpty()
+              || (classNames != null && !classNames.isEmpty())
+              || (moduleClassNames != null && !moduleClassNames.isEmpty()))) {
+        throw new MobileHarnessException(
+            BasicErrorId.PLUGIN_LOADER_FAILED_TO_GET_JAR_URL,
+            "Refusing to load job-supplied LAB plugin jar/class/module ["
+                + jarUris
+                + ", "
+                + classNames
+                + ", "
+                + moduleClassNames
+                + "]: --enable_lab_plugin_jar_from_job is false. Unauthenticated job submitters"
+                + " must not be able to load or instantiate arbitrary classes in the lab-server"
+                + " JVM.");
+      }
       List<URL> jarUrls = new ArrayList<>();
       for (URI uri : jarUris) {
         jarUrls.add(toJarUrl(uri));

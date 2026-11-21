@@ -853,6 +853,15 @@ public class Flags {
   public static final Flag<Boolean> enableGrpcRelay = Flag.value(false);
 
   @FlagSpec(
+      name = "enable_lab_plugin_jar_from_job",
+      help =
+          "Whether the lab server may load a job-supplied lab_plugin_jar into a URLClassLoader and"
+              + " instantiate its classes in the lab JVM. Default is false: unauthenticated job"
+              + " submitters must not be able to run arbitrary code on the lab host. Only set to"
+              + " true on single-tenant labs whose job-submission path is fully authenticated.")
+  public static final Flag<Boolean> enableLabPluginJarFromJob = Flag.value(false);
+
+  @FlagSpec(
       name = "enable_lab_server_file_log",
       help =
           "Whether the lab server writes logs to local files (including the rotated main log files"
