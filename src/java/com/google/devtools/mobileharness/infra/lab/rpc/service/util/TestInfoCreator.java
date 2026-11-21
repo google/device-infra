@@ -16,12 +16,15 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.service.util;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Dirs;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.KickOffTestRequest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -38,6 +41,12 @@ import java.util.List;
  * server.
  */
 public class TestInfoCreator {
+
+  private static final ImmutableSet<String> LAB_PLUGIN_PARAMS =
+      ImmutableSet.of(
+          JobInfo.PARAM_LAB_PLUGIN,
+          JobInfo.PARAM_CLIENT_PLUGIN_MODULES,
+          JobInfo.PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX);
 
   private final JobDirFactory jobDirsFactory;
   private final LocalFileUtil localFileUtil;
@@ -102,7 +111,16 @@ public class TestInfoCreator {
           "Failed to set job scoped specs: " + req.getJob().getJobScopedSpecsJson(),
           e);
     }
-    jobInfo.params().addAll(StrPairUtil.convertCollectionToMap(req.getJob().getJobParamList()));
+    if (Flags.enableLabPluginJarFromJob.getNonNull()) {
+      jobInfo.params().addAll(StrPairUtil.convertCollectionToMap(req.getJob().getJobParamList()));
+    } else {
+      jobInfo
+          .params()
+          .addAll(
+              Maps.filterKeys(
+                  StrPairUtil.convertCollectionToMap(req.getJob().getJobParamList()),
+                  key -> !LAB_PLUGIN_PARAMS.contains(key)));
+    }
     jobInfo
         .properties()
         .addAll(StrPairUtil.convertCollectionToMap(req.getJob().getJobPropertyList()));

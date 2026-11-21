@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit.
 import com.google.devtools.mobileharness.infra.lab.proto.File.TestFileUnit;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.TextFormat;
@@ -197,6 +198,13 @@ public class LabFileNotifier {
 
   @GuardedBy("fileCache")
   private void addJobFile(JobFileUnit jobFileUnit) throws MobileHarnessException {
+    if (jobFileUnit.getTag().equals(JobInfo.TAG_LAB_PLUGIN)
+        && !Flags.enableLabPluginJarFromJob.getNonNull()) {
+      logger.atWarning().log(
+          "Ignoring job file [%s] with tag [%s]: --enable_lab_plugin_jar_from_job is false.",
+          jobFileUnit.getLocalPath(), jobFileUnit.getTag());
+      return;
+    }
     JobInfo jobInfo = testInfo.jobInfo();
     if (!jobFileUnit.getTag().startsWith(JobSpecHelper.FILE_TAG_PREFIX)
         && !jobFileUnit.getTag().startsWith(ScopedSpecs.FILE_TAG_PREFIX)) {
