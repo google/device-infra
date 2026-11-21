@@ -36,7 +36,6 @@ java_library(
         "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:schedule_unit",
-        "//src/java/com/google/devtools/mobileharness/shared/constant/device:device_constants",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/device:device_health_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",

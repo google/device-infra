@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.mobileharness.shared.constant.device.DeviceConstants.UNHEALTHY_DEVICE_TYPES;
+import static com.google.devtools.mobileharness.shared.util.device.DeviceHealthUtil.UNHEALTHY_DEVICE_TYPES;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
 
