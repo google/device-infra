@@ -97,7 +97,7 @@ public final class HostDecommissionButtonBuilderTest {
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isTrue();
     assertThat(result.getIsReady()).isFalse();
-    assertThat(result.getTooltip()).isEqualTo("Decommission the host");
+    assertThat(result.getTooltip()).isEqualTo("Remove the missing host");
   }
 
   @Test
@@ -113,7 +113,7 @@ public final class HostDecommissionButtonBuilderTest {
 
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isTrue();
-    assertThat(result.getTooltip()).isEqualTo("Decommission the host");
+    assertThat(result.getTooltip()).isEqualTo("Remove the missing host");
   }
 
   @Test

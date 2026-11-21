@@ -303,9 +303,9 @@
                     <span class="action-button-text">Remote Control</span>
                   </button>
                   @if(decommissionMissingCount() > 0) {
-                    <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'" (click)="isDeviceActionReady(selection.selected, 'decommission') ? decommission(selection.selected) : showComingSoonPopup('Decommission')">
+                    <button mat-flat-button class="action-button" [matTooltip]="'Remove Missing (' + decommissionMissingCount() + ')'" (click)="isDeviceActionReady(selection.selected, 'decommission') ? decommission(selection.selected) : showComingSoonPopup('Decommission')">
                       <mat-icon>delete_sweep</mat-icon>
-                      <span class="action-button-text">Decommission Missing ({{decommissionMissingCount()}})</span>
+                      <span class="action-button-text">Remove Missing ({{decommissionMissingCount()}})</span>
                     </button>
                   }
                 }

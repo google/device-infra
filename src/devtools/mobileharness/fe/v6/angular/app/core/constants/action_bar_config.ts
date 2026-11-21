@@ -71,7 +71,7 @@ export const ACTION_BAR_CONFIG: Record<ActionBarAction, ActionMetadata> = {
     displayName: 'Stop Server',
   },
   [ActionBarAction.HOST_DECOMMISSION]: {
-    displayName: 'Decommission',
+    displayName: 'Remove',
   },
 
   [ActionBarAction.HOST_RELEASE]: {
@@ -89,7 +89,7 @@ export const ACTION_BAR_CONFIG: Record<ActionBarAction, ActionMetadata> = {
     displayName: 'Remote Control',
   },
   [ActionBarAction.DEVICE_DECOMMISSION]: {
-    displayName: 'Decommission',
+    displayName: 'Remove',
   },
   [ActionBarAction.DEVICE_SCREENSHOT]: {
     displayName: 'Screenshot',
@@ -189,7 +189,7 @@ export const DEVICE_ACTION_UI_CONFIG: Record<
     feature: ActionBarAction.DEVICE_QUARANTINE,
   },
   'decommission': {
-    label: 'Decommission',
+    label: 'Remove',
     icon: 'delete_sweep',
     testIdPrefix: 'decommission',
     feature: ActionBarAction.DEVICE_DECOMMISSION,
@@ -230,7 +230,7 @@ export const HOST_ACTION_UI_CONFIG: Record<
     feature: ActionBarAction.HOST_CONFIGURATION,
   },
   'decommission': {
-    label: 'Decommission',
+    label: 'Remove',
     icon: 'delete_sweep',
     testIdPrefix: 'decommission',
     feature: ActionBarAction.HOST_DECOMMISSION,

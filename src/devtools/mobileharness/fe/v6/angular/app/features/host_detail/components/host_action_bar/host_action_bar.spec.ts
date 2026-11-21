@@ -47,7 +47,7 @@ describe('HostActionBar', () => {
         decommission: {
           enabled: true,
           visible: true,
-          tooltip: 'Decommission tooltip',
+          tooltip: 'Remove the missing host',
           isReady: true,
         },
         advancedOperations: {
@@ -118,6 +118,10 @@ describe('HostActionBar', () => {
     expect(configButton).toBeTruthy();
     expect(debugButton).toBeTruthy();
     expect(decommissionButton).toBeTruthy();
+    expect(decommissionButton.nativeElement.textContent).toContain('Remove');
+    expect(decommissionButton.nativeElement.textContent).not.toContain(
+      'Decommission',
+    );
   });
 
   it('should open debug dialog on action click', () => {

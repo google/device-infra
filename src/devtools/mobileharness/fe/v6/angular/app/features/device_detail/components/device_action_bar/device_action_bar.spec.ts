@@ -1,11 +1,11 @@
 import {ChangeDetectorRef} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {MatDialog} from '@angular/material/dialog';
+import {MatDialog, MatDialogRef} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter, Router} from '@angular/router';
 import {ActionBarAction} from '@deviceinfra/app/core/constants/action_bar_config';
 import {APP_DATA} from '@deviceinfra/app/core/models/app_data';
-import {of, Subject} from 'rxjs';
+import {Observable, of, Subject, throwError} from 'rxjs';
 import {
   GetLogcatResponse,
   TakeScreenshotResponse,
@@ -14,9 +14,11 @@ import {DeviceOverviewPageData} from '../../../../core/models/device_overview';
 import {Environment} from '../../../../core/services/environment';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
+import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {DeviceActionService} from '../../../../shared/services/device_action_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
+import {SnackBarService} from '../../../../shared/services/snackbar_service';
 
 import {DeviceActionBar} from './device_action_bar';
 
@@ -417,5 +419,55 @@ describe('DeviceActionBar', () => {
     });
 
     expect(deviceActionService.configureDevice).not.toHaveBeenCalled();
+  });
+
+  it('renders Remove label and opens Remove Missing Device dialog on click', () => {
+    const dialogRefSpy = jasmine.createSpyObj<MatDialogRef<ConfirmDialog>>(
+      'MatDialogRef',
+      ['afterClosed'],
+    );
+    dialogRefSpy.afterClosed.and.returnValue(of('cancel'));
+    dialog.open.and.returnValue(dialogRefSpy);
+
+    const snackBar = TestBed.inject(SnackBarService);
+    const showSuccessSpy = spyOn(snackBar, 'showSuccess');
+    const showErrorSpy = spyOn(snackBar, 'showError');
+    const decommissionSpy = spyOn(
+      hostService,
+      'decommissionMissingDevices',
+    ).and.returnValue(of(undefined));
+
+    const removeButton = fixture.nativeElement.querySelector(
+      '[data-testid="decommission-button-2xl"]',
+    ) as HTMLButtonElement;
+    expect(removeButton).toBeTruthy();
+    expect(removeButton.textContent).toContain('Remove');
+    expect(removeButton.textContent).not.toContain('Decommission');
+
+    removeButton.click();
+
+    expect(dialog.open).toHaveBeenCalledWith(
+      ConfirmDialog,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          title: 'Remove Missing Device',
+          primaryButtonLabel: 'Remove',
+          secondaryButtonLabel: 'Cancel',
+        }),
+      }),
+    );
+
+    const dialogConfig = dialog.open.calls.mostRecent().args[1] as {
+      data: {onConfirm: () => Observable<void>};
+    };
+    dialogConfig.data.onConfirm().subscribe();
+    expect(decommissionSpy).toHaveBeenCalledWith('test-host', ['test-device']);
+    expect(showSuccessSpy).toHaveBeenCalledWith(
+      'Device test-device removed successfully.\nIt may take a few minutes to take effect on the UI side.',
+    );
+
+    decommissionSpy.and.returnValue(throwError(() => ({})));
+    dialogConfig.data.onConfirm().subscribe({error: () => {}});
+    expect(showErrorSpy).toHaveBeenCalledWith('Failed to remove device');
   });
 });

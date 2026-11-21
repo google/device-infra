@@ -71,7 +71,7 @@ class DeviceDecommissionButtonBuilder {
         .setVisible(true)
         .setIsReady(isReady)
         .setEnabled(true)
-        .setTooltip("Decommission the missing device")
+        .setTooltip("Remove the missing device")
         .build();
   }
 }

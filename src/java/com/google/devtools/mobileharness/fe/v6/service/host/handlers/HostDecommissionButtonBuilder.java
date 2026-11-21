@@ -61,7 +61,7 @@ public class HostDecommissionButtonBuilder {
         .setVisible(true)
         .setEnabled(true)
         .setIsReady(isReady)
-        .setTooltip("Decommission the host")
+        .setTooltip("Remove the missing host")
         .build();
   }
 }
