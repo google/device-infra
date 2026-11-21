@@ -531,6 +531,21 @@ public interface PropertyName {
     /** Whether the file is resolved lazily for one tag. */
     public static final String PREFIX_FILE_LAZY_RESOLVE = "file_lazy_resolve_";
 
+    /**
+     * Test property prefix for client-internal state excluded from Lab Server RPC sync.
+     *
+     * <p>Applies only to {@code TestInfo} properties ({@code JobInfo} properties are still
+     * forwarded on kick-off). Properties with this prefix are not sent to the lab server on test
+     * kick-off and are ignored if returned from the lab server. Prefixed with {@code _} so Sponge
+     * hides it if a test ends without client-side teardown.
+     */
+    public static final String PREFIX_CLIENT_INTERNAL = "_mh_client_internal_";
+
+    /** Returns whether {@code propertyName} is a client-internal test property. */
+    public static boolean isClientInternal(String propertyName) {
+      return propertyName.startsWith(PREFIX_CLIENT_INTERNAL);
+    }
+
     /** Gateway service property name constants. */
     public enum Gateway implements PropertyName {
 

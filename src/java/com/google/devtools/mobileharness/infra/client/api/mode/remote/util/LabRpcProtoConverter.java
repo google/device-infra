@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toCollection;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -49,6 +50,7 @@ import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.SubTestGenDat
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.SubTestStatusResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.TestMessage;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
@@ -73,6 +75,16 @@ public class LabRpcProtoConverter {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final LocalFileUtil localFileUtil = new LocalFileUtil();
+
+  /**
+   * Converts {@code testInfo}'s properties into lab RPC {@link StrPair} entries, excluding {@link
+   * PropertyName.Test#PREFIX_CLIENT_INTERNAL} keys.
+   */
+  public static ImmutableList<StrPair> toLabTestProperties(TestInfo testInfo) {
+    return StrPairUtil.convertMapToList(
+        Maps.filterKeys(
+            testInfo.properties().getAll(), key -> !PropertyName.Test.isClientInternal(key)));
+  }
 
   public KickOffTestRequest generateKickOffTestRequestFrom(
       TestInfo testInfo,
@@ -114,7 +126,7 @@ public class LabRpcProtoConverter {
                 .setTestName(testInfo.locator().getName())
                 .setTestCreateTimeMs(testInfo.timing().getCreateTime().toEpochMilli())
                 .setTestStartTimeMs(testInfo.timing().getStartTimeNonNull().toEpochMilli())
-                .addAllTestProperty(StrPairUtil.convertMapToList(testInfo.properties().getAll())))
+                .addAllTestProperty(toLabTestProperties(testInfo)))
         .setParentSpan(parentSpan)
         .build();
   }
@@ -388,8 +400,19 @@ public class LabRpcProtoConverter {
         testInfo.isRootTest()
             ? ""
             : String.format(" for sub_test %s(%s)", testInfo.locator().getName(), testId);
-    // Gets the test generated properties.
-    if (resp.getTestPropertyCount() == 0) {
+    // Gets the test generated properties, ignoring client-internal keys so lab/DUT code cannot
+    // inject or overwrite client-side control state.
+    List<StrPair> properties = new ArrayList<>(resp.getTestPropertyCount());
+    for (StrPair property : resp.getTestPropertyList()) {
+      if (PropertyName.Test.isClientInternal(property.getName())) {
+        logger.atWarning().log(
+            "Ignoring client-internal test property '%s' returned from lab server%s",
+            property.getName(), testInfo.isRootTest() ? " for test " + testId : subTestLogPostfix);
+        continue;
+      }
+      properties.add(property);
+    }
+    if (properties.isEmpty()) {
       testInfo
           .getRootTest()
           .log()
@@ -397,7 +420,6 @@ public class LabRpcProtoConverter {
           .alsoTo(logger)
           .log("No generated property%s", subTestLogPostfix);
     } else {
-      List<StrPair> properties = new ArrayList<>(resp.getTestPropertyList());
       StrPairUtil.sort(properties);
       StringBuilder buf =
           new StringBuilder("Generated properties").append(subTestLogPostfix).append(':');

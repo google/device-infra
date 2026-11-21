@@ -60,6 +60,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
