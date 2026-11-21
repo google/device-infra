@@ -27,15 +27,23 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.Striped;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.file.resolver.cache.LocalCache;
 import com.google.devtools.mobileharness.shared.file.resolver.cache.PersistentResolvedFileCache;
 import com.google.devtools.mobileharness.shared.file.resolver.cache.ResolvedFileCache.CachedResolveResult;
+import com.google.devtools.mobileharness.shared.file.resolver.cache.SlotCache;
+import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
+import com.google.devtools.mobileharness.shared.util.concurrent.MobileHarnessRunnable;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import java.io.File;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.InstantSource;
 import java.util.ArrayList;
@@ -46,7 +54,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Lock;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -67,6 +78,13 @@ public class CacheFileResolver extends AbstractFileResolver {
 
   private final LocalCache localCache;
   @Nullable private final PersistentResolvedFileCache persistentResolvedFileCache;
+
+  /** Caches the resolved files in place of {@link #localCache}, if set. */
+  @Nullable private final SlotCache slotCache;
+
+  /** Keeps two callers from putting a file at the same path at once. */
+  private final Striped<Lock> outOfSlotLocks = Striped.lazyWeakLock(1024);
+
   private final LocalFileUtil localFileUtil;
   private final InstantSource instantSource;
 
@@ -79,6 +97,49 @@ public class CacheFileResolver extends AbstractFileResolver {
     this.instantSource = instantSource;
     this.localCache = new LocalCache(executorService, instantSource, super::resolve);
     this.persistentResolvedFileCache = PersistentResolvedFileCache.create(super::resolve);
+    this.slotCache = null;
+  }
+
+  /**
+   * Creates a resolver that caches the resolved files in a directory of its own, where no caller
+   * can remove them, instead of in the directories of the callers that asked first. See {@link
+   * SlotCache}.
+   */
+  public CacheFileResolver(
+      ListeningExecutorService executorService,
+      LocalFileUtil localFileUtil,
+      InstantSource instantSource,
+      SlotCache.Options slotCacheOptions) {
+    this(
+        executorService,
+        localFileUtil,
+        instantSource,
+        slotCacheOptions,
+        ThreadPools.createStandardScheduledThreadPool("slot-cache-sweep", /* corePoolSize= */ 1));
+  }
+
+  @VisibleForTesting
+  CacheFileResolver(
+      ListeningExecutorService executorService,
+      LocalFileUtil localFileUtil,
+      InstantSource instantSource,
+      SlotCache.Options slotCacheOptions,
+      ScheduledExecutorService sweepScheduler) {
+    super(executorService);
+    this.localFileUtil = localFileUtil;
+    this.instantSource = instantSource;
+    this.localCache = new LocalCache(executorService, instantSource, super::resolve);
+    this.persistentResolvedFileCache = PersistentResolvedFileCache.create(super::resolve);
+    this.slotCache =
+        new SlotCache(
+            slotCacheOptions,
+            SUCCEED_CACHE_EXPIRATION_TIME,
+            FAIL_CACHE_EXPIRATION_TIME,
+            executorService,
+            sweepScheduler,
+            instantSource,
+            localFileUtil,
+            super::resolve);
   }
 
   @VisibleForTesting
@@ -92,6 +153,7 @@ public class CacheFileResolver extends AbstractFileResolver {
     this.instantSource = instantSource;
     this.localCache = new LocalCache(executorService, instantSource, super::resolve);
     this.persistentResolvedFileCache = persistentResolvedFileCache;
+    this.slotCache = null;
   }
 
   @Override
@@ -161,36 +223,13 @@ public class CacheFileResolver extends AbstractFileResolver {
         return persistentResolvedFileCache.getCachedResolveResult(resolveSource, checksum.get());
       }
     }
+    if (slotCache != null) {
+      return resolveThroughSlot(slotCache, resolveSource);
+    }
     resolveSource = withFileVersion(resolveSource);
     CachedResolveResult cachedResult = localCache.getCachedResolveResult(resolveSource);
     if (!cachedResult.isCachedData()) {
-      try {
-        return cachedResult.cachedResult().get();
-      } catch (CancellationException e) {
-        // This thread created the task. If cancelled, we want to cancel the background task to
-        // avoid zombie futures.
-        cachedResult.cachedResult().cancel(/* mayInterruptIfRunning= */ true);
-        throw new MobileHarnessException(
-            BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Downloading was cancelled", e);
-      } catch (InterruptedException e) {
-        // This thread created the task. If interrupted, we want to cancel the background task to
-        // avoid zombie futures.
-        cachedResult.cachedResult().cancel(/* mayInterruptIfRunning= */ true);
-        Thread.currentThread().interrupt();
-        throw new MobileHarnessException(
-            BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Downloading is interrupted", e);
-      } catch (ExecutionException e) {
-        if (e.getCause() instanceof MobileHarnessException mhe) {
-          throw mhe;
-        } else if (e.getCause() instanceof InterruptedException interruptedException) {
-          throw interruptedException;
-        } else if (e.getCause() instanceof Error error) {
-          throw error;
-        } else if (e.getCause() instanceof RuntimeException runtimeException) {
-          throw runtimeException;
-        }
-        throw new AssertionError("Should not happen.", e);
-      }
+      return getOwnResolveResult(cachedResult.cachedResult());
     } else {
       logger.atInfo().log("%s has been resolved before. Use the cached value.", resolveSource);
       // If already cached, use cached future's result.
@@ -364,6 +403,43 @@ public class CacheFileResolver extends AbstractFileResolver {
   }
 
   /**
+   * Returns the result of the resolution this thread started, which it cancels if it stops waiting
+   * for it.
+   */
+  @SuppressWarnings("Interruption")
+  private static Optional<ResolveResult> getOwnResolveResult(
+      Future<Optional<ResolveResult>> resolveResult)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      return resolveResult.get();
+    } catch (CancellationException e) {
+      // This thread created the task. If cancelled, we want to cancel the background task to
+      // avoid zombie futures.
+      resolveResult.cancel(/* mayInterruptIfRunning= */ true);
+      throw new MobileHarnessException(
+          BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Downloading was cancelled", e);
+    } catch (InterruptedException e) {
+      // This thread created the task. If interrupted, we want to cancel the background task to
+      // avoid zombie futures.
+      resolveResult.cancel(/* mayInterruptIfRunning= */ true);
+      Thread.currentThread().interrupt();
+      throw new MobileHarnessException(
+          BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Downloading is interrupted", e);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof MobileHarnessException mhe) {
+        throw mhe;
+      } else if (e.getCause() instanceof InterruptedException interruptedException) {
+        throw interruptedException;
+      } else if (e.getCause() instanceof Error error) {
+        throw error;
+      } else if (e.getCause() instanceof RuntimeException runtimeException) {
+        throw runtimeException;
+      }
+      throw new AssertionError("Should not happen.", e);
+    }
+  }
+
+  /**
    * Copies a cached resolved file or directory to {@code thisPath}, which must not exist, and
    * returns whether {@code thisPath} holds the copy. A directory copied only in part is left for
    * the caller to remove.
@@ -389,9 +465,320 @@ public class CacheFileResolver extends AbstractFileResolver {
     return false;
   }
 
+  /**
+   * Resolves {@code resolveSource} into a slot of {@code slotCache}, or waits for the caller that
+   * is doing so, and returns the files as links or copies in the directories of {@code
+   * resolveSource}.
+   *
+   * <p>No caller's directory backs what another caller reads, so unlike in {@link #internalResolve}
+   * a cached file cannot vanish while it is linked or copied.
+   */
+  @SuppressWarnings("Interruption")
+  private Optional<ResolveResult> resolveThroughSlot(
+      SlotCache slotCache, ResolveSource originalResolveSource)
+      throws MobileHarnessException, InterruptedException {
+    while (true) {
+      ResolveSource resolveSource = withFileVersion(originalResolveSource);
+      SlotCache.Lookup lookup = slotCache.get(resolveSource);
+      SlotCache.Entry entry = lookup.entry();
+      Optional<ResolveResult> slotResult;
+      if (lookup.isNew()) {
+        try {
+          slotResult = getOwnResolveResult(entry.future());
+        } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+          if (entry.future().isCancelled()
+              || MoreThrowables.isInterruption(e)
+              || (e instanceof MobileHarnessException mhe
+                  && mhe.getErrorId() == BasicErrorId.RESOLVE_FILE_TIMEOUT)) {
+            slotCache.retire(entry);
+          }
+          throw e;
+        }
+      } else {
+        logger.atInfo().log("%s has been resolved before. Use the cached value.", resolveSource);
+        try {
+          slotResult = entry.future().get(getResolveTimeout().toMillis(), MILLISECONDS);
+        } catch (CancellationException e) {
+          logger.atInfo().log(
+              "Previous resolve process for %s was cancelled. Need to re-resolve.", resolveSource);
+          slotCache.retire(entry);
+          continue;
+        } catch (ExecutionException e) {
+          boolean timedOutOrInterrupted =
+              MoreThrowables.isInterruption(e.getCause())
+                  || (e.getCause() instanceof MobileHarnessException mhe
+                      && mhe.getErrorId() == BasicErrorId.RESOLVE_FILE_TIMEOUT);
+          if (!timedOutOrInterrupted) {
+            throw new MobileHarnessException(
+                BasicErrorId.RESOLVE_FILE_CACHED_EXCEPTION_ERROR,
+                String.format(
+                    "Previous resolve process for %s did not succeed because of exception.",
+                    resolveSource),
+                e);
+          }
+          logger.atInfo().log(
+              "Previous resolve process for %s did not succeed because of timeout or interruption."
+                  + " Need to re-resolve.",
+              resolveSource);
+          slotCache.retire(entry);
+          continue;
+        } catch (TimeoutException e) {
+          // Interrupt the long-running resolution task because it is considered as a zombie future.
+          entry.future().cancel(/* mayInterruptIfRunning= */ true);
+          slotCache.retire(entry);
+          throw new MobileHarnessException(
+              BasicErrorId.RESOLVE_FILE_TIMEOUT,
+              String.format("Timeout while resolving file %s", resolveSource),
+              e);
+        }
+      }
+      if (slotResult.isEmpty()) {
+        return slotResult;
+      }
+      Optional<ResolveResult> result =
+          copyOutOfSlot(slotCache, entry, slotResult.get(), resolveSource, lookup.isNew());
+      if (result.isPresent()) {
+        return result;
+      }
+    }
+  }
+
+  /**
+   * Returns {@code slotResult} for {@code resolveSource}, with every file in the slot of {@code
+   * entry} linked or copied into the directories of {@code resolveSource}. Returns empty if the
+   * slot is not kept any more or a previously cached file is missing from the slot.
+   */
+  private Optional<ResolveResult> copyOutOfSlot(
+      SlotCache slotCache,
+      SlotCache.Entry entry,
+      ResolveResult slotResult,
+      ResolveSource resolveSource,
+      boolean isNew)
+      throws MobileHarnessException, InterruptedException {
+    boolean inSlot =
+        slotResult.resolvedFiles().stream()
+            .anyMatch(file -> entry.pathFor(resolveSource, file.path()).isPresent());
+    if (!inSlot) {
+      // The resolver fetched nothing and names the files where they are.
+      return Optional.of(
+          ResolveResult.of(slotResult.resolvedFiles(), slotResult.properties(), resolveSource));
+    }
+    if (!entry.acquire()) {
+      logger.atInfo().log(
+          "The cache entry of %s was retired before its files were used. Need to re-resolve.",
+          resolveSource);
+      return Optional.empty();
+    }
+    boolean succeeded = false;
+    List<String> createdPaths = new ArrayList<>();
+    try {
+      ImmutableList.Builder<ResolvedFile> files = ImmutableList.builder();
+      for (ResolvedFile slotFile : slotResult.resolvedFiles()) {
+        Optional<String> path = entry.pathFor(resolveSource, slotFile.path());
+        if (path.isPresent() && !copyFromSlot(slotFile.path(), path.get(), createdPaths)) {
+          slotCache.retire(entry);
+          if (isNew) {
+            throw new MobileHarnessException(
+                BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND,
+                String.format(
+                    "Resolved file %s for %s does not exist in cache slot.",
+                    slotFile.path(), resolveSource));
+          }
+          logger.atWarning().log(
+              "Cached resolved file %s for %s is missing from slot. Retiring entry and"
+                  + " re-resolving.",
+              slotFile.path(), resolveSource);
+          return Optional.empty();
+        }
+        files.add(
+            ResolvedFile.create(
+                path.orElse(slotFile.path()),
+                slotFile.fingerprint().orElse(null),
+                slotFile.spec().orElse(null)));
+      }
+      ResolveResult result =
+          ResolveResult.of(files.build(), slotResult.properties(), resolveSource);
+      logger.atInfo().log("Resolved result: %s", result);
+      succeeded = true;
+      return Optional.of(result);
+    } finally {
+      try {
+        if (!succeeded) {
+          removeCreatedFiles(createdPaths);
+        }
+      } finally {
+        entry.release();
+      }
+    }
+  }
+
+  private enum CopyOutcome {
+    ALREADY_EXISTS,
+    CREATED,
+    SOURCE_MISSING,
+  }
+
+  /**
+   * Puts the file or directory at {@code slotPath} at {@code path}, recording newly created file
+   * paths in {@code createdPaths}. Returns {@code false} if {@code slotPath} (or a child inside it)
+   * is missing on disk.
+   *
+   * <p>Directories are copied entry-by-entry with per-file locking so a concurrent source targeting
+   * a file inside the same directory neither causes nested copying nor races on that file.
+   */
+  private boolean copyFromSlot(String slotPath, String path, List<String> createdPaths)
+      throws MobileHarnessException, InterruptedException {
+    String normalizedSlotPath = normalizeLocalPath(slotPath);
+    String normalizedPath = normalizeLocalPath(path);
+    if (!existsNoFollow(normalizedSlotPath)) {
+      return false;
+    }
+    if (localFileUtil.isDirExist(normalizedSlotPath) && !isSymbolicLink(normalizedSlotPath)) {
+      return copyDirectory(normalizedSlotPath, normalizedPath, createdPaths);
+    }
+    CopyOutcome outcome = linkOrCopyFile(normalizedSlotPath, normalizedPath);
+    if (outcome == CopyOutcome.CREATED) {
+      createdPaths.add(normalizedPath);
+    }
+    return outcome != CopyOutcome.SOURCE_MISSING;
+  }
+
+  private boolean copyDirectory(
+      String normalizedSlotDir, String normalizedDestDir, List<String> createdPaths)
+      throws MobileHarnessException, InterruptedException {
+    if (!localFileUtil.isDirExist(normalizedSlotDir)) {
+      return false;
+    }
+    File[] children;
+    try {
+      children = localFileUtil.listFilesOrDirs(normalizedSlotDir);
+    } catch (MobileHarnessException e) {
+      if (!localFileUtil.isDirExist(normalizedSlotDir)) {
+        return false;
+      }
+      throw e;
+    }
+    localFileUtil.prepareDir(normalizedDestDir);
+    for (File child : children) {
+      String childSrc = normalizeLocalPath(child.getPath());
+      String childDest = PathUtil.join(normalizedDestDir, child.getName());
+      if (child.isDirectory() && !isSymbolicLink(childSrc)) {
+        if (!copyDirectory(childSrc, childDest, createdPaths)) {
+          return false;
+        }
+      } else {
+        CopyOutcome outcome = linkOrCopyFile(childSrc, childDest);
+        if (outcome == CopyOutcome.CREATED) {
+          createdPaths.add(childDest);
+        } else if (outcome == CopyOutcome.SOURCE_MISSING) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Puts the file at {@code normalizedSlotPath} at {@code normalizedPath}, unless something is
+   * already there.
+   *
+   * <p>As in {@link #internalResolve}, regular files with suffixes in {@link #LINKABLE_FILE_SUFFIX}
+   * are hard-linked, and the rest are copied with file attributes preserved.
+   */
+  private CopyOutcome linkOrCopyFile(String normalizedSlotPath, String normalizedPath)
+      throws MobileHarnessException, InterruptedException {
+    // Two sources of one job (or a directory and a file inside it) can target the same path.
+    Lock lock = outOfSlotLocks.get(normalizedPath);
+    lock.lockInterruptibly();
+    try {
+      if (!existsNoFollow(normalizedSlotPath)) {
+        return CopyOutcome.SOURCE_MISSING;
+      }
+      if (existsNoFollow(normalizedPath)) {
+        return CopyOutcome.ALREADY_EXISTS;
+      }
+      localFileUtil.prepareDir(PathUtil.dirname(normalizedPath));
+      if (!isSymbolicLink(normalizedSlotPath)
+          && LINKABLE_FILE_SUFFIX.contains(
+              Ascii.toLowerCase(Files.getFileExtension(normalizedPath)))) {
+        try {
+          localFileUtil.hardLinkFile(normalizedSlotPath, normalizedPath);
+          return CopyOutcome.CREATED;
+        } catch (MobileHarnessException e) {
+          if (!existsNoFollow(normalizedSlotPath)) {
+            return CopyOutcome.SOURCE_MISSING;
+          }
+          logger.atInfo().withCause(e).log(
+              "Failed to hard link %s to %s. Fall back to copy.",
+              normalizedSlotPath, normalizedPath);
+        }
+      }
+      copyWithCleanup(normalizedSlotPath, normalizedPath);
+      return existsNoFollow(normalizedPath) ? CopyOutcome.CREATED : CopyOutcome.SOURCE_MISSING;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  private boolean existsNoFollow(String path) {
+    return localFileUtil.isFileOrDirExist(path) || isSymbolicLink(path);
+  }
+
+  private boolean isSymbolicLink(String path) {
+    try {
+      return localFileUtil.isSymbolicLink(Path.of(path));
+    } catch (InvalidPathException e) {
+      return false;
+    }
+  }
+
+  private void copyWithCleanup(String src, String dst)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      localFileUtil.copyFileOrDir(src, dst, /* copyAttributes= */ true);
+    } catch (MobileHarnessException | InterruptedException e) {
+      // What a copy cut short leaves behind would pass for the whole file the next time the
+      // path is asked for. Callables.runAll clears the interrupt flag around rm -rf.
+      MoreThrowables.runAndSuppressException(
+          e,
+          () -> Callables.runAll((MobileHarnessRunnable) () -> localFileUtil.removeFileOrDir(dst)));
+      throw e;
+    }
+  }
+
+  private void removeCreatedFiles(List<String> paths) {
+    for (String path : paths) {
+      Lock lock = outOfSlotLocks.get(path);
+      lock.lock();
+      try {
+        Callables.runAll((MobileHarnessRunnable) () -> localFileUtil.removeFileOrDir(path));
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log("Failed to remove partial destination %s.", path);
+      } catch (InterruptedException e) {
+        logger.atWarning().withCause(e).log("Interrupted removing partial destination %s.", path);
+        Thread.currentThread().interrupt();
+      } finally {
+        lock.unlock();
+      }
+    }
+  }
+
+  private static String normalizeLocalPath(String path) {
+    try {
+      return Path.of(path).normalize().toString();
+    } catch (InvalidPathException e) {
+      return PathUtil.removeExtraneousSlashes(path);
+    }
+  }
+
   @Override
   protected Set<ResolveResult> preBatchProcess(List<ResolveSource> resolveSources)
       throws MobileHarnessException, InterruptedException {
+    if (slotCache != null) {
+      // A batch is resolved into the directories of its caller, which no other caller may read
+      // from, so each file is resolved on its own into a slot instead.
+      return ImmutableSet.of();
+    }
     Set<ResolveResult> resolveResults = super.preBatchProcess(resolveSources);
     for (ResolveResult resolveResult : resolveResults) {
       localCache.addResolveResult(resolveResult, instantSource.instant());
