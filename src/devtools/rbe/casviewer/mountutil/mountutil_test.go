@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
+	"github.com/google/device-infra/src/devtools/rbe/common/chunkerutil"
 )
 
 func TestValidateMountPoint(t *testing.T) {

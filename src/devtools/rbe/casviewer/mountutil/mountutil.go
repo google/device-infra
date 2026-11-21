@@ -9,7 +9,7 @@ import (
 
 	"path/filepath"
 
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
+	"github.com/google/device-infra/src/devtools/rbe/common/chunkerutil"
 )
 
 // ValidateMountPoint validates the mount point directory exists and is empty.

@@ -11,7 +11,7 @@ import (
 
 	log "github.com/golang/glog"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
+	"github.com/google/device-infra/src/devtools/rbe/common/chunkerutil"
 )
 
 // FileUploader is the uploader for uploading a file to CAS.

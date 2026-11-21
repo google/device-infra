@@ -15,8 +15,8 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	repb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
 	"github.com/google/device-infra/src/devtools/rbe/casuploader/metrics"
+	"github.com/google/device-infra/src/devtools/rbe/common/chunkerutil"
 	"google.golang.org/protobuf/proto"
 )
 

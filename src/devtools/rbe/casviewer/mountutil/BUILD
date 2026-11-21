@@ -24,12 +24,12 @@ go_library(
     name = "mountutil",
     srcs = ["mountutil.go"],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casviewer/mountutil",
-    deps = ["//src/devtools/rbe/casuploader/chunkerutil"],
+    deps = ["//src/devtools/rbe/common/chunkerutil"],
 )
 
 go_test(
     name = "mountutil_test",
     srcs = ["mountutil_test.go"],
     embed = [":mountutil"],
-    deps = ["//src/devtools/rbe/casuploader/chunkerutil"],
+    deps = ["//src/devtools/rbe/common/chunkerutil"],
 )

@@ -24,7 +24,7 @@ go_binary(
     name = "casconverter",
     srcs = ["main.go"],
     deps = [
-        "//src/devtools/rbe/casuploader/chunkerutil",
+        "//src/devtools/rbe/common/chunkerutil",
         "@com_github_golang_glog//:glog",
     ],
 )
