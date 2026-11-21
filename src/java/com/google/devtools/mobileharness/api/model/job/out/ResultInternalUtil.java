@@ -44,4 +44,17 @@ public final class ResultInternalUtil {
       boolean logStackTrace) {
     return result.setNonPassing(testResult, cause, logStackTrace);
   }
+
+  /**
+   * Sets a non-PASSing result and cause in place of the ones {@code result} holds, without keeping
+   * the prior cause as suppressed.
+   */
+  @CanIgnoreReturnValue
+  public static Result replaceNonPassing(
+      Result result,
+      TestResult testResult,
+      ExceptionProto.ExceptionDetail cause,
+      boolean logStackTrace) {
+    return result.replaceNonPassing(testResult, cause, logStackTrace);
+  }
 }

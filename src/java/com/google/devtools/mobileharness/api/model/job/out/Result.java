@@ -248,6 +248,33 @@ public class Result {
     return this;
   }
 
+  /**
+   * Unconditionally replaces the result and cause without retaining any prior cause as suppressed.
+   *
+   * <p>Do NOT make this method public.
+   */
+  @CanIgnoreReturnValue
+  Result replaceNonPassing(
+      TestResult result, ExceptionProto.ExceptionDetail cause, boolean logStackTrace) {
+    Preconditions.checkArgument(result != TestResult.PASS && result != TestResult.UNKNOWN);
+    Preconditions.checkNotNull(cause);
+
+    synchronized (lock) {
+      if (this.result == result && Objects.equals(this.cause, cause)) {
+        return this;
+      }
+      logger.atInfo().withStackTrace(stackSize(logStackTrace)).log(
+          "Replace result: %s -> %s%s",
+          this,
+          formatResultWithDetailedCause(result, cause),
+          formatCurrentStackTrace(logStackTrace));
+      this.result = result;
+      this.cause = cause;
+      timing.touch();
+    }
+    return this;
+  }
+
   /** Test result type and its cause. */
   @AutoValue
   public abstract static class ResultTypeWithCause {
