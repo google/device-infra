@@ -38,4 +38,22 @@ describe('LabServerOperationContent', () => {
       expect(component.isWarningState()).toBeFalse();
     });
   });
+
+  it('should render Remove wording for DECOMMISSION operation', () => {
+    fixture.componentRef.setInput('operation', 'DECOMMISSION');
+    fixture.componentRef.setInput('hostName', 'test-host');
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain(
+      'Removing it will permanently delete its record from OmniLab for host:',
+    );
+    expect(text).not.toContain('Decommission');
+    expect(text).not.toContain('DECOMMISSION');
+
+    const badge = (fixture.nativeElement as HTMLElement).querySelector(
+      '.operation-badge',
+    );
+    expect(badge?.textContent?.trim()).toBe('Remove');
+  });
 });

@@ -699,7 +699,7 @@ export class HostOverviewPage {
     }`;
   }
 
-  // device table actions - Decommission missing devices
+  // device table actions - Remove missing devices
   decommission(devices: DeviceSummary | DeviceSummary[]) {
     const devicesList = Array.isArray(devices) ? devices : [devices];
     const devicesToDecommission = devicesList.filter(
@@ -712,8 +712,8 @@ export class HostOverviewPage {
 
     const isSingle = devicesToDecommission.length === 1;
     const title = isSingle
-      ? `Decommission Device ${devicesToDecommission[0].id}?`
-      : `Decommission ${devicesToDecommission.length} Devices?`;
+      ? `Remove Missing Device ${devicesToDecommission[0].id}?`
+      : `Remove ${devicesToDecommission.length} Missing Devices?`;
 
     const dialogData = {
       title,
@@ -722,7 +722,7 @@ export class HostOverviewPage {
         'deviceIds': devicesToDecommission.map((d) => d.id),
       },
       type: 'error',
-      primaryButtonLabel: 'Decommission',
+      primaryButtonLabel: 'Remove',
       secondaryButtonLabel: 'Cancel',
       onConfirm: () => this.executeDecommission(devicesToDecommission),
     };
@@ -747,8 +747,9 @@ export class HostOverviewPage {
             (d) => !decommissionedIds.has(d.id),
           );
           this.selection.clear();
+          const deviceLabel = devices.length === 1 ? 'device' : 'devices';
           this.snackBar.showSuccess(
-            `${devices.length} devices decommissioned successfully.\nIt may take a few minutes to take effect on the UI side.`,
+            `${devices.length} ${deviceLabel} removed successfully.\nIt may take a few minutes to take effect on the UI side.`,
           );
         }),
       );

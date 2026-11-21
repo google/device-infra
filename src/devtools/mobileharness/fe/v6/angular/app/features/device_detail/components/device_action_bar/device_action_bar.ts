@@ -196,11 +196,11 @@ export class DeviceActionBar implements OnInit {
 
   readonly onDecommission = () => {
     const dialogData = {
-      title: 'Decommission Device',
+      title: 'Remove Missing Device',
       contentComponent: DecommissionContent,
       contentComponentInputs: {'deviceIds': [this.deviceId()]},
       type: 'error',
-      primaryButtonLabel: 'Decommission',
+      primaryButtonLabel: 'Remove',
       secondaryButtonLabel: 'Cancel',
       onConfirm: () =>
         this.hostService
@@ -208,12 +208,12 @@ export class DeviceActionBar implements OnInit {
           .pipe(
             tap(() => {
               this.snackBar.showSuccess(
-                `Device ${this.deviceId()} decommissioned successfully.\nIt may take a few minutes to take effect on the UI side.`,
+                `Device ${this.deviceId()} removed successfully.\nIt may take a few minutes to take effect on the UI side.`,
               );
             }),
             catchError((err) => {
               this.snackBar.showError(
-                err.message || 'Failed to decommission device',
+                err.message || 'Failed to remove device',
               );
               return throwError(() => err);
             }),

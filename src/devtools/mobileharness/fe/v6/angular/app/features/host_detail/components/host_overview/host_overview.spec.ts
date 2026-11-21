@@ -1082,7 +1082,7 @@ describe('HostOverview Component', () => {
       expect(component.bulkConfig.dimensionConfig().error).toBeNull();
     });
 
-    it('computes decommissionMissingCount and renders Decommission Missing button only for selected MISSING devices', async () => {
+    it('computes decommissionMissingCount and renders Remove Missing button only for selected MISSING devices', async () => {
       const missingDevice1 = {
         ...mockDevice1,
         id: 'missing-1',
@@ -1110,20 +1110,86 @@ describe('HostOverview Component', () => {
 
       expect(component.decommissionMissingCount()).toBe(0);
       expect(compiled.textContent).toContain('1 of 3 selected');
-      expect(compiled.textContent).not.toContain('Decommission Missing');
+      expect(compiled.textContent).not.toContain('Remove Missing');
 
       await rowCheckboxes[1].check();
       await rowCheckboxes[2].check();
       fixture.detectChanges();
 
       expect(component.decommissionMissingCount()).toBe(2);
-      expect(compiled.textContent).toContain('Decommission Missing (2)');
+      expect(compiled.textContent).toContain('Remove Missing (2)');
 
       await rowCheckboxes[1].uncheck();
       fixture.detectChanges();
 
       expect(component.decommissionMissingCount()).toBe(1);
-      expect(compiled.textContent).toContain('Decommission Missing (1)');
+      expect(compiled.textContent).toContain('Remove Missing (1)');
+    });
+
+    it('opens Remove Missing confirmation dialog with Remove wording for single and multiple devices', () => {
+      const missingDevice1 = {
+        ...mockDevice1,
+        id: 'missing-1',
+        deviceStatus: {status: 'MISSING', isCritical: true},
+      } as unknown as DeviceSummary;
+      const missingDevice2 = {
+        ...mockDevice1,
+        id: 'missing-2',
+        deviceStatus: {status: 'MISSING', isCritical: true},
+      } as unknown as DeviceSummary;
+      const decommissionSpy = spyOn(
+        hostService,
+        'decommissionMissingDevices',
+      ).and.returnValue(of(undefined));
+      initComponentWithDevices([mockDevice1, missingDevice1, missingDevice2]);
+
+      component.decommission(missingDevice1);
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        ConfirmDialog,
+        jasmine.objectContaining({
+          data: jasmine.objectContaining({
+            title: 'Remove Missing Device missing-1?',
+            primaryButtonLabel: 'Remove',
+            secondaryButtonLabel: 'Cancel',
+          }),
+        }),
+      );
+
+      const singleDialogConfig = dialogSpy.open.calls.mostRecent().args[1] as {
+        data: {onConfirm: () => Observable<void>};
+      };
+      singleDialogConfig.data.onConfirm().subscribe();
+      expect(decommissionSpy).toHaveBeenCalledWith('host-a-1.prod.example.com', [
+        'missing-1',
+      ]);
+      expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
+        '1 device removed successfully.\nIt may take a few minutes to take effect on the UI side.',
+      );
+
+      initComponentWithDevices([mockDevice1, missingDevice1, missingDevice2]);
+      component.decommission([missingDevice1, missingDevice2]);
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        ConfirmDialog,
+        jasmine.objectContaining({
+          data: jasmine.objectContaining({
+            title: 'Remove 2 Missing Devices?',
+            primaryButtonLabel: 'Remove',
+            secondaryButtonLabel: 'Cancel',
+          }),
+        }),
+      );
+
+      const multiDialogConfig = dialogSpy.open.calls.mostRecent().args[1] as {
+        data: {onConfirm: () => Observable<void>};
+      };
+      multiDialogConfig.data.onConfirm().subscribe();
+      expect(decommissionSpy).toHaveBeenCalledWith('host-a-1.prod.example.com', [
+        'missing-1',
+        'missing-2',
+      ]);
+      expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
+        '2 devices removed successfully.\nIt may take a few minutes to take effect on the UI side.',
+      );
     });
 
     it('keeps bulk config disabled when CONFIG_SERVICE is not provided', async () => {

@@ -100,7 +100,7 @@ public final class DeviceDecommissionButtonBuilderTest {
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isTrue();
     assertThat(result.getIsReady()).isFalse();
-    assertThat(result.getTooltip()).isEqualTo("Decommission the missing device");
+    assertThat(result.getTooltip()).isEqualTo("Remove the missing device");
   }
 
   @Test
@@ -114,6 +114,6 @@ public final class DeviceDecommissionButtonBuilderTest {
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isTrue();
     assertThat(result.getIsReady()).isTrue();
-    assertThat(result.getTooltip()).isEqualTo("Decommission the missing device");
+    assertThat(result.getTooltip()).isEqualTo("Remove the missing device");
   }
 }
