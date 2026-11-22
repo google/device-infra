@@ -23,10 +23,14 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDevi
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetHostWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetHostWifiConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateHostWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateHostWifiConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
@@ -39,6 +43,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigura
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigTemplateRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigTemplateResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigRequest;
@@ -53,6 +59,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPr
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigTemplateRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigTemplateResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigResponse;
 import java.util.Optional;
@@ -121,4 +129,16 @@ public interface ConfigServiceLogic {
 
   ListenableFuture<BatchUpdateDeviceWifiConfigsResponse> batchUpdateDeviceWifiConfigs(
       BatchUpdateDeviceWifiConfigsRequest request, Optional<String> username);
+
+  ListenableFuture<BatchGetHostWifiConfigsResponse> batchGetHostWifiConfigs(
+      BatchGetHostWifiConfigsRequest request, Optional<String> username);
+
+  ListenableFuture<BatchUpdateHostWifiConfigsResponse> batchUpdateHostWifiConfigs(
+      BatchUpdateHostWifiConfigsRequest request, Optional<String> username);
+
+  ListenableFuture<GetDeviceConfigTemplateResponse> getDeviceConfigTemplate(
+      GetDeviceConfigTemplateRequest request);
+
+  ListenableFuture<UpdateDeviceConfigTemplateResponse> updateDeviceConfigTemplate(
+      UpdateDeviceConfigTemplateRequest request, Optional<String> username);
 }
