@@ -10,6 +10,7 @@ import {of} from 'rxjs';
 
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
 import {HostConfigStateService} from '../../../../core/services/config/host_config_state_service';
+import {Environment} from '../../../../core/services/environment';
 
 import {
   GetHostConfigResult,
@@ -22,6 +23,7 @@ describe('HostConfig Component', () => {
   let mockGetHostConfig: jasmine.Spy;
   let stateService: HostConfigStateService;
   let setUiStatusSpy: jasmine.Spy;
+  let isGoogleInternalSpy: jasmine.Spy;
 
   beforeEach(async () => {
     mockGetHostConfig = jasmine
@@ -41,6 +43,7 @@ describe('HostConfig Component', () => {
           provide: CONFIG_SERVICE,
           useValue: {
             getHostConfig: mockGetHostConfig,
+            getRecommendedWifi: () => of([]),
             checkHostConfigPermission: () => of({hasPermission: true}),
             checkDeviceConfigPermission: () => of({hasPermission: true}),
           },
@@ -48,6 +51,10 @@ describe('HostConfig Component', () => {
       ],
     }).compileComponents();
 
+    isGoogleInternalSpy = spyOn(
+      TestBed.inject(Environment),
+      'isGoogleInternal',
+    ).and.returnValue(true);
     stateService = TestBed.inject(HostConfigStateService);
     stateService.clear();
     setUiStatusSpy = spyOn(stateService, 'setUiStatus').and.callThrough();
@@ -152,5 +159,27 @@ describe('HostConfig Component', () => {
       comp.configResult$.subscribe();
     }).not.toThrow();
     expect(setUiStatusSpy).not.toHaveBeenCalled();
+  });
+
+  it('opens HostSettings directly in ATS even when hostConfig is null', async () => {
+    isGoogleInternalSpy.and.returnValue(false);
+    mockGetHostConfig.and.returnValue(of({hostConfig: null}));
+
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostConfig, {
+        data: {hostName: 'ats-host'},
+      }),
+    );
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+    dialogOpener.detectChanges();
+
+    expect(document.querySelector('app-host-settings')).toBeTruthy();
+    expect(document.querySelector('app-host-empty')).toBeNull();
+    expect(
+      stateService.getUiStatus('ats-host').deviceConfig.subSections?.wifi
+        ?.visible,
+    ).toBeTrue();
+    expect(stateService.getUiStatus('ats-host').hostAdmins.visible).toBeFalse();
   });
 });

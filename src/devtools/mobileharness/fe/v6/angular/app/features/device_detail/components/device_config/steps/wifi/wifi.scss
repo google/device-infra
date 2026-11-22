@@ -20,10 +20,18 @@
     font-weight: 500;
   }
 
-  .text-gray-800 { color: #1f2937; }
-  .text-gray-700 { color: #374151; }
-  .text-gray-600 { color: #4b5563; }
-  .text-gray-500 { color: #6b7280; }
+  .text-gray-800 {
+    color: #1f2937;
+  }
+  .text-gray-700 {
+    color: #374151;
+  }
+  .text-gray-600 {
+    color: #4b5563;
+  }
+  .text-gray-500 {
+    color: #6b7280;
+  }
 
   .wifi-config-content {
     max-width: 64rem; // increased from 32rem to fit split view (approx max-w-5xl)
@@ -40,7 +48,9 @@
 
       .toggle-switch-text-container {
         flex-grow: 1;
-        p { margin: 0.25rem 1rem 0 0; }
+        p {
+          margin: 0.25rem 1rem 0 0;
+        }
       }
     }
   }
@@ -89,7 +99,11 @@
       align-items: center;
       gap: 0.5rem;
 
-      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
       h4 {
         font-size: 0.875rem;
         font-weight: 600;
@@ -132,7 +146,9 @@
       color: #475569;
       margin-bottom: 0.5rem;
 
-      .required { color: #ef4444; }
+      .required {
+        color: #ef4444;
+      }
     }
 
     .full-width {
@@ -141,19 +157,21 @@
 
     // Adjust mat-form-field density
     mat-form-field {
-       .mat-mdc-form-field-subscript-wrapper {
-         display: none; // Hide unused subscript space
-       }
+      .mat-mdc-form-field-subscript-wrapper {
+        display: none; // Hide unused subscript space
+      }
 
-       .input-suffix-btn {
-         @include mat.icon-button-overrides((
-           icon-size: 1.25rem,
-           state-layer-size: 2rem,
-           touch-target-size: 2rem,
-         ));
-         padding: 0.25rem;
-         margin-right: 0.25rem;
-       }
+      .input-suffix-btn {
+        @include mat.icon-button-overrides(
+          (
+            icon-size: 1.25rem,
+            state-layer-size: 2rem,
+            touch-target-size: 2rem,
+          )
+        );
+        padding: 0.25rem;
+        margin-right: 0.25rem;
+      }
     }
   }
 
@@ -212,8 +230,7 @@
       font-size: 0.75rem;
       font-weight: 600;
       color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 0.025em;
+      letter-spacing: normal;
     }
 
     button {
@@ -225,9 +242,16 @@
       justify-content: center;
       color: #9ca3af;
 
-      &:hover { color: #4b5563; background-color: #e5e7eb; }
+      &:hover {
+        color: #4b5563;
+        background-color: #e5e7eb;
+      }
 
-      mat-icon { font-size: 14px; width: 14px; height: 14px; }
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
     }
   }
 
@@ -293,9 +317,15 @@
         color: #1d4ed8; // hover:text-blue-700
         border-color: #dbeafe; // hover:border-blue-100
 
-        .wifi-icon { color: #3b82f6; } // group-hover:text-blue-500
-        .rec-ssid { color: #1d4ed8; }
-        .auto-fill-label { opacity: 1; }
+        .wifi-icon {
+          color: #3b82f6;
+        } // group-hover:text-blue-500
+        .rec-ssid {
+          color: #1d4ed8;
+        }
+        .auto-fill-label {
+          opacity: 1;
+        }
       }
 
       .rec-item-content {
