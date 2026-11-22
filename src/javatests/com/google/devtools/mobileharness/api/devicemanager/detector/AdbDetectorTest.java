@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.api.devicemanager.detector;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.api.devicemanager.detector.AdbDetector.MAX_ADB_ADDRESS_IN_USE_ERROR_ROUNDS;
+import static com.google.devtools.mobileharness.api.devicemanager.detector.AdbDetector.MAX_ALL_DEVICES_UNAUTHORIZED_ROUNDS;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -365,5 +366,95 @@ public class AdbDetectorTest {
 
     assertThat(detector.detectDevices()).isEmpty();
     verify(adbInternalUtil, times(2)).disconnect(OVER_TCP_ID);
+  }
+
+  @Test
+  public void detectDevices_allDevicesUnauthorized_recoverEvenWhenAteDualStackEnabled()
+      throws Exception {
+    doReturn(true).when(detector).isAteDualStackEnabled();
+    ImmutableMap<String, DeviceState> unauthorizedMap =
+        ImmutableMap.of(DEVICE_0, DeviceState.UNAUTHORIZED, DEVICE_1, DeviceState.UNAUTHORIZED);
+    ImmutableMap<String, DeviceState> recoveredMap =
+        ImmutableMap.of(DEVICE_0, DeviceState.DEVICE, DEVICE_1, DeviceState.DEVICE);
+    when(adbInternalUtil.getDeviceSerialsAsMap()).thenReturn(unauthorizedMap);
+
+    for (int i = 0; i < MAX_ALL_DEVICES_UNAUTHORIZED_ROUNDS - 1; i++) {
+      var unused = detector.detectDevices();
+    }
+    verify(adbInternalUtil, never()).killAdbServer();
+
+    when(adbInternalUtil.getDeviceSerialsAsMap())
+        .thenReturn(unauthorizedMap)
+        .thenReturn(recoveredMap);
+
+    assertThat(detector.detectDevices())
+        .containsExactly(
+            DetectionResult.of(DEVICE_0, DetectionType.ADB, DeviceState.DEVICE),
+            DetectionResult.of(DEVICE_1, DetectionType.ADB, DeviceState.DEVICE));
+    verify(adbInternalUtil).killAdbServer();
+  }
+
+  @Test
+  public void detectDevices_mixedAuthorizedAndUnauthorized_noRecover() throws Exception {
+    when(adbInternalUtil.getDeviceSerialsAsMap())
+        .thenReturn(
+            ImmutableMap.of(DEVICE_0, DeviceState.DEVICE, DEVICE_1, DeviceState.UNAUTHORIZED));
+
+    for (int i = 0; i <= MAX_ALL_DEVICES_UNAUTHORIZED_ROUNDS; i++) {
+      var unused = detector.detectDevices();
+    }
+
+    verify(adbInternalUtil, never()).killAdbServer();
+  }
+
+  @Test
+  public void detectDevices_allDevicesUnauthorized_resetsCounterWhenRecoveredEarly()
+      throws Exception {
+    doReturn(true).when(detector).isAteDualStackEnabled();
+    ImmutableMap<String, DeviceState> unauthorizedMap =
+        ImmutableMap.of(DEVICE_0, DeviceState.UNAUTHORIZED);
+    when(adbInternalUtil.getDeviceSerialsAsMap()).thenReturn(unauthorizedMap);
+
+    for (int i = 0; i < MAX_ALL_DEVICES_UNAUTHORIZED_ROUNDS - 1; i++) {
+      var unused = detector.detectDevices();
+    }
+    when(adbInternalUtil.getDeviceSerialsAsMap())
+        .thenReturn(ImmutableMap.of(DEVICE_0, DeviceState.DEVICE));
+    assertThat(detector.detectDevices())
+        .containsExactly(DetectionResult.of(DEVICE_0, DetectionType.ADB, DeviceState.DEVICE));
+
+    when(adbInternalUtil.getDeviceSerialsAsMap()).thenReturn(unauthorizedMap);
+    for (int i = 0; i < MAX_ALL_DEVICES_UNAUTHORIZED_ROUNDS - 1; i++) {
+      var unused = detector.detectDevices();
+    }
+
+    verify(adbInternalUtil, never()).killAdbServer();
+  }
+
+  @Test
+  public void detectDevices_allDevicesUnauthorized_noRecoverIfNotMhManaged() throws Exception {
+    flags.set("should_manage_devices", "false");
+    when(adbInternalUtil.getDeviceSerialsAsMap())
+        .thenReturn(ImmutableMap.of(DEVICE_0, DeviceState.UNAUTHORIZED));
+
+    for (int i = 0; i <= MAX_ALL_DEVICES_UNAUTHORIZED_ROUNDS; i++) {
+      var unused = detector.detectDevices();
+    }
+
+    verify(adbInternalUtil, never()).killAdbServer();
+  }
+
+  @Test
+  public void detectDevices_genuinelyUnauthorizedDevice_onlyRecoversOncePerEpisode()
+      throws Exception {
+    doReturn(true).when(detector).isAteDualStackEnabled();
+    when(adbInternalUtil.getDeviceSerialsAsMap())
+        .thenReturn(ImmutableMap.of(DEVICE_0, DeviceState.UNAUTHORIZED));
+
+    for (int i = 0; i < MAX_ALL_DEVICES_UNAUTHORIZED_ROUNDS * 3; i++) {
+      var unused = detector.detectDevices();
+    }
+
+    verify(adbInternalUtil, times(1)).killAdbServer();
   }
 }

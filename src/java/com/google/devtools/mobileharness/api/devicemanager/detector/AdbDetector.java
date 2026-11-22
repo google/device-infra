@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandFailureExcep
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidRealDevice;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.util.Collection;
@@ -63,6 +64,12 @@ public class AdbDetector implements Detector {
    */
   @VisibleForTesting static final int MAX_ADB_ADDRESS_IN_USE_ERROR_ROUNDS = 450;
 
+  /**
+   * The max rounds of detection when all detected adb devices are unauthorized. Since adb detects
+   * devices with 2 seconds interval, set it to 60 which is around 2 mins.
+   */
+  @VisibleForTesting static final int MAX_ALL_DEVICES_UNAUTHORIZED_ROUNDS = 60;
+
   private static final String ADB_ADDRESS_IN_USE_ERROR =
       "could not install *smartsocket* listener: Address already in use";
 
@@ -74,6 +81,16 @@ public class AdbDetector implements Detector {
    * listener: Address already in use".
    */
   private static final AtomicInteger adbAddressInUseErrorRounds = new AtomicInteger(0);
+
+  private final Object allUnauthorizedRecoveryLock = new Object();
+
+  /** The rounds of detection when all detected adb devices are unauthorized. */
+  @GuardedBy("allUnauthorizedRecoveryLock")
+  private int allDevicesUnauthorizedRounds = 0;
+
+  /** Whether adb server restart has already been attempted for the current unauthorized episode. */
+  @GuardedBy("allUnauthorizedRecoveryLock")
+  private boolean hasAttemptedAllUnauthorizedRecovery = false;
 
   private final AndroidAdbInternalUtil adbInternalUtil;
   private final OverTcpDeviceCache cache;
@@ -157,6 +174,9 @@ public class AdbDetector implements Detector {
         // error, reset adbAddressInUseErrorRounds.
         adbAddressInUseErrorRounds.set(0);
       }
+      if (Flags.shouldManageDevices.getNonNull()) {
+        ids = recoverIfAllDevicesUnauthorized(ids);
+      }
       if (needRedetectDevice(ids)) {
         // The adb detection result have been changed, use the realtime result.
         ids = adbInternalUtil.getDeviceSerialsAsMap();
@@ -183,6 +203,42 @@ public class AdbDetector implements Detector {
   /** Returns whether the detector need to check adb process. */
   private boolean needCheckAdbProcess(int maxNoDeviceDetectionRounds) {
     return maxNoDeviceDetectionRounds > 0 && !DeviceUtil.inSharedLab() && !isAteDualStackEnabled();
+  }
+
+  private Map<String, DeviceState> recoverIfAllDevicesUnauthorized(Map<String, DeviceState> ids)
+      throws MobileHarnessException, InterruptedException {
+    if (!areAllDevicesUnauthorized(ids) || !getCachedDevices().isEmpty()) {
+      synchronized (allUnauthorizedRecoveryLock) {
+        allDevicesUnauthorizedRounds = 0;
+        hasAttemptedAllUnauthorizedRecovery = false;
+      }
+      return ids;
+    }
+    synchronized (allUnauthorizedRecoveryLock) {
+      if (hasAttemptedAllUnauthorizedRecovery
+          || ++allDevicesUnauthorizedRounds < MAX_ALL_DEVICES_UNAUTHORIZED_ROUNDS) {
+        return ids;
+      }
+      hasAttemptedAllUnauthorizedRecovery = true;
+      allDevicesUnauthorizedRounds = 0;
+    }
+    logger.atInfo().log(
+        "All %d detected adb devices have been unauthorized for %d rounds. "
+            + "Restarting adb server to recover...",
+        ids.size(), MAX_ALL_DEVICES_UNAUTHORIZED_ROUNDS);
+    adbInternalUtil.killAdbServer();
+    Map<String, DeviceState> updatedIds = adbInternalUtil.getDeviceSerialsAsMap();
+    if (!areAllDevicesUnauthorized(updatedIds)) {
+      synchronized (allUnauthorizedRecoveryLock) {
+        hasAttemptedAllUnauthorizedRecovery = false;
+      }
+    }
+    return updatedIds;
+  }
+
+  private static boolean areAllDevicesUnauthorized(Map<String, DeviceState> ids) {
+    return !ids.isEmpty()
+        && ids.values().stream().allMatch(state -> state.equals(DeviceState.UNAUTHORIZED));
   }
 
   /**
