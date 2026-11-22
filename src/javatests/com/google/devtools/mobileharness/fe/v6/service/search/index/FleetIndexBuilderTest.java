@@ -394,6 +394,52 @@ public final class FleetIndexBuilderTest {
   }
 
   @Test
+  public void build_deviceConfigValues_indexedAsGiven() {
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab-core",
+                            "1.1.1.1",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            device0(),
+                            device1())))
+            .build();
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
+            .setLabData(labResult)
+            .setDeviceEnrichments(
+                ImmutableMap.of(
+                    "device-0",
+                    DeviceEnrichment.builder()
+                        .setConfigValues(
+                            ImmutableMap.of(
+                                "device_config::max_consecutive_fail", ImmutableList.of("3"),
+                                "device_config::config_source", ImmutableList.of("Per device")))
+                        .build()))
+            .build();
+
+    FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
+    FleetIndex index = snapshot.index();
+
+    assertThat(snapshot.devices().get(0).values("device_config::max_consecutive_fail"))
+        .containsExactly("3");
+    assertThat(snapshot.devices().get(0).values("device_config::config_source"))
+        .containsExactly("Per device");
+    assertThat(index.valueCount("device_config::max_consecutive_fail", "3")).isEqualTo(1);
+    assertThat(index.valueDisplays("device_config::config_source"))
+        .containsEntry("per device", "Per device");
+    LazyPostings postings = new LazyPostings(snapshot.devices());
+    assertThat(posting(postings, "device_config::config_source", "per device")).containsExactly(0);
+    // device-1 has no enrichment, so it carries no config values.
+    assertThat(snapshot.devices().get(1).values("device_config::max_consecutive_fail")).isEmpty();
+  }
+
+  @Test
   public void build_atsController_termIsIdDisplayIsFriendly() {
     LabQueryResult labResult =
         LabQueryResult.newBuilder()

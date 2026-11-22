@@ -119,7 +119,8 @@ public final class FleetFlatSearcher {
    *
    * <p>Each matched record's sort key is extracted at most once via {@link
    * SearchCorpus#firstSortKey}, and only the top {@code end} records are retained in primitive
-   * arrays before popping the trailing {@code end - offset} elements in reverse order.
+   * arrays before popping the trailing {@code end - offset} elements in reverse order. The values
+   * of an integer-comparable key sort numerically through {@link IntSortKeys}.
    */
   private static int[] selectPage(
       BitSet matched, SearchCorpus corpus, FleetColumnSort sort, int offset, int end) {
@@ -129,6 +130,7 @@ public final class FleetFlatSearcher {
     String sortKey =
         (sort == null || sort.getKey().isEmpty()) ? corpus.identifierKey() : sort.getKey();
     boolean ascending = sort == null || sort.getKey().isEmpty() || sort.getAscending();
+    boolean numeric = IntSortKeys.appliesTo(corpus, sortKey);
 
     int[] heapIndices = new int[end];
     String[] heapKeys = new String[end];
@@ -136,6 +138,9 @@ public final class FleetFlatSearcher {
 
     for (int i = matched.nextSetBit(0); i >= 0; i = matched.nextSetBit(i + 1)) {
       String key = corpus.firstSortKey(i, sortKey);
+      if (numeric) {
+        key = IntSortKeys.of(key);
+      }
       if (heapSize < end) {
         heapIndices[heapSize] = i;
         heapKeys[heapSize] = key;

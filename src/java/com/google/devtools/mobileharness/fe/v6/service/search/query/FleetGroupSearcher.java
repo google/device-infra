@@ -160,7 +160,7 @@ public final class FleetGroupSearcher {
               corpus.utilization(members)));
     }
 
-    sortGroups(groups, keys, sort);
+    sortGroups(corpus, groups, keys, sort);
 
     int totalGroups = groups.size();
     int pageSize = pageSize(page);
@@ -259,10 +259,13 @@ public final class FleetGroupSearcher {
    * Orders the groups by the requested sort, breaking ties by the group's value tuple so equal
    * groups keep a stable order. A descending sort reverses the whole comparison, tie-break
    * included, matching the prototype. The default, used when no sort is set, is item count
-   * descending.
+   * descending. Groups of an integer-comparable key sort numerically by that key.
    */
   private static void sortGroups(
-      List<GroupHolder> groups, ImmutableList<String> keys, FleetGroupSort sort) {
+      SearchCorpus corpus,
+      List<GroupHolder> groups,
+      ImmutableList<String> keys,
+      FleetGroupSort sort) {
     Comparator<GroupHolder> primary;
     boolean ascending;
     FleetGroupSortField field =
@@ -270,12 +273,15 @@ public final class FleetGroupSearcher {
     switch (field.getKindCase()) {
       case GROUP_KEY -> {
         int index = keys.indexOf(field.getGroupKey());
-        if (index >= 0) {
-          primary = Comparator.comparing(group -> group.displayValues().get(index));
-          ascending = sort.getAscending();
-        } else {
+        if (index < 0) {
           primary = Comparator.comparingInt(GroupHolder::itemCount);
           ascending = false;
+        } else if (IntSortKeys.appliesTo(corpus, field.getGroupKey())) {
+          primary = Comparator.comparing(group -> intSortKey(group.displayValues().get(index)));
+          ascending = sort.getAscending();
+        } else {
+          primary = Comparator.comparing(group -> group.displayValues().get(index));
+          ascending = sort.getAscending();
         }
       }
       case ITEM_COUNT -> {
@@ -292,6 +298,14 @@ public final class FleetGroupSearcher {
       comparator = comparator.reversed();
     }
     groups.sort(comparator);
+  }
+
+  /**
+   * The numeric sort key of a group's display value of an integer-comparable key. The no-value
+   * bucket keeps the empty key, so it stays first in ascending order, as it does in string order.
+   */
+  private static String intSortKey(String displayValue) {
+    return displayValue.equals(NO_VALUE_DISPLAY) ? "" : IntSortKeys.of(displayValue);
   }
 
   /**

@@ -264,6 +264,44 @@ public final class FleetGroupSearcherTest {
   }
 
   @Test
+  public void sortByIntComparableGroupKey_ordersGroupsNumerically() {
+    FleetSnapshot sdkSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(
+                LabQueryResult.newBuilder()
+                    .setLabView(
+                        LabQueryResult.LabView.newBuilder()
+                            .setLabTotalCount(1)
+                            .addLabData(
+                                labData(
+                                    "lab1",
+                                    "1.1.1.1",
+                                    deviceWithSdk("device-10", "10"),
+                                    deviceWithSdk("device-9", "9"),
+                                    deviceWithSdk("device-none", ""),
+                                    deviceWithSdk("device-35", "35"))))
+                    .build(),
+                BUILD_TIME);
+    DeviceCorpus sdkCorpus =
+        new DeviceCorpus(sdkSnapshot, new LazyPostings(sdkSnapshot.devices()), null);
+
+    FleetGroupedResults results =
+        searcher.searchGrouped(
+            sdkCorpus,
+            ImmutableList.of(),
+            ImmutableList.of("dimension::sdk_version"),
+            FleetGroupSort.newBuilder()
+                .setField(FleetGroupSortField.newBuilder().setGroupKey("dimension::sdk_version"))
+                .setAscending(true)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+
+    // String order would put "10" and "35" before "9"; the no-value group stays first.
+    assertThat(groupValues(results)).containsExactly("(no value)", "9", "10", "35").inOrder();
+  }
+
+  @Test
   public void threeKeyGuard_capsToFirstThreeKnownKeys() {
     FleetGroupedResults results =
         searcher.searchGrouped(
@@ -643,6 +681,20 @@ public final class FleetGroupSearcherTest {
                 .setCompositeDimension(
                     DeviceCompositeDimension.newBuilder()
                         .addSupportedDimension(dimension("os", "android"))))
+        .build();
+  }
+
+  private static DeviceInfo deviceWithSdk(String id, String sdkVersion) {
+    DeviceCompositeDimension.Builder dims =
+        DeviceCompositeDimension.newBuilder().addSupportedDimension(dimension("os", "android"));
+    if (!sdkVersion.isEmpty()) {
+      dims.addSupportedDimension(dimension("sdk_version", sdkVersion));
+    }
+    return DeviceInfo.newBuilder()
+        .setDeviceLocator(DeviceLocator.newBuilder().setId(id))
+        .setDeviceStatus(DeviceStatus.IDLE)
+        .setDeviceFeature(
+            DeviceFeature.newBuilder().addType("AndroidRealDevice").setCompositeDimension(dims))
         .build();
   }
 
