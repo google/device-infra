@@ -169,23 +169,8 @@ public final class LabInfoProviderTest {
   }
 
   @Test
-  public void createNewLabQueryResult_pushdownDisabled_callsUnmaskedOverloadAndTrimsPostBuild()
+  public void createNewLabQueryResult_maskedQuery_matchesBetweenDefaultAndMaskedBuilderProviders()
       throws Exception {
-    LabInfoProvider unmaskedOnlyProvider =
-        new LabInfoProvider() {
-          @Override
-          public LabView getLabInfos(Filter filter) {
-            return FULL_VIEW;
-          }
-
-          @Override
-          public LabView getLabInfos(
-              Filter filter,
-              CompiledLabInfoMask labInfoMask,
-              CompiledDeviceInfoMask deviceInfoMask) {
-            throw new AssertionError("Masked overload should not be called when pushdown is off");
-          }
-        };
     LabQuery query =
         LabQuery.newBuilder()
             .setMask(
@@ -198,20 +183,18 @@ public final class LabInfoProviderTest {
                             .setFieldMask(FieldMask.newBuilder().addPaths("device_status"))))
             .build();
 
-    LabQueryResult pushdownOffResult =
-        LabQueryUtils.createNewLabQueryResult(
-            query, unmaskedOnlyProvider, /* useProjectionPushdown= */ false);
-    LabQueryResult pushdownOnResult =
-        LabQueryUtils.createNewLabQueryResult(
-            query, MASKED_BUILDER_PROVIDER, /* useProjectionPushdown= */ true);
+    LabQueryResult defaultProviderResult =
+        LabQueryUtils.createNewLabQueryResult(query, FULL_VIEW_PROVIDER);
+    LabQueryResult maskedBuilderResult =
+        LabQueryUtils.createNewLabQueryResult(query, MASKED_BUILDER_PROVIDER);
 
-    assertThat(pushdownOffResult.toBuilder().clearTimestamp().build())
-        .isEqualTo(pushdownOnResult.toBuilder().clearTimestamp().build());
+    assertThat(defaultProviderResult.toBuilder().clearTimestamp().build())
+        .isEqualTo(maskedBuilderResult.toBuilder().clearTimestamp().build());
   }
 
   @Test
   public void
-      createNewLabQueryResult_deviceViewGroupByWithDimensionWhitelist_matchesBetweenPushdownOnAndOff()
+      createNewLabQueryResult_deviceViewGroupByWithDimensionWhitelist_matchesBetweenDefaultAndMaskedBuilderProviders()
           throws Exception {
     LabQuery query =
         LabQuery.newBuilder()
@@ -238,14 +221,12 @@ public final class LabInfoProviderTest {
                                 DimensionsMask.newBuilder().addDimensionNames("model"))))
             .build();
 
-    LabQueryResult pushdownOffResult =
-        LabQueryUtils.createNewLabQueryResult(
-            query, MASKED_BUILDER_PROVIDER, /* useProjectionPushdown= */ false);
-    LabQueryResult pushdownOnResult =
-        LabQueryUtils.createNewLabQueryResult(
-            query, MASKED_BUILDER_PROVIDER, /* useProjectionPushdown= */ true);
+    LabQueryResult defaultProviderResult =
+        LabQueryUtils.createNewLabQueryResult(query, FULL_VIEW_PROVIDER);
+    LabQueryResult maskedBuilderResult =
+        LabQueryUtils.createNewLabQueryResult(query, MASKED_BUILDER_PROVIDER);
 
-    assertThat(pushdownOffResult.toBuilder().clearTimestamp().build())
-        .isEqualTo(pushdownOnResult.toBuilder().clearTimestamp().build());
+    assertThat(defaultProviderResult.toBuilder().clearTimestamp().build())
+        .isEqualTo(maskedBuilderResult.toBuilder().clearTimestamp().build());
   }
 }
