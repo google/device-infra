@@ -29,5 +29,15 @@ public final class DeviceIdManagerShim {
     deviceIdManager.add(deviceId);
   }
 
+  /** See {@link DeviceIdManager#remove} */
+  public static void remove(DeviceIdManager deviceIdManager, String controlId, String uuid) {
+    deviceIdManager.remove(controlId, uuid);
+  }
+
+  /** See {@link DeviceIdManager#clearAll} */
+  public static void clearMappings(DeviceIdManager deviceIdManager) {
+    deviceIdManager.clearAll();
+  }
+
   private DeviceIdManagerShim() {}
 }
