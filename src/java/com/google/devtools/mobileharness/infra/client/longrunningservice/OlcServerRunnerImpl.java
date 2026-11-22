@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -33,6 +34,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.EnableDatabase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcDatabaseConnections;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesDualMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForLocalApi;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForNonWorker;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForWorker;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
@@ -53,6 +55,8 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import io.grpc.BindableService;
 import io.grpc.ServerBuilder;
+import io.grpc.netty.NettyServerBuilder;
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Properties;
 import java.util.Set;
@@ -73,6 +77,7 @@ class OlcServerRunnerImpl implements OlcServerRunner {
   private final Set<BindableService> servicesForNonWorker;
   private final Set<BindableService> servicesForWorker;
   private final Set<BindableService> servicesDualMode;
+  private final Set<BindableService> servicesForLocalApi;
   private final ControlService controlService;
   private final SessionManager sessionManager;
   @Nullable private final MonitorPipelineLauncher monitorPipelineLauncher;
@@ -95,6 +100,7 @@ class OlcServerRunnerImpl implements OlcServerRunner {
       @OlcServicesForNonWorker Set<BindableService> servicesForNonWorker,
       @OlcServicesForWorker Set<BindableService> servicesForWorker,
       @OlcServicesDualMode Set<BindableService> servicesDualMode,
+      @OlcServicesForLocalApi Set<BindableService> servicesForLocalApi,
       ControlService controlService,
       SessionManager sessionManager,
       @Nullable MonitorPipelineLauncher monitorPipelineLauncher,
@@ -112,6 +118,7 @@ class OlcServerRunnerImpl implements OlcServerRunner {
     this.servicesForNonWorker = servicesForNonWorker;
     this.servicesForWorker = servicesForWorker;
     this.servicesDualMode = servicesDualMode;
+    this.servicesForLocalApi = servicesForLocalApi;
     this.controlService = controlService;
     this.sessionManager = sessionManager;
     this.monitorPipelineLauncher = monitorPipelineLauncher;
@@ -245,6 +252,18 @@ class OlcServerRunnerImpl implements OlcServerRunner {
               .intercept(new ClientAddressServerInterceptor());
       servicesForWorker.forEach(serverBuilderForWorker::addService);
       servers.add(LabeledServer.create(serverBuilderForWorker.build(), "for-worker"));
+    }
+
+    // Creates RPC server for local API clients. It binds to the IPv4 loopback address rather than
+    // "localhost", which may resolve to the IPv6 one while the clients connect to 127.0.0.1.
+    if (!servicesForLocalApi.isEmpty()) {
+      ServerBuilder<?> serverBuilderForLocalApi =
+          NettyServerBuilder.forAddress(
+                  new InetSocketAddress(
+                      InetAddresses.forString("127.0.0.1"), Flags.atsLocalApiPort.getNonNull()))
+              .executor(threadPool);
+      servicesForLocalApi.forEach(serverBuilderForLocalApi::addService);
+      servers.add(LabeledServer.create(serverBuilderForLocalApi.build(), "for-local-api"));
     }
 
     // Starts RPC servers.

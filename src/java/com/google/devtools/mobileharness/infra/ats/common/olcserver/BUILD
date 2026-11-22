@@ -30,6 +30,7 @@ olc_server_binary(
     name = "ats_olc_server",
     extra_runtime_deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/dda/sessionplugin:ats_dda_session_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/config:ats_server_config_module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:ats_server_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay/service:server_utils_impl",
