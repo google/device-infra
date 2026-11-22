@@ -122,6 +122,19 @@ java_library(
 )
 
 java_library(
+    name = "android_reverse_usb_tethering_decorator_env_validator",
+    srcs = ["AndroidReverseUsbTetheringDecoratorEnvValidator.java"],
+    deps = [
+        ":env_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:usb_reverse_tethering_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_switch_user_decorator_env_validator",
     srcs = ["AndroidSwitchUserDecoratorEnvValidator.java"],
     deps = [

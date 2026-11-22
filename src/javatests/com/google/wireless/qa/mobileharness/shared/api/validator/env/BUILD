@@ -27,10 +27,12 @@ java_library(
     visibility = ["//visibility:private"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:usb_reverse_tethering_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_aflags_decorator_env_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_reverse_usb_tethering_decorator_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_screenshot_decorator_env_validator",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",

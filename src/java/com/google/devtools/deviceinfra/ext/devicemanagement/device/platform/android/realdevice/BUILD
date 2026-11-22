@@ -48,6 +48,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/app/mtaastools",
         "//src/java/com/google/devtools/mobileharness/platform/android/app/telephony:telephony_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:android_connectivity_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:usb_reverse_tethering_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/device:android_device_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/deviceadmin:device_admin_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",

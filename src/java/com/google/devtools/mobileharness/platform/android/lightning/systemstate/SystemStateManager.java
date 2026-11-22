@@ -21,6 +21,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
+import com.google.devtools.mobileharness.platform.android.connectivity.UsbReverseTetheringUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedLogUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
@@ -54,6 +55,8 @@ public class SystemStateManager {
 
   private final DeviceCache deviceCache;
 
+  private final UsbReverseTetheringUtil usbReverseTetheringUtil;
+
   /**
    * Oxygen device is of the format <serverUrl>:<waterfallPort>:<session_id> server url has numbers
    * and "." is at least 8 digits waterfall port is upto 5 digits and session is an alphanuermic
@@ -63,7 +66,11 @@ public class SystemStateManager {
       "(^[0-9\\.]{8,}):([0-9]){2,5}:([a-zA-Z0-9-]{6,}$)";
 
   public SystemStateManager() {
-    this(new AndroidSystemStateUtil(), new AndroidAdbInternalUtil(), DeviceCache.getInstance());
+    this(
+        new AndroidSystemStateUtil(),
+        new AndroidAdbInternalUtil(),
+        DeviceCache.getInstance(),
+        new UsbReverseTetheringUtil());
   }
 
   @VisibleForTesting
@@ -71,9 +78,19 @@ public class SystemStateManager {
       AndroidSystemStateUtil systemStateUtil,
       AndroidAdbInternalUtil adbInternalUtil,
       DeviceCache deviceCache) {
+    this(systemStateUtil, adbInternalUtil, deviceCache, new UsbReverseTetheringUtil());
+  }
+
+  @VisibleForTesting
+  SystemStateManager(
+      AndroidSystemStateUtil systemStateUtil,
+      AndroidAdbInternalUtil adbInternalUtil,
+      DeviceCache deviceCache,
+      UsbReverseTetheringUtil usbReverseTetheringUtil) {
     this.systemStateUtil = systemStateUtil;
     this.adbInternalUtil = adbInternalUtil;
     this.deviceCache = deviceCache;
+    this.usbReverseTetheringUtil = usbReverseTetheringUtil;
   }
 
   /**
@@ -223,6 +240,9 @@ public class SystemStateManager {
     }
 
     becomeRoot(device);
+    if (mode == RebootMode.SYSTEM_IMAGE) {
+      usbReverseTetheringUtil.restoreAfterRebootIfEnabled(device, log);
+    }
     SharedLogUtil.logMsg(logger, log, "Device %s reboot finished.", deviceId);
   }
 

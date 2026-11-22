@@ -772,6 +772,25 @@ java_library(
 )
 
 java_library(
+    name = "android_reverse_usb_tethering_decorator",
+    srcs = ["AndroidReverseUsbTetheringDecorator.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:usb_reverse_tethering_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_reverse_usb_tethering_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "android_runtime_stats_decorator",
     srcs = ["AndroidRuntimeStatsDecorator.java"],
     deps = [

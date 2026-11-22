@@ -27,6 +27,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/app/devicedaemon:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/networkconnector:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/connectivity:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/lightning/networkconnector:__pkg__",
     ],
     deps = [
@@ -64,5 +65,32 @@ java_library(
         "WifiState.java",
     ],
     visibility = [
+    ],
+)
+
+java_library(
+    name = "usb_reverse_tethering_util",
+    srcs = ["UsbReverseTetheringUtil.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+    ],
+    deps = [
+        ":android_connectivity_util",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/shared:shared_log_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/log",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )
