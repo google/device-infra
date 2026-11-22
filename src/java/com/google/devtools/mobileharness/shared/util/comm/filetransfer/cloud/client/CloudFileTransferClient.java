@@ -23,6 +23,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Comparators;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -91,8 +92,12 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /** Interval to get a process status. */
-  private static final Duration GET_PROCESS_STATUS_INTERVAL = Duration.ofSeconds(5);
+  /**
+   * Cap of the wait after an unfinished status check, which doubles after each check when {@link
+   * FileTransferParameters#initialProcessStatusPollInterval} is below this cap.
+   */
+  private static final Duration MAX_GET_PROCESS_STATUS_INTERVAL =
+      FileTransferParameters.DEFAULT_PROCESS_STATUS_POLL_INTERVAL;
 
   /** Non local file types that is writable. */
   private static final ImmutableSet<RemoteFileType> NON_LOCAL_WRITABLE_FILE_TYPE =
@@ -119,6 +124,9 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
   /** Timeout of starting to send/receive a file. */
   private final Duration initialTimeout;
+
+  /** Waits before the checks of a process status. */
+  private final Sleeper sleeper;
 
   private final Path tmpDir;
 
@@ -170,6 +178,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         params,
         new LocalFileUtil(),
         FileTransferConstant.getInitialTimeout(),
+        Sleeper.defaultSleeper(),
         impersonationUser);
   }
 
@@ -181,6 +190,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       FileTransferParameters params,
       LocalFileUtil localFileUtil,
       Duration initialTimeout,
+      Sleeper sleeper,
       @Nullable String impersonationUser) {
     this.stub = stub;
     this.gcsFileManager = gcsFileManager;
@@ -188,6 +198,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     this.params = params;
     this.localFileUtil = localFileUtil;
     this.initialTimeout = initialTimeout;
+    this.sleeper = sleeper;
     this.impersonationUser = impersonationUser;
   }
 
@@ -349,7 +360,6 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       throws MobileHarnessException, InterruptedException {
     withTimeout(
         () -> {
-          Sleeper sleeper = Sleeper.defaultSleeper();
           StartDownloadingGcsFileResponse response =
               withRetry(
                   () ->
@@ -378,23 +388,14 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
               return response.getResponse();
             }
 
-            while (!Thread.interrupted()) {
-              GetProcessStatusResponse statusResponse =
-                  withRetry(
-                      () -> stub.getProcessStatus(processId, impersonationUser),
-                      String.format(
-                          "[%s] get status of downloading gcs file %s; original path: %s",
-                          processId, checksum, relativePath));
-              if (statusResponse.getStatus() == ProcessStatus.FINISHED) {
-                success = true;
-                return statusResponse.getResponse();
-              }
-              sleeper.sleep(GET_PROCESS_STATUS_INTERVAL);
-            }
-            throw new InterruptedException(
-                String.format(
-                    "[%s] Interrupted while waiting for the finish of sending file %s",
-                    processId, relativePath));
+            Any finalResponse =
+                waitUntilProcessFinished(
+                    processId,
+                    String.format(
+                        "[%s] get status of downloading gcs file %s; original path: %s",
+                        processId, checksum, relativePath));
+            success = true;
+            return finalResponse;
           } finally {
             if (!success) {
               try {
@@ -606,24 +607,14 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
           }
 
           String processId = response.getProcessId();
-          Sleeper sleeper = Sleeper.defaultSleeper();
           boolean success = false;
           try {
-            while (!Thread.interrupted()) {
-              GetProcessStatusResponse statusResponse =
-                  withRetry(
-                      () -> stub.getProcessStatus(processId, impersonationUser),
-                      String.format("get status of uploading file [%s] %s", processId, local));
-              if (statusResponse.getStatus() == ProcessStatus.FINISHED) {
-                success = true;
-                return statusResponse.getResponse().unpack(UploadFileResponse.class);
-              }
-              sleeper.sleep(GET_PROCESS_STATUS_INTERVAL);
-            }
-            throw new InterruptedException(
-                String.format(
-                    "Interrupted while waiting for the finish of getting file [%s] %s",
-                    processId, local));
+            Any finalResponse =
+                waitUntilProcessFinished(
+                    processId,
+                    String.format("get status of uploading file [%s] %s", processId, local));
+            success = true;
+            return finalResponse.unpack(UploadFileResponse.class);
           } finally {
             if (!success) {
               try {
@@ -639,6 +630,31 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         },
         "let server uploading file " + local,
         /* isUploadFile= */ true);
+  }
+
+  /**
+   * Waits until the peer has finished process {@code processId}. Starts with {@link
+   * FileTransferParameters#initialProcessStatusPollInterval} and doubles the wait after each
+   * unfinished check up to {@link #MAX_GET_PROCESS_STATUS_INTERVAL} (or the initial interval if
+   * larger).
+   *
+   * @param statusMsg what a status check does, for logging
+   * @return the response the process finished with
+   */
+  private Any waitUntilProcessFinished(String processId, String statusMsg)
+      throws MobileHarnessException, InterruptedException {
+    Duration interval = params.initialProcessStatusPollInterval();
+    Duration maxInterval = Comparators.max(interval, MAX_GET_PROCESS_STATUS_INTERVAL);
+    while (!Thread.interrupted()) {
+      GetProcessStatusResponse statusResponse =
+          withRetry(() -> stub.getProcessStatus(processId, impersonationUser), statusMsg);
+      if (statusResponse.getStatus() == ProcessStatus.FINISHED) {
+        return statusResponse.getResponse();
+      }
+      sleeper.sleep(interval);
+      interval = Comparators.min(interval.multipliedBy(2), maxInterval);
+    }
+    throw new InterruptedException("Interrupted while waiting for process " + processId);
   }
 
   private Path join(Path dir, Path sub) {

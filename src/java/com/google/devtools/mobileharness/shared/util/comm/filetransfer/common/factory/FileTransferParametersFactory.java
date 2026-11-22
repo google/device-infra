@@ -66,15 +66,34 @@ public class FileTransferParametersFactory {
 
   public FileTransferParameters create(TestInfo testInfo) throws MobileHarnessException {
     Params params = testInfo.jobInfo().params();
-    FileTransferParameters.Builder fileTransferParams = FileTransferParameters.builder();
-
     boolean enableCloudFileTransfer;
     if (params.has(PARAM_ENABLE_CLOUD_FILE_TRANSFER)) {
       enableCloudFileTransfer = params.getBool(PARAM_ENABLE_CLOUD_FILE_TRANSFER, false);
     } else {
       enableCloudFileTransfer = false;
     }
+    return buildParameters(testInfo, enableCloudFileTransfer);
+  }
 
+  /**
+   * Creates {@link FileTransferParameters} for {@code testInfo}, using {@code
+   * defaultEnableCloudFileTransfer} when the job params do not set {@link
+   * #PARAM_ENABLE_CLOUD_FILE_TRANSFER}.
+   */
+  public FileTransferParameters create(TestInfo testInfo, boolean defaultEnableCloudFileTransfer)
+      throws MobileHarnessException {
+    Params params = testInfo.jobInfo().params();
+    boolean enableCloudFileTransfer =
+        params.has(PARAM_ENABLE_CLOUD_FILE_TRANSFER)
+            ? params.getBool(PARAM_ENABLE_CLOUD_FILE_TRANSFER, false)
+            : defaultEnableCloudFileTransfer;
+    return buildParameters(testInfo, enableCloudFileTransfer);
+  }
+
+  private FileTransferParameters buildParameters(TestInfo testInfo, boolean enableCloudFileTransfer)
+      throws MobileHarnessException {
+    Params params = testInfo.jobInfo().params();
+    FileTransferParameters.Builder fileTransferParams = FileTransferParameters.builder();
     fileTransferParams.setEnableCloudFileTransfer(enableCloudFileTransfer);
 
     if (params.has(PARAM_ATTEMPTS)) {

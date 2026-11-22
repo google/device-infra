@@ -31,6 +31,9 @@ public abstract class FileTransferParameters {
   /** Default zip timeout. */
   public static final Duration DEFAULT_ZIP_TIMEOUT = Duration.ofMinutes(10);
 
+  /** Default interval between status checks for an async peer file transfer. */
+  public static final Duration DEFAULT_PROCESS_STATUS_POLL_INTERVAL = Duration.ofSeconds(5);
+
   /** Default value of parameters. */
   public static final FileTransferParameters DEFAULT = builder().build();
 
@@ -74,6 +77,12 @@ public abstract class FileTransferParameters {
    */
   public abstract Optional<Duration> cloudCacheTtl();
 
+  /**
+   * Wait after the first unfinished process status check. Doubles on each subsequent unfinished
+   * check up to {@link #DEFAULT_PROCESS_STATUS_POLL_INTERVAL} (or this value if larger).
+   */
+  public abstract Duration initialProcessStatusPollInterval();
+
   /** Returns a builder holding these parameters, for a caller overriding one of them. */
   public abstract Builder toBuilder();
 
@@ -89,6 +98,7 @@ public abstract class FileTransferParameters {
         .setEnableCloudFileTransfer(true)
         .setCloudFileTransferBucket(FileTransferConstant.getBucket())
         .setCloudCacheTtl(Optional.of(FileTransferConstant.getCloudCacheTtl()))
+        .setInitialProcessStatusPollInterval(DEFAULT_PROCESS_STATUS_POLL_INTERVAL)
         .setHomeDir(createHomeDir());
   }
 
@@ -127,6 +137,18 @@ public abstract class FileTransferParameters {
 
     public abstract Builder setCloudCacheTtl(Optional<Duration> cloudCacheTtl);
 
-    public abstract FileTransferParameters build();
+    public abstract Builder setInitialProcessStatusPollInterval(Duration interval);
+
+    abstract FileTransferParameters autoBuild();
+
+    public final FileTransferParameters build() {
+      FileTransferParameters params = autoBuild();
+      if (params.initialProcessStatusPollInterval().compareTo(Duration.ZERO) <= 0) {
+        throw new IllegalArgumentException(
+            "initialProcessStatusPollInterval must be positive: "
+                + params.initialProcessStatusPollInterval());
+      }
+      return params;
+    }
   }
 }
