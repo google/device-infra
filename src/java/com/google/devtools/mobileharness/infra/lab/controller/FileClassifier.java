@@ -101,14 +101,22 @@ public class FileClassifier implements FileCallback {
       } else {
         logger.atFine().log(
             "Copy file/dir from %s to %s", originalFileOrDirPath, targetFileOrDirPath);
-        if (fileUtil.getFileOrDir(originalFileOrDirPath).isDirectory()
-            && targetFileOrDir.exists()) {
+        boolean isDir = fileUtil.getFileOrDir(originalFileOrDirPath).isDirectory();
+        if (isDir && targetFileOrDir.exists()) {
           fileUtil.prepareDir(targetFileOrDirPath);
           for (File srcFile : fileUtil.listFilesOrDirs(originalFileOrDirPath)) {
             fileUtil.copyFileOrDir(srcFile.getPath(), targetFileOrDirPath);
           }
         } else {
           fileUtil.copyFileOrDir(originalFileOrDirPath, targetFileOrDirPath);
+          if (!isDir) {
+            // The received file may be a GcsFileManager cache entry, which is read-only because
+            // jobs share it through hard links. This copy belongs to the job alone and needs full
+            // access rather than owner-write alone, because its mode carries over to root-owned
+            // adb-pushed files that non-root app UIDs open for writing (matching
+            // GcsFileManager.copyGcsFile).
+            fileUtil.grantFileOrDirFullAccess(targetFileOrDirPath);
+          }
         }
       }
     }
