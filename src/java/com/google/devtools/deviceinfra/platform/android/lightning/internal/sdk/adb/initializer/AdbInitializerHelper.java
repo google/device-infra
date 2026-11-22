@@ -33,23 +33,41 @@ public final class AdbInitializerHelper {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /** Kills adb server. */
+  private static final int DEFAULT_ADB_SERVER_PORT = 5037;
+
+  /** Kills adb server on default port 5037. */
   public static void killAdbServer(
       String adbPath, CommandExecutor commandExecutor, SystemUtil systemUtil) {
+    killAdbServer(adbPath, commandExecutor, systemUtil, DEFAULT_ADB_SERVER_PORT);
+  }
+
+  /** Kills adb server. */
+  public static void killAdbServer(
+      String adbPath, CommandExecutor commandExecutor, SystemUtil systemUtil, int adbServerPort) {
     boolean adbKillServerCommandFailed = false;
+    boolean hasLocalAdbProcess = false;
     try {
       Set<Integer> adbProcessIds = systemUtil.getProcessIds("adb", "fork-server");
-      if (adbProcessIds.isEmpty()) {
+      hasLocalAdbProcess = !adbProcessIds.isEmpty();
+      if (!hasLocalAdbProcess && !systemUtil.isLocalPortListening(adbServerPort)) {
         logger.atInfo().log("No adb processes found, skip killing adb server.");
         return;
+      }
+      if (!hasLocalAdbProcess) {
+        logger.atInfo().log(
+            "No adb processes found in current PID namespace, but port %d is listening;"
+                + " killing existing adb server via adb kill-server.",
+            adbServerPort);
       }
       CommandResult result =
           commandExecutor.exec(Command.of(adbPath, "kill-server").timeout(Duration.ofMinutes(4)));
       logger.atInfo().log("The result of adb kill-server: %s", result);
 
-      Set<Integer> adbProcessIdsAfterKill = systemUtil.getProcessIds("adb", "fork-server");
-      if (!adbProcessIdsAfterKill.isEmpty()) {
-        adbKillServerCommandFailed = true;
+      if (hasLocalAdbProcess) {
+        Set<Integer> adbProcessIdsAfterKill = systemUtil.getProcessIds("adb", "fork-server");
+        if (!adbProcessIdsAfterKill.isEmpty()) {
+          adbKillServerCommandFailed = true;
+        }
       }
     } catch (MobileHarnessException e) {
       adbKillServerCommandFailed = true;
@@ -61,7 +79,7 @@ public final class AdbInitializerHelper {
           "Interrupted when killing adb server: %s", MoreThrowables.shortDebugString(e));
     }
 
-    if (!adbKillServerCommandFailed) {
+    if (!adbKillServerCommandFailed || !hasLocalAdbProcess) {
       return;
     }
 
@@ -92,7 +110,7 @@ public final class AdbInitializerHelper {
   }
 
   /**
-   * Manages adb server in the adb initialization process.
+   * Manages adb server in the adb initialization process on default port 5037.
    *
    * @param adbPath adb binary path
    * @param commandExecutor command executor used to execute "adb kill-server" command
@@ -106,6 +124,32 @@ public final class AdbInitializerHelper {
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
       boolean ifKillAdbServer) {
+    manageAdbServer(
+        adbPath,
+        commandExecutor,
+        localFileUtil,
+        systemUtil,
+        ifKillAdbServer,
+        DEFAULT_ADB_SERVER_PORT);
+  }
+
+  /**
+   * Manages adb server in the adb initialization process.
+   *
+   * @param adbPath adb binary path
+   * @param commandExecutor command executor used to execute "adb kill-server" command
+   * @param localFileUtil local file util
+   * @param systemUtil system util
+   * @param ifKillAdbServer whether kill adb server
+   * @param adbServerPort the TCP port used by the adb server
+   */
+  public static void manageAdbServer(
+      String adbPath,
+      CommandExecutor commandExecutor,
+      LocalFileUtil localFileUtil,
+      SystemUtil systemUtil,
+      boolean ifKillAdbServer,
+      int adbServerPort) {
 
     boolean validAdbPath = localFileUtil.isFileExistInPath(adbPath);
     if (!validAdbPath) {
@@ -115,7 +159,8 @@ public final class AdbInitializerHelper {
 
     boolean managedAdbServer = false;
     try {
-      if (systemUtil.getProcessIds("adb", "fork-server").isEmpty()) {
+      if (systemUtil.getProcessIds("adb", "fork-server").isEmpty()
+          && !systemUtil.isLocalPortListening(adbServerPort)) {
         managedAdbServer = true;
       }
     } catch (MobileHarnessException e) {
@@ -130,7 +175,7 @@ public final class AdbInitializerHelper {
       // Stops the old adb server and touch the adb binary. This can help to recover some
       // offline devices.
       try {
-        killAdbServer(adbPath, commandExecutor, systemUtil);
+        killAdbServer(adbPath, commandExecutor, systemUtil, adbServerPort);
         logger.atInfo().log("Old adb server killed if any");
         // Since we killed the old server, now we will be the parent of the server.
         managedAdbServer = true;
@@ -147,7 +192,7 @@ public final class AdbInitializerHelper {
           .addShutdownHook(
               new Thread(() -> {
                 try {
-                  killAdbServer(adbPath, commandExecutor, systemUtil);
+                  killAdbServer(adbPath, commandExecutor, systemUtil, adbServerPort);
                 } catch (Throwable e) {
                   logger.atInfo().log(
                       "Failed to stop ADB server: %s", MoreThrowables.shortDebugString(e));
