@@ -330,6 +330,14 @@ public class Flags {
   public static final Flag<Duration> atsLabRemovalTime = DurationFlag.days(7L);
 
   @FlagSpec(
+      name = "ats_local_api_port",
+      help =
+          "Port of the gRPC server for the local APIs of ATS server. The server only accepts"
+              + " connections from localhost and has no authentication. By default, it is 0,"
+              + " which means the server is not started.")
+  public static final Flag<Integer> atsLocalApiPort = Flag.value(0);
+
+  @FlagSpec(
       name = "ats_run_tf_on_android_real_device",
       help =
           "Whether to require to run ATS TF jobs on Android real device. Otherwise, Android "
