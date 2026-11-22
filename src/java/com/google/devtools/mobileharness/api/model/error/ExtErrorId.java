@@ -130,6 +130,7 @@ public enum ExtErrorId implements ErrorId {
   TVOS_GUNIT_TEST_FAILED(84_573, ErrorType.INFRA_ISSUE),
   TVOS_GUNIT_TEST_ERROR(84_574, ErrorType.UNDETERMINED),
   TVOS_GUNIT_CONVERT_TEST_APP_ERROR(84_575, ErrorType.INFRA_ISSUE),
+  TVOS_DEVICE_REBOOT_ERROR(84_576, ErrorType.INFRA_ISSUE),
 
   /** xTS Utils: 86_901 ~ 88_900 */
   // CompatibilityReportParser: 86_901 ~ 86_950
