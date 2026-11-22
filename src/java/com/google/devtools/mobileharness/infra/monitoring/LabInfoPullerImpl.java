@@ -98,6 +98,7 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
                 .addAll(compositeDimension.getSupportedDimensionList())
                 .addAll(compositeDimension.getRequiredDimensionList())
                 .build();
+
         DeviceProperties deviceProperties = deviceInfo.getDeviceFeature().getProperties();
         MonitoredEntry.Builder deviceEntry =
             MonitoredEntry.newBuilder()
