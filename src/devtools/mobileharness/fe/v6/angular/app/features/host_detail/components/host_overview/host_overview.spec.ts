@@ -898,6 +898,84 @@ describe('HostOverview Component', () => {
     expect(compiled.querySelector('.sub-device-table')).toBeNull();
   });
 
+  describe('lab server upgrade affordances', () => {
+    /**
+     * Re-creates the component under a spied `isGoogleInternal()` and renders
+     * it with `host`. The component reads `isGoogleInternal()` only once at
+     * construction, so the spy must be set up before the component is created.
+     */
+    function recreateComponent({
+      isGoogleInternal,
+      host,
+    }: {
+      isGoogleInternal: boolean;
+      host: HostOverview;
+    }) {
+      spyOn(
+        TestBed.inject(EnvUniverseService),
+        'isGoogleInternal',
+      ).and.returnValue(isGoogleInternal);
+      fixture = TestBed.createComponent(HostOverviewPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('host', host);
+      fixture.detectChanges();
+    }
+
+    it('renders enabled upgrade buttons in Google internal when canUpgrade is true', () => {
+      recreateComponent({
+        isGoogleInternal: true,
+        host: {...mockHost, canUpgrade: true},
+      });
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const upgradeButton = compiled.querySelector<HTMLButtonElement>(
+        '#lab-server .upgrade-version-button',
+      );
+      const updateAvailableButton = compiled.querySelector<HTMLButtonElement>(
+        '#lab-server .m3-chip-suggestion',
+      );
+      expect(upgradeButton).not.toBeNull();
+      expect(upgradeButton?.disabled).toBeFalse();
+      expect(updateAvailableButton).not.toBeNull();
+      expect(updateAvailableButton?.disabled).toBeFalse();
+      expect(updateAvailableButton?.textContent).toContain('Update available');
+    });
+
+    it('never renders upgrade buttons in OSS even when canUpgrade is forced on', () => {
+      // Mirrors real OSS data (release action hidden and disabled) with
+      // canUpgrade forced on client-side, e.g. by force_all_ready=true.
+      recreateComponent({
+        isGoogleInternal: false,
+        host: {
+          ...mockHost,
+          canUpgrade: true,
+          labServer: {
+            ...mockHost.labServer,
+            actions: {
+              release: {
+                visible: false,
+                enabled: false,
+                isReady: true,
+                tooltip: '',
+              },
+              restart: mockHost.labServer.actions!.restart,
+              start: mockHost.labServer.actions!.start,
+              stop: mockHost.labServer.actions!.stop,
+            },
+          },
+        },
+      });
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(
+        compiled.querySelector('#lab-server .upgrade-version-button'),
+      ).toBeNull();
+      expect(
+        compiled.querySelector('#lab-server .m3-chip-suggestion'),
+      ).toBeNull();
+    });
+  });
+
   describe('bulk device configuration', () => {
     const mockDevice1 = {
       id: 'device-1',
