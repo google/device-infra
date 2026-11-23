@@ -9,7 +9,7 @@ import (
 	"flag"
 	
 	log "github.com/golang/glog"
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
+	"github.com/google/device-infra/src/devtools/rbe/common/chunkerutil"
 )
 
 const (

@@ -17,7 +17,7 @@ import (
 	"time"
 
 	log "github.com/golang/glog"
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunker"
+	"github.com/google/device-infra/src/devtools/rbe/common/chunker"
 )
 
 const (

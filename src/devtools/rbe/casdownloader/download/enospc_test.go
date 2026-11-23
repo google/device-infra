@@ -13,7 +13,7 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/google/device-infra/src/devtools/rbe/casdownloader/cache"
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
+	"github.com/google/device-infra/src/devtools/rbe/common/chunkerutil"
 )
 
 // outOfSpaceCache misses on everything, like missingCache, and records what

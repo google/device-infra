@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunker"
+	"github.com/google/device-infra/src/devtools/rbe/common/chunker"
 )
 
 func TestChunkStore_ReadFileToDest(t *testing.T) {
