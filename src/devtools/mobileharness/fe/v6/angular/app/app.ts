@@ -55,6 +55,7 @@ import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
 import {ENTITY_SEARCH_PATHS, isHeaderJumpBarVisibleOnRoute} from '@deviceinfra/app/features/all_site_search/all_site_search_scope';
 import {HeaderJumpBar} from '@deviceinfra/app/features/all_site_search/components/header_jump_bar/header_jump_bar';
+import {EmbeddedBackdropService} from '@deviceinfra/app/shared/services/embedded_backdrop_service';
 import {HeaderSearchDockService} from '@deviceinfra/app/shared/services/header_search_dock_service';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
@@ -119,6 +120,7 @@ export class App implements OnDestroy {
   readonly loadingService = inject(LoadingService);
   private readonly urlService = inject(UrlService);
   readonly dockService = inject(HeaderSearchDockService);
+  private readonly embeddedBackdropService = inject(EmbeddedBackdropService);
   private readonly commonParamsService = inject(CommonParamsService);
   showVersionInfo = true;
   isEmbeddedMode = true;
@@ -266,6 +268,12 @@ export class App implements OnDestroy {
       this.embeddedHeaderBandHeight();
       this.updateEmbeddedOverlayOffset();
     });
+
+    // When embedded in the ATS host, let the host dim its whole page while a
+    // dialog is open.
+    if (this.urlService.isInAtsEmbeddedMode()) {
+      this.embeddedBackdropService.start();
+    }
   }
 
   updateShowContent() {

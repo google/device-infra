@@ -17,11 +17,13 @@ import {
 import {APP_DATA, type AppData} from './core/models/app_data';
 import {CommonParamsService} from './core/services/common_params_service';
 import {type EmbeddedHeaderSlot, UrlService} from './core/services/url_service';
+import {EmbeddedBackdropService} from './shared/services/embedded_backdrop_service';
 
 describe('App Component', () => {
   let component: App;
   let fixture: ComponentFixture<App>;
   let mockUrlService: jasmine.SpyObj<UrlService>;
+  let mockEmbeddedBackdropService: jasmine.SpyObj<EmbeddedBackdropService>;
   let mockActivatedRoute: Partial<ActivatedRoute>;
   let commonParamsService: CommonParamsService;
 
@@ -40,6 +42,10 @@ describe('App Component', () => {
         navigate$: new Subject<string>(),
         embeddedHeaderSlot: signal<EmbeddedHeaderSlot | null>(null),
       },
+    );
+    mockEmbeddedBackdropService = jasmine.createSpyObj(
+      'EmbeddedBackdropService',
+      ['start'],
     );
 
     mockActivatedRoute = {
@@ -63,6 +69,10 @@ describe('App Component', () => {
           useValue: mockUrlService,
         },
         {
+          provide: EmbeddedBackdropService,
+          useValue: mockEmbeddedBackdropService,
+        },
+        {
           provide: ActivatedRoute,
           useValue: mockActivatedRoute,
         },
@@ -77,6 +87,25 @@ describe('App Component', () => {
 
   it('should create the app', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('embedded backdrop', () => {
+    // The app starts the backdrop service (or not) when it is created.
+    function createApp(isInAtsEmbeddedMode: boolean) {
+      mockUrlService.isInAtsEmbeddedMode.and.returnValue(isInAtsEmbeddedMode);
+      mockEmbeddedBackdropService.start.calls.reset();
+      TestBed.createComponent(App);
+    }
+
+    it('should start mirroring the dialog backdrop to the host page in ATS embedded mode', () => {
+      createApp(true);
+      expect(mockEmbeddedBackdropService.start).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not start mirroring the dialog backdrop outside the ATS embedded mode', () => {
+      createApp(false);
+      expect(mockEmbeddedBackdropService.start).not.toHaveBeenCalled();
+    });
   });
 
   it('should have sideNavExpanded true by default', () => {

@@ -311,4 +311,53 @@ describe('UrlService', () => {
       expect(errorSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('embedded backdrop (ATS host only)', () => {
+    function setUp(embedded: boolean, isGoogleInternal = false) {
+      if (embedded) {
+        mockWin.location.search = '?is_embedded_mode=true&origin=test-origin';
+        mockWin.self = {id: 'iframe'};
+        mockWin.top = {id: 'parent'};
+      }
+      TestBed.configureTestingModule({
+        providers: [
+          UrlService,
+          {provide: DOCUMENT, useValue: mockDocument},
+          {
+            provide: Environment,
+            useValue: {isGoogleInternal: () => isGoogleInternal},
+          },
+        ],
+      });
+      service = TestBed.inject(UrlService);
+    }
+
+    it('tells the parent window when the backdrop is shown or hidden', () => {
+      setUp(/* embedded= */ true);
+
+      service.notifyEmbeddedBackdropChanged(true);
+      service.notifyEmbeddedBackdropChanged(false);
+
+      expect(mockWin.parent.postMessage.calls.allArgs()).toEqual([
+        [{type: 'EMBEDDED_BACKDROP_CHANGED', visible: true}, 'test-origin'],
+        [{type: 'EMBEDDED_BACKDROP_CHANGED', visible: false}, 'test-origin'],
+      ]);
+    });
+
+    it('does not post the backdrop state when not in embedded mode', () => {
+      setUp(/* embedded= */ false);
+
+      service.notifyEmbeddedBackdropChanged(true);
+
+      expect(mockWin.parent.postMessage).not.toHaveBeenCalled();
+    });
+
+    it('does not post the backdrop state in the Google-internal embedded mode', () => {
+      setUp(/* embedded= */ true, /* isGoogleInternal= */ true);
+
+      service.notifyEmbeddedBackdropChanged(true);
+
+      expect(mockWin.parent.postMessage).not.toHaveBeenCalled();
+    });
+  });
 });
