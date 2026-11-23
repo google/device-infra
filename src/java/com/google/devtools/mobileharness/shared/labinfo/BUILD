@@ -43,7 +43,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
