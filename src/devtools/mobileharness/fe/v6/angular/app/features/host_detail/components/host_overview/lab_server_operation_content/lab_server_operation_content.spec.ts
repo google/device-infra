@@ -38,4 +38,50 @@ describe('LabServerOperationContent', () => {
       expect(component.isWarningState()).toBeFalse();
     });
   });
+
+  function expectOperationBadgeText(expected: string) {
+    const badge = (fixture.nativeElement as HTMLElement).querySelector(
+      '.operation-badge',
+    );
+    expect(badge?.textContent?.trim()).toBe(expected);
+  }
+
+  it('should render Remove wording for DECOMMISSION operation', () => {
+    fixture.componentRef.setInput('operation', 'DECOMMISSION');
+    fixture.componentRef.setInput('hostName', 'test-host');
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain(
+      'Removing it will permanently delete its record from OmniLab for host:',
+    );
+    expect(text).not.toContain('Decommission');
+    expect(text).not.toContain('DECOMMISSION');
+    expectOperationBadgeText('Remove');
+  });
+
+  it('renders consistent title-case operation badges for START, STOP, and RESTART', () => {
+    fixture.componentRef.setInput('hostName', 'test-host');
+
+    fixture.componentRef.setInput('operation', 'START');
+    fixture.detectChanges();
+    expectOperationBadgeText('Start');
+
+    fixture.componentRef.setInput('operation', 'STOP');
+    fixture.detectChanges();
+    expectOperationBadgeText('Stop');
+
+    fixture.componentRef.setInput('operation', 'RESTART');
+    fixture.detectChanges();
+    expectOperationBadgeText('Restart');
+  });
+
+  it('renders targetVersion verbatim for DEPLOY operation', () => {
+    fixture.componentRef.setInput('hostName', 'test-host');
+    fixture.componentRef.setInput('operation', 'DEPLOY');
+    fixture.componentRef.setInput('targetVersion', 'v4.391.0');
+    fixture.detectChanges();
+
+    expectOperationBadgeText('v4.391.0');
+  });
 });

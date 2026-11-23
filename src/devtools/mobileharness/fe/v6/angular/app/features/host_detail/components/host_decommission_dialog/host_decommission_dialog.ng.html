@@ -6,9 +6,9 @@
           <mat-icon class="confirm-dialog-icon success-icon">check_circle</mat-icon>
         </div>
         <div class="confirm-dialog-title-wrapper">
-          <h3 class="confirm-dialog-title">Decommissioned Successfully</h3>
+          <h3 class="confirm-dialog-title">Removed Successfully</h3>
           <p class="confirm-dialog-subtitle">
-            Host <span class="target-host-value">{{ data.hostName }}</span> has been decommissioned successfully!
+            Host <span class="target-host-value">{{ data.hostName }}</span> has been removed successfully!
             <br />
             It may take a few minutes to take effect on the UI side.
           </p>
@@ -31,9 +31,9 @@
           <mat-icon class="confirm-dialog-icon danger-icon">delete_sweep</mat-icon>
         </div>
         <div class="confirm-dialog-title-wrapper">
-          <h3 class="confirm-dialog-title">Decommission Host?</h3>
+          <h3 class="confirm-dialog-title">Remove Missing Host?</h3>
           <div class="confirm-dialog-subtitle">
-            This host is reported as missing. Decommissioning it will delete its record permanently from MobileHarness for host:
+            This host is reported as missing. Removing it will permanently delete its record from OmniLab for host:
           </div>
         </div>
       </div>
@@ -45,7 +45,7 @@
         </div>
         <div class="summary-card-row">
           <span class="summary-card-label">Operation</span>
-          <span class="summary-card-badge">Decommission</span>
+          <span class="summary-card-badge">Remove</span>
         </div>
       </div>
 
@@ -80,10 +80,10 @@
         <div class="button-content">
           @if (isDecommissioning()) {
             <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
-            <span>Decommissioning...</span>
+            <span>Removing...</span>
           } @else {
             <mat-icon>delete_sweep</mat-icon>
-            <span>Decommission</span>
+            <span>Remove</span>
           }
         </div>
       </button>

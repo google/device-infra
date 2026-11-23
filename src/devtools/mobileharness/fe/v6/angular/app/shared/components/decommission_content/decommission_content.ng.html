@@ -1,11 +1,11 @@
 <div class="decommission-box">
   @if (deviceIds.length === 1) {
-    <p class="text-gray-600">This will <b>permanently remove</b> this device <b>{{deviceIds[0]}}</b> from the Lab Console inventory. This action cannot be undone.</p>
+    <p class="text-gray-600">This will <b>permanently remove</b> this missing device <b>{{deviceIds[0]}}</b> from OmniLab. This action cannot be undone.</p>
   } @else {
-    <p class="text-gray-600">This will <b>permanently remove</b> the selected devices from the Lab Console inventory. This action cannot be undone.</p>
+    <p class="text-gray-600">This will <b>permanently remove</b> the selected missing devices from OmniLab. This action cannot be undone.</p>
     <div class="items-list-container">
       <p class="items-list-label">
-          <span class="material-icons info-icon-small">info</span> Devices to be decommissioned:
+          <span class="material-icons info-icon-small">info</span> Devices to be removed:
       </p>
       <div class="items-scroll-container custom-scrollbar">
         <ul class="items-list">

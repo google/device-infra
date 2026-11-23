@@ -6,7 +6,7 @@ import {
 } from '@angular/material/dialog/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter, Router} from '@angular/router';
-import {of} from 'rxjs';
+import {of, throwError} from 'rxjs';
 
 import {
   HOST_SERVICE,
@@ -65,24 +65,61 @@ describe('HostDecommissionDialog', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show the host name', () => {
+  it('should render remove wording and host name', () => {
+    const dialogContainer = document.querySelector('.confirm-dialog-container');
+    expect(dialogContainer?.textContent).toContain('Remove Missing Host?');
+    expect(dialogContainer?.textContent).toContain(
+      'Removing it will permanently delete its record from OmniLab for host:',
+    );
+    expect(dialogContainer?.textContent).not.toContain('Decommission');
+
     const hostNameElement = document.querySelector('.target-host-value');
     expect(hostNameElement?.textContent).toContain('test-host');
+
+    const operationBadge = document.querySelector('.summary-card-badge');
+    expect(operationBadge?.textContent?.trim()).toBe('Remove');
+
+    const primaryButton = document.querySelector('.primary-button');
+    expect(primaryButton?.textContent).toContain('Remove');
   });
 
-  it('should call decommissionHost and show success state when decommission button is clicked', () => {
+  it('should call decommissionHost and show success state when remove button is clicked', () => {
     hostServiceSpy.decommissionHost.and.returnValue(of({}));
 
-    const decommissionButton = document.querySelector(
+    const removeButton = document.querySelector(
       '.primary-button',
     ) as HTMLButtonElement;
-    decommissionButton.click();
+    removeButton.click();
+    fixture.detectChanges();
 
     expect(hostServiceSpy.decommissionHost).toHaveBeenCalledWith('test-host');
     expect(component.isDecommissioned()).toBeTrue();
     expect(dialogRef.disableClose).toBeTrue();
     expect(router.navigate).not.toHaveBeenCalled();
     expect(dialogRef.close).not.toHaveBeenCalled();
+
+    const dialogContainer = document.querySelector('.confirm-dialog-container');
+    expect(dialogContainer?.textContent).toContain('Removed Successfully');
+    expect(dialogContainer?.textContent).toContain(
+      'has been removed successfully!',
+    );
+  });
+
+  it('should show error snackbar when decommissionHost fails', () => {
+    hostServiceSpy.decommissionHost.and.returnValue(
+      throwError(() => new Error('RPC failed')),
+    );
+
+    const removeButton = document.querySelector(
+      '.primary-button',
+    ) as HTMLButtonElement;
+    removeButton.click();
+
+    expect(snackBarServiceSpy.showError).toHaveBeenCalledWith(
+      'Failed to remove host test-host: RPC failed',
+    );
+    expect(component.isDecommissioning()).toBeFalse();
+    expect(component.isDecommissioned()).toBeFalse();
   });
 
   it('should close with false when cancel button is clicked', () => {

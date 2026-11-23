@@ -61,7 +61,7 @@ export class HostDecommissionDialog {
         },
         error: (error: {message?: string}) => {
           this.snackBar.showError(
-            `Failed to decommission host ${this.data.hostName}: ${
+            `Failed to remove host ${this.data.hostName}: ${
               error.message || 'Unknown error'
             }`,
           );

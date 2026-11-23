@@ -467,7 +467,7 @@ export function createHostActions(
       enabled: removeEnabled,
       visible: removeEnabled,
       tooltip: removeEnabled
-        ? 'Decommission this missing host record from OmniLab'
+        ? 'Remove this missing host record from OmniLab'
         : '',
       isReady: true,
     },

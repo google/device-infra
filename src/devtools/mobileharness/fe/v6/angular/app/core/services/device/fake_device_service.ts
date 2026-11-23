@@ -544,7 +544,7 @@ export class FakeDeviceService extends DeviceService {
         decommission: {
           enabled: true,
           visible: decommissionVisible,
-          tooltip: 'Decommission device',
+          tooltip: 'Remove the missing device',
           isReady: !scenario.allActionsNotReady,
         },
         prepare: {

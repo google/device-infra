@@ -12,6 +12,14 @@ export type LabServerOperation =
   | 'DECOMMISSION'
   | 'DEPLOY';
 
+const OPERATION_LABELS: Readonly<Record<LabServerOperation, string>> = {
+  START: 'Start',
+  RESTART: 'Restart',
+  STOP: 'Stop',
+  DECOMMISSION: 'Remove',
+  DEPLOY: 'Deploy',
+};
+
 /**
  * Component to display Lab Server Operation confirmation content.
  */
@@ -30,6 +38,8 @@ export class LabServerOperationContent {
 
   @Input() targetVersion?: string;
   @Input() currentVersion?: string;
+
+  protected readonly operationLabels = OPERATION_LABELS;
 
   isWarningState(): boolean {
     if (this.operation === 'STOP') {
