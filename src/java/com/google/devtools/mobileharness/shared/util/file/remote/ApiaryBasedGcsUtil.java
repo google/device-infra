@@ -48,10 +48,10 @@ import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
@@ -188,12 +188,34 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
   @Override
   protected void copyFileToLocal(GcsApiObject gcsFile, Path localFile, long from, long size)
       throws MobileHarnessException, InterruptedException {
+    copyFileToLocalInternal(gcsFile, localFile, from, size, /* localOffset= */ -1);
+  }
+
+  @Override
+  protected void copyFileToLocalAtOffset(
+      GcsApiObject gcsFile, Path localFile, long from, long size, long localOffset)
+      throws MobileHarnessException, InterruptedException {
+    MobileHarnessExceptions.check(
+        localOffset >= 0 && size > 0,
+        BasicErrorId.GCS_ILLEGAL_OFFSET,
+        () ->
+            String.format(
+                "localOffset must be >= 0 and size must be > 0, got localOffset=%d, size=%d",
+                localOffset, size));
+    copyFileToLocalInternal(gcsFile, localFile, from, size, localOffset);
+  }
+
+  private void copyFileToLocalInternal(
+      GcsApiObject gcsFile, Path localFile, long from, long size, long localOffset)
+      throws MobileHarnessException, InterruptedException {
     Stopwatch stopwatch = Stopwatch.createStarted();
     MobileHarnessExceptions.check(
         from >= 0,
         BasicErrorId.GCS_ILLEGAL_OFFSET,
         () -> "file offset should be a non negative position, but get " + from);
-    localFileUtil.prepareParentDir(localFile);
+    if (localOffset < 0) {
+      localFileUtil.prepareParentDir(localFile);
+    }
 
     String fileInfo =
         String.format(
@@ -202,7 +224,10 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
 
     retryIfMeetQuotaOrNetworkIssue(
         () -> {
-          try (BufferedOutputStream bufferedOutputStream = getOutputStream(localFile)) {
+          try (OutputStream outputStream =
+              localOffset >= 0
+                  ? openPositionalOutputStream(localFile, localOffset, size)
+                  : getOutputStream(localFile)) {
             Storage.Objects.Get get =
                 client.objects().get(storageParams.bucketName, gcsFile.path().toString());
 
@@ -225,9 +250,12 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
             } else if (from > 0) {
               downloader.setBytesDownloaded(from);
             }
-            get.executeMediaAndDownloadTo(bufferedOutputStream);
+            get.executeMediaAndDownloadTo(outputStream);
+            if (outputStream instanceof PositionalOutputStream positionalOutputStream) {
+              positionalOutputStream.verifyExpectedSize();
+            }
           } catch (IOException e) {
-            if (e.getMessage().contains(OUTPUT_NO_SPACE)) {
+            if (Strings.nullToEmpty(e.getMessage()).contains(OUTPUT_NO_SPACE)) {
               throw new MobileHarnessException(
                   BasicErrorId.GCS_DOWNLOAD_FILE_NO_SPACE_ERROR,
                   "Please clean the lab machine to make space for GCS file downloading",
