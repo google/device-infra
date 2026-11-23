@@ -29,7 +29,6 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__",
     ],
     runtime_deps = [
     ],
