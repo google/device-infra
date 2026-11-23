@@ -83,6 +83,19 @@ public abstract class FileTransferParameters {
    */
   public abstract Duration initialProcessStatusPollInterval();
 
+  /**
+   * Whether {@code CloudFileTransferClient#getFile} tries a direct RPC before uploading to GCS when
+   * the remote path fits within {@link #smallFileSize}. Defaults to {@code true}.
+   */
+  public abstract boolean enableDirectGetFile();
+
+  /**
+   * Whether {@code CloudFileTransferClient} moves an unzipped directory onto a local target with an
+   * atomic filesystem rename before falling back to merging its contents. Defaults to {@code
+   * false}.
+   */
+  public abstract boolean moveUnzippedLocalDir();
+
   /** Returns a builder holding these parameters, for a caller overriding one of them. */
   public abstract Builder toBuilder();
 
@@ -99,6 +112,8 @@ public abstract class FileTransferParameters {
         .setCloudFileTransferBucket(FileTransferConstant.getBucket())
         .setCloudCacheTtl(Optional.of(FileTransferConstant.getCloudCacheTtl()))
         .setInitialProcessStatusPollInterval(DEFAULT_PROCESS_STATUS_POLL_INTERVAL)
+        .setEnableDirectGetFile(true)
+        .setMoveUnzippedLocalDir(false)
         .setHomeDir(createHomeDir());
   }
 
@@ -138,6 +153,10 @@ public abstract class FileTransferParameters {
     public abstract Builder setCloudCacheTtl(Optional<Duration> cloudCacheTtl);
 
     public abstract Builder setInitialProcessStatusPollInterval(Duration interval);
+
+    public abstract Builder setEnableDirectGetFile(boolean enable);
+
+    public abstract Builder setMoveUnzippedLocalDir(boolean move);
 
     abstract FileTransferParameters autoBuild();
 

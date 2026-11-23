@@ -68,7 +68,14 @@ import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.DirectoryIteratorException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -435,12 +442,14 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       removeLocalFileOrDir(local);
     }
 
-    FileOperationStatus result = getFileDirectlyIfSmall(remote, local);
-    if (result.isFinished()) {
-      publishEvent(
-          event.setEnd(Instant.now()).setIsCached(false).setFileSize(result.fileSize()).build());
-      logger.atInfo().log("Got file: %s with size %s", local, prettySize(result.fileSize()));
-      return result.fileSize();
+    if (params.enableDirectGetFile()) {
+      FileOperationStatus result = getFileDirectlyIfSmall(remote, local);
+      if (result.isFinished()) {
+        publishEvent(
+            event.setEnd(Instant.now()).setIsCached(false).setFileSize(result.fileSize()).build());
+        logger.atInfo().log("Got file: %s with size %s", local, prettySize(result.fileSize()));
+        return result.fileSize();
+      }
     }
 
     UploadFileResponse response =
@@ -501,6 +510,12 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
           replaceFile(finalizedReceivedFileOrDir, local, deleteReceivedFileFinally);
         }
       } else if (localFileUtil.isDirExist(finalizedReceivedFileOrDir)) {
+        if (tmpUnzippedFile != null
+            && params.moveUnzippedLocalDir()
+            && isLocalMoveTarget(local)
+            && tryMoveLocalDir(tmpUnzippedFile, local)) {
+          return;
+        }
         mergeDir(finalizedReceivedFileOrDir, local);
       } else {
         // Should never reach here but just in case the received file is not found.
@@ -542,6 +557,116 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       localFileUtil.mergeDir(srcDir, destDir);
       return;
     }
+  }
+
+  /**
+   * Moves {@code srcDir} onto {@code destDir} via a single atomic rename when {@code destDir} is
+   * absent or an empty local directory on the same filesystem. Grants full permissions on {@code
+   * srcDir} first so {@code destDir} is never replaced with unnormalized entries. Leaves {@code
+   * destDir} intact and returns {@code false} if {@code destDir} is a symlink, a non-empty
+   * directory, or on another filesystem.
+   */
+  private boolean tryMoveLocalDir(Path srcDir, Path destDir) throws InterruptedException {
+    Path fileName = destDir.getFileName();
+    if (fileName == null || fileName.toString().equals(".")) {
+      return false;
+    }
+    for (Path segment : destDir) {
+      if (segment.toString().equals("..")) {
+        return false;
+      }
+    }
+    boolean destExists;
+    try {
+      if (Files.isSymbolicLink(destDir)) {
+        return false;
+      }
+      destExists = Files.exists(destDir, LinkOption.NOFOLLOW_LINKS);
+      if (destExists) {
+        if (!Files.isDirectory(destDir, LinkOption.NOFOLLOW_LINKS)) {
+          return false;
+        }
+        try (DirectoryStream<Path> entries = Files.newDirectoryStream(destDir)) {
+          if (entries.iterator().hasNext()) {
+            return false;
+          }
+        }
+      }
+    } catch (IOException | DirectoryIteratorException | SecurityException e) {
+      logger.atInfo().withCause(e).log(
+          "Could not inspect %s before atomic move; falling back to mergeDir", destDir);
+      return false;
+    }
+    try {
+      localFileUtil.grantFileOrDirFullAccessRecursively(srcDir);
+    } catch (MobileHarnessException | SecurityException e) {
+      logger.atInfo().withCause(e).log(
+          "Could not grant full access to %s before atomic move; falling back to mergeDir", srcDir);
+      return false;
+    }
+    if (!destExists) {
+      try {
+        localFileUtil.prepareParentDir(destDir);
+      } catch (MobileHarnessException | SecurityException e) {
+        logger.atInfo().withCause(e).log(
+            "Could not prepare parent dir of %s before atomic move; falling back to mergeDir",
+            destDir);
+        return false;
+      }
+    }
+    try {
+      Files.move(
+          srcDir, destDir, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+      return true;
+    } catch (IOException | UnsupportedOperationException | SecurityException e) {
+      logger.atInfo().withCause(e).log(
+          "Could not atomically move %s to %s; falling back to mergeDir", srcDir, destDir);
+      return false;
+    }
+  }
+
+  /**
+   * Returns true if {@code file} targets a local filesystem path eligible for an atomic directory
+   * move. Unlike {@link #isLocalFileType}, this avoids {@code Path.startsWith("//")}, which
+   * collapses to root {@code "/"} and matches every absolute local path.
+   */
+  private static boolean isLocalMoveTarget(Path file) {
+    if (!file.getFileSystem().equals(FileSystems.getDefault())) {
+      return false;
+    }
+    Path normalized = file.normalize();
+    String pathString = normalized.toString();
+    Path absNormalized =
+        normalized.isAbsolute() ? normalized : normalized.toAbsolutePath().normalize();
+    for (RemoteFileType type : RemoteFileType.values()) {
+      String prefix = type.prefix();
+      if (prefix.equals("//")) {
+        continue;
+      }
+      if (pathString.startsWith(prefix)) {
+        return false;
+      }
+      int schemeSeparatorIndex = prefix.indexOf("://");
+      if (schemeSeparatorIndex >= 0) {
+        String collapsedPrefix = prefix.replace("://", ":/");
+        String bareScheme = prefix.substring(0, schemeSeparatorIndex + 1);
+        if (pathString.startsWith(collapsedPrefix) || pathString.equals(bareScheme)) {
+          return false;
+        }
+        continue;
+      }
+      if (prefix.contains(":")) {
+        continue;
+      }
+      Path prefixPath = Path.of(prefix);
+      if (prefixPath.getNameCount() > 0) {
+        if (normalized.startsWith(prefixPath)
+            || (prefixPath.isAbsolute() && absNormalized.startsWith(prefixPath))) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   private static CompressOptions toCompressOptions(FileTransferParameters params) {
