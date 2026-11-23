@@ -107,4 +107,7 @@ message ConduitSetupMetadata {
   // Key-value pairs encoding the W3C Trace Context (e.g., "traceparent",
   // "tracestate").
   map<string, string> trace_context = 2;
+  // The protocol version of the dialer. See ProtocolVersion in
+  // version/version.go. Dialers of version 0.1.2 and older do not set it.
+  int32 protocol_version = 3;
 }

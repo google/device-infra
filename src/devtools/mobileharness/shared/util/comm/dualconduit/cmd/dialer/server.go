@@ -138,6 +138,13 @@ func main() {
 		defer shutdownTelemetry(dialerCtx)
 	}
 	dialerSvc := dialer.New(dialerCtx, cfg.Hostname, cfg.ForwardAddress, newTransporter, policy, keepAliveTickPeriod)
+	go func() {
+		// The acceptor refused the protocol version of this dialer. Trying
+		// again cannot succeed, so the dialer stops instead of retrying.
+		err := <-dialerSvc.Fatal()
+		slog.ErrorContext(dialerCtx, "The acceptor refused this dialer, exiting", "error", err)
+		os.Exit(1)
+	}()
 	if err := dialerSvc.CheckConnection(context.Background()); err != nil {
 		slog.ErrorContext(dialerCtx, "Pre-flight check failed", "error", err)
 		os.Exit(1)

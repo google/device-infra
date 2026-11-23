@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"strings"
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/conduit"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/mesh"
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/attribute"
 	otelcodes "go.opentelemetry.io/otel/codes"
@@ -73,14 +75,30 @@ func (s *Service) Run(ctx context.Context) error {
 	defer s.Manager.Shutdown()
 
 	handler := func(ctx context.Context, setup payload.SetupPayload, rs rsocket.CloseableRSocket) (rsocket.RSocket, error) {
-		conduitID := setup.DataUTF8()
+		// The string that rsocket-go returns points into a buffer that it
+		// reuses for later frames, so the ID is copied.
+		conduitID := strings.Clone(setup.DataUTF8())
 
 		if conduitID == "PROBE" {
 			return s.handleProbe(), nil
 		}
 
-		req, traceContext, err := s.parseSetupMetadata(setup)
+		req, traceContext, protocolVersion, err := s.parseSetupMetadata(ctx, setup)
 		if err != nil {
+			return nil, err
+		}
+		// A dialer of another protocol is refused.
+		switch {
+		case protocolVersion == version.ProtocolVersion:
+		case protocolVersion >= version.MinProtocolVersion && protocolVersion < version.ProtocolVersion:
+			// Protocol 0 support: a dialer of an older protocol that this
+			// acceptor still serves is served in that protocol.
+			slog.WarnContext(ctx, "Dialer speaks an older DualConduit protocol and is served with it. Upgrade the dialer",
+				"id", conduitID, "instance_id", req.GetInstanceId(), "type", req.GetType().String(),
+				"dialer_protocol", protocolVersion, "acceptor_protocol", version.ProtocolVersion, "acceptor_version", version.Version)
+		default:
+			err := version.MismatchError(protocolVersion)
+			slog.ErrorContext(ctx, "Refusing conduit", "id", conduitID, "error", err)
 			return nil, err
 		}
 
@@ -109,6 +127,8 @@ func (s *Service) Run(ctx context.Context) error {
 			return nil, err
 		}
 		acceptorSpan.End()
+		// Protocol 0 support.
+		con.SetPeerProtocol(protocolVersion)
 
 		if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_REVERSE {
 			return s.handleReverseConduit(ctx, conduitID, req, rs, con)
@@ -134,24 +154,33 @@ func (s *Service) handleProbe() rsocket.RSocket {
 	)
 }
 
-func (s *Service) parseSetupMetadata(setup payload.SetupPayload) (*dconpb.EstablishConduitRequest, map[string]string, error) {
+// parseSetupMetadata returns the request, the trace context and the protocol
+// version of the dialer. A dialer that does not name its protocol version has
+// version 0.
+func (s *Service) parseSetupMetadata(ctx context.Context, setup payload.SetupPayload) (*dconpb.EstablishConduitRequest, map[string]string, int32, error) {
 	metadata, ok := setup.Metadata()
-	if !ok {
-		slog.ErrorContext(context.Background(), "Setup payload is missing metadata")
-		return nil, nil, fmt.Errorf("setup payload is missing metadata")
+	if !ok || len(metadata) == 0 {
+		slog.ErrorContext(ctx, "Setup payload is missing metadata")
+		return nil, nil, 0, fmt.Errorf("setup payload is missing metadata")
 	}
 	setupMeta := &dconpb.ConduitSetupMetadata{}
-	if err := proto.Unmarshal(metadata, setupMeta); err == nil && setupMeta.Request != nil {
-		return setupMeta.Request, setupMeta.TraceContext, nil
+	if err := proto.Unmarshal(metadata, setupMeta); err == nil {
+		if setupMeta.Request != nil {
+			return setupMeta.Request, setupMeta.TraceContext, setupMeta.ProtocolVersion, nil
+		}
+		if setupMeta.ProtocolVersion != 0 || len(setupMeta.TraceContext) > 0 {
+			slog.ErrorContext(ctx, "Setup metadata is missing EstablishConduitRequest")
+			return nil, nil, 0, fmt.Errorf("setup metadata is missing request")
+		}
 	}
 
-	// Fallback to unmarshaling directly as EstablishConduitRequest
+	// Fallback to unmarshaling directly as EstablishConduitRequest.
 	req := &dconpb.EstablishConduitRequest{}
 	if err := proto.Unmarshal(metadata, req); err != nil {
-		slog.ErrorContext(context.Background(), "Invalid setup metadata", "error", err)
-		return nil, nil, err
+		slog.ErrorContext(ctx, "Invalid setup metadata", "error", err)
+		return nil, nil, 0, err
 	}
-	return req, nil, nil
+	return req, nil, 0, nil
 }
 
 func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, req *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, con *conduit.Conduit) (rsocket.RSocket, error) {

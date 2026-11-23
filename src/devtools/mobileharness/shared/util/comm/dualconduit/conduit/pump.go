@@ -5,9 +5,7 @@ import (
 	"log/slog"
 	"net"
 
-	"github.com/rsocket/rsocket-go/payload"
 	"github.com/rsocket/rsocket-go/rx/flux"
-	"github.com/rsocket/rsocket-go/rx"
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn"
 )
@@ -39,96 +37,88 @@ func StartListeningLoop(c *Conduit, listen func() (net.Listener, error)) error {
 			continue
 		}
 
-		c.activeConnections.Add(1)
+		if !c.streamStarted() {
+			resetConn(conn)
+			return nil
+		}
 		go func() {
-			defer c.activeConnections.Done()
+			defer c.streamFinished()
 			handleIngressConnection(c, conn)
 		}()
 	}
 }
 
-func handleIngressConnection(c *Conduit, conn net.Conn) {
-	var remoteAddr string
-	if conn != nil {
-		remoteAddr = conn.RemoteAddr().String()
-	} else {
-		remoteAddr = "<nil>"
+func resetConn(conn net.Conn) {
+	if lc, ok := conn.(interface{ SetLinger(sec int) error }); ok {
+		_ = lc.SetLinger(0)
 	}
-	rc, err := rxconn.New(conn)
-	if err != nil {
-		slog.ErrorContext(c.Context(), "rxconn.New error", "id", c.ID, "error", err)
-		return
-	}
+	_ = conn.Close()
+}
 
+// streamOptions returns the options for the Conn of every stream of c.
+func (c *Conduit) streamOptions() []rxconn.Option {
+	return []rxconn.Option{
+		rxconn.WithConduit(c.ID),
+		// Protocol 0 support.
+		rxconn.WithPeerProtocol(c.peerProtocol.Load()),
+	}
+}
+
+func handleIngressConnection(c *Conduit, conn net.Conn) {
 	streamCtx, cancel := context.WithCancel(c.Context())
 	defer cancel()
 
-	// Ensure connection is closed when context is cancelled to unblock Wait and Read
-	go func() {
-		<-streamCtx.Done()
-		conn.Close()
-	}()
-
-	// 1. Wrap network into Flux.
-	upstream := rc.ToFlux(streamCtx)
-
-	// 2. Initiate the RequestChannel over RSocket.
-	downstream := c.rsocket.RequestChannel(upstream)
-
-	// 3. Send downstream flux to TCP socket.
-	rc.FromFlux(streamCtx, downstream)
-
-	// Wait until both pumps finish.
+	// The RSocket stream is created only when the client sends its first
+	// bytes. When the conduit closes, its context ends the stream.
+	rc, err := rxconn.Open(streamCtx, conn, c.rsocket.RequestChannel, c.streamOptions()...)
+	if err != nil {
+		slog.ErrorContext(c.Context(), "rxconn.Open error", "id", c.ID, "error", err)
+		return
+	}
+	defer conn.Close()
 	rc.Wait()
-	slog.InfoContext(streamCtx, "Conduit ingress connection finished", "id", c.ID, "remote_addr", remoteAddr)
 }
 
 // AcceptStream handles an incoming RSocket channel, dials the target service, and bridges the streams.
 // This implements the Responder Role.
 func AcceptStream(c *Conduit, destEndpoint string, downstream flux.Flux) flux.Flux {
+	if c.Context().Err() != nil {
+		return refuseStream(c, downstream)
+	}
 	conn, err := net.Dial("tcp", destEndpoint)
 	if err != nil {
-		slog.ErrorContext(c.Context(), "Conduit AcceptStream: Dial backend failed", "id", c.ID, "backend", destEndpoint, "error", err)
-		return flux.Create(func(ctx context.Context, s flux.Sink) {
-			// Subscribe and drain downstream Flux to activate RSocket's internal DoFinally
-			// and unblock the unicast processor's Complete() call on Dialer's completion.
-			downstream.Subscribe(ctx,
-				rx.OnNext(func(p payload.Payload) error {
-					return nil // Discard incoming frames
-				}),
-				rx.OnComplete(func() {}),
-				rx.OnError(func(e error) {}),
-			)
-			s.Error(err) // Propagate the dial error immediately
-		})
-	}
-	slog.InfoContext(c.Context(), "Conduit AcceptStream: Connected to backend", "id", c.ID, "backend", destEndpoint)
-
-	rc, err := rxconn.New(conn)
-	if err != nil {
-		slog.ErrorContext(c.Context(), "Conduit AcceptStream: rxconn.New failed", "id", c.ID, "error", err)
-		conn.Close()
-		return flux.Error(err)
+		slog.WarnContext(c.Context(), "Conduit AcceptStream: destination cannot be reached, refusing the stream", "id", c.ID, "backend", destEndpoint, "error", err)
+		return refuseStream(c, downstream)
 	}
 
+	if !c.streamStarted() {
+		resetConn(conn)
+		return rxconn.Refuse(c.Context(), downstream, nil)
+	}
 	streamCtx, cancel := context.WithCancel(c.Context())
-
-	// 1. Read from RSocket and write to backend TCP.
-	rc.FromFlux(streamCtx, downstream)
-
-	// 2. Read from backend TCP and send to RSocket.
-	upstream := rc.ToFlux(streamCtx)
-
-	// Clean up TCP connection when streaming finishes.
-	c.activeConnections.Add(1)
+	rc, upstream, err := rxconn.Accept(streamCtx, conn, downstream, c.streamOptions()...)
+	if err != nil {
+		slog.ErrorContext(c.Context(), "Conduit AcceptStream: rxconn.Accept failed", "id", c.ID, "error", err)
+		cancel()
+		conn.Close()
+		return rxconn.Refuse(c.Context(), downstream, c.streamFinished)
+	}
 	go func() {
-		slog.DebugContext(streamCtx, "Conduit AcceptStream pump started", "id", c.ID, "backend", destEndpoint)
-		defer c.activeConnections.Done()
+		defer c.streamFinished()
 		rc.Wait()
-		slog.DebugContext(streamCtx, "Conduit AcceptStream pump finished, closing connection", "id", c.ID, "backend", destEndpoint)
 		cancel()
 		conn.Close()
 	}()
-
 	return upstream
+}
+
+// refuseStream answers an incoming RSocket channel that cannot be served, in
+// the way a destination that cannot be reached is answered: with the RST
+// marker. While the conduit is open, the stream is counted until the Requester
+// has completed it.
+func refuseStream(c *Conduit, downstream flux.Flux) flux.Flux {
+	if !c.streamStarted() {
+		return rxconn.Refuse(c.Context(), downstream, nil)
+	}
+	return rxconn.Refuse(c.Context(), downstream, c.streamFinished)
 }
