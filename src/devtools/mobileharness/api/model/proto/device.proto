@@ -150,4 +150,14 @@ message DeviceCondition {
 
   // Optional. The timestamp of the last time when the device was healthy.
   google.protobuf.Timestamp last_healthy_time = 3;
+
+  // Optional. Whether the lab has reported device errors since the device was
+  // last healthy (see last_healthy_time). The errors are cleared once the
+  // device becomes healthy again.
+  //
+  // Currently only populated by Master. ATS mode and local mode do not populate
+  // it yet, so false can also mean "unknown".
+  // TODO: b/585438621 - Update this comment once ATS mode and local mode
+  // populate it.
+  bool has_device_error = 4;
 }

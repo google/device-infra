@@ -1082,6 +1082,8 @@ class RemoteDeviceManager implements LabInfoProvider {
                                         DeviceDimension.newBuilder().setName(name).setValue(value))
                                     .setExpireTimestampMs(dimensions.expireTime().toEpochMilli())
                                     .setRequired(true)));
+                    // TODO: b/585438621 - Populate DeviceCondition.has_device_error from
+                    // SignUpLabRequest.Device.flattened_exception_detail.
                     return conditionBuilder.build();
                   }))
           .setMaskedDeviceFeature(
