@@ -84,6 +84,7 @@ public final class LabReport implements Report {
         if (labAssessment.getScore() < existingLabAssessment.getScore()) {
           assessments.remove(existingLabAssessment);
           assessments.add(labAssessment);
+          hostToAssessments.put(hostname, labAssessment);
         }
       }
     }
