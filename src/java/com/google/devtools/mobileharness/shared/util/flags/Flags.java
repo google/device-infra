@@ -853,6 +853,13 @@ public class Flags {
   public static final Flag<Boolean> enableGrpcRelay = Flag.value(false);
 
   @FlagSpec(
+      name = "enable_ios_dossier_codesign",
+      help =
+          "Whether to enable dossier-based iOS code signing via dossier_code_sign_tool_swift_osx"
+              + " when dossier artifacts and the tool are present. Default is false.")
+  public static final Flag<Boolean> enableIosDossierCodesign = Flag.value(false);
+
+  @FlagSpec(
       name = "enable_lab_server_file_log",
       help =
           "Whether the lab server writes logs to local files (including the rotated main log files"
