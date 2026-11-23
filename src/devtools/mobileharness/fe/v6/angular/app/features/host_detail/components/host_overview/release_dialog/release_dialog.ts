@@ -49,6 +49,16 @@ export interface ReleaseDialogData {
 }
 
 /**
+ * View model for rendering a deployable version card in Step 1 while keeping
+ * the underlying {@link DeployableVersion} payload unmutated.
+ */
+export interface FormattedDeployableVersion {
+  readonly raw: DeployableVersion;
+  readonly displayVersion: string;
+  readonly trackKey: string;
+}
+
+/**
  * Component for displaying and managing host releases.
  */
 @Component({
@@ -80,11 +90,23 @@ export class ReleaseDialog implements OnInit {
   readonly selectedVersion = signal<DeployableVersion | null>(null);
   readonly availableVersions = signal<DeployableVersion[]>([]);
 
-  readonly formattedAvailableVersions = computed(() => {
-    return this.availableVersions().map((v) => ({
-      ...v,
-      version: `v${v.version.replace(/^v/, '')}`,
+  readonly formattedAvailableVersions = computed<
+    readonly FormattedDeployableVersion[]
+  >(() => {
+    return this.availableVersions().map((raw) => ({
+      raw,
+      displayVersion: formatDisplayVersion(raw.version),
+      trackKey: getVersionTrackKey(raw),
     }));
+  });
+
+  readonly selectedDisplayVersion = computed<string>(() =>
+    formatDisplayVersion(this.selectedVersion()?.version),
+  );
+
+  readonly selectedTrackKey = computed<string | null>(() => {
+    const selected = this.selectedVersion();
+    return selected ? getVersionTrackKey(selected) : null;
   });
 
   readonly statusDisplayMap: Record<string, string> = {
@@ -109,12 +131,12 @@ export class ReleaseDialog implements OnInit {
   readonly versionDeltaInfo = computed<VersionDelta>(() => {
     const targetRaw = this.selectedVersion()?.version || '';
     const currentRaw =
-      this.formattedAvailableVersions().find(
+      this.availableVersions().find(
         (v) => v.status === 'CURRENT' || v.status === 'LATEST_AND_CURRENT',
       )?.version || '';
 
-    const target = targetRaw.replace(/^v/i, '');
-    const current = currentRaw.replace(/^v/i, '');
+    const target = normalizeSemanticVersionPrefix(targetRaw);
+    const current = normalizeSemanticVersionPrefix(currentRaw);
 
     const defaultResult: VersionDelta = {
       type: 'deploy',
@@ -205,9 +227,13 @@ export class ReleaseDialog implements OnInit {
     this.selectedVersion.set(version);
   }
 
-  viewDetails(version: DeployableVersion) {
+  viewDetails(version: DeployableVersion): void {
     const current = this.selectedVersion();
-    if (current?.version === version.version && this.showDetails()) {
+    if (
+      current != null &&
+      getVersionTrackKey(current) === getVersionTrackKey(version) &&
+      this.showDetails()
+    ) {
       this.showDetails.set(false);
     } else {
       this.selectedVersion.set(version);
@@ -229,7 +255,7 @@ export class ReleaseDialog implements OnInit {
     this.currentStep.set(1);
   }
 
-  deploy() {
+  deploy(): void {
     const version = this.selectedVersion()?.version;
     if (!version) {
       this.snackBar.showError('No version selected');
@@ -285,4 +311,31 @@ export class ReleaseDialog implements OnInit {
       }
     });
   }
+}
+
+/**
+ * Strips a leading 'v'/'V' only when followed by a digit (for example,
+ * 'v9.99.9' -> '9.99.9') while keeping customized names like 'version_20200820'
+ * intact.
+ */
+function normalizeSemanticVersionPrefix(version: string): string {
+  return version.trim().replace(/^[vV](?=\d)/, '');
+}
+
+/**
+ * Formats numeric versions with a leading 'v' for display while leaving custom
+ * names intact.
+ */
+function formatDisplayVersion(version: string | undefined): string {
+  if (!version) {
+    return '';
+  }
+  const trimmed = version.trim();
+  return /^[vV]?\d/.test(trimmed)
+    ? `v${normalizeSemanticVersionPrefix(trimmed)}`
+    : trimmed;
+}
+
+function getVersionTrackKey(version: DeployableVersion): string {
+  return `${version.releaseName ?? ''}:${version.version}`;
 }

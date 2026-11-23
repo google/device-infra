@@ -17,28 +17,28 @@
       </div>
       <div class="content-splitter">
         <div class="versions-panel">
-          @for(version of formattedAvailableVersions(); track version.version) {
+          @for(option of formattedAvailableVersions(); track option.trackKey) {
             <div class="version-card"
-                [class.selected]="selectedVersion()?.version === version.version"
-                (click)="selectVersion(version)">
+                [class.selected]="selectedTrackKey() === option.trackKey"
+                (click)="selectVersion(option.raw)">
               <div class="version-info">
                 <div class="version-header">
-                  <span class="version-number">{{version.version}}</span>
-                  @if(version.status === 'CURRENT' || version.status === 'LATEST_AND_CURRENT') {
+                  <span class="version-number">{{option.displayVersion}}</span>
+                  @if(option.raw.status === 'CURRENT' || option.raw.status === 'LATEST_AND_CURRENT') {
                     <span class="status-pill current-version">
                       <mat-icon>check</mat-icon>Current Version
                     </span>
                   }
-                  @if(version.status === 'LATEST' || version.status === 'LATEST_AND_CURRENT') {
+                  @if(option.raw.status === 'LATEST' || option.raw.status === 'LATEST_AND_CURRENT') {
                     <span class="status-pill latest-stable">Latest Stable</span>
                   }
                 </div>
                 <div class="version-name-card">
-                  {{version.name || 'Available release candidate package binary.'}}
+                  {{option.raw.name || 'Available release candidate package binary.'}}
                 </div>
               </div>
               <div class="version-actions">
-                <button mat-icon-button title="View Details" (click)="viewDetails(version); $event.stopPropagation();">
+                <button mat-icon-button title="View Details" (click)="viewDetails(option.raw); $event.stopPropagation();">
                   <mat-icon>info</mat-icon>
                 </button>
               </div>
@@ -74,7 +74,7 @@
                   <div>
                     <div class="label">Version</div>
                     <div class="value">
-                      {{ selectedVersion()?.version || 'N/A' }}
+                      {{ selectedDisplayVersion() || 'N/A' }}
                     </div>
                   </div>
                 </div>
@@ -207,7 +207,7 @@
             <div class="version-details">
               <div class="label">Selected Release Target</div>
               <div class="value">
-                <span class="version-str">{{ selectedVersion()?.version }}</span>
+                <span class="version-str">{{ selectedDisplayVersion() }}</span>
                 @if (selectedVersion()?.status === 'LATEST_AND_CURRENT') {
                   <span class="status-badge current">Current</span>
                   <span class="status-badge latest">Latest</span>
