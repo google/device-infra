@@ -141,6 +141,10 @@ export interface FilterSortOptions {
   readonly sortBy: 'value' | 'filtered' | 'total';
   /** Sort direction flag (true = ascending, false = descending). */
   readonly sortAsc: boolean;
+  /** Whether the candidate items are plain values without count columns. */
+  readonly isPlain?: boolean;
+  /** Optional filter key identifier used to select version vs decimal comparison. */
+  readonly key?: string;
 }
 
 /** Date range bounds representation for value picker range layout. */
