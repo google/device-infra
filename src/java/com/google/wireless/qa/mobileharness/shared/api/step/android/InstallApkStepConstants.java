@@ -16,8 +16,10 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.step.android;
 
+import com.google.common.base.Ascii;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.ApkInfo;
 
 /** Constants for {@code InstallApkStep}. */
 @SuppressWarnings("InterfaceWithOnlyStatics")
@@ -36,6 +38,21 @@ public interface InstallApkStepConstants {
       required = false,
       help = "Extra apks to install.  Used in combination with TAG_BUILD_APK")
   String TAG_EXTRA_APK = "extra_apk";
+
+  /**
+   * Property on TestInfo to skip reading job-level and spec-level extra_apk,
+   * install_apk_extra_file_tags, dex_metadata, and test_data input files.
+   */
+  String PROPERTY_SKIP_JOB_INPUT_FILES = "skip_job_input_files";
+
+  /** Property on TestInfo to override the list of extra file tags to install. */
+  String PROPERTY_INSTALL_APK_EXTRA_FILE_TAGS_OVERRIDE = "install_apk_extra_file_tags_override";
+
+  /** Property on TestInfo to force reinstalling APKs even if already cached on device. */
+  String PROPERTY_FORCE_INSTALL_APKS_OVERRIDE = "force_install_apks_override";
+
+  /** Property prefix for APK size recorded by InstallApkStep. */
+  String PROPERTY_PREFIX_APK_SIZE = Ascii.toLowerCase(ApkInfo.APK_SIZE_.name());
 
   @ParamAnnotation(
       required = false,
