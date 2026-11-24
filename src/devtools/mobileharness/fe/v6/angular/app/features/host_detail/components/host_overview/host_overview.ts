@@ -94,6 +94,10 @@ import {objectUtils} from '../../../../shared/utils/object_utils';
 import {useBulkConfigActions} from '../../../search_page/components/bulk_config/bulk_config_actions';
 import {FlagsDialog} from './flags_dialog/flags_dialog';
 import {LabServerActionService} from './lab_server_action_service';
+import {
+  parsePassThroughFlags,
+  type ParsedPassThroughFlag,
+} from './pass_through_flags_utils';
 
 const HEALTH_SEMANTIC_MAP: Record<
   string,
@@ -173,6 +177,8 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     'RUNNING': {icon: 'check_circle', colorClass: 'text-green-600'},
     'MISSING': {icon: 'error', colorClass: 'text-red-600'},
   };
+
+const MAX_VISIBLE_PASS_THROUGH_FLAGS = 4;
 
 /**
  * Component for displaying an overview of a host, including its basic
@@ -283,6 +289,25 @@ export class HostOverviewPage {
   }
 
   readonly passThroughFlags = this.actionService.passThroughFlags;
+  readonly flagsExpanded = linkedSignal({
+    source: this.host,
+    computation: () => false,
+  });
+  readonly parsedPassThroughFlags = computed<ParsedPassThroughFlag[]>(() =>
+    parsePassThroughFlags(this.passThroughFlags()),
+  );
+  readonly visiblePassThroughFlags = computed<ParsedPassThroughFlag[]>(() =>
+    this.flagsExpanded()
+      ? this.parsedPassThroughFlags()
+      : this.parsedPassThroughFlags().slice(0, MAX_VISIBLE_PASS_THROUGH_FLAGS),
+  );
+  readonly hasHiddenPassThroughFlags = computed(
+    () => this.parsedPassThroughFlags().length > MAX_VISIBLE_PASS_THROUGH_FLAGS,
+  );
+
+  toggleFlagsExpanded(): void {
+    this.flagsExpanded.update((expanded) => !expanded);
+  }
 
   deviceDataSource = new MatTableDataSource<DeviceSummary>();
   selection = new SelectionModel<DeviceSummary>(true, []);

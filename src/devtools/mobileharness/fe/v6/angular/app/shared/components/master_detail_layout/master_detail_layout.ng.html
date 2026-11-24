@@ -1,20 +1,27 @@
 <div class="master-detail-layout-container">
-  <!-- Left Sticky Navigation -->
-  <aside class="master-detail-layout-nav-container">
-    <nav class="master-detail-layout-nav">
-      @for (nav of navList(); track nav.id) {
-        <a
-          #navLink
-          href="#{{ nav.id }}"
-          class="master-detail-layout-nav-link"
-          [class.active]="nav.id === activeSection()"
-          (click)="scrollToSection($event, '#' + nav.id)"
-          >{{ nav.label }}</a
+  @if (navList().length > 0) {
+    <div class="master-detail-layout-nav-container">
+      <div class="master-detail-layout-nav-surface">
+        <nav
+          #navListEl
+          class="master-detail-layout-nav"
+          aria-label="Page sections"
         >
-      }
-    </nav>
-  </aside>
-  <!-- End of Left Sticky Navigation -->
+          @for (nav of navList(); track nav.id) {
+            <a
+              #navLink
+              [href]="'#' + nav.id"
+              class="master-detail-layout-nav-link"
+              [class.active]="nav.id === activeSection()"
+              [attr.aria-current]="nav.id === activeSection() ? 'location' : null"
+              (click)="scrollToSection($event, nav.id)"
+              >{{ nav.label }}</a
+            >
+          }
+        </nav>
+      </div>
+    </div>
+  }
   <div class="master-detail-layout-content-cards">
     <ng-content></ng-content>
   </div>

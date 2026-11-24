@@ -158,4 +158,34 @@ describe('HostDetail Component', () => {
 
     expect(title.getTitle()).toBe('OmniLab Console');
   });
+
+  it('renders a Hosts breadcrumb without IP in the top bar and keeps hero copy action', () => {
+    spyOn(hostService, 'getHostOverview').and.returnValue(
+      of(createMockPageData(false)),
+    );
+
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const header = compiled.querySelector('.card-header') as HTMLElement;
+    const hostsLink = header.querySelector<HTMLAnchorElement>('.hosts-link');
+    const hostIdText = header.querySelector<HTMLElement>('.host-id-text');
+
+    expect(hostsLink).not.toBeNull();
+    expect(hostsLink?.textContent?.trim()).toBe('Hosts');
+    expect(hostsLink?.getAttribute('href')).toBe('/hosts');
+    expect(hostIdText?.textContent?.trim()).toBe('host-a-1.example.com');
+    expect(header.textContent).not.toContain('192.168.1.1');
+
+    const heroTitle = compiled.querySelector('.host-title')?.textContent;
+    const copyButton = compiled.querySelector<HTMLButtonElement>(
+      'button[title="Copy host name to clipboard"]',
+    );
+    expect(heroTitle).toContain('host-a-1.example.com');
+    expect(copyButton).not.toBeNull();
+
+    copyButton!.click();
+    expect(mockClipboardService.copyToClipboard).toHaveBeenCalledWith(
+      'host-a-1.example.com',
+    );
+  });
 });

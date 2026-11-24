@@ -1,4 +1,9 @@
-import {ChangeDetectorRef} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  signal,
+} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatDialog, MatDialogRef} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
@@ -22,6 +27,26 @@ import {RemoteControlService} from '../../../../shared/services/remote_control_s
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 
 import {DeviceActionBar} from './device_action_bar';
+
+@Component({
+  standalone: true,
+  imports: [DeviceActionBar],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div
+      style="container: detail-sheet / inline-size;"
+      [style.width.px]="containerWidth()"
+    >
+      <app-device-action-bar [pageData]="pageData()"></app-device-action-bar>
+    </div>
+  `,
+})
+class DeviceActionBarContainerHostComponent {
+  readonly containerWidth = signal(600);
+  readonly pageData = signal<DeviceOverviewPageData>(
+    {} as DeviceOverviewPageData,
+  );
+}
 
 describe('DeviceActionBar', () => {
   let component: DeviceActionBar;
@@ -111,9 +136,10 @@ describe('DeviceActionBar', () => {
 
     mockEnvironment = jasmine.createSpyObj('Environment', ['isGoogleInternal']);
     mockEnvironment.isGoogleInternal.and.returnValue(true);
-    featureEnablementService = jasmine.createSpyObj('FeatureEnablementService', [
-      'isDeviceConfigEnabled',
-    ]);
+    featureEnablementService = jasmine.createSpyObj(
+      'FeatureEnablementService',
+      ['isDeviceConfigEnabled'],
+    );
     featureEnablementService.isDeviceConfigEnabled.and.returnValue(true);
 
     remoteControlService = jasmine.createSpyObj('RemoteControlService', [
@@ -505,5 +531,33 @@ describe('DeviceActionBar', () => {
 
       expect(deviceActionService.configureDevice).not.toHaveBeenCalled();
     });
+  });
+
+  it('folds secondary actions based on detail-sheet container width', () => {
+    const hostFixture = TestBed.createComponent(
+      DeviceActionBarContainerHostComponent,
+    );
+    hostFixture.componentInstance.pageData.set(mockPageData);
+    hostFixture.detectChanges();
+    const compiled = hostFixture.nativeElement as HTMLElement;
+    const smEl = compiled.querySelector<HTMLElement>('.header-actions-sm')!;
+    const xlEl = compiled.querySelector<HTMLElement>('.header-actions-xl')!;
+    const twoXlEl = compiled.querySelector<HTMLElement>('.header-actions-2xl')!;
+
+    expect(getComputedStyle(smEl).display).toBe('flex');
+    expect(getComputedStyle(xlEl).display).toBe('none');
+    expect(getComputedStyle(twoXlEl).display).toBe('none');
+
+    hostFixture.componentInstance.containerWidth.set(920);
+    hostFixture.detectChanges();
+    expect(getComputedStyle(smEl).display).toBe('none');
+    expect(getComputedStyle(xlEl).display).toBe('flex');
+    expect(getComputedStyle(twoXlEl).display).toBe('none');
+
+    hostFixture.componentInstance.containerWidth.set(1160);
+    hostFixture.detectChanges();
+    expect(getComputedStyle(smEl).display).toBe('none');
+    expect(getComputedStyle(xlEl).display).toBe('none');
+    expect(getComputedStyle(twoXlEl).display).toBe('flex');
   });
 });

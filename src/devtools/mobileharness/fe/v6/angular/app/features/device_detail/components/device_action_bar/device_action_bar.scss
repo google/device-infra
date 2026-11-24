@@ -32,13 +32,13 @@
     gap: 0.5rem;
   }
 
-  // sm: up to 1024px
+  // sm: container below 860px
   .header-actions-sm {
     display: flex;
   }
 
-  // xl: 1024px to 1300px
-  @media (min-width: 1024px) {
+  // xl: container 860px to 1119px
+  @container detail-sheet (min-width: 860px) {
     .header-actions-sm {
       display: none;
     }
@@ -47,14 +47,22 @@
     }
   }
 
-  // 2xl: 1300px and up
-  @media (min-width: 1300px) {
+  // 2xl: container 1120px and up
+  @container detail-sheet (min-width: 1120px) {
     .header-actions-xl {
       display: none;
     }
     .header-actions-2xl {
       display: flex;
     }
+  }
+}
+
+@container detail-sheet (max-width: 640px) {
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
 

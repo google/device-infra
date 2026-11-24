@@ -19,13 +19,13 @@
     gap: 0.5rem;
   }
 
-  // sm: up to 1024px
+  // sm: container below 720px
   .header-actions-sm {
     display: flex;
   }
 
-  // xl: 1024px to 1300px
-  @media (min-width: 1024px) {
+  // xl: container 720px to 899px
+  @container detail-sheet (min-width: 720px) {
     .header-actions-sm {
       display: none;
     }
@@ -34,8 +34,8 @@
     }
   }
 
-  // 2xl: 1300px and up
-  @media (min-width: 1300px) {
+  // 2xl: container 900px and up
+  @container detail-sheet (min-width: 900px) {
     .header-actions-xl {
       display: none;
     }
@@ -51,6 +51,14 @@
     &:hover:not(:disabled) {
       background-color: #fad2cf;
     }
+  }
+}
+
+@container detail-sheet (max-width: 640px) {
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
 
