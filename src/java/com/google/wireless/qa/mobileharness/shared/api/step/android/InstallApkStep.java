@@ -387,8 +387,8 @@ public class InstallApkStep implements InstallApkStepConstants {
         || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_INVALID_GMS_VERSION
         || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_DEVICE_SDK_TOO_LOW
         || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ABI_INCOMPATIBLE
-        || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_MISSING_SHARED_LIBRARY
-        || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE
+        || errorId == AndroidErrorId.ANDROID_INSTALLATION_MISSING_SHARED_LIBRARY
+        || errorId == AndroidErrorId.ANDROID_INSTALLATION_UPDATE_INCOMPATIBLE
         || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_SDK_VERSION_NOT_SUPPORT
         || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_PARTIAL_INSTALL_NOT_ALLOWED_ERROR
         || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_VERSION_DOWNGRADE) {

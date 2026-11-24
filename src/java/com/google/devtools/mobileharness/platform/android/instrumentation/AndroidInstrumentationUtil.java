@@ -529,7 +529,7 @@ public class AndroidInstrumentationUtil {
         newId = AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT;
       } else if (e.getMessage() != null
           && e.getMessage().contains("does not have a signature matching the target")) {
-        newId = AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_SIGNATURE_MISMATCH;
+        newId = AndroidErrorId.ANDROID_INSTRUMENTATION_SIGNATURE_MISMATCH;
       } else {
         newId = AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_FAILED;
       }
