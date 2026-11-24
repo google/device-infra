@@ -125,6 +125,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_instrumentation_driver_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:entry_delimiter_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/step/android:install_apk_step",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/step/android:install_apk_step_constants",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
