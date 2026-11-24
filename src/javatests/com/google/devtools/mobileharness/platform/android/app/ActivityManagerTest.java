@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.time.Duration;
 import org.junit.Before;
@@ -122,7 +123,7 @@ public final class ActivityManagerTest {
 
   @Test
   public void getLocale_invalidException() throws MobileHarnessException, InterruptedException {
-    String invalidOutput = "config: ss";
+    String invalidOutput = "config: invalid";
     when(adb.runShellWithRetry(eq(SERIAL), eq(ADB_SHELL_GET_CONFIG), any(Duration.class)))
         .thenReturn(invalidOutput);
     Exception thrown = assertThrows(MobileHarnessException.class, () -> am.getLocale(SERIAL));
@@ -136,5 +137,273 @@ public final class ActivityManagerTest {
         .thenReturn(notFoundOutput);
     Exception thrown = assertThrows(MobileHarnessException.class, () -> am.getLocale(SERIAL));
     assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_languageOnlyWithQualifiers_returnsLanguageWithoutRegion()
+      throws MobileHarnessException {
+    ActivityManager.Locale locale =
+        ActivityManager.parseLocale(
+            "config: ja-ldltr-sw411dp-w411dp-h659dp-normal-notlong-notround");
+
+    assertThat(locale.locale()).isEqualTo("ja");
+    assertThat(locale.language()).isEqualTo("ja");
+    assertThat(locale.region()).isEmpty();
+  }
+
+  @Test
+  public void parseLocale_languageOnlyWithRoundQualifier_returnsLanguageOnly()
+      throws MobileHarnessException {
+    ActivityManager.Locale locale = ActivityManager.parseLocale("config: en-round-notnight");
+
+    assertThat(locale.locale()).isEqualTo("en");
+    assertThat(locale.language()).isEqualTo("en");
+    assertThat(locale.region()).isEmpty();
+  }
+
+  @Test
+  public void parseLocale_bcp47ThreeLetterLanguageAndRegion_returnsNormalizedLocale()
+      throws MobileHarnessException {
+    ActivityManager.Locale locale =
+        ActivityManager.parseLocale("config: b+fil+PH-ldltr-sw411dp-normal");
+
+    assertThat(locale.locale()).isEqualTo("fil-PH");
+    assertThat(locale.language()).isEqualTo("fil");
+    assertThat(locale.region()).isEqualTo("PH");
+  }
+
+  @Test
+  public void parseLocale_bcp47ThreeLetterLanguageOnly_returnsLocaleWithoutRegion()
+      throws MobileHarnessException {
+    ActivityManager.Locale locale = ActivityManager.parseLocale("config: b+fil-ldltr-sw411dp");
+
+    assertThat(locale.locale()).isEqualTo("fil");
+    assertThat(locale.language()).isEqualTo("fil");
+    assertThat(locale.region()).isEmpty();
+  }
+
+  @Test
+  public void parseLocale_bcp47NumericRegion_returnsLocale() throws MobileHarnessException {
+    ActivityManager.Locale locale = ActivityManager.parseLocale("config: b+es+419-ldltr-sw411dp");
+
+    assertThat(locale.locale()).isEqualTo("es-419");
+    assertThat(locale.language()).isEqualTo("es");
+    assertThat(locale.region()).isEqualTo("419");
+  }
+
+  @Test
+  public void parseLocale_bcp47ScriptQualified_returnsLocaleWithLanguageAndRegion()
+      throws MobileHarnessException {
+    ActivityManager.Locale locale =
+        ActivityManager.parseLocale("config: b+zh+Hans+CN-ldltr-sw411dp");
+
+    assertThat(locale.locale()).isEqualTo("zh-Hans-CN");
+    assertThat(locale.language()).isEqualTo("zh");
+    assertThat(locale.region()).isEqualTo("CN");
+  }
+
+  @Test
+  public void parseLocale_bcp47ScriptOnly_returnsLocaleWithoutRegion()
+      throws MobileHarnessException {
+    ActivityManager.Locale locale = ActivityManager.parseLocale("config: b+sr+Latn-ldltr-sw411dp");
+
+    assertThat(locale.locale()).isEqualTo("sr-Latn");
+    assertThat(locale.language()).isEqualTo("sr");
+    assertThat(locale.region()).isEmpty();
+  }
+
+  @Test
+  public void parseLocale_bcp47WithMccMncAndMultiLocaleList_returnsPrimaryLocale()
+      throws MobileHarnessException {
+    ActivityManager.Locale locale =
+        ActivityManager.parseLocale(
+            "config: mcc310-mnc410-b+zh+Hans+CN,en-rUS-ldltr-sw411dp\r\nabi: arm64-v8a");
+
+    assertThat(locale.locale()).isEqualTo("zh-Hans-CN");
+    assertThat(locale.language()).isEqualTo("zh");
+    assertThat(locale.region()).isEqualTo("CN");
+  }
+
+  @Test
+  public void parseLocale_traditionalMultiLocaleList_returnsPrimaryLocale()
+      throws MobileHarnessException {
+    ActivityManager.Locale locale = ActivityManager.parseLocale("config: en-rUS,ja-ldltr-sw411dp");
+
+    assertThat(locale.locale()).isEqualTo("en-US");
+    assertThat(locale.language()).isEqualTo("en");
+    assertThat(locale.region()).isEqualTo("US");
+  }
+
+  @Test
+  public void parseLocale_legacyHebrewCode_normalizesToHe() throws MobileHarnessException {
+    ActivityManager.Locale locale = ActivityManager.parseLocale("config: iw-rIL-ldltr-sw411dp");
+
+    assertThat(locale.locale()).isEqualTo("he-IL");
+    assertThat(locale.language()).isEqualTo("he");
+    assertThat(locale.region()).isEqualTo("IL");
+  }
+
+  @Test
+  public void parseLocale_legacyIndonesianCode_normalizesToId() throws MobileHarnessException {
+    ActivityManager.Locale locale = ActivityManager.parseLocale("config: in-rID-ldltr-sw411dp");
+
+    assertThat(locale.locale()).isEqualTo("id-ID");
+    assertThat(locale.language()).isEqualTo("id");
+    assertThat(locale.region()).isEqualTo("ID");
+  }
+
+  @Test
+  public void parseLocale_legacyYiddishCode_normalizesToYi() throws MobileHarnessException {
+    ActivityManager.Locale locale = ActivityManager.parseLocale("config: ji-ldltr-sw411dp");
+
+    assertThat(locale.locale()).isEqualTo("yi");
+    assertThat(locale.language()).isEqualTo("yi");
+    assertThat(locale.region()).isEmpty();
+  }
+
+  @Test
+  public void parseLocale_nonLocaleConfigQualifiers_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> ActivityManager.parseLocale("config: ldltr-sw411dp"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_carUiModeQualifier_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> ActivityManager.parseLocale("config: car-ldltr-sw411dp"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_mccMncOnlyWithoutLocale_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> ActivityManager.parseLocale("config: mcc310-mnc410"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_emptyBcp47Tag_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> ActivityManager.parseLocale("config: b+-ldltr"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_invalidBcp47Subtag_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> ActivityManager.parseLocale("config: b+123-ldltr"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_undeterminedBcp47Language_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> ActivityManager.parseLocale("config: b+und-ldltr"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_malformedTraditionalRegion_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> ActivityManager.parseLocale("config: en-rUSA"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_emptyTraditionalRegionBeforeQualifier_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> ActivityManager.parseLocale("config: en-r-ldltr"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_numericTraditionalRegionBeforeQualifier_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> ActivityManager.parseLocale("config: en-r1-ldltr"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_incompleteTraditionalRegionBeforeComma_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> ActivityManager.parseLocale("config: en-r,ja"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void parseLocale_trailingCommaAfterLocale_throwsParseError() {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> ActivityManager.parseLocale("config: en-rUS,"));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_AM_PARSE_LOCALE_ERROR);
+    assertThat(thrown).hasMessageThat().contains("Failed to parse locale from am");
+  }
+
+  @Test
+  public void localeMatches_caseInsensitiveAndOmittedCountry_returnsTrue() {
+    ActivityManager.Locale locale = ActivityManager.Locale.create("en-US");
+
+    assertThat(locale.matches("EN", "us")).isTrue();
+    assertThat(locale.matches("en", "")).isTrue();
+    assertThat(locale.matches("en", /* targetCountry= */ null)).isTrue();
+  }
+
+  @Test
+  public void localeMatches_scriptQualifiedLocale_matchesLanguageAndRegion() {
+    ActivityManager.Locale locale = ActivityManager.Locale.create("zh-Hans-CN");
+
+    assertThat(locale.matches("zh", "CN")).isTrue();
+    assertThat(locale.matches("zh", "TW")).isFalse();
+  }
+
+  @Test
+  public void localeMatches_legacyAndModernIso639Codes_matchAcrossForms() {
+    assertThat(ActivityManager.Locale.create("iw-IL").matches("he", "IL")).isTrue();
+    assertThat(ActivityManager.Locale.create("he-IL").matches("iw", "IL")).isTrue();
+    assertThat(ActivityManager.Locale.create("in-ID").matches("id", "ID")).isTrue();
+    assertThat(ActivityManager.Locale.create("ji").matches("yi", "")).isTrue();
+  }
+
+  @Test
+  public void localeMatches_countryRequestedWhenRegionEmpty_returnsFalse() {
+    ActivityManager.Locale locale = ActivityManager.Locale.create("ja");
+
+    assertThat(locale.matches("ja", "JP")).isFalse();
+    assertThat(locale.matches("ja", "")).isTrue();
   }
 }
