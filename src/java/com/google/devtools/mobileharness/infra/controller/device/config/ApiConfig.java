@@ -16,10 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.config;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.DetectorSpecs;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.OverSshDevice;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.protobuf.Any;
@@ -66,8 +68,16 @@ public interface ApiConfig {
   /** Gets the required dimensions of the given device. */
   List<StrPair> getRequiredDimensions(String deviceControlId);
 
-  /** Gets all over ssh devices info. */
+  /**
+   * Gets all over ssh devices info.
+   *
+   * @deprecated Use {@link #getOverSshDevices()} instead.
+   */
+  @Deprecated
   Map<String, List<String>> getOverSshDevice();
+
+  /** Gets all configured over-SSH devices. */
+  ImmutableList<OverSshDevice> getOverSshDevices();
 
   /** Gets the wifi config for the given device. */
   WifiConfig getDefaultWifi(String deviceControlId);

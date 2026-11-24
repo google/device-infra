@@ -87,6 +87,8 @@ message OverSshDevice {
   string password = 3;
   // The device type of ssh device, Required
   string ssh_device_type = 4;
+  // The SSH port to connect to. Defaults to 22 when unset.
+  optional int32 port = 5;
 }
 
 // The configuration of a device type.

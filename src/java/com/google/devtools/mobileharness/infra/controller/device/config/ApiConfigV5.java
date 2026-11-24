@@ -256,6 +256,7 @@ public class ApiConfigV5 implements ApiConfig {
   }
 
   @Override
+  @Deprecated
   public Map<String, List<String>> getOverSshDevice() {
     Map<String, List<String>> sshDeviceInfo = new HashMap<>();
     List<OverSshDevice> sshDeviceList = labConfig.getOverSshList();
@@ -265,6 +266,11 @@ public class ApiConfigV5 implements ApiConfig {
           ImmutableList.of(device.getUsername(), device.getPassword(), device.getSshDeviceType()));
     }
     return sshDeviceInfo;
+  }
+
+  @Override
+  public ImmutableList<OverSshDevice> getOverSshDevices() {
+    return ImmutableList.copyOf(labConfig.getOverSshList());
   }
 
   /**
