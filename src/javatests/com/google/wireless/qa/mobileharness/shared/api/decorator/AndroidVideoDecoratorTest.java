@@ -174,6 +174,48 @@ public final class AndroidVideoDecoratorTest {
   }
 
   @Test
+  public void run_autoMode_realDeviceUseLowSpecVideoTrue_usesScreenshotRecorder() throws Exception {
+    Device realDevice = mockDevice(FakeAndroidRealDevice.class);
+    when(realDevice.getDimension("use_low_spec_video")).thenReturn(ImmutableList.of("true"));
+    setUpDecorator(realDevice, AUTO_DETECT_SPEC);
+
+    decorator.run(testInfo);
+
+    verify(screenshotRecorder).start(DEVICE_ID, TEST_ID, genDir, AUTO_DETECT_SPEC, REMAINING_TIME);
+    verify(screenshotRecorder).stop();
+    verifyNoInteractions(screenrecord, emulatorConsoleRecorder, systemSettingUtil);
+  }
+
+  @Test
+  public void run_autoMode_realDeviceUseLowSpecVideoFalse_usesScreenrecord() throws Exception {
+    Device realDevice = mockDevice(FakeAndroidRealDevice.class);
+    when(realDevice.getDimension("use_low_spec_video")).thenReturn(ImmutableList.of("false"));
+    setUpDecorator(realDevice, AUTO_DETECT_SPEC);
+    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID))
+        .thenReturn(Screenrecord.MIN_SDK_VERSION_FOR_UNLIMITED_RECORDING);
+
+    decorator.run(testInfo);
+
+    verify(screenrecord).start(DEVICE_ID, TEST_ID, genDir, AUTO_DETECT_SPEC, REMAINING_TIME);
+    verify(screenrecord).stop();
+    verifyNoInteractions(screenshotRecorder, emulatorConsoleRecorder);
+  }
+
+  @Test
+  public void run_explicitHdScreenRecord_realDeviceUseLowSpecVideoTrue_usesScreenrecord()
+      throws Exception {
+    Device realDevice = mockDevice(FakeAndroidRealDevice.class);
+    when(realDevice.getDimension("use_low_spec_video")).thenReturn(ImmutableList.of("true"));
+    setUpDecorator(realDevice, HD_SCREEN_RECORD_SPEC);
+
+    decorator.run(testInfo);
+
+    verify(screenrecord).start(DEVICE_ID, TEST_ID, genDir, HD_SCREEN_RECORD_SPEC, REMAINING_TIME);
+    verify(screenrecord).stop();
+    verifyNoInteractions(screenshotRecorder, emulatorConsoleRecorder, systemSettingUtil);
+  }
+
+  @Test
   public void run_autoMode_realDeviceWithoutVideoRecorder_usesScreenshotRecorder()
       throws Exception {
     setUpDecorator(FakeAndroidRealDevice.class, AUTO_DETECT_SPEC);

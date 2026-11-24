@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import com.google.common.base.Ascii;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
@@ -64,6 +65,8 @@ public class AndroidVideoDecorator extends LifecycleDecorator
 
   /** Directory name of the screenshots. */
   public static final String SCREENSHOTS_DIR_NAME = "screenshots";
+
+  private static final String DIMENSION_USE_LOW_SPEC_VIDEO = "use_low_spec_video";
 
   private AndroidVideoDecoratorSpec spec;
   private AndroidVideoRecorder recorder;
@@ -258,6 +261,7 @@ public class AndroidVideoDecorator extends LifecycleDecorator
    *
    * <ul>
    *   <li>Emulator: EMULATOR_CONSOLE.
+   *   <li>Physical device with {@code use_low_spec_video=true} dimension: STITCHED_SCREENSHOTS.
    *   <li>Physical device with SDK >= 34: HD_SCREEN_RECORD (native screenrecord without time
    *       limit).
    *   <li>Physical device with a supported 32-bit ARM SDK in [{@code
@@ -271,8 +275,16 @@ public class AndroidVideoDecorator extends LifecycleDecorator
     if (deviceType.contains("Emulator")) {
       return AndroidVideoDecoratorSpec.VideoTypeSpecCase.EMULATOR_CONSOLE;
     }
-    // TODO: Fall back to STITCHED_SCREENSHOTS if the device reports (via device
-    // property) that screen recording is not supported.
+    if (useLowSpecVideo(getDevice())) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Device %s has %s=true dimension, using STITCHED_SCREENSHOTS.",
+              deviceId, DIMENSION_USE_LOW_SPEC_VIDEO);
+      return AndroidVideoDecoratorSpec.VideoTypeSpecCase.STITCHED_SCREENSHOTS;
+    }
     int sdkVersion;
     try {
       sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
@@ -289,6 +301,11 @@ public class AndroidVideoDecorator extends LifecycleDecorator
       return AndroidVideoDecoratorSpec.VideoTypeSpecCase.HD_SCREEN_RECORD;
     }
     return AndroidVideoDecoratorSpec.VideoTypeSpecCase.STITCHED_SCREENSHOTS;
+  }
+
+  private static boolean useLowSpecVideo(Device device) {
+    List<String> values = device.getDimension(DIMENSION_USE_LOW_SPEC_VIDEO);
+    return values != null && values.stream().anyMatch(v -> Ascii.equalsIgnoreCase(v, "true"));
   }
 
   private void cleanupVideoFiles(TestInfo testInfo, List<Path> generatedFiles)
