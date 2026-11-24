@@ -68,7 +68,13 @@ public class Screenrecord implements AndroidVideoRecorder {
   /** Shell command to SIGKILL screenrecord on the device if it does not stop gracefully. */
   @VisibleForTesting static final String FORCE_STOP_CMD = "pkill -9 screenrecord";
 
-  private static final String DEVICE_DIR = "/data/local/tmp";
+  /**
+   * Video path on the device. It does not contain the test ID: a device records one test at a time,
+   * and a test ID may contain "/" (e.g., the ID of a sub-device test of {@code
+   * MoblyDecoratorAdapter}), which would point the path into a directory that does not exist.
+   */
+  private static final String DEVICE_VIDEO_PATH = "/data/local/tmp/mh_screenrecord.mp4";
+
   private static final Pattern SIZE_PATTERN = Pattern.compile("\\d+x\\d+");
 
   private final AndroidMediaUtil androidMediaUtil;
@@ -77,7 +83,6 @@ public class Screenrecord implements AndroidVideoRecorder {
   private final Adb adb;
 
   private String deviceId;
-  private String deviceVideoPath;
   private Path hostVideoPath;
   private CommandProcess process;
 
@@ -109,7 +114,6 @@ public class Screenrecord implements AndroidVideoRecorder {
       throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Starting screenrecord recorder...");
     this.deviceId = deviceId;
-    deviceVideoPath = String.format("%s/mh_screenrecord_%s.mp4", DEVICE_DIR, testId);
     hostVideoPath = genFileDir.resolve(VIDEO_FILE_NAME);
 
     AndroidVideoDecoratorSpec.HdScreenRecord config = spec.getHdScreenRecord();
@@ -118,7 +122,7 @@ public class Screenrecord implements AndroidVideoRecorder {
             MAX_BIT_RATE,
             Math.max(MIN_BIT_RATE, config.hasBitRate() ? config.getBitRate() : DEFAULT_BIT_RATE));
     ScreenRecordArgs.Builder args =
-        ScreenRecordArgs.builder(deviceVideoPath).setBitRate(bitRate).setVerbose(true);
+        ScreenRecordArgs.builder(DEVICE_VIDEO_PATH).setBitRate(bitRate).setVerbose(true);
 
     if (config.hasResolution()) {
       if (SIZE_PATTERN.matcher(config.getResolution()).matches()) {
@@ -174,7 +178,7 @@ public class Screenrecord implements AndroidVideoRecorder {
     }
 
     try {
-      androidFileUtil.pull(deviceId, deviceVideoPath, hostVideoPath.toString());
+      androidFileUtil.pull(deviceId, DEVICE_VIDEO_PATH, hostVideoPath.toString());
     } finally {
       removeDeviceVideoFile();
     }
@@ -203,10 +207,10 @@ public class Screenrecord implements AndroidVideoRecorder {
 
   private void removeDeviceVideoFile() throws InterruptedException {
     try {
-      androidFileUtil.removeFiles(deviceId, deviceVideoPath);
+      androidFileUtil.removeFiles(deviceId, DEVICE_VIDEO_PATH);
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
-          "Failed to remove screenrecord video %s on device %s.", deviceVideoPath, deviceId);
+          "Failed to remove screenrecord video %s on device %s.", DEVICE_VIDEO_PATH, deviceId);
     }
   }
 

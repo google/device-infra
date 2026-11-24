@@ -29,6 +29,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -63,7 +64,7 @@ public final class ScreenrecordTest {
 
   private static final String DEVICE_ID = "device_id";
   private static final String TEST_ID = "test_id";
-  private static final String DEVICE_VIDEO_PATH = "/data/local/tmp/mh_screenrecord_test_id.mp4";
+  private static final String DEVICE_VIDEO_PATH = "/data/local/tmp/mh_screenrecord.mp4";
 
   @Mock private AndroidMediaUtil androidMediaUtil;
   @Mock private AndroidFileUtil androidFileUtil;
@@ -98,6 +99,23 @@ public final class ScreenrecordTest {
     assertThat(args.bitRate()).hasValue(Screenrecord.DEFAULT_BIT_RATE);
     assertThat(args.size()).isAbsent();
     assertThat(args.verbose()).isTrue();
+  }
+
+  @Test
+  public void start_testIdWithSlash_recordsToFixedDevicePath() throws Exception {
+    recorder.start(
+        DEVICE_ID,
+        "root_test_id/device_id",
+        genDir,
+        AndroidVideoDecoratorSpec.getDefaultInstance());
+
+    ScreenRecordArgs expectedArgs =
+        ScreenRecordArgs.builder(DEVICE_VIDEO_PATH)
+            .setBitRate(Screenrecord.DEFAULT_BIT_RATE)
+            .setVerbose(true)
+            .setTimeLimit(Optional.of(Duration.ZERO))
+            .build();
+    assertThat(captureRecordScreenArgs()).isEqualTo(expectedArgs);
   }
 
   @Test
