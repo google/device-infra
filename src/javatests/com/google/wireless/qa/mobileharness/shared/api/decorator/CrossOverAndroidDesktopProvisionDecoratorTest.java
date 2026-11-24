@@ -765,9 +765,7 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
         .hasMessageThat()
         .contains("Failed to connect to test_dut:5555 via ADB after CrossOver provisioning");
     assertThat(thrown.getErrorId())
-        .isEqualTo(
-            AndroidErrorId
-                .CROSSOVER_ANDROID_DESKTOP_PROVISION_DECORATOR_POST_PROVISION_CONNECT_ADB_ERROR);
+        .isEqualTo(AndroidErrorId.CROSSOVER_ANDROID_DESKTOP_PROVISION_POST_CONNECT_ADB_ERROR);
     verify(properties).add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
   }
 
@@ -799,9 +797,7 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
             "Failed to connect to test_dut:5555 via ADB after CrossOver provisioning: device did"
                 + " not return a valid Android build ID");
     assertThat(thrown.getErrorId())
-        .isEqualTo(
-            AndroidErrorId
-                .CROSSOVER_ANDROID_DESKTOP_PROVISION_DECORATOR_POST_PROVISION_DEVICE_NOT_RESPONSIVE);
+        .isEqualTo(AndroidErrorId.CROSSOVER_ANDROID_DESKTOP_PROVISION_POST_DEVICE_UNRESPONSIVE);
     verify(androidAdbUtil).connect("test_dut:5555");
     verify(properties).add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
   }

@@ -96,7 +96,7 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
   /** The following exceptions for running the binary are considered as test failures. */
   private static final ImmutableSet<ErrorId> ERROR_IDS_OF_TEST_FAILURES =
       ImmutableSet.of(
-          AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_FAILURE,
+          AndroidErrorId.ANDROID_RUN_NATIVE_BIN_FAILURE,
           AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_NULL_COMMAND_RESULT_ERROR,
           AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_NON_ZERO_EXIT_CODE_FROM_ECHO,
           AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR,

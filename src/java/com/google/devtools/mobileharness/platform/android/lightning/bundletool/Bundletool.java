@@ -164,7 +164,7 @@ public class Bundletool {
       ZipEntry tocEntry = zipFile.getEntry("toc.pb");
       if (tocEntry == null) {
         throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_BUNDLETOOL_EXTRACT_PACKAGE_NAME_PARSING_ERROR,
+            AndroidErrorId.ANDROID_APK_SET_EXTRACT_PACKAGE_NAME_ERROR,
             "toc.pb, containing the package name, not found in " + apksPath);
       }
       try (InputStream inputStream = zipFile.getInputStream(tocEntry)) {
@@ -182,7 +182,7 @@ public class Bundletool {
       }
     } catch (ZipException | InvalidProtocolBufferException e) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_BUNDLETOOL_EXTRACT_PACKAGE_NAME_PARSING_ERROR,
+          AndroidErrorId.ANDROID_APK_SET_EXTRACT_PACKAGE_NAME_ERROR,
           "Failed to parse package name from toc.pb in " + apksPath,
           e);
     } catch (IOException e) {
@@ -192,7 +192,7 @@ public class Bundletool {
           e);
     }
     throw new MobileHarnessException(
-        AndroidErrorId.ANDROID_BUNDLETOOL_EXTRACT_PACKAGE_NAME_PARSING_ERROR,
+        AndroidErrorId.ANDROID_APK_SET_EXTRACT_PACKAGE_NAME_ERROR,
         "Package name not found in " + apksPath);
   }
 

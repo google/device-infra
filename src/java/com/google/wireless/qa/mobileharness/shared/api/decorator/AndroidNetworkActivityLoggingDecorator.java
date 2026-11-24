@@ -170,7 +170,7 @@ public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
           getDevice().getDeviceId(), DEVICE_ADMIN_PACKAGE_ID);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_NETWORK_ACTIVITY_LOGGING_DECORATOR_CHECK_DEVICE_ADMIN_ERROR,
+          AndroidErrorId.ANDROID_NETWORK_ACTIVITY_LOGGING_CHECK_DEVICE_ADMIN_ERROR,
           "Failed to check if device admin is available",
           e);
     }
@@ -246,7 +246,7 @@ public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
       return adbUtil.settings(utilArgs, spec, SHORT_COMMAND_TIMEOUT);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_NETWORK_ACTIVITY_LOGGING_DECORATOR_SETTINGS_COMMAND_ERROR,
+          AndroidErrorId.ANDROID_NETWORK_ACTIVITY_LOGGING_SETTINGS_COMMAND_ERROR,
           "Failed to run settings command: " + spec,
           e);
     }
