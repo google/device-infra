@@ -171,7 +171,7 @@ public class DynamicConfigResolver {
     } catch (ExecutionException e) {
       Throwables.throwIfInstanceOf(e.getCause(), MobileHarnessException.class);
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARTNER_SERVER_ERROR,
+          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_PARTNER_SERVER_ERROR,
           "Failed to get dynamic config from android partner remote server.",
           e);
     }
@@ -185,7 +185,7 @@ public class DynamicConfigResolver {
           .collect(toImmutableMap(Map.Entry::getKey, e -> ImmutableList.copyOf(e.getValue())));
     } catch (JsonParseException e) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARTNER_SERVER_ERROR,
+          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_PARTNER_SERVER_ERROR,
           "Invalid dynamic config from android partner remote server.",
           e);
     }
@@ -207,7 +207,7 @@ public class DynamicConfigResolver {
       }
     } catch (IOException | URISyntaxException | IllegalArgumentException e) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARTNER_SERVER_ERROR,
+          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_PARTNER_SERVER_ERROR,
           "Failed to access android partner remote server over internet.",
           e);
     }

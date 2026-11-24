@@ -310,8 +310,7 @@ public final class AndroidInstallMainlineModulesDecoratorTest {
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     assertThat(exception.getErrorId())
-        .isEqualTo(
-            AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_DECORATOR_MODULE_INSTALLATION_FAILURE);
+        .isEqualTo(AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_INSTALLATION_FAILURE);
     assertThat(exception)
         .hasMessageThat()
         .contains(
@@ -364,8 +363,7 @@ public final class AndroidInstallMainlineModulesDecoratorTest {
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     assertThat(exception.getErrorId())
-        .isEqualTo(
-            AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_DECORATOR_MODULE_INSTALLATION_FAILURE);
+        .isEqualTo(AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_INSTALLATION_FAILURE);
     assertThat(exception)
         .hasMessageThat()
         .contains(
@@ -412,8 +410,7 @@ public final class AndroidInstallMainlineModulesDecoratorTest {
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     assertThat(exception.getErrorId())
-        .isEqualTo(
-            AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_DECORATOR_MODULE_INSTALLATION_FAILURE);
+        .isEqualTo(AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_INSTALLATION_FAILURE);
     assertThat(exception)
         .hasMessageThat()
         .contains("Failed to install mainline modules: [Package: base is not installed]");
@@ -447,14 +444,13 @@ public final class AndroidInstallMainlineModulesDecoratorTest {
 
     when(androidPackageManagerUtil.getApkPackageName("/usr/local/test/gen/module1.apks/base1.apk"))
         .thenThrow(
-            new MobileHarnessException(AndroidErrorId.ANDROID_AAPT_GET_APK_PACKAGE_NAME_ERROR, ""));
+            new MobileHarnessException(AndroidErrorId.ANDROID_GET_APK_PACKAGE_NAME_ERROR, ""));
 
     MobileHarnessException exception =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     assertThat(exception.getErrorId())
-        .isEqualTo(
-            AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_DECORATOR_PACKAGE_INFO_PARSING_ERROR);
+        .isEqualTo(AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_PACKAGE_INFO_PARSING_ERROR);
     assertThat(exception)
         .hasMessageThat()
         .contains(
