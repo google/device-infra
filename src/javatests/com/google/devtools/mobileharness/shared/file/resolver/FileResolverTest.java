@@ -42,6 +42,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -254,8 +256,8 @@ public class FileResolverTest {
 
           @Override
           public <T> ListenableFuture<T> submit(Callable<T> task) {
-            // Submission 1 is preBatchProcess, 2 is the first file, 3 is the second file.
-            if (submitCalls.incrementAndGet() == 3) {
+            // Submission 1 is the first file, 2 is the second file.
+            if (submitCalls.incrementAndGet() == 2) {
               try {
                 if (!firstFileResolving.await(10, SECONDS)) {
                   throw new AssertionError("First file did not start resolving");
@@ -335,6 +337,41 @@ public class FileResolverTest {
   }
 
   @Test
+  public void batchResolve_directExecutor_callerInterrupted_throwsInterruptedException() {
+    List<String> resolvedPaths = new ArrayList<>();
+    AbstractFileResolver interruptingResolver =
+        new AbstractFileResolver(MoreExecutors.newDirectExecutorService()) {
+          @Override
+          protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
+            return true;
+          }
+
+          @Override
+          protected ResolveResult actuallyResolve(ResolveSource resolveSource) {
+            resolvedPaths.add(resolveSource.path());
+            // The file ends normally in spite of the interrupt.
+            Thread.currentThread().interrupt();
+            return ResolveResult.of(ImmutableList.of(), ImmutableMap.of(), resolveSource);
+          }
+        };
+
+    try {
+      assertThrows(
+          InterruptedException.class,
+          () ->
+              interruptingResolver.resolve(
+                  ImmutableList.of(
+                      ResolveSource.create("/a/first", ImmutableMap.of(), "/", "/"),
+                      ResolveSource.create("/a/second", ImmutableMap.of(), "/", "/"))));
+
+      assertThat(resolvedPaths).containsExactly("/a/first");
+    } finally {
+      // The interrupt must not reach the tests that run after this one.
+      boolean unused = Thread.interrupted();
+    }
+  }
+
+  @Test
   public void batchResolve_earlierFileFailsMidSubmission_skipsLaterFiles() throws Exception {
     CountDownLatch allowFirstToFail = new CountDownLatch(1);
     CountDownLatch firstFailureHandled = new CountDownLatch(1);
@@ -353,12 +390,12 @@ public class FileResolverTest {
           @Override
           public <T> ListenableFuture<T> submit(Callable<T> task) {
             int call = submitCalls.incrementAndGet();
-            if (call == 2) {
+            if (call == 1) {
               ListenableFuture<T> future = super.submit(task);
               firstFileFuture.set(future);
               return future;
             }
-            if (call == 3) {
+            if (call == 2) {
               // Registered after AbstractFileResolver's listener so FIFO completion guarantees the
               // batch-failure flag is set before the third file is checked.
               firstFileFuture.get().addListener(firstFailureHandled::countDown, directExecutor());
@@ -406,9 +443,119 @@ public class FileResolverTest {
       batchFuture.addListener(batchDone::countDown, directExecutor());
 
       assertThat(batchDone.await(10, SECONDS)).isTrue();
-      assertThat(submitCalls.get()).isEqualTo(3);
+      assertThat(submitCalls.get()).isEqualTo(2);
     } finally {
       rawThreadPool.shutdownNow();
+    }
+  }
+
+  @Test
+  public void batchResolve_cancelledWhileFileRunsOnSubmittingThread_interruptsAllFiles()
+      throws Exception {
+    CountDownLatch bothFilesResolving = new CountDownLatch(2);
+    CountDownLatch bothFilesInterrupted = new CountDownLatch(2);
+    CountDownLatch neverCountedDown = new CountDownLatch(1);
+    AtomicInteger resolveCalls = new AtomicInteger();
+    // One thread runs the batch and the other the first file, so the second file runs on the
+    // thread of the batch, which is submitting it.
+    ListeningExecutorService callerRunsThreadPool = newCallerRunsThreadPool(/* threads= */ 2);
+    AbstractFileResolver blockingResolver =
+        new AbstractFileResolver(callerRunsThreadPool) {
+          @Override
+          protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
+            return true;
+          }
+
+          @Override
+          protected ResolveResult actuallyResolve(ResolveSource resolveSource)
+              throws InterruptedException {
+            resolveCalls.incrementAndGet();
+            bothFilesResolving.countDown();
+            try {
+              neverCountedDown.await();
+            } catch (InterruptedException e) {
+              bothFilesInterrupted.countDown();
+              throw e;
+            }
+            return ResolveResult.of(ImmutableList.of(), ImmutableMap.of(), resolveSource);
+          }
+        };
+
+    try {
+      ListenableFuture<List<Optional<ResolveResult>>> batchFuture =
+          blockingResolver.resolveAsync(
+              ImmutableList.of(
+                  ResolveSource.create("/a/first", ImmutableMap.of(), "/", "/"),
+                  ResolveSource.create("/a/second", ImmutableMap.of(), "/", "/"),
+                  ResolveSource.create("/a/third", ImmutableMap.of(), "/", "/")));
+      assertThat(bothFilesResolving.await(10, SECONDS)).isTrue();
+
+      assertThat(batchFuture.cancel(/* mayInterruptIfRunning= */ true)).isTrue();
+
+      assertThat(bothFilesInterrupted.await(10, SECONDS)).isTrue();
+      // The batch submits nothing more once its thread is done.
+      callerRunsThreadPool.shutdown();
+      assertThat(callerRunsThreadPool.awaitTermination(10, SECONDS)).isTrue();
+      assertThat(resolveCalls.get()).isEqualTo(2);
+    } finally {
+      callerRunsThreadPool.shutdownNow();
+    }
+  }
+
+  @Test
+  public void batchResolve_cancelledFileOnSubmittingThreadEndsNormally_submitsNoMoreFiles()
+      throws Exception {
+    CountDownLatch bothFilesResolving = new CountDownLatch(2);
+    CountDownLatch firstFileInterrupted = new CountDownLatch(1);
+    CountDownLatch neverCountedDown = new CountDownLatch(1);
+    AtomicInteger resolveCalls = new AtomicInteger();
+    // One thread runs the batch and the other the first file, so the second file runs on the
+    // thread of the batch, which is submitting it.
+    ListeningExecutorService callerRunsThreadPool = newCallerRunsThreadPool(/* threads= */ 2);
+    AbstractFileResolver interruptKeepingResolver =
+        new AbstractFileResolver(callerRunsThreadPool) {
+          @Override
+          protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
+            return true;
+          }
+
+          @Override
+          protected ResolveResult actuallyResolve(ResolveSource resolveSource)
+              throws InterruptedException {
+            resolveCalls.incrementAndGet();
+            bothFilesResolving.countDown();
+            try {
+              neverCountedDown.await();
+            } catch (InterruptedException e) {
+              if (resolveSource.path().equals("/a/first")) {
+                firstFileInterrupted.countDown();
+                throw e;
+              }
+              // The file on the submitting thread keeps the interrupt and ends normally.
+              Thread.currentThread().interrupt();
+            }
+            return ResolveResult.of(ImmutableList.of(), ImmutableMap.of(), resolveSource);
+          }
+        };
+
+    try {
+      ListenableFuture<List<Optional<ResolveResult>>> batchFuture =
+          interruptKeepingResolver.resolveAsync(
+              ImmutableList.of(
+                  ResolveSource.create("/a/first", ImmutableMap.of(), "/", "/"),
+                  ResolveSource.create("/a/second", ImmutableMap.of(), "/", "/"),
+                  ResolveSource.create("/a/third", ImmutableMap.of(), "/", "/")));
+      assertThat(bothFilesResolving.await(10, SECONDS)).isTrue();
+
+      assertThat(batchFuture.cancel(/* mayInterruptIfRunning= */ true)).isTrue();
+
+      assertThat(firstFileInterrupted.await(10, SECONDS)).isTrue();
+      // The batch submits nothing more once its thread is done.
+      callerRunsThreadPool.shutdown();
+      assertThat(callerRunsThreadPool.awaitTermination(10, SECONDS)).isTrue();
+      assertThat(resolveCalls.get()).isEqualTo(2);
+    } finally {
+      callerRunsThreadPool.shutdownNow();
     }
   }
 
@@ -464,6 +611,23 @@ public class FileResolverTest {
     resolver.setSuccessor(new FileResolverUnderTest(null, Duration.ofHours(2)));
 
     assertThat(resolver.getResolveTimeout()).isEqualTo(Duration.ofHours(9));
+  }
+
+  /**
+   * Returns a pool of {@code threads} threads that queues nothing: with all of them busy, a task
+   * runs on the thread that submits it.
+   */
+  private static ListeningExecutorService newCallerRunsThreadPool(int threads) {
+    return MoreExecutors.listeningDecorator(
+        new ThreadPoolExecutor(
+            threads,
+            threads,
+            /* keepAliveTime= */ 0L,
+            SECONDS,
+            new SynchronousQueue<>(),
+            // Unlike ThreadPoolExecutor.CallerRunsPolicy, this also runs a task submitted after
+            // shutdown, so a test can wait for the pool to end and still see a late submission.
+            (task, executor) -> task.run()));
   }
 
   private class FileResolverUnderTest extends AbstractFileResolver {

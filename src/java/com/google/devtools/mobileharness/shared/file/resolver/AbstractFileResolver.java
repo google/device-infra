@@ -160,17 +160,20 @@ public abstract class AbstractFileResolver implements FileResolver {
    * Resolves multiple files asynchronously.
    *
    * <p>If any file fails to resolve, unfinished resolutions in the same batch are cancelled with
-   * interruption and any remaining unsubmitted files are skipped.
+   * interruption and any remaining unsubmitted files are skipped. A file that the executor runs on
+   * the thread submitting the batch is not interrupted, since that thread may be the caller's: the
+   * batch fails once that file ends.
    */
   @Override
   public final ListenableFuture<List<Optional<ResolveResult>>> resolveAsync(
       List<ResolveSource> resolveSources) {
-    ListenableFuture<Set<ResolveResult>> preBatchProcessFuture =
-        executorService.submit(() -> preBatchProcess(resolveSources));
+    // Pre-batch processing and the submission of the files are one task, which cancelling the
+    // returned future interrupts. An executor may run a file on the thread that submits it, and
+    // nothing else stops that thread before it has submitted every file.
+    return Futures.submitAsync(
+        () -> {
+          Set<ResolveResult> unused = preBatchProcess(resolveSources);
 
-    return Futures.transformAsync(
-        preBatchProcessFuture,
-        preBachProcessResult -> {
           List<ListenableFuture<Optional<ResolveResult>>> fileResolveFutures = new ArrayList<>();
 
           logger.atInfo().log(
@@ -180,6 +183,10 @@ public abstract class AbstractFileResolver implements FileResolver {
           AtomicBoolean batchFailed = new AtomicBoolean();
           try {
             for (ResolveSource source : resolveSources) {
+              // A file that ran on this thread may have ended normally in spite of an interrupt.
+              if (Thread.interrupted()) {
+                throw new InterruptedException("Interrupted while submitting files to resolve");
+              }
               if (batchFailed.get()) {
                 break;
               }
@@ -193,7 +200,7 @@ public abstract class AbstractFileResolver implements FileResolver {
                   },
                   directExecutor());
             }
-          } catch (RuntimeException | Error e) {
+          } catch (InterruptedException | RuntimeException | Error e) {
             cancelUnfinished(resolveSources, fileResolveFutures);
             throw e;
           }
