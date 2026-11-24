@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 
 	"github.com/jotfs/fastcdc-go"
 )
@@ -89,6 +90,46 @@ func writeChunkToFile(dir string, sha256 string, chunk fastcdc.Chunk) error {
 // this package did before restores were written to a temporary file first.
 const restoredFileMode = 0644
 
+// ChunkMismatchError is the error a restore returns when the bytes it read
+// from a chunk file do not hash to the SHA-256 the chunk is named after.
+//
+// A chunk is content-addressed, so such a file is corrupt: a bit flipped in
+// memory or in the page cache after the chunk was downloaded and verified, a
+// short write, or an edit through a hard link. Callers that got the chunk from
+// a cache can use Path and Want to remove it there, so that the next attempt
+// fetches a good copy instead of failing on the same bytes again.
+type ChunkMismatchError struct {
+	// Path is the chunk file that was read.
+	Path string
+	// Want is the SHA-256, in hex, that the chunk is named after.
+	Want string
+	// Got is the SHA-256, in hex, of the bytes read from Path.
+	Got string
+	// Size is the number of bytes read from Path.
+	Size int64
+}
+
+func (e *ChunkMismatchError) Error() string {
+	return fmt.Sprintf("chunk %s is corrupt: its %d bytes have SHA-256 %s, want %s", e.Path, e.Size, e.Got, e.Want)
+}
+
+// copyBufferSize is the size of the buffers that verifying restores copy
+// chunks through. Every chunk byte passes through one of them on its way to
+// both the restored file and the hash that verifies it, so they are large
+// enough to keep the number of read and write calls per chunk small.
+const copyBufferSize = 1 << 20
+
+// copyBuffers holds the *[]byte buffers of copyBufferSize that verifying
+// restores copy chunks through. Files are restored in parallel and most of
+// them are small, so buffers are reused rather than allocated per file.
+// Restores that do not verify leave the copy to the kernel and take none.
+var copyBuffers = sync.Pool{
+	New: func() any {
+		b := make([]byte, copyBufferSize)
+		return &b
+	},
+}
+
 // RestoreFile restores a file from its chunks file in chunksDir.
 //
 // A file made of a single chunk is hard linked to that chunk rather than
@@ -100,14 +141,27 @@ const restoredFileMode = 0644
 //
 // Whatever was at path before is replaced, never modified in place, and path
 // never holds a partially restored file.
-func RestoreFile(path string, chunksDir string, chunks []ChunkInfo) error {
-	return restoreFile(path, chunksDir, chunks, true, false)
+//
+// Without verify, chunks are copied as they are, by the kernel where it can
+// (copy_file_range on Linux), without passing through user space.
+//
+// With verify, every chunk that is copied is verified against its SHA-256 as
+// it is copied, so the check reads nothing that the copy does not read anyway,
+// but every chunk byte is read into user space, hashed and written back out. A
+// chunk that does not match fails the restore with a *ChunkMismatchError, and
+// nothing is left at path. A single chunk that is hard linked is not read, and
+// so not verified, either way: linking costs the same whatever the chunk's
+// size, and hashing it would read the whole chunk.
+func RestoreFile(path string, chunksDir string, chunks []ChunkInfo, verify bool) error {
+	return restoreFile(path, chunksDir, chunks, true, false, verify)
 }
 
 // RestoreFileCopy is like RestoreFile, but always writes an independent copy,
 // so the restored file shares no inode with any chunk and is safe to modify.
-func RestoreFileCopy(path string, chunksDir string, chunks []ChunkInfo) error {
-	return restoreFile(path, chunksDir, chunks, false, false)
+// Every chunk is therefore copied, and with verify, verified against its
+// SHA-256.
+func RestoreFileCopy(path string, chunksDir string, chunks []ChunkInfo, verify bool) error {
+	return restoreFile(path, chunksDir, chunks, false, false, verify)
 }
 
 // RestorePrivateFileCopy is like RestoreFileCopy, but for a path that is
@@ -119,11 +173,11 @@ func RestoreFileCopy(path string, chunksDir string, chunks []ChunkInfo) error {
 // removes it, but a crash part way can leave a partial file at path, so path
 // must never be a name that others read. If something is already at path, it
 // is replaced as RestoreFileCopy does.
-func RestorePrivateFileCopy(path string, chunksDir string, chunks []ChunkInfo) error {
-	return restoreFile(path, chunksDir, chunks, false, true)
+func RestorePrivateFileCopy(path string, chunksDir string, chunks []ChunkInfo, verify bool) error {
+	return restoreFile(path, chunksDir, chunks, false, true, verify)
 }
 
-func restoreFile(path string, chunksDir string, chunks []ChunkInfo, allowLink, private bool) error {
+func restoreFile(path string, chunksDir string, chunks []ChunkInfo, allowLink, private, verify bool) error {
 	if allowLink && len(chunks) == 1 {
 		// Hard link the file if there is only one chunk. If linking fails,
 		// fall back to copying the data.
@@ -183,18 +237,23 @@ func restoreFile(path string, chunksDir string, chunks []ChunkInfo, allowLink, p
 	}
 
 	// Restore the file by appending chunks.
-	for _, chunk := range chunks {
-		chunkFile, err := os.Open(filepath.Join(chunksDir, chunk.SHA256))
-		if err != nil {
-			return fmt.Errorf("failed to open chunk file: %v", err)
+	switch {
+	case len(chunks) == 0:
+		// An empty file: there is nothing to copy or verify, so no buffer is
+		// taken.
+	case verify:
+		bufp := copyBuffers.Get().(*[]byte)
+		defer copyBuffers.Put(bufp)
+		for _, chunk := range chunks {
+			if err := appendChunk(dst, filepath.Join(chunksDir, chunk.SHA256), chunk.SHA256, *bufp); err != nil {
+				return err
+			}
 		}
-		_, copyErr := io.Copy(dst, chunkFile)
-		closeErr := chunkFile.Close()
-		if copyErr != nil {
-			return fmt.Errorf("failed to append chunk to artifact: %w", copyErr)
-		}
-		if closeErr != nil {
-			return fmt.Errorf("failed to close chunk file: %w", closeErr)
+	default:
+		for _, chunk := range chunks {
+			if err := appendChunkUnverified(dst, filepath.Join(chunksDir, chunk.SHA256)); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -207,6 +266,64 @@ func restoreFile(path string, chunksDir string, chunks []ChunkInfo, allowLink, p
 		}
 	}
 	committed = true
+	return nil
+}
+
+// appendChunk copies the chunk file at chunkPath to the end of dst through
+// buf, and fails with a *ChunkMismatchError if what it copied does not have
+// the SHA-256 want.
+//
+// The bytes are hashed in buf on their way to dst, which is the only way to
+// verify them without reading the chunk a second time. That is also why
+// neither side of the copy is handed to io.CopyBuffer as an *os.File: it
+// would then copy with copy_file_range, inside the kernel, where nothing can
+// hash the bytes, and which on a filesystem that shares extents may not read
+// them at all. Giving that up is what the check costs: every chunk byte is
+// read into user space, hashed and written back out.
+//
+// The bytes are written to dst before the hash is checked, so on a mismatch
+// dst holds them; the caller removes it.
+func appendChunk(dst io.Writer, chunkPath, want string, buf []byte) error {
+	chunkFile, err := os.Open(chunkPath)
+	if err != nil {
+		return fmt.Errorf("failed to open chunk file: %v", err)
+	}
+	h := sha256.New()
+	// The struct hides chunkFile's WriteTo method, and io.MultiWriter has no
+	// ReadFrom method, so io.CopyBuffer copies through buf.
+	n, copyErr := io.CopyBuffer(io.MultiWriter(dst, h), struct{ io.Reader }{chunkFile}, buf)
+	closeErr := chunkFile.Close()
+	if copyErr != nil {
+		return fmt.Errorf("failed to append chunk to artifact: %w", copyErr)
+	}
+	if closeErr != nil {
+		return fmt.Errorf("failed to close chunk file: %w", closeErr)
+	}
+	if got := hex.EncodeToString(h.Sum(nil)); got != want {
+		return &ChunkMismatchError{Path: chunkPath, Want: want, Got: got, Size: n}
+	}
+	return nil
+}
+
+// appendChunkUnverified copies the chunk file at chunkPath to the end of dst,
+// without checking what it copies.
+//
+// Both sides of the copy are *os.File, so on Linux io.Copy hands it to
+// copy_file_range: the kernel copies the bytes, or shares the extents on a
+// filesystem that can, without reading them into user space.
+func appendChunkUnverified(dst *os.File, chunkPath string) error {
+	chunkFile, err := os.Open(chunkPath)
+	if err != nil {
+		return fmt.Errorf("failed to open chunk file: %v", err)
+	}
+	_, copyErr := io.Copy(dst, chunkFile)
+	closeErr := chunkFile.Close()
+	if copyErr != nil {
+		return fmt.Errorf("failed to append chunk to artifact: %w", copyErr)
+	}
+	if closeErr != nil {
+		return fmt.Errorf("failed to close chunk file: %w", closeErr)
+	}
 	return nil
 }
 

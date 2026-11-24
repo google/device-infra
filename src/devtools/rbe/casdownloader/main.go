@@ -136,7 +136,9 @@ var (
 	invocationID = flag.String("invocation-id", "", "comma-separated list of key-value pairs, like 'bid=<build-id>,branch=<branch>,flavor=<flavor>'.")
 
 	// Flags for chunked version of artifacts.
-	chunksOnly = flag.Bool("chunks-only", false, "Only download chunk files and the index file (skip file restoration) for chunked version of artifacts.")
+	chunksOnly           = flag.Bool("chunks-only", false, "Only download chunk files and the index file (skip file restoration) for chunked version of artifacts.")
+	verifyRestoredChunks = flag.Bool("verify-restored-chunks", false,
+		"When restoring files from the chunked version of an artifact, check each chunk against its SHA-256 as it is copied. A chunk that does not match fails the download and is removed from the local cache, so that the next download fetches it again. This reads every restored byte into user space instead of letting the kernel copy it with copy_file_range. Small blobs the server may have sent with BatchReadBlobs are verified either way.")
 
 	// Flags for concurrency (affects peak memory), specify 0 for default.
 	casConcurrency = flag.Int("cas-concurrency", RBECASConcurrency, "the maximum number of concurrent download operations.")
@@ -223,6 +225,9 @@ func checkFlags() error {
 	if *chunksOnly && len(copyFilters) > 0 {
 		log.Warningf("-copy-filters is ignored with -chunks-only, which restores no files.")
 		copyFilters = nil
+	}
+	if *chunksOnly && *verifyRestoredChunks {
+		log.Warningf("-verify-restored-chunks is ignored with -chunks-only, which restores no files.")
 	}
 	if !*disableCache {
 		warnAboutIgnoredCacheFlags(explicitFlags(), *enableLockFreeCache)
@@ -530,23 +535,24 @@ func run(ctx context.Context) error {
 	}
 
 	d := download.DownloadJob{
-		Client:           rbeClient,
-		Digest:           *rootDigest,
-		Dir:              *dir,
-		DumpJSON:         *dumpJSON,
-		Cache:            localCache,
-		CacheMaxBlobSize: *cacheMaxBlobSize,
-		CASProxyStatus:   proxyStatus,
-		IncludeFilters:   includeFilters,
-		ExcludeFilters:   excludeFilters,
-		CopyFilters:      copyFilters,
-		ChunksOnly:       *chunksOnly,
-		DisableOverwrite: *disableOverwrite,
-		MinDownloadMbps:  *minDownloadMbps,
-		DownloadTimeout:  *downloadTimeout,
-		UseProxy:         useProxy,
-		Tracker:          tracker,
-		Notes:            jobNotes,
+		Client:               rbeClient,
+		Digest:               *rootDigest,
+		Dir:                  *dir,
+		DumpJSON:             *dumpJSON,
+		Cache:                localCache,
+		CacheMaxBlobSize:     *cacheMaxBlobSize,
+		CASProxyStatus:       proxyStatus,
+		IncludeFilters:       includeFilters,
+		ExcludeFilters:       excludeFilters,
+		CopyFilters:          copyFilters,
+		ChunksOnly:           *chunksOnly,
+		VerifyRestoredChunks: *verifyRestoredChunks,
+		DisableOverwrite:     *disableOverwrite,
+		MinDownloadMbps:      *minDownloadMbps,
+		DownloadTimeout:      *downloadTimeout,
+		UseProxy:             useProxy,
+		Tracker:              tracker,
+		Notes:                jobNotes,
 	}
 	if !*disableCache && *cacheDir != "" && *useHardlink {
 		// Chunk data is linked from the cache, so the cache directory is on

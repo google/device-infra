@@ -50,6 +50,7 @@ go_test(
     name = "cache_test",
     srcs = [
         "enospc_test.go",
+        "evict_test.go",
         "evictorconfig_test.go",
         "lockfreecache_test.go",
         "monitoring_test.go",

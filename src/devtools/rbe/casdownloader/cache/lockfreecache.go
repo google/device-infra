@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -65,6 +66,7 @@ func newLockFreeStorage(cacheDir string, opts ...storage.Option) (*storage.Stora
 var (
 	_ Cache                = (*LockFreeCache)(nil)
 	_ CorruptBlobReporter  = (*LockFreeCache)(nil)
+	_ CorruptBlobEvictor   = (*LockFreeCache)(nil)
 	_ ModeCopyReporter     = (*LockFreeCache)(nil)
 	_ StorageStatsReporter = (*LockFreeCache)(nil)
 	_ OutOfSpaceHandler    = (*LockFreeCache)(nil)
@@ -276,13 +278,47 @@ func (c *LockFreeCache) discardCorruptHit(item *client.TreeOutput, info os.FileI
 // file that Pull itself has just created.
 var removeFile = os.Remove
 
+// EvictCorruptBlob removes the cached blob for dg after path, a file
+// materialized from it, failed verification. See CorruptBlobEvictor.
+//
+// It removes the blob through the store's RemoveCorruptBlob, so the removal
+// is counted in StorageStats().CorruptBlobs with the wrong-size hits Pull
+// finds, and a blob another process has replaced in the meantime is left
+// alone. It does not touch path, which belongs to the caller.
+func (c *LockFreeCache) EvictCorruptBlob(dg digest.Digest, path string) (bool, error) {
+	// The hash names the file to remove. Tree digests reach here unvalidated
+	// (FlattenTree does not check them), and one such as "../../x" would name
+	// a file outside the cache.
+	if err := dg.Validate(); err != nil {
+		return false, fmt.Errorf("refusing to evict blob with invalid digest %v: %w", dg, err)
+	}
+	blob, err := c.store.Open(dg.Hash)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("opening cached blob %s: %w", dg.Hash, err)
+	}
+	defer blob.Close()
+	corrupt, info, err := cachedBlobIsCorrupt(blob, path, dg)
+	if err != nil || !corrupt {
+		return false, err
+	}
+	removed, err := c.store.RemoveCorruptBlob(dg.Hash, dg.Size, info)
+	if err != nil {
+		return false, fmt.Errorf("removing corrupt cached blob %s: %w", dg.Hash, err)
+	}
+	return removed, nil
+}
+
 // statPulled stats a file Pull has just materialized. It is a variable so that
 // tests can make the stat fail, which nothing on disk can arrange for a file
 // that HardlinkTo has just created.
 var statPulled = os.Lstat
 
 // CorruptBlobsQuarantined returns how many hits Pull has found to be the wrong
-// size and turned into misses since the cache was created.
+// size and turned into misses since the cache was created. Blobs reported
+// through EvictCorruptBlob are counted too, from the time they are reported.
 func (c *LockFreeCache) CorruptBlobsQuarantined() int64 {
 	return c.store.Stats().CorruptBlobs
 }

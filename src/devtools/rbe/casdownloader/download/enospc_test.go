@@ -113,7 +113,7 @@ func TestDoDownload_RestoreOutOfSpace(t *testing.T) {
 	job.Cache = c
 	orig := restoreFilesTo
 	t.Cleanup(func() { restoreFilesTo = orig })
-	restoreFilesTo = func(string, string, func(string) string) ([]chunkerutil.Restored, error) {
+	restoreFilesTo = func(string, string, func(string) string, bool) ([]chunkerutil.Restored, error) {
 		return nil, diskFullErr()
 	}
 
@@ -138,7 +138,7 @@ func TestDoDownload_RestoreFailureOtherThanSpace(t *testing.T) {
 	job.Cache = c
 	orig := restoreFilesTo
 	t.Cleanup(func() { restoreFilesTo = orig })
-	restoreFilesTo = func(string, string, func(string) string) ([]chunkerutil.Restored, error) {
+	restoreFilesTo = func(string, string, func(string) string, bool) ([]chunkerutil.Restored, error) {
 		return nil, &os.PathError{Op: "open", Path: "/tmp/dir/a.img", Err: syscall.EACCES}
 	}
 

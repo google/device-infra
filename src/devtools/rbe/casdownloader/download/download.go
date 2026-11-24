@@ -25,6 +25,7 @@ import (
 	"github.com/google/device-infra/src/devtools/rbe/casdownloader/cache"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/google/device-infra/src/devtools/rbe/common/chunker"
 	"github.com/google/device-infra/src/devtools/rbe/common/chunkerutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -65,6 +66,16 @@ type DownloadJob struct {
 	CopyFilters   []string
 	DownloadStats *Stats
 	ChunksOnly    bool
+	// VerifyRestoredChunks checks each chunk of a chunked artifact against
+	// its SHA-256 while files are restored from it. A chunk that does not
+	// match fails the download with a *chunker.ChunkMismatchError and is
+	// removed from the local cache, so that the next run fetches it again;
+	// see Stats.CorruptChunks. It makes every restored byte pass through user
+	// space and SHA-256; otherwise chunks are copied unread, by the kernel
+	// where it can. A single-chunk file restored as a hard link is not read
+	// either way. Blobs the SDK may have fetched with BatchReadBlobs are
+	// verified whatever this is set to.
+	VerifyRestoredChunks bool
 	// DisableOverwrite fails the download if a file it would write, other
 	// than chunk data, is already in Dir, rather than replace it. Either way,
 	// what is in Dir is left alone if the download fails before it commits.
@@ -182,6 +193,14 @@ type Stats struct {
 	// are not counted in Hot. Zero for a cache that does not check, such as
 	// LocalCache.
 	CorruptBlobsQuarantined int64 `json:"corrupt_blobs_quarantined"`
+	// CorruptChunks is how many chunks of a chunked artifact were found not
+	// to match their SHA-256 while files were being restored from them, which
+	// fails the download. Each one is removed from the local cache, if it is
+	// there, so that the next run downloads it again rather than failing on
+	// the same bytes. A restore stops at the first such chunk, so this is
+	// zero or one. Chunks are only checked with
+	// DownloadJob.VerifyRestoredChunks; without it, this is always zero.
+	CorruptChunks int64 `json:"corrupt_chunks"`
 	// ExecMismatchCopies counts local cache hits whose blob had the other
 	// executable bit and were copied instead of linked; ExecMismatchBytes is
 	// what those copies wrote. They are counted in Hot: the bytes still came
@@ -710,12 +729,94 @@ func (d *DownloadJob) downloadFilesWithAbsolutePath(ctx context.Context, toDownl
 	if _, err := downloadFiles(d.Client, ctx, d.Dir, toDownloadRelative); err != nil {
 		return err
 	}
+	if err := d.verifyBatchEligibleBlobs(ctx, toDownload); err != nil {
+		return err
+	}
 	return normalizeModes(toDownload)
 }
 
 // downloadFiles is client.Client.DownloadFiles. It is a variable so that tests
 // can make the fetch fail as a full disk would, which the fake CAS cannot.
 var downloadFiles = (*client.Client).DownloadFiles
+
+// errBlobDigestMismatch is wrapped by the error for a downloaded blob whose
+// file does not match its digest.
+var errBlobDigestMismatch = errors.New("downloaded blob does not match its digest")
+
+// verifyBatchEligibleBlobs checks the size and digest of each file in
+// downloaded, which the SDK has just written, whose blob it may have fetched
+// with BatchReadBlobs. It runs before the files are pushed to the cache or
+// committed, so a corrupt blob fails the download rather than poisoning the
+// local cache, which would serve it to every later run on the host, or the
+// caller's tree.
+//
+// The SDK verifies the digest of a blob it streams with ByteStream.Read, but
+// writes a blob from a BatchReadBlobs response to disk without checking either
+// its digest or its size. Only those blobs are checked here, so the cost is a
+// read, mostly from the page cache, of files no larger than a batch:
+//
+//   - The SDK batches only blobs whose sizes, together, fit in
+//     Client.MaxBatchSize: BatchDownloadBlobsWithStats fails a batch whose
+//     sizes add up to more. A larger blob is always streamed, and verified
+//     by the SDK, so it is not read again here. The limit is read from the
+//     client after the download, so that it is the one the SDK used,
+//     including a server's lower limit, which the client adopts when it
+//     connects.
+//   - Whether a smaller blob was batched depends on the other blobs fetched
+//     with it and on how the client was configured, which the SDK does not
+//     report, so every one of them is checked. Empty blobs are too; they
+//     cost an open and nothing else.
+//
+// Blobs served by the local cache are not in downloaded and are not read:
+// that would defeat the point of linking them. Duplicates are copied from
+// the file checked here.
+//
+// A mismatch is reported as a failure to fetch, as the SDK's own digest
+// mismatch is: corrupt bytes from casproxy are a reason to retry against CAS
+// remote. If ctx is done before every blob was checked, the check fails with
+// ctx's error, so that blobs it did not read are not pushed or committed.
+func (d *DownloadJob) verifyBatchEligibleBlobs(ctx context.Context, downloaded map[digest.Digest]*client.TreeOutput) error {
+	limit := int64(d.Client.MaxBatchSize)
+	eg, egCtx := errgroup.WithContext(ctx)
+	// Like copyFiles, bound the number of files read at once.
+	eg.SetLimit(runtime.NumCPU())
+	for dg, output := range downloaded {
+		if egCtx.Err() != nil {
+			// A blob already failed, or ctx is done; the rest need not be
+			// read.
+			break
+		}
+		if dg.Size > limit {
+			continue
+		}
+		eg.Go(func() error {
+			if err := egCtx.Err(); err != nil {
+				return err
+			}
+			return verifyDownloadedBlob(output.Path, dg)
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+	// The loop stops early, without an error from any blob, once ctx is done,
+	// which leaves the remaining blobs unchecked.
+	return ctx.Err()
+}
+
+// verifyDownloadedBlob fails, with an error wrapping errBlobDigestMismatch,
+// unless the file at path has digest dg. It is a variable so that tests can
+// see which blobs are checked.
+var verifyDownloadedBlob = func(path string, dg digest.Digest) error {
+	got, err := digest.NewFromFile(path)
+	if err != nil {
+		return fmt.Errorf("reading downloaded blob %s to verify it: %w", dg, err)
+	}
+	if got != dg {
+		return fmt.Errorf("%w: %s, written to %s, has digest %s", errBlobDigestMismatch, dg, path, got)
+	}
+	return nil
+}
 
 // normalizeModes gives each downloaded file the canonical mode of its tree
 // node.
@@ -1205,11 +1306,12 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 					madeDirs[dir] = true
 				}
 				return s.tmpName(final)
-			})
+			}, d.VerifyRestoredChunks)
 			if err != nil {
 				// On a full disk this starts a trim. The cache is closed by
 				// now, which does not stop it from doing that.
 				cache.HandleOutOfSpace(d.Cache, err)
+				d.evictCorruptChunk(err, outputs)
 				return err
 			}
 			copyCandidates = make([]stagedFile, 0, len(restored))
@@ -1294,6 +1396,53 @@ func (d *DownloadJob) removeChunkTrash(trashed string) {
 // restoreFilesTo is chunkerutil.RestoreFilesTo. It is a variable so that tests
 // can make the restore fail as a full disk would.
 var restoreFilesTo = chunkerutil.RestoreFilesTo
+
+// evictCorruptChunk looks at err, from restoring files from the chunk data in
+// outputs, for a chunk whose bytes did not match its SHA-256. If there is
+// one, it counts it in the stats and removes it from the local cache, so that
+// the next run fetches it again instead of failing on the same bytes. The
+// download fails either way.
+//
+// The chunk is still in Dir at this point, as a hard link to the cached blob
+// or a copy of it, which is what lets the cache tell whether its blob is the
+// corrupt one. The cache is closed by now; EvictCorruptBlob does not need it
+// open.
+func (d *DownloadJob) evictCorruptChunk(err error, outputs []*client.TreeOutput) {
+	var mismatch *chunker.ChunkMismatchError
+	if !errors.As(err, &mismatch) {
+		return
+	}
+	d.DownloadStats.CorruptChunks++
+	if d.Cache == nil {
+		return
+	}
+	i := slices.IndexFunc(outputs, func(o *client.TreeOutput) bool { return o.Path == mismatch.Path })
+	if i < 0 {
+		log.Errorf("Corrupt chunk %s is not a file of the tree; not removing it from the local cache", mismatch.Path)
+		return
+	}
+	dg := outputs[i].Digest
+	if dg.Hash != mismatch.Want {
+		// The artifact itself is inconsistent: a fresh copy of the blob
+		// would fail the same way, so evicting it would gain nothing.
+		log.Errorf("Corrupt chunk %s has digest %s, which does not match its name; not removing it from the local cache", mismatch.Path, dg)
+		return
+	}
+	evictor, ok := d.Cache.(cache.CorruptBlobEvictor)
+	if !ok {
+		log.Errorf("Corrupt chunk %s cannot be removed from a local cache of type %T; later downloads may fail on it too", mismatch.Path, d.Cache)
+		return
+	}
+	removed, evictErr := evictor.EvictCorruptBlob(dg, mismatch.Path)
+	switch {
+	case evictErr != nil:
+		log.Errorf("Failed to remove the blob %s of corrupt chunk %s from the local cache; later downloads may fail on it too: %v", dg, mismatch.Path, evictErr)
+	case removed:
+		log.Warningf("Removed the blob %s of corrupt chunk %s from the local cache, so the next download fetches it again", dg, mismatch.Path)
+	default:
+		log.Warningf("Left the blob %s of corrupt chunk %s in the local cache: it is intact, or no longer there", dg, mismatch.Path)
+	}
+}
 
 // maxReplacedExamples is how many replaced paths noteReplaced names.
 const maxReplacedExamples = 3

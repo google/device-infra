@@ -101,13 +101,14 @@ var (
 )
 
 // RestoreFiles restores files to dstDir with chunks index file and chunks file in srcDir.
+// Chunks are not verified against their SHA-256; see RestoreFilesTo.
 func RestoreFiles(srcDir string, dstDir string, keepChunks bool) error {
 	chunksIndexEntries, found, err := readChunksIndex(srcDir)
 	if err != nil || !found {
 		return err
 	}
 
-	if _, err := restoreEntries(srcDir, dstDir, chunksIndexEntries, nil); err != nil {
+	if _, err := restoreEntries(srcDir, dstDir, chunksIndexEntries, nil, false); err != nil {
 		return err
 	}
 
@@ -143,13 +144,18 @@ type Restored struct {
 // Every path in the index must be local, as defined by filepath.IsLocal, or
 // nothing is restored. If several entries have the same path, only the last
 // is restored and returned.
-func RestoreFilesTo(srcDir, dstDir string, tmpName func(path string) string) ([]Restored, error) {
+//
+// With verify, each chunk that is copied is checked against its SHA-256 as it
+// is copied, and a chunk that does not match fails the call with a
+// *chunker.ChunkMismatchError; see chunker.RestoreFile. Without it, chunks are
+// copied unread by the kernel where it can.
+func RestoreFilesTo(srcDir, dstDir string, tmpName func(path string) string, verify bool) ([]Restored, error) {
 	chunksIndexEntries, found, err := readChunksIndex(srcDir)
 	if err != nil || !found {
 		return nil, err
 	}
 
-	restored, err := restoreEntries(srcDir, dstDir, chunksIndexEntries, tmpName)
+	restored, err := restoreEntries(srcDir, dstDir, chunksIndexEntries, tmpName, verify)
 	if err != nil {
 		for _, r := range restored {
 			if rmErr := os.Remove(r.TmpPath); rmErr != nil && !errors.Is(rmErr, os.ErrNotExist) {
@@ -201,12 +207,13 @@ var restoreConcurrency = func() int {
 }
 
 // restoreEntries restores each of chunksIndexEntries to tmpName(path), or to
-// path if tmpName is nil, where path is its final path under dstDir. It
-// returns the files restored so far, including when it fails.
+// path if tmpName is nil, where path is its final path under dstDir, verifying
+// the chunks it copies if verify is set. It returns the files restored so far,
+// including when it fails.
 //
 // If several entries restore to the same path, only the last is restored, as
 // it was the one left in place when entries were restored one at a time.
-func restoreEntries(srcDir, dstDir string, chunksIndexEntries []ChunksIndex, tmpName func(string) string) ([]Restored, error) {
+func restoreEntries(srcDir, dstDir string, chunksIndexEntries []ChunksIndex, tmpName func(string) string, verify bool) ([]Restored, error) {
 	// Check every path before restoring anything, so a bad index leaves no
 	// files behind. A path that is absolute or climbs out with ".." would
 	// otherwise be written outside dstDir.
@@ -258,7 +265,7 @@ func restoreEntries(srcDir, dstDir string, chunksIndexEntries []ChunksIndex, tmp
 		if chunksIndex.ModTime.IsZero() { // for backward compatibility
 			// Nothing is applied to the restored file afterwards, so it may
 			// share an inode with its chunk.
-			if err := chunker.RestoreFile(dstPath, chunksDir, chunksIndex.Chunks); err != nil {
+			if err := chunker.RestoreFile(dstPath, chunksDir, chunksIndex.Chunks, verify); err != nil {
 				return err
 			}
 			restoredMask[i] = true
@@ -276,7 +283,7 @@ func restoreEntries(srcDir, dstDir string, chunksIndexEntries []ChunksIndex, tmp
 			// file and rename.
 			restoreCopy = chunker.RestorePrivateFileCopy
 		}
-		if err := restoreCopy(dstPath, chunksDir, chunksIndex.Chunks); err != nil {
+		if err := restoreCopy(dstPath, chunksDir, chunksIndex.Chunks, verify); err != nil {
 			return err
 		}
 		restoredMask[i] = true

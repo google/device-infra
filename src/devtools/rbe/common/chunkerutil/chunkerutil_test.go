@@ -490,7 +490,7 @@ func TestCreateIndexFile_NoChunksDir(t *testing.T) {
 	if !exists(t, filepath.Join(dir, ChunksIndexFileName)) {
 		t.Error("CreateIndexFile did not write the index")
 	}
-	restored, err := RestoreFilesTo(dir, t.TempDir(), tmpNameFor("run1"))
+	restored, err := RestoreFilesTo(dir, t.TempDir(), tmpNameFor("run1"), false)
 	if err != nil || len(restored) != 0 {
 		t.Errorf("RestoreFilesTo on empty index = %v, %v, want [], nil", restored, err)
 	}
@@ -578,7 +578,7 @@ func TestRestoreFilesTo_RestoresToTmpNames(t *testing.T) {
 	}
 
 	tmpName := tmpNameFor("run1")
-	restored, err := RestoreFilesTo(srcDir, dstDir, tmpName)
+	restored, err := RestoreFilesTo(srcDir, dstDir, tmpName, false)
 	if err != nil {
 		t.Fatalf("RestoreFilesTo failed: %v", err)
 	}
@@ -637,7 +637,7 @@ func TestRestoreFilesTo_RestoresToTmpNames(t *testing.T) {
 }
 
 func TestRestoreFilesTo_NoIndex(t *testing.T) {
-	restored, err := RestoreFilesTo(t.TempDir(), t.TempDir(), tmpNameFor("run1"))
+	restored, err := RestoreFilesTo(t.TempDir(), t.TempDir(), tmpNameFor("run1"), false)
 	if err != nil || restored != nil {
 		t.Errorf("RestoreFilesTo without an index = %v, %v, want nil, nil", restored, err)
 	}
@@ -648,7 +648,7 @@ func TestRestoreFilesTo_MalformedIndex(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(srcDir, ChunksIndexFileName), []byte("{not json"), 0644); err != nil {
 		t.Fatalf("Failed to write index: %v", err)
 	}
-	if _, err := RestoreFilesTo(srcDir, t.TempDir(), tmpNameFor("run1")); err == nil {
+	if _, err := RestoreFilesTo(srcDir, t.TempDir(), tmpNameFor("run1"), false); err == nil {
 		t.Error("RestoreFilesTo with a malformed index succeeded, want an error")
 	}
 }
@@ -736,7 +736,7 @@ func TestRestoreFilesTo_FailureRemovesRestoredFiles(t *testing.T) {
 				t.Fatalf("Failed to write existing file: %v", err)
 			}
 
-			restored, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"))
+			restored, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"), false)
 			if err == nil {
 				t.Fatal("RestoreFilesTo succeeded, want an error")
 			}
@@ -779,7 +779,7 @@ func TestRestoreFilesTo_CleanupFailure(t *testing.T) {
 		return errInjected
 	}
 
-	if _, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1")); !errors.Is(err, errInjected) {
+	if _, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"), false); !errors.Is(err, errInjected) {
 		t.Errorf("RestoreFilesTo = %v, want an error wrapping %v", err, errInjected)
 	}
 }
@@ -800,7 +800,7 @@ func TestRestore_RejectsNonLocalPaths(t *testing.T) {
 			return RestoreFiles(srcDir, dstDir, false)
 		},
 		"RestoreFilesTo": func(srcDir, dstDir string) error {
-			_, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"))
+			_, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"), false)
 			return err
 		},
 	}
@@ -907,7 +907,7 @@ func TestRestoreFilesTo_ParallelOrderAndCleanup(t *testing.T) {
 			return baseTmp(path)
 		}
 
-		restored, err := RestoreFilesTo(srcDir, dstDir, tmpName)
+		restored, err := RestoreFilesTo(srcDir, dstDir, tmpName, false)
 		if err != nil {
 			t.Fatalf("RestoreFilesTo failed: %v", err)
 		}
@@ -959,7 +959,7 @@ func TestRestoreFilesTo_ParallelOrderAndCleanup(t *testing.T) {
 			t.Fatalf("CreateIndexFile failed: %v", err)
 		}
 
-		restored, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"))
+		restored, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"), false)
 		if err == nil {
 			t.Fatal("RestoreFilesTo succeeded with a missing chunk, want an error")
 		}
@@ -1025,7 +1025,7 @@ func TestRestore_DuplicatePathsRestoreLastEntry(t *testing.T) {
 		dstDir := t.TempDir()
 		newIndex(t, srcDir)
 		tmpName := tmpNameFor("run1")
-		restored, err := RestoreFilesTo(srcDir, dstDir, tmpName)
+		restored, err := RestoreFilesTo(srcDir, dstDir, tmpName, false)
 		if err != nil {
 			t.Fatalf("RestoreFilesTo failed: %v", err)
 		}
@@ -1052,4 +1052,102 @@ func TestRestore_DuplicatePathsRestoreLastEntry(t *testing.T) {
 			}
 		}
 	})
+}
+
+// writeCorruptChunkIndex writes, in srcDir, the chunks and index of two
+// files, "good" and "sub/bad", where one of bad's two chunks no longer
+// matches its name, as after a bit flip. It returns the corrupt chunk's name
+// and the content bad is restored with when chunks are not verified.
+func writeCorruptChunkIndex(t *testing.T, srcDir string) (corrupt, badContent string) {
+	t.Helper()
+	chunksDir := filepath.Join(srcDir, ChunksDirName)
+	good := writeChunk(t, chunksDir, "good content")
+	first := writeChunk(t, chunksDir, "first 1111 ")
+	second := writeChunk(t, chunksDir, "second 1111")
+	// Flip one bit in place, as a RAM or page cache error would.
+	if err := os.WriteFile(filepath.Join(chunksDir, second), []byte("second 1191"), 0644); err != nil {
+		t.Fatalf("Failed to corrupt chunk: %v", err)
+	}
+	modTime := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+	index := []ChunksIndex{
+		{Path: "good", ModTime: modTime, Mode: 0644, Chunks: []chunker.ChunkInfo{{SHA256: good, Offset: 0}}},
+		{Path: filepath.Join("sub", "bad"), ModTime: modTime, Mode: 0644, Chunks: []chunker.ChunkInfo{{SHA256: first, Offset: 0}, {SHA256: second, Offset: 11}}},
+	}
+	if err := CreateIndexFile(srcDir, index); err != nil {
+		t.Fatalf("CreateIndexFile failed: %v", err)
+	}
+	return second, "first 1111 second 1191"
+}
+
+// TestRestoreFilesTo_CorruptChunkFails restores, with verify, an index in
+// which one chunk is corrupt. RestoreFilesTo must fail with the chunker's
+// *ChunkMismatchError, so that casdownloader can find the chunk to evict, and
+// must remove every file it restored, the intact one included.
+func TestRestoreFilesTo_CorruptChunkFails(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+	corrupt, _ := writeCorruptChunkIndex(t, srcDir)
+
+	restored, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"), true)
+	var mismatch *chunker.ChunkMismatchError
+	if !errors.As(err, &mismatch) {
+		t.Fatalf("RestoreFilesTo with a corrupt chunk = %v, want a *chunker.ChunkMismatchError", err)
+	}
+	if want := filepath.Join(srcDir, ChunksDirName, corrupt); mismatch.Path != want || mismatch.Want != corrupt {
+		t.Errorf("RestoreFilesTo with a corrupt chunk reported chunk %s (want %s), want chunk %s (want %s)", mismatch.Path, mismatch.Want, want, corrupt)
+	}
+	if restored != nil {
+		t.Errorf("RestoreFilesTo returned %v with an error, want nil", restored)
+	}
+	if got := listFiles(t, dstDir); len(got) != 0 {
+		t.Errorf("Files in dstDir after a restore from a corrupt chunk = %v, want none", got)
+	}
+}
+
+// TestRestoreFilesTo_UnverifiedRestoresCorruptChunk restores the same index
+// without verify. The chunks are copied as they are, so RestoreFilesTo must
+// succeed and restore the corrupt bytes, as it did before chunks could be
+// verified.
+func TestRestoreFilesTo_UnverifiedRestoresCorruptChunk(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+	_, badContent := writeCorruptChunkIndex(t, srcDir)
+	tmpName := tmpNameFor("run1")
+
+	restored, err := RestoreFilesTo(srcDir, dstDir, tmpName, false)
+	if err != nil {
+		t.Fatalf("RestoreFilesTo without verify with a corrupt chunk = %v, want it to copy the chunk unchecked", err)
+	}
+	if len(restored) != 2 {
+		t.Fatalf("RestoreFilesTo without verify with a corrupt chunk restored %v, want both files", restored)
+	}
+	badPath := tmpName(filepath.Join(dstDir, "sub", "bad"))
+	got, err := os.ReadFile(badPath)
+	if err != nil {
+		t.Fatalf("Failed to read restored file: %v", err)
+	}
+	if string(got) != badContent {
+		t.Errorf("RestoreFilesTo without verify restored %s as %q, want the chunk files' bytes %q", badPath, got, badContent)
+	}
+}
+
+// TestRestoreFiles_DoesNotVerifyChunks restores the same index with
+// RestoreFiles, which casconverter uses and which does not verify chunks: it
+// must succeed and restore the chunk files' bytes as they are.
+func TestRestoreFiles_DoesNotVerifyChunks(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+	_, badContent := writeCorruptChunkIndex(t, srcDir)
+
+	if err := RestoreFiles(srcDir, dstDir, false); err != nil {
+		t.Fatalf("RestoreFiles with a corrupt chunk = %v, want it to copy the chunk unchecked", err)
+	}
+	badPath := filepath.Join(dstDir, "sub", "bad")
+	got, err := os.ReadFile(badPath)
+	if err != nil {
+		t.Fatalf("Failed to read restored file: %v", err)
+	}
+	if string(got) != badContent {
+		t.Errorf("RestoreFiles restored %s as %q, want the chunk files' bytes %q", badPath, got, badContent)
+	}
 }
