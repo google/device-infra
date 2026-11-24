@@ -385,8 +385,7 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
           androidAdbUtil.getProperty(connectionTarget, AndroidProperty.INCREMENTAL_BUILD);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          AndroidErrorId
-              .CROSSOVER_ANDROID_DESKTOP_PROVISION_DECORATOR_POST_PROVISION_CONNECT_ADB_ERROR,
+          AndroidErrorId.CROSSOVER_ANDROID_DESKTOP_PROVISION_POST_CONNECT_ADB_ERROR,
           String.format(
               "Failed to connect to %s via ADB after CrossOver provisioning: %s",
               connectionTarget, e.getMessage()),
@@ -394,8 +393,7 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
     }
     if (Strings.isNullOrEmpty(currentBuildId)) {
       throw new MobileHarnessException(
-          AndroidErrorId
-              .CROSSOVER_ANDROID_DESKTOP_PROVISION_DECORATOR_POST_PROVISION_DEVICE_NOT_RESPONSIVE,
+          AndroidErrorId.CROSSOVER_ANDROID_DESKTOP_PROVISION_POST_DEVICE_UNRESPONSIVE,
           String.format(
               "Failed to connect to %s via ADB after CrossOver provisioning: device did not return"
                   + " a valid Android build ID",

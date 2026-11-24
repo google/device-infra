@@ -352,8 +352,7 @@ public class AndroidDesktopOtaUpdateDecoratorTest {
 
     // Verify error
     assertThat(e.getErrorId())
-        .isEqualTo(
-            AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_DECORATOR_OTA_UPDATE_SCRIPT_FILE_NOT_FOUND);
+        .isEqualTo(AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_SCRIPT_FILE_NOT_FOUND);
     assertThat(e)
         .hasMessageThat()
         .contains(
@@ -383,8 +382,7 @@ public class AndroidDesktopOtaUpdateDecoratorTest {
 
     // Verify error
     assertThat(e.getErrorId())
-        .isEqualTo(
-            AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_DECORATOR_OTA_UPDATE_PACKAGE_FILE_NOT_EXISTS);
+        .isEqualTo(AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_PACKAGE_FILE_NOT_EXISTS);
     assertThat(e)
         .hasMessageThat()
         .contains(

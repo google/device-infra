@@ -80,7 +80,7 @@ public class AndroidShippingApiLevelCheckDecorator extends SetupOnlyDecorator
       int vsrMinApiLevel = spec.getVsrMinApiLevel();
       if (vsrMinApiLevel > 34 && vsrMinApiLevel < 202404) {
         throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_SHIPPING_API_LEVEL_CHECK_DECORATOR_INVALID_VSR_MIN_API_LEVEL,
+            AndroidErrorId.ANDROID_SHIPPING_API_LEVEL_CHECK_INVALID_VSR_MIN_API_LEVEL,
             "vsr-min-api-level must have YYYYMM format if it has a value greater than 34, but has "
                 + vsrMinApiLevel);
       }
@@ -90,7 +90,7 @@ public class AndroidShippingApiLevelCheckDecorator extends SetupOnlyDecorator
       int vendorMinApiLevel = spec.getVendorMinApiLevel();
       if (vendorMinApiLevel < 202404) {
         throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_SHIPPING_API_LEVEL_CHECK_DECORATOR_INVALID_VENDOR_MIN_API_LEVEL,
+            AndroidErrorId.ANDROID_SHIPPING_API_LEVEL_CHECK_INVALID_VENDOR_MIN_API_LEVEL,
             "vendor-min-api-level must have YYYYMM format greater than or equal to 202404, but has "
                 + vendorMinApiLevel);
       }

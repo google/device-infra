@@ -223,7 +223,7 @@ public class AndroidFilePullerDecorator extends LifecycleDecorator
     if (!missingPaths.isEmpty()) {
       MobileHarnessException exception =
           new MobileHarnessException(
-              AndroidErrorId.ANDROID_FILE_PULLER_DECORATOR_OUTPUT_FILE_NOT_FOUND,
+              AndroidErrorId.ANDROID_PULL_OUTPUT_FILE_NOT_FOUND,
               "Skipped pulling files/dirs that do not exist on the device.");
       exception.addMetadata(FINDING_METADATA_KEY_PATHS, String.join(PATH_DELIMITER, missingPaths));
       testInfo

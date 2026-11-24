@@ -232,13 +232,12 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
                     DEFAULT_IGNORE_LOG_BUFFER_SIZE_SET_FAILURE)) {
           if (DeviceUtil.inSharedLab()) {
             throw new MobileHarnessException(
-                AndroidErrorId.ANDROID_LOGCAT_DECORATOR_SET_LOGCAT_BUFFER_SIZE_ERROR_IN_SHARED_LAB,
+                AndroidErrorId.ANDROID_LOGCAT_SET_BUFFER_SIZE_ERROR_IN_SHARED_LAB,
                 String.format("Failed to set logcat buffer size on device %s", deviceId),
                 e);
           } else {
             throw new MobileHarnessException(
-                AndroidErrorId
-                    .ANDROID_LOGCAT_DECORATOR_SET_LOGCAT_BUFFER_SIZE_ERROR_IN_SATELLITE_LAB,
+                AndroidErrorId.ANDROID_LOGCAT_SET_BUFFER_SIZE_ERROR_IN_SATELLITE_LAB,
                 String.format(
                     "Failed to set logcat buffer size on device %s. Please consider 1. not setting"
                         + " log_buffer_size_kb, and we'll use a default size; or 2. set"
