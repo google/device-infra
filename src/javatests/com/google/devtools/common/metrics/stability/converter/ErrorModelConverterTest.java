@@ -574,6 +574,56 @@ public class ErrorModelConverterTest {
   }
 
   @Test
+  public void flattenedExceptionDetailProto_toExceptionDetail_preservesMultipleCauses() {
+    FlattenedExceptionDetail flattened =
+        FlattenedExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionSummary.newBuilder()
+                    .setErrorId(ErrorId.newBuilder().setCode(1).setName("ERR_0"))
+                    .setMessage("root"))
+            .addCause(
+                ExceptionSummary.newBuilder()
+                    .setErrorId(ErrorId.newBuilder().setCode(2).setName("ERR_1"))
+                    .setMessage("cause1"))
+            .addCause(
+                ExceptionSummary.newBuilder()
+                    .setErrorId(ErrorId.newBuilder().setCode(3).setName("ERR_2"))
+                    .setMessage("cause2"))
+            .addCause(
+                ExceptionSummary.newBuilder()
+                    .setErrorId(ErrorId.newBuilder().setCode(4).setName("ERR_3"))
+                    .setMessage("cause3"))
+            .build();
+
+    ExceptionDetail detail = ErrorModelConverter.toExceptionDetail(flattened);
+
+    assertThat(detail.getSummary().getErrorId().getCode()).isEqualTo(1);
+    assertThat(detail.getSummary().getMessage()).isEqualTo("root");
+    assertThat(detail.hasCause()).isTrue();
+    assertThat(detail.getCause().getSummary().getErrorId().getCode()).isEqualTo(2);
+    assertThat(detail.getCause().getSummary().getMessage()).isEqualTo("cause1");
+    assertThat(detail.getCause().hasCause()).isTrue();
+    assertThat(detail.getCause().getCause().getSummary().getErrorId().getCode()).isEqualTo(3);
+    assertThat(detail.getCause().getCause().getSummary().getMessage()).isEqualTo("cause2");
+    assertThat(detail.getCause().getCause().hasCause()).isTrue();
+    assertThat(detail.getCause().getCause().getCause().getSummary().getErrorId().getCode())
+        .isEqualTo(4);
+    assertThat(detail.getCause().getCause().getCause().getSummary().getMessage())
+        .isEqualTo("cause3");
+    assertThat(detail.getCause().getCause().getCause().hasCause()).isFalse();
+
+    DeserializedException deserialized = ErrorModelConverter.toDeserializedException(flattened);
+    assertThat(deserialized.getErrorId().code()).isEqualTo(1);
+    assertThat(deserialized.getCause()).isNotNull();
+    assertThat(deserialized.getCause().getErrorId().code()).isEqualTo(2);
+    assertThat(deserialized).hasCauseThat().hasCauseThat().isNotNull();
+    assertThat(deserialized.getCause().getCause().getErrorId().code()).isEqualTo(3);
+    assertThat(deserialized).hasCauseThat().hasCauseThat().hasCauseThat().isNotNull();
+    assertThat(deserialized.getCause().getCause().getCause().getErrorId().code()).isEqualTo(4);
+    assertThat(deserialized).hasCauseThat().hasCauseThat().hasCauseThat().hasCauseThat().isNull();
+  }
+
+  @Test
   public void throwable_toExceptionDetail_withoutStackTrace_appliesToCausesAndSuppressed() {
     Exception primary = new Exception("Primary", new Exception("Cause"));
     primary.addSuppressed(new Exception("Suppressed"));
