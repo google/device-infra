@@ -101,6 +101,54 @@ public final class HostSuggesterTest {
   }
 
   @Test
+  public void valueSuggestion_exactHostPropertyOutranksHostNameStartsWithAndPrefixProperty() {
+    LabQueryResult mtvHosts =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(2)
+                    .addLabData(
+                        hostLab(
+                            "mtv-host-1",
+                            "1.1.1.1",
+                            LabStatus.LAB_RUNNING,
+                            hostProperties("lab_location", "mtv", "host_group", "mtv-group"),
+                            1))
+                    .addLabData(
+                        hostLab(
+                            "mtv-host-2",
+                            "2.2.2.2",
+                            LabStatus.LAB_RUNNING,
+                            hostProperties("lab_location", "mtv", "host_group", "mtv-group"),
+                            1)))
+            .build();
+    FleetSnapshot mtvSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(mtvHosts, BUILD_TIME);
+    HostCorpus mtvCorpus =
+        new HostCorpus(mtvSnapshot, LazyPostings.forHosts(mtvSnapshot.hosts()), new AtsCuration());
+
+    FleetSuggestionResponse response = suggester.suggest(mtvCorpus, request("mtv"));
+
+    assertThat(
+            response.getItemsList().stream()
+                .map(item -> item.getApplyFilter().getResultingFilter().getKey()))
+        .containsExactly(
+            "host_property::lab_location", "host_field::host_name", "host_property::host_group")
+        .inOrder();
+    assertThat(response.getItems(0).getCount()).isEqualTo(2);
+    assertThat(
+            response
+                .getItems(1)
+                .getApplyFilter()
+                .getResultingFilter()
+                .getComplex()
+                .getStartsWith()
+                .getValue())
+        .isEqualTo("mtv");
+    assertThat(response.getItems(1).getCount()).isEqualTo(2);
+  }
+
+  @Test
   public void keyName_ranksHostTier1KeyAboveTier2Key() {
     FleetSuggestionResponse response =
         suggester.suggest(

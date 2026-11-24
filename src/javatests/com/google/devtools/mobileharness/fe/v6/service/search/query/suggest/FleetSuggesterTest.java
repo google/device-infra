@@ -27,7 +27,10 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -1111,6 +1114,90 @@ public final class FleetSuggesterTest {
     assertThat(response.getItemsCount()).isAtLeast(2);
     assertThat(response.getItems(0).getApplyFilter().getResultingFilter().getKey())
         .isEqualTo("dimension::model");
+  }
+
+  @Test
+  public void ranking_exactMatchOutranksHigherPriorityPrefixAndIdentifierStartsWith() {
+    // Reproduces typing "mtv" when a lower-priority key has exact matches (dimension::lab_location
+    // = "mtv" on 3 devices, host_property::lab = "mtv" on 2 devices), while higher-priority keys
+    // only prefix-match (UUID starts with "mtv" on 2 devices, priority 3; Label = "mtv_pixel" on 1
+    // device, priority 1) and a raw host property prefix-matches ("mtv-group", priority 0).
+    // Exact matches rank first (ordered by count), followed by prefix matches ordered by key
+    // priority (UUID starts with -> Label -> raw host property).
+    DeviceInfo mtvDev0 =
+        deviceWith(
+            "mtv-dev-0",
+            DeviceStatus.IDLE,
+            dimension("lab_location", "mtv"),
+            dimension("label", "mtv_pixel"));
+    DeviceInfo mtvDev1 =
+        deviceWith("mtv-dev-1", DeviceStatus.IDLE, dimension("lab_location", "mtv"));
+    DeviceInfo otherDev2 =
+        deviceWith("other-dev-2", DeviceStatus.IDLE, dimension("lab_location", "mtv"));
+    LabQueryResult mtvFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(2)
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setLabInfo(
+                                LabInfo.newBuilder()
+                                    .setLabLocator(
+                                        LabLocator.newBuilder()
+                                            .setHostName("lab-a")
+                                            .setIp("1.1.1.1"))
+                                    .setLabStatus(LabStatus.LAB_RUNNING)
+                                    .setLabServerFeature(
+                                        LabServerFeature.newBuilder()
+                                            .setHostProperties(
+                                                HostProperties.newBuilder()
+                                                    .addHostProperty(
+                                                        HostProperty.newBuilder()
+                                                            .setKey("lab")
+                                                            .setValue("mtv"))
+                                                    .addHostProperty(
+                                                        HostProperty.newBuilder()
+                                                            .setKey("host_group")
+                                                            .setValue("mtv-group")))))
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(2)
+                                    .addDeviceInfo(mtvDev0)
+                                    .addDeviceInfo(mtvDev1)))
+                    .addLabData(labData("lab-b", "2.2.2.2", otherDev2)))
+            .build();
+    FleetSnapshot mtvSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(mtvFleet, BUILD_TIME);
+    DeviceCorpus mtvCorpus =
+        new DeviceCorpus(mtvSnapshot, new LazyPostings(mtvSnapshot.devices()), new AtsCuration());
+
+    FleetSuggestionResponse response = suggester.suggest(mtvCorpus, request("mtv"));
+
+    assertThat(
+            response.getItemsList().stream()
+                .map(item -> item.getApplyFilter().getResultingFilter().getKey()))
+        .containsExactly(
+            "dimension::lab_location",
+            "host_property::lab",
+            "device_field::uuid",
+            "dimension::label",
+            "host_property::host_group")
+        .inOrder();
+    assertThat(response.getItems(0).getCount()).isEqualTo(3);
+    assertThat(response.getItems(1).getCount()).isEqualTo(2);
+    assertThat(response.getItems(2).getCount()).isEqualTo(2);
+    assertThat(
+            response
+                .getItems(2)
+                .getApplyFilter()
+                .getResultingFilter()
+                .getComplex()
+                .getStartsWith()
+                .getValue())
+        .isEqualTo("mtv");
+    assertThat(response.getItems(3).getCount()).isEqualTo(1);
+    assertThat(response.getItems(4).getCount()).isEqualTo(2);
   }
 
   @Test
@@ -2730,10 +2817,10 @@ public final class FleetSuggesterTest {
     assertThat(priorityResponse.getItemsCount()).isEqualTo(1);
     assertThat(priorityTracking.keysScannedInScope).containsExactly("dimension::model");
 
-    // 2. Tier pruning: custom_a="zephyr" (exact match, tier 3) and custom_b="zephyr_plus" (prefix
-    // match, tier 2) share priority 0. Under status=IDLE with limit = 1, custom_a fills top and
-    // custom_b is pruned by cannotBeat (candidate.tier() < worstKept.tier()) without being
-    // evaluated.
+    // 2. Tier pruning: custom_a="zephyr" (exact match, priority 0) fills limit = 1 under
+    // status=IDLE, pruning both same-priority prefix match custom_b="zephyr_plus" (priority 0) and
+    // higher-priority prefix match label="zephyr_label" (priority 1) via cannotBeat without
+    // scanning either prefix key.
     DeviceInfo tierDevice =
         DeviceInfo.newBuilder()
             .setDeviceLocator(DeviceLocator.newBuilder().setId("device-0"))
@@ -2744,7 +2831,8 @@ public final class FleetSuggesterTest {
                     .setCompositeDimension(
                         DeviceCompositeDimension.newBuilder()
                             .addSupportedDimension(dimension("custom_a", "zephyr"))
-                            .addSupportedDimension(dimension("custom_b", "zephyr_plus"))))
+                            .addSupportedDimension(dimension("custom_b", "zephyr_plus"))
+                            .addSupportedDimension(dimension("label", "zephyr_label"))))
             .build();
     LabQueryResult tierLab =
         LabQueryResult.newBuilder()

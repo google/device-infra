@@ -20,10 +20,10 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query.suggest;
  * How strongly a suggestion answers what the user typed, declared best first so the natural enum
  * order is the ranking order.
  *
- * <p>The ranker orders filter rows by curated key priority first and by this tier second, whereas
- * the group-by ranker orders key-name matches by this tier first, then grouping usefulness, and
- * curated key priority third. A tier describes rank, not the string operation that found the row,
- * which is why rows without a direct text match can sit in any tier.
+ * <p>The filter ranker orders rows by this tier first and curated key priority second, whereas the
+ * group-by ranker orders key-name matches by this tier first, then grouping usefulness, and curated
+ * key priority third. A tier describes rank, not the string operation that found the row, which is
+ * why rows without a direct text match can sit in any tier.
  */
 enum MatchTier {
   /**
@@ -35,15 +35,15 @@ enum MatchTier {
   EXACT,
 
   /**
-   * A key name or value starts with the typed text, or an emptiness condition covers the whole
-   * filtered scope and is stepped down one tier via {@link #demoted()}.
+   * A key name or value starts with the typed text, a collapsed {@code <Key> starts with} prefix
+   * filter on an identifier key, or an emptiness condition covers the whole filtered scope and is
+   * stepped down one tier via {@link #demoted()}.
    */
   PREFIX,
 
   /**
    * The weakest evidence of what the user meant: a key name or value that only contains the typed
-   * text, a collapsed {@code <Key> starts with} prefix filter on an identifier key, or a literal
-   * condition on a cold long-tail key that the index cannot confirm.
+   * text, or a literal condition on a cold long-tail key that the index cannot confirm.
    */
   WEAK;
 

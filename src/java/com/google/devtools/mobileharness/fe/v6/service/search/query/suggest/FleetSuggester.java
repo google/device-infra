@@ -595,12 +595,12 @@ public final class FleetSuggester {
               .addAllMainText(
                   segments(vocabulary.titleDisplayName(key.get()) + " starts with ", prefix))
               .setApplyFilter(applyFilter(vocabulary, index, key.get(), filter));
-      // The row applies a prefix filter rather than a single value, so MatchTier.WEAK places it
-      // below every concrete value match of the same key priority while still ordering it by
-      // matchCount ahead of uncounted rows.
+      // The row matches identifier values by prefix, so MatchTier.PREFIX places it below every
+      // exact match across all keys while keeping it alongside other prefix matches (ordered by
+      // curated key priority and matchCount).
       out.add(
           SuggestionCandidate.presetCondition(
-              key.get(), MatchTier.WEAK, proto, matchCount, matchCount));
+              key.get(), MatchTier.PREFIX, proto, matchCount, matchCount));
     }
     return out.build();
   }

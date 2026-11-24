@@ -37,9 +37,10 @@ import javax.annotation.Nullable;
  *
  * <p>This class answers "of everything the patterns produced, what does the user see and in which
  * order?" It knows nothing about how candidates were generated. Filter suggestions are ordered by
- * curated key priority first, so a core key such as Model outranks a raw dimension whatever the
- * counts, then match quality, count, and finally main text as a stable tie-break; group-by
- * suggestions are ordered by {@link #rankGroupBys}.
+ * match quality first, so an exact match always outranks a prefix or weak match across keys, then
+ * curated key priority (so a core key such as Model outranks a raw dimension within the same match
+ * tier), count, and finally main text as a stable tie-break; group-by suggestions are ordered by
+ * {@link #rankGroupBys}.
  *
  * <p>Counts follow the spec's count semantics: an add-filter row shows the resulting total under
  * the current filters; a modify-include row shows the delta it would add, prefixed with "+"; a
@@ -70,7 +71,7 @@ final class SuggestionRanker {
    *
    * <p>Counting every admitted candidate when only {@code limit} rows are shown would waste passes
    * over the filtered scope across dozens of candidate keys. Instead, candidates are ordered best
-   * first by an {@link EvaluationKey} that combines curated key priority, match tier, {@link
+   * first by an {@link EvaluationKey} that combines match tier, curated key priority, {@link
    * #upperBoundCount}, and the row's full-corpus count (so two candidates whose upper bounds are
    * both clamped to a small filtered scope size still keep their relative fleet-wide frequency
    * order). The best {@code limit} counted candidates are kept in a heap, and the walk stops as
@@ -201,30 +202,28 @@ final class SuggestionRanker {
   }
 
   /**
-   * The fields a filter row is ordered by, best first: curated key priority (higher first), match
-   * tier (stronger first), count (higher first), and main text as a stable tie-break.
+   * The fields a filter row is ordered by, best first: match tier (stronger first), curated key
+   * priority (higher first), count (higher first), and main text as a stable tie-break.
    */
-  private record RankKey(int priority, MatchTier tier, int count, String mainText) {
+  private record RankKey(MatchTier tier, int priority, int count, String mainText) {
     static final Comparator<RankKey> BEST_FIRST =
-        Comparator.comparingInt(RankKey::priority)
-            .reversed()
-            .thenComparing(RankKey::tier)
+        Comparator.comparing(RankKey::tier)
+            .thenComparing(Comparator.comparingInt(RankKey::priority).reversed())
             .thenComparing(Comparator.comparingInt(RankKey::count).reversed())
             .thenComparing(RankKey::mainText);
   }
 
   /**
-   * Ordering key for visiting candidates before their filtered counts are computed: curated key
-   * priority, match tier, {@link #upperBoundCount}, {@link #fullCorpusCount} (preserving relative
+   * Ordering key for visiting candidates before their filtered counts are computed: match tier,
+   * curated key priority, {@link #upperBoundCount}, {@link #fullCorpusCount} (preserving relative
    * fleet-wide frequency when {@link #upperBoundCount} is clamped to a small filtered scope size),
    * and main text.
    */
   private record EvaluationKey(
-      int priority, MatchTier tier, int upperBoundCount, int fullCorpusCount, String mainText) {
+      MatchTier tier, int priority, int upperBoundCount, int fullCorpusCount, String mainText) {
     static final Comparator<EvaluationKey> BEST_FIRST =
-        Comparator.comparingInt(EvaluationKey::priority)
-            .reversed()
-            .thenComparing(EvaluationKey::tier)
+        Comparator.comparing(EvaluationKey::tier)
+            .thenComparing(Comparator.comparingInt(EvaluationKey::priority).reversed())
             .thenComparing(Comparator.comparingInt(EvaluationKey::upperBoundCount).reversed())
             .thenComparing(Comparator.comparingInt(EvaluationKey::fullCorpusCount).reversed())
             .thenComparing(EvaluationKey::mainText);
@@ -233,8 +232,8 @@ final class SuggestionRanker {
   /** The candidate's rank key with its current count; final once the candidate is counted. */
   private static RankKey finalKey(KeyVocabulary vocabulary, SuggestionCandidate candidate) {
     return new RankKey(
-        vocabulary.priority(candidate.key()),
         candidate.tier(),
+        vocabulary.priority(candidate.key()),
         candidate.rankCount(),
         candidate.mainText());
   }
@@ -243,8 +242,8 @@ final class SuggestionRanker {
   private static EvaluationKey evaluationKey(
       SuggestionContext context, SuggestionCandidate candidate) {
     return new EvaluationKey(
-        context.vocabulary().priority(candidate.key()),
         candidate.tier(),
+        context.vocabulary().priority(candidate.key()),
         upperBoundCount(context, candidate),
         fullCorpusCount(context, candidate),
         candidate.mainText());
@@ -254,9 +253,9 @@ final class SuggestionRanker {
    * Whether neither {@code candidate} nor any candidate ordered after it by {@link EvaluationKey}
    * can beat {@code worstKept}.
    *
-   * <p>Every kept candidate was visited before {@code candidate}, so {@code candidate}'s key
-   * priority is never higher than {@code worstKept}'s and, at the same priority, its tier is never
-   * stronger; a different priority or tier is therefore a worse one. At the same priority and tier,
+   * <p>Every kept candidate was visited before {@code candidate}, so {@code candidate}'s tier is
+   * never stronger than {@code worstKept}'s and, within the same tier, its key priority is never
+   * higher; a different tier or priority is therefore a worse one. At the same tier and priority,
    * {@code upperBoundCount} is non-increasing along {@link EvaluationKey#BEST_FIRST} and a final
    * count never exceeds its upper bound, so an upper bound below {@code worstKept}'s count ends the
    * walk. An upper bound equal to it does not: a row with that count wins when its main text sorts
@@ -265,8 +264,8 @@ final class SuggestionRanker {
   private static boolean cannotBeat(
       SuggestionContext context, SuggestionCandidate candidate, SuggestionCandidate worstKept) {
     KeyVocabulary vocabulary = context.vocabulary();
-    if (vocabulary.priority(candidate.key()) != vocabulary.priority(worstKept.key())
-        || candidate.tier() != worstKept.tier()) {
+    if (candidate.tier() != worstKept.tier()
+        || vocabulary.priority(candidate.key()) != vocabulary.priority(worstKept.key())) {
       return true;
     }
     return upperBoundCount(context, candidate) < worstKept.rankCount();

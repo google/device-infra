@@ -54,6 +54,9 @@ import org.junit.runners.JUnit4;
 public final class SuggestionRankerTest {
 
   private static final String MODEL = "dimension::model";
+  private static final String LABEL = "dimension::label";
+  private static final String UUID = "device_field::uuid";
+  private static final String LAB_LOCATION = "dimension::lab_location";
 
   @Test
   public void rank_filteredTieOnCount_evaluatesTheTiedRowAndKeepsTheEarlierMainText() {
@@ -145,6 +148,54 @@ public final class SuggestionRankerTest {
         .inOrder();
     assertThat(response.getItemsList().stream().map(FleetSuggestion::getCount))
         .containsExactly(1, 2, 3)
+        .inOrder();
+  }
+
+  @Test
+  public void rank_strongerMatchTierOutranksHigherKeyPriority() {
+    FleetSnapshot snapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(fleet(), Instant.ofEpochSecond(1_700_000_000L));
+    DeviceCorpus corpus =
+        new DeviceCorpus(snapshot, new LazyPostings(snapshot.devices()), new AtsCuration());
+    SuggestionContext context =
+        SuggestionContext.create(
+            corpus,
+            ImmutableList.of(),
+            Guice.createInjector().getInstance(FleetFilterEngine.class));
+
+    // In AtsCuration: UUID and Model have priority 3, Label has priority 1, and long-tail
+    // dimension::lab_location has priority 0. Match tier ranks first, then key priority, then
+    // count.
+    var labLocationKey = corpus.vocabulary().describe(LAB_LOCATION).get();
+    var uuidKey = corpus.vocabulary().describe(UUID).get();
+    var labelKey = corpus.vocabulary().describe(LABEL).get();
+    var modelKey = corpus.vocabulary().describe(MODEL).get();
+
+    SuggestionCandidate exactLowPriority =
+        SuggestionCandidate.presetCondition(
+            labLocationKey, MatchTier.EXACT, row("exact_raw"), /* count= */ 1, /* rankCount= */ 1);
+    SuggestionCandidate prefixHighPriority =
+        SuggestionCandidate.presetCondition(
+            uuidKey, MatchTier.PREFIX, row("prefix_tier1"), /* count= */ 14, /* rankCount= */ 14);
+    SuggestionCandidate prefixMidPriority =
+        SuggestionCandidate.presetCondition(
+            labelKey, MatchTier.PREFIX, row("prefix_tier2"), /* count= */ 50, /* rankCount= */ 50);
+    SuggestionCandidate weakHighPriority =
+        SuggestionCandidate.presetCondition(
+            modelKey, MatchTier.WEAK, row("weak_tier1"), /* count= */ 100, /* rankCount= */ 100);
+
+    FleetSuggestionResponse response =
+        new SuggestionRanker()
+            .rank(
+                context,
+                ImmutableList.of(
+                    weakHighPriority, prefixMidPriority, prefixHighPriority, exactLowPriority),
+                /* limit= */ 4);
+
+    assertThat(response.getItemsList().stream().map(item -> item.getMainText(0).getText()))
+        .containsExactly("exact_raw", "prefix_tier1", "prefix_tier2", "weak_tier1")
         .inOrder();
   }
 
