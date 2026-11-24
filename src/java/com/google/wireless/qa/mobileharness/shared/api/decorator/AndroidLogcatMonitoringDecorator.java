@@ -544,7 +544,7 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
             && process.type().equals(ANDROID_RUNTIME)
             && crashEvent.crashLogs().contains(ORCHESTRATOR_CONNECTION_FAILURE_MESSAGE)) {
           throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ORCHESTRATOR_CONNECTION_FAILURE,
+              AndroidErrorId.ANDROID_LOGCAT_MONITORING_ORCHESTRATOR_CONNECTION_FAILURE,
               String.format(
                   "%s failed to connect to androidx.test.orchestrator.OrchestratorService",
                   crashEvent.process().name()));
@@ -579,7 +579,7 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
           .setNonPassing(
               TestResult.FAIL,
               new MobileHarnessException(
-                  AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED,
+                  AndroidErrorId.ANDROID_LOGCAT_MONITORING_APP_UNDER_TEST_PROCESS_CRASHED,
                   String.format(
                       "Processes crashed: %s ", Joiner.on(", ").join(appsUnderTestThatCrashed))));
     } else {
@@ -587,7 +587,7 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
           .findings()
           .add(
               Severity.SEVERE,
-              AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED,
+              AndroidErrorId.ANDROID_LOGCAT_MONITORING_APP_UNDER_TEST_PROCESS_CRASHED,
               "App under test crashed.")
           .addMetadata("package_names", Joiner.on(",").join(appsUnderTestThatCrashed));
     }
@@ -605,8 +605,7 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
                   .findings()
                   .add(
                       Severity.SEVERE,
-                      AndroidErrorId
-                          .ANDROID_LOGCAT_MONITORING_DECORATOR_LICENSING_PROTECTION_TERMINATION,
+                      AndroidErrorId.ANDROID_LOGCAT_MONITORING_LICENSING_PROTECTION_TERMINATION,
                       "Licensing protection termination detected.");
           case ANTI_TAMPERING_TERMINATION ->
               testInfo

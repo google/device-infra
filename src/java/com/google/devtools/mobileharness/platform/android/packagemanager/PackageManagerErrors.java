@@ -31,19 +31,19 @@ public final class PackageManagerErrors {
       ImmutableList.of(
           new ErrorDetail(
               "INSTALL_FAILED_CONFLICTING_PROVIDER",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_CONFLICTING_PROVIDER,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_CONFLICTING_PROVIDER,
               "Package conflicts with an installed package providing the same provider authority"),
           new ErrorDetail(
               "INSTALL_FAILED_CPU_ABI_INCOMPATIBLE",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_CPU_ABI_INCOMPATIBLE,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_CPU_ABI_INCOMPATIBLE,
               "Package contains native code, but non is compatible with the device's ABI"),
           new ErrorDetail(
               "INSTALL_FAILED_DEPRECATED_SDK_VERSION",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_DEPRECATED_SDK_VERSION,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_DEPRECATED_SDK_VERSION,
               "Package targets a deprecated SDK version"),
           new ErrorDetail(
               "INSTALL_FAILED_DUPLICATE_PERMISSION",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_DUPLICATE_PERMISSION,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_DUPLICATE_PERMISSION,
               "Package failed because it wants to define a permission already defined"),
           new ErrorDetail(
               "INSTALL_FAILED_INVALID_APK: Split null was defined multiple times",
@@ -51,24 +51,24 @@ public final class PackageManagerErrors {
               "Installation failed due to duplication of splits or duplication of apps"),
           new ErrorDetail(
               "INSTALL_FAILED_INVALID_APK",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_INVALID_APK,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_INVALID_APK,
               "Package is not a valid APK"),
           new ErrorDetail(
               "INSTALL_FAILED_MISSING_FEATURE",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_MISSING_FEATURE,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_MISSING_FEATURE,
               "Package uses a feature not supported by the device"),
           new ErrorDetail(
               "INSTALL_FAILED_MISSING_SHARED_LIBRARY",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_MISSING_SHARED_LIBRARY,
+              AndroidErrorId.ANDROID_INSTALLATION_MISSING_SHARED_LIBRARY,
               "Package is missing a shared library. Check the <uses-library> element in the"
                   + " manifest."),
           new ErrorDetail(
               "INSTALL_FAILED_MISSING_SPLIT",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_MISSING_SPLIT,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_MISSING_SPLIT,
               "Package is missing one or more splits"),
           new ErrorDetail(
               "INSTALL_FAILED_NEWER_SDK",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_NEWER_SDK,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_NEWER_SDK,
               "Package requires an older device SDK version"),
           new ErrorDetail(
               "INSTALL_FAILED_NO_MATCHING_ABIS",
@@ -80,7 +80,7 @@ public final class PackageManagerErrors {
               "Package requires a newer device SDK version"),
           new ErrorDetail(
               "INSTALL_FAILED_SHARED_USER_INCOMPATIBLE",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_SHARED_USER_INCOMPATIBLE,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_SHARED_USER_INCOMPATIBLE,
               "Package requested shared user which is already installed with non-matching"
                   + " signatures"),
           new ErrorDetail(
@@ -90,44 +90,43 @@ public final class PackageManagerErrors {
                   + " only packages"),
           new ErrorDetail(
               "INSTALL_FAILED_VERIFICATION_FAILURE",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_FAILED_VERIFICATION_FAILURE,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_VERIFICATION_FAILURE,
               "Package verification failed"),
           new ErrorDetail(
               "INSTALL_PARSE_FAILED_BAD_MANIFEST",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_BAD_MANIFEST,
+              AndroidErrorId.ANDROID_INSTALLATION_PARSE_FAILED_BAD_MANIFEST,
               "Parser encountered an error in manifest"),
           new ErrorDetail(
               "INSTALL_PARSE_FAILED_BAD_PACKAGE_NAME",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_BAD_PACKAGE_NAME,
+              AndroidErrorId.ANDROID_INSTALLATION_PARSE_FAILED_BAD_PACKAGE_NAME,
               "Parser encountered an invalid package name"),
           new ErrorDetail(
               "INSTALL_PARSE_FAILED_BAD_SHARED_USER_ID",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_BAD_SHARED_USER_ID,
+              AndroidErrorId.ANDROID_INSTALLATION_PARSE_FAILED_BAD_SHARED_USER_ID,
               "Parser encountered an invalid shared user ID"),
           new ErrorDetail(
               "INSTALL_PARSE_FAILED_CERTIFICATE_ENCODING",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_CERTIFICATE_ENCODING,
+              AndroidErrorId.ANDROID_INSTALLATION_PARSE_FAILED_CERTIFICATE_ENCODING,
               "Parser encountered an invalid certificate encoding"),
           new ErrorDetail(
               "INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES",
-              AndroidErrorId
-                  .ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_INCONSISTENT_CERTIFICATES,
+              AndroidErrorId.ANDROID_INSTALLATION_PARSE_FAILED_INCONSISTENT_CERTIFICATES,
               "Ecountered certificate signature mismatch for a shared user"),
           new ErrorDetail(
               "INSTALL_PARSE_FAILED_MANIFEST_EMPTY",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_MANIFEST_EMPTY,
+              AndroidErrorId.ANDROID_INSTALLATION_PARSE_FAILED_MANIFEST_EMPTY,
               "Parser encountered an empty manifest"),
           new ErrorDetail(
               "INSTALL_PARSE_FAILED_MANIFEST_MALFORMED",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_MANIFEST_MALFORMED,
+              AndroidErrorId.ANDROID_INSTALLATION_PARSE_FAILED_MANIFEST_MALFORMED,
               "Parser encountered a malformed manifest"),
           new ErrorDetail(
               "INSTALL_PARSE_FAILED_NO_CERTIFICATES",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_NO_CERTIFICATES,
+              AndroidErrorId.ANDROID_INSTALLATION_PARSE_FAILED_NO_CERTIFICATES,
               "No certificates found in package"),
           new ErrorDetail(
               "INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_UNEXPECTED_EXCEPTION,
+              AndroidErrorId.ANDROID_INSTALLATION_PARSE_FAILED_UNEXPECTED_EXCEPTION,
               "Unexpected error when parsing the package"));
 
   private static final ImmutableList<ErrorDetail> BAD_NO_RETRY_USER_CONFIG_INSTALL_FAILURES =
@@ -138,13 +137,13 @@ public final class PackageManagerErrors {
               "Package install failed optimizing and validating"),
           new ErrorDetail(
               "INSTALL_FAILED_PERMISSION_MODEL_DOWNGRADE",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_PERMISSION_MODEL_DOWNGRADE,
+              AndroidErrorId.ANDROID_INSTALLATION_FAILED_PERMISSION_MODEL_DOWNGRADE,
               "Package does not support runtime permissions but the installed package does"),
           // Can occur for pre-installed system apps where signatures don't match, even after
           // uninstall.
           new ErrorDetail(
               "INSTALL_FAILED_UPDATE_INCOMPATIBLE",
-              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE,
+              AndroidErrorId.ANDROID_INSTALLATION_UPDATE_INCOMPATIBLE,
               "Package is already installed and is not compatible with the update"),
           new ErrorDetail(
               "INSTALL_FAILED_VERSION_DOWNGRADE",

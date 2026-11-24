@@ -1120,7 +1120,7 @@ public class AndroidPackageManagerUtil {
 
       if (output.contains(OUTPUT_INSTALL_FAILED_UPDATE_INCOMPATIBLE)) {
         throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE, errorMessage);
+            AndroidErrorId.ANDROID_INSTALLATION_UPDATE_INCOMPATIBLE, errorMessage);
       }
       if (output.contains(String.format(OUTPUT_TEMPLATE_INSTALL_FAILED_UID_INVALID, packageName))) {
         throw new MobileHarnessException(

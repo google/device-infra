@@ -395,7 +395,7 @@ public class AndroidSystemStateUtil {
     } catch (MobileHarnessException e) {
       if (e.getMessage().contains(RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR)) {
         throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_SYSTEM_STATE_FACTORY_RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR,
+            AndroidErrorId.ANDROID_FACTORY_RESET_TEST_HARNESS_SCREEN_LOCKED_ERROR,
             format(
                 "Failed to factory reset device %s via Test Harness Mode as device screen seems"
                     + " locked.",

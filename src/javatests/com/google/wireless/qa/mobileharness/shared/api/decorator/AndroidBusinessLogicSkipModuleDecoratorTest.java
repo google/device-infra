@@ -674,8 +674,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
     when(mockDynamicConfigResolver.fetchServerConfig(anyString(), anyString(), anyString(), any()))
         .thenThrow(
             new MobileHarnessException(
-                AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARTNER_SERVER_ERROR,
-                "Failed"));
+                AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_PARTNER_SERVER_ERROR, "Failed"));
     AndroidBusinessLogicSkipModuleDecoratorSpec spec =
         AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
             .setBusinessLogicUrl("http://fake-url/logic")
@@ -696,8 +695,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
     when(mockDynamicConfigResolver.fetchServerConfig(anyString(), anyString(), anyString(), any()))
         .thenThrow(
             new MobileHarnessException(
-                AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARTNER_SERVER_ERROR,
-                "Failed"));
+                AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_PARTNER_SERVER_ERROR, "Failed"));
     AndroidBusinessLogicSkipModuleDecoratorSpec spec =
         AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
             .setBusinessLogicUrl("http://fake-url/logic")

@@ -176,15 +176,14 @@ public class AndroidDesktopOtaUpdateDecorator extends SetupOnlyDecorator
     File updateDeviceScript = new File(tmpDir, IN_ZIP_SCRIPT_PATH);
     if (!updateDeviceScript.exists() || !updateDeviceScript.isFile()) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_DECORATOR_OTA_UPDATE_SCRIPT_FILE_NOT_FOUND,
+          AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_SCRIPT_FILE_NOT_FOUND,
           String.format(
               "Update device script file at %s does not exist or is not a regular file.",
               updateDeviceScript.getAbsolutePath()));
     }
     if (!updateDeviceScript.setExecutable(true)) {
       throw new MobileHarnessException(
-          AndroidErrorId
-              .ANDROID_DESKTOP_OTA_UPDATE_DECORATOR_OTA_UPDATE_SCRIPT_NOT_EXECUTABLE_ERROR,
+          AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_SCRIPT_NOT_EXECUTABLE_ERROR,
           String.format("Failed to set executable for %s.", updateDeviceScript.getAbsolutePath()));
     }
 
@@ -197,7 +196,7 @@ public class AndroidDesktopOtaUpdateDecorator extends SetupOnlyDecorator
     File otaPackage = new File(spec.getOtaPackage());
     if (!otaPackage.exists() || !otaPackage.isFile()) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_DECORATOR_OTA_UPDATE_PACKAGE_FILE_NOT_EXISTS,
+          AndroidErrorId.ANDROID_DESKTOP_OTA_UPDATE_PACKAGE_FILE_NOT_EXISTS,
           String.format(
               "OTA package file at %s does not exist or is not a regular file.",
               spec.getOtaPackage()));
