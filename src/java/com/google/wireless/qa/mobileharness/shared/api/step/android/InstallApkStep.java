@@ -19,7 +19,6 @@ package com.google.wireless.qa.mobileharness.shared.api.step.android;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -151,25 +150,41 @@ public class InstallApkStep implements InstallApkStepConstants {
     if (spec == null) {
       spec = createInstallApkStepSpec(testInfo.jobInfo());
     }
+    if (!spec.getForceInstallApks()
+        && testInfo.properties().getBoolean(PROPERTY_FORCE_INSTALL_APKS_OVERRIDE).orElse(false)) {
+      spec = spec.toBuilder().setForceInstallApks(true).build();
+    }
 
     String deviceId = device.getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
     InstallCoordinator coordinator = new InstallCoordinator(testInfo, apkInstaller);
 
+    boolean skipJobFiles =
+        testInfo.properties().getBoolean(PROPERTY_SKIP_JOB_INPUT_FILES).orElse(false);
+
     // Makes sure the first apk in 'build_apk' will still be the first element inserted.
     coordinator.addApks(jobBuildApks);
     coordinator.addApks(testInfo.inputFiles().get(TAG_BUILD_APK));
     coordinator.addApks(testInfo.inputFiles().get(TAG_EXTRA_APK));
-    coordinator.addApks(getExtraApks(spec, jobInfo));
-
-    String extraFileTags = spec.getInstallApkExtraFileTags();
-    for (String fileTag : Splitter.on(',').split(extraFileTags)) {
-      testInfo.log().atInfo().alsoTo(logger).log("Get extra tag %s", fileTag);
-      coordinator.addApks(testInfo.inputFiles().get(fileTag));
-      coordinator.addApks(jobInfo.inputFiles().get(fileTag));
+    if (!skipJobFiles) {
+      coordinator.addApks(getExtraApks(spec, jobInfo));
     }
 
-    coordinator.addDexMetadataFiles(getDexMetadataFiles(spec, testInfo));
+    String extraFileTagsOverride =
+        testInfo.properties().get(PROPERTY_INSTALL_APK_EXTRA_FILE_TAGS_OVERRIDE);
+    Iterable<String> fileTags =
+        extraFileTagsOverride != null
+            ? Splitter.on(',').omitEmptyStrings().trimResults().split(extraFileTagsOverride)
+            : Splitter.on(',').split(spec.getInstallApkExtraFileTags());
+    for (String fileTag : fileTags) {
+      testInfo.log().atInfo().alsoTo(logger).log("Get extra tag %s", fileTag);
+      coordinator.addApks(testInfo.inputFiles().get(fileTag));
+      if (!skipJobFiles) {
+        coordinator.addApks(jobInfo.inputFiles().get(fileTag));
+      }
+    }
+
+    coordinator.addDexMetadataFiles(getDexMetadataFiles(spec, testInfo, skipJobFiles));
 
     coordinator
         .getFirstPackageName()
@@ -405,7 +420,7 @@ public class InstallApkStep implements InstallApkStepConstants {
 
   private void checkSizeInfo(TestInfo testInfo, String packageName, Collection<String> apks) {
     String propertyName =
-        Ascii.toLowerCase(ApkInfo.APK_SIZE_.name()) + packageName.replace('.', '_');
+        InstallApkStepConstants.PROPERTY_PREFIX_APK_SIZE + packageName.replace('.', '_');
     if (testInfo.properties().get(propertyName) != null) {
       return;
     }
@@ -464,7 +479,10 @@ public class InstallApkStep implements InstallApkStepConstants {
   }
 
   private static ImmutableSet<String> getDexMetadataFiles(
-      InstallApkStepSpec spec, TestInfo testInfo) {
+      InstallApkStepSpec spec, TestInfo testInfo, boolean skipJobFiles) {
+    if (skipJobFiles) {
+      return testInfo.inputFiles().get(TAG_DEX_METADATA);
+    }
     return new ImmutableSet.Builder<String>()
         .addAll(expandG3Files(spec.getDexMetadataList()))
         .addAll(testInfo.inputFiles().get(TAG_DEX_METADATA))

@@ -39,6 +39,7 @@ import androidx.test.services.storage.TestStorageConstants;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flags.testing.SetFlags;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -68,6 +69,7 @@ import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidInstrumentationDriverSpec;
 import com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStep;
+import com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStepConstants;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -241,6 +243,64 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(androidInstrumentationUtil)
         .setMockLocationEnabled(DEVICE_ID, TEST_PACKAGE, DEFAULT_SDK_VERSION);
+  }
+
+  @Test
+  public void run_skipJobFilesFalse_ignoresTestInfoTestDataAndPushesJobTestData() throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    String testDataPath = tempFolder.newFile("test_test_data.txt").getAbsolutePath();
+    jobInfo
+        .inputFiles()
+        .add(AndroidInstrumentationDriverSpec.TAG_TEST_DATA, "/path/job_test_data.txt");
+    testInfo.inputFiles().add(AndroidInstrumentationDriverSpec.TAG_TEST_DATA, testDataPath);
+
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    verify(androidInstrumentationUtil)
+        .pushTestData(
+            eq(testInfo), eq(DEVICE_ID), eq(ImmutableSet.of("/path/job_test_data.txt")), any());
+  }
+
+  @Test
+  public void run_skipJobFilesTrue_pushesTestInfoTestDataOnly() throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    String testDataPath = tempFolder.newFile("test_test_data_only.txt").getAbsolutePath();
+    jobInfo
+        .inputFiles()
+        .add(AndroidInstrumentationDriverSpec.TAG_TEST_DATA, "/path/job_test_data.txt");
+    testInfo.inputFiles().add(AndroidInstrumentationDriverSpec.TAG_TEST_DATA, testDataPath);
+    testInfo.properties().add(InstallApkStepConstants.PROPERTY_SKIP_JOB_INPUT_FILES, "true");
+
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    verify(androidInstrumentationUtil)
+        .pushTestData(eq(testInfo), eq(DEVICE_ID), eq(ImmutableSet.of(testDataPath)), any());
   }
 
   @Test
