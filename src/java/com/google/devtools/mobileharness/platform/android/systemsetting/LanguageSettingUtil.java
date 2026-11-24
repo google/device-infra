@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSettings;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil.AppOpsMode;
@@ -85,7 +86,15 @@ public class LanguageSettingUtil {
   /** The target signal to search in the device log. */
   @VisibleForTesting static final String LOG_SIGNAL = "Successfully switch language";
 
-  /** Snapshot of the device's original locale used to restore language settings after a test. */
+  /** The system setting that holds the locale list of a user on API 24+. */
+  @VisibleForTesting static final String SETTING_SYSTEM_LOCALES = "system_locales";
+
+  /**
+   * Snapshot of the device's original locale used to restore language settings after a test.
+   *
+   * <p>The original language is null or empty if the original locale is unknown. Then nothing is
+   * restored.
+   */
   public record LocaleRestoreState(
       @Nullable String originalLanguage,
       @Nullable String originalCountry,
@@ -151,7 +160,8 @@ public class LanguageSettingUtil {
 
   /**
    * Switches the language and optional country/region on a managed {@link Device}, returning a
-   * {@link LocaleRestoreState} if a switch was performed or {@link Optional#empty()} if skipped.
+   * {@link LocaleRestoreState} if a switch was performed or {@link Optional#empty()} if it was
+   * skipped or there is nothing to restore.
    */
   @CanIgnoreReturnValue
   public Optional<LocaleRestoreState> switchLanguage(
@@ -181,13 +191,32 @@ public class LanguageSettingUtil {
       Duration logSignalTimeout,
       @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
-    String originalLanguage = adbUtil.getProperty(deviceId, AndroidProperty.LANGUAGE);
-    String originalCountry = adbUtil.getProperty(deviceId, AndroidProperty.REGION);
+    int sdkVersion =
+        device != null
+            ? systemSettingManager.getDeviceSdkVersion(device)
+            : androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
 
-    boolean skipSwitch =
-        Ascii.equalsIgnoreCase(language, Strings.nullToEmpty(originalLanguage))
-            && (Strings.isNullOrEmpty(country)
-                || Ascii.equalsIgnoreCase(country, Strings.nullToEmpty(originalCountry)));
+    String originalLanguage;
+    String originalCountry;
+    boolean skipSwitch;
+    Optional<EffectiveLocale> effectiveLocale = Optional.empty();
+    if (sdkVersion < AndroidVersion.NOUGAT.getStartSdkVersion()) {
+      originalLanguage = adbUtil.getProperty(deviceId, AndroidProperty.LANGUAGE);
+      originalCountry = adbUtil.getProperty(deviceId, AndroidProperty.REGION);
+      skipSwitch = isTargetLocale(language, country, originalLanguage, originalCountry);
+    } else {
+      // On API 24+, the platform no longer updates the legacy language and region properties, so
+      // they can be stale. The effective locale of the current user is the restore baseline
+      // instead. Only the user's own locale setting can skip the switch: the device default locale
+      // is global, so it may not be what the current user sees.
+      effectiveLocale = getEffectiveLocale(log, deviceId, sdkVersion);
+      Optional<Locale> baseline = effectiveLocale.map(EffectiveLocale::locale);
+      originalLanguage = baseline.map(Locale::getLanguage).orElse(null);
+      originalCountry = baseline.map(Locale::getCountry).orElse(null);
+      skipSwitch =
+          effectiveLocale.map(EffectiveLocale::fromUserSetting).orElse(false)
+              && isTargetLocale(language, country, originalLanguage, originalCountry);
+    }
 
     if (skipSwitch) {
       SharedLogUtil.logMsg(
@@ -199,17 +228,12 @@ public class LanguageSettingUtil {
       return Optional.empty();
     }
 
-    int sdkVersion =
-        device != null
-            ? systemSettingManager.getDeviceSdkVersion(device)
-            : androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
-
     SharedLogUtil.logMsg(
         logger,
         log,
         "Device locale is [%s_%s]. Target is [%s_%s]. Switching language...",
-        originalLanguage,
-        originalCountry,
+        Strings.nullToEmpty(originalLanguage),
+        Strings.nullToEmpty(originalCountry),
         language,
         Strings.nullToEmpty(country));
 
@@ -222,6 +246,22 @@ public class LanguageSettingUtil {
     // Switch the language and country.
     runWithLogcatTimeoutRetry(() ->
         switchLocale(log, sdkVersion, deviceId, language, country, switchRegion, logSignalTimeout));
+
+    if (isSameLocale(language, country, originalLanguage, originalCountry)) {
+      // The original locale already is the target, so there is nothing to restore. The switch APK
+      // then changes nothing and does not store the user's locale setting, which is why a user
+      // without the setting gets here instead of skipping the switch. Store the user's locale as
+      // the setting, so that later switches to it are skipped.
+      if (effectiveLocale.isPresent()) {
+        putSystemLocales(
+            log,
+            deviceId,
+            sdkVersion,
+            effectiveLocale.get().userId(),
+            effectiveLocale.get().locale());
+      }
+      return Optional.empty();
+    }
     return Optional.of(
         new LocaleRestoreState(originalLanguage, originalCountry, sdkVersion, switchRegion));
   }
@@ -235,6 +275,11 @@ public class LanguageSettingUtil {
       throws MobileHarnessException, InterruptedException {
     String originalLanguage = restoreState.originalLanguage();
     if (StrUtil.isEmptyOrWhitespace(originalLanguage)) {
+      SharedLogUtil.logMsg(
+          logger,
+          log,
+          "Original locale of device %s is unknown. Skipping language restore.",
+          deviceId);
       return;
     }
     switchLocale(
@@ -245,6 +290,157 @@ public class LanguageSettingUtil {
         restoreState.originalCountry(),
         restoreState.restoreRegion(),
         logSignalTimeout);
+  }
+
+  /**
+   * The effective locale of the current user on API 24+.
+   *
+   * @param userId the current user
+   * @param locale the primary locale of the user's {@code system_locales} setting, or the device
+   *     default locale if the user has no such setting
+   * @param fromUserSetting whether {@code locale} comes from the user's {@code system_locales}
+   *     setting
+   */
+  private record EffectiveLocale(int userId, Locale locale, boolean fromUserSetting) {}
+
+  /**
+   * Returns the effective locale of the current user on API 24+: the primary locale of the user's
+   * {@code system_locales} setting or, if the user has no such setting, the device default locale.
+   *
+   * <p>Returns empty if the effective locale can not be read.
+   */
+  private Optional<EffectiveLocale> getEffectiveLocale(
+      @Nullable LogCollector<?> log, String deviceId, int sdkVersion) throws InterruptedException {
+    int userId;
+    boolean fromUserSetting;
+    String languageTags;
+    try {
+      userId = androidUserUtil.getCurrentUser(deviceId, sdkVersion);
+      String systemLocales =
+          Strings.nullToEmpty(
+                  adbUtil.settings(
+                      userArgs(deviceId, sdkVersion, userId),
+                      AndroidSettings.Spec.create(
+                          AndroidSettings.Command.GET,
+                          AndroidSettings.NameSpace.SYSTEM,
+                          SETTING_SYSTEM_LOCALES)))
+              .trim();
+      // The setting is a comma-separated list of BCP 47 language tags whose first entry is the
+      // primary locale, e.g. "sv-SE,en-US". It is "null" if the user has no locale set; such a
+      // user follows the device default locale, a single language tag in persist.sys.locale or
+      // ro.product.locale.
+      fromUserSetting = !systemLocales.isEmpty() && !systemLocales.equals("null");
+      languageTags =
+          fromUserSetting
+              ? systemLocales
+              : Strings.nullToEmpty(adbUtil.getProperty(deviceId, AndroidProperty.LOCALE)).trim();
+    } catch (MobileHarnessException e) {
+      SharedLogUtil.logMsg(
+          logger,
+          log,
+          "Failed to read the effective locale of device %s: %s",
+          deviceId,
+          e.getMessage());
+      return Optional.empty();
+    }
+
+    int separatorIndex = languageTags.indexOf(',');
+    Locale primaryLocale =
+        Locale.forLanguageTag(
+            separatorIndex < 0 ? languageTags : languageTags.substring(0, separatorIndex));
+    if (primaryLocale.getLanguage().isEmpty()) {
+      SharedLogUtil.logMsg(
+          logger,
+          log,
+          "Failed to get the effective locale of user %s on device %s from [%s]",
+          userId,
+          deviceId,
+          languageTags);
+      return Optional.empty();
+    }
+    SharedLogUtil.logMsg(
+        logger,
+        log,
+        "Effective locale of user %s on device %s is [%s]%s",
+        userId,
+        deviceId,
+        primaryLocale.toLanguageTag(),
+        fromUserSetting ? "" : ", the device default locale");
+    return Optional.of(new EffectiveLocale(userId, primaryLocale, fromUserSetting));
+  }
+
+  /** Stores the given locale as the {@code system_locales} setting of the user. */
+  private void putSystemLocales(
+      @Nullable LogCollector<?> log, String deviceId, int sdkVersion, int userId, Locale locale)
+      throws InterruptedException {
+    String languageTag = locale.toLanguageTag();
+    try {
+      adbUtil.settings(
+          userArgs(deviceId, sdkVersion, userId),
+          AndroidSettings.Spec.create(
+              AndroidSettings.Command.PUT,
+              AndroidSettings.NameSpace.SYSTEM,
+              SETTING_SYSTEM_LOCALES + " " + languageTag));
+    } catch (MobileHarnessException e) {
+      SharedLogUtil.logMsg(
+          logger,
+          log,
+          "Failed to set %s of user %s on device %s to [%s]: %s",
+          SETTING_SYSTEM_LOCALES,
+          userId,
+          deviceId,
+          languageTag,
+          e.getMessage());
+    }
+  }
+
+  private static UtilArgs userArgs(String deviceId, int sdkVersion, int userId) {
+    return UtilArgs.builder()
+        .setSerial(deviceId)
+        .setSdkVersion(sdkVersion)
+        .setUserId(String.valueOf(userId))
+        .build();
+  }
+
+  /**
+   * Returns whether the given language and country match the target language and country. The
+   * country is ignored if the target country is empty.
+   */
+  private static boolean isTargetLocale(
+      String targetLanguage,
+      @Nullable String targetCountry,
+      @Nullable String language,
+      @Nullable String country) {
+    return normalizeLanguage(targetLanguage).equals(normalizeLanguage(language))
+        && (Strings.isNullOrEmpty(targetCountry)
+            || Ascii.equalsIgnoreCase(targetCountry, Strings.nullToEmpty(country)));
+  }
+
+  /**
+   * Returns whether the given language and country are exactly the target language and country,
+   * which is the case in which the switch APK changes nothing.
+   */
+  private static boolean isSameLocale(
+      String targetLanguage,
+      @Nullable String targetCountry,
+      @Nullable String language,
+      @Nullable String country) {
+    return normalizeLanguage(targetLanguage).equals(normalizeLanguage(language))
+        && Ascii.equalsIgnoreCase(Strings.nullToEmpty(targetCountry), Strings.nullToEmpty(country));
+  }
+
+  /**
+   * Returns the language code in lower case, with the legacy ISO 639 codes that Android still uses
+   * (iw, in, ji) replaced by the current codes, which {@link Locale} uses on newer JDKs.
+   */
+  private static String normalizeLanguage(@Nullable String language) {
+    String code = Ascii.toLowerCase(Strings.nullToEmpty(language));
+    return switch (code) {
+      case "iw" -> "he";
+      case "in" -> "id";
+      case "ji" -> "yi";
+      default -> code;
+    };
   }
 
   private void installApkAndGrantPermission(

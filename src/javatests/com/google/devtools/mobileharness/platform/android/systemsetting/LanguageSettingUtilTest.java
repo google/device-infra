@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.systemsetting;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
@@ -74,6 +75,13 @@ public final class LanguageSettingUtilTest {
   private static final String ACTIVITY_NAME =
       AndroidPackages.MH_SWITCH_LANGUAGE.getActivityName().get();
   private static final Duration TIMEOUT = Duration.ofSeconds(30);
+  private static final UtilArgs API_33_USER_10_ARGS =
+      UtilArgs.builder().setSerial(DEVICE_ID).setSdkVersion(33).setUserId("10").build();
+  private static final AndroidSettings.Spec GET_SYSTEM_LOCALES =
+      AndroidSettings.Spec.create(
+          AndroidSettings.Command.GET,
+          AndroidSettings.NameSpace.SYSTEM,
+          LanguageSettingUtil.SETTING_SYSTEM_LOCALES);
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
@@ -230,13 +238,13 @@ public final class LanguageSettingUtilTest {
   public void switchLanguage_byDeviceWithCountry_returnsLocaleRestoreState() throws Exception {
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
     when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("us");
-    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(24);
-    when(androidUserUtil.getCurrentUser(DEVICE_ID, 24)).thenReturn(0);
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(23);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 23)).thenReturn(0);
 
     Optional<LocaleRestoreState> result =
         languageSettingUtil.switchLanguage(device, "zh", "cn", TIMEOUT, log);
 
-    assertThat(result).hasValue(new LocaleRestoreState("en", "us", 24, true));
+    assertThat(result).hasValue(new LocaleRestoreState("en", "us", 23, true));
   }
 
   @Test
@@ -409,6 +417,324 @@ public final class LanguageSettingUtilTest {
         .setProperty(DEVICE_ID, AndroidProperty.LOCALE.getPropertyKeys().get(0), "en-US");
   }
 
+  @Test
+  public void restoreLanguage_withUnknownOriginalLanguage_doesNothing() throws Exception {
+    LocaleRestoreState state = new LocaleRestoreState(null, null, 33, true);
+
+    languageSettingUtil.restoreLanguage(DEVICE_ID, state, TIMEOUT, log);
+
+    verifyNoInteractions(instrumentationUtil, adbUtil);
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithStaleLegacyProperties_switchesFromEffectiveLocale()
+      throws Exception {
+    // The legacy properties still claim the target locale, but the current user is in sv-SE.
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("zh");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("CN");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES))
+        .thenReturn("sv-SE-u-fw-mon,en-US");
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "zh", "CN", TIMEOUT, log);
+
+    verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            33,
+            createInstrumentSetting(ImmutableMap.of("language", "zh", "country", "CN")),
+            Duration.ofMinutes(1));
+    verify(adbUtil, never()).settings(any(UtilArgs.class), anyPutSystemLocales());
+    assertThat(result).hasValue(new LocaleRestoreState("sv", "SE", 33, true));
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithEffectiveLocaleAsTarget_skipsSwitch()
+      throws Exception {
+    // The legacy properties are stale, but the primary locale of the current user is the target.
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("en");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("US");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("zh-CN,en-US");
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "zh", "cn", TIMEOUT, log);
+
+    assertThat(result).isEmpty();
+    verifyNoInteractions(apkInstaller, instrumentationUtil);
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithSameCountryOtherLanguage_switches()
+      throws Exception {
+    // Only the country of the current user's locale matches the target.
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("en-CA");
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "fr", "CA", TIMEOUT, log);
+
+    verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            33,
+            createInstrumentSetting(ImmutableMap.of("language", "fr", "country", "CA")),
+            Duration.ofMinutes(1));
+    assertThat(result).hasValue(new LocaleRestoreState("en", "CA", 33, true));
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithSameLanguageOtherCountry_switches()
+      throws Exception {
+    // Only the language of the current user's locale matches the target.
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("en-GB");
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "en", "US", TIMEOUT, log);
+
+    verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            33,
+            createInstrumentSetting(ImmutableMap.of("language", "en", "country", "US")),
+            Duration.ofMinutes(1));
+    assertThat(result).hasValue(new LocaleRestoreState("en", "GB", 33, true));
+  }
+
+  @Test
+  public void switchLanguage_byDeviceInfoOnApi33WithSameEffectiveLanguageNoCountry_skipsSwitch()
+      throws Exception {
+    when(androidSystemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("zh-TW");
+
+    languageSettingUtil.switchLanguage(deviceInfo, "zh", /* country= */ null);
+
+    verifyNoInteractions(apkInstaller, androidPackageManagerUtil, instrumentationUtil);
+  }
+
+  @Test
+  public void switchLanguage_byDeviceInfoOnApi33WithLegacyLanguageCodes_skipsSwitch()
+      throws Exception {
+    // Android uses the legacy codes iw, in and ji for Hebrew, Indonesian and Yiddish.
+    when(androidSystemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES))
+        .thenReturn("he-IL", "id-ID", "yi");
+
+    languageSettingUtil.switchLanguage(deviceInfo, "iw", "IL");
+    languageSettingUtil.switchLanguage(deviceInfo, "in", "ID");
+    languageSettingUtil.switchLanguage(deviceInfo, "ji", /* country= */ null);
+
+    verifyNoInteractions(apkInstaller, androidPackageManagerUtil, instrumentationUtil);
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithLegacyCodeForDefaultLocale_storesSetting()
+      throws Exception {
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LOCALE)).thenReturn("he-IL");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("null");
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "iw", "IL", TIMEOUT, log);
+
+    verify(adbUtil).settings(API_33_USER_10_ARGS, putSystemLocales("he-IL"));
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithUnsetSystemLocales_switchesFromDefaultLocale()
+      throws Exception {
+    // The legacy properties are stale, and the current user follows the device default locale.
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("zh");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("CN");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LOCALE)).thenReturn("sv-SE");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("null");
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "zh", "CN", TIMEOUT, log);
+
+    verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            33,
+            createInstrumentSetting(ImmutableMap.of("language", "zh", "country", "CN")),
+            Duration.ofMinutes(1));
+    verify(adbUtil, never()).settings(any(UtilArgs.class), anyPutSystemLocales());
+    assertThat(result).hasValue(new LocaleRestoreState("sv", "SE", 33, true));
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithoutTargetCountry_restoresDefaultLocale()
+      throws Exception {
+    // The switch APK compares the country too, so it switches zh-TW to zh.
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LOCALE)).thenReturn("zh-TW");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("null");
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "zh", /* country= */ null, TIMEOUT, log);
+
+    verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            33,
+            createInstrumentSetting(ImmutableMap.of("language", "zh")),
+            Duration.ofMinutes(1));
+    verify(adbUtil, never()).settings(any(UtilArgs.class), anyPutSystemLocales());
+    assertThat(result).hasValue(new LocaleRestoreState("zh", "TW", 33, false));
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithBlankLanguage_storesNoSetting() throws Exception {
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LOCALE)).thenReturn("en-US");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("null");
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "", "", TIMEOUT, log);
+
+    verifyNoInteractions(instrumentationUtil);
+    verify(adbUtil, never()).settings(any(UtilArgs.class), anyPutSystemLocales());
+    assertThat(result).hasValue(new LocaleRestoreState("en", "US", 33, false));
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithBlankLanguageAndReadError_returnsEmpty()
+      throws Exception {
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_UTIL_SETTINGS_CMD_ERROR, "Failed to run settings"));
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "", "", TIMEOUT, log);
+
+    verify(adbUtil, never()).settings(any(UtilArgs.class), anyPutSystemLocales());
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WhenStoringSettingFails_stillSwitches()
+      throws Exception {
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LOCALE)).thenReturn("zh-CN");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("null");
+    when(adbUtil.settings(API_33_USER_10_ARGS, putSystemLocales("zh-CN")))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_UTIL_SETTINGS_CMD_ERROR, "Failed to run settings"));
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "zh", "CN", TIMEOUT, log);
+
+    verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            33,
+            createInstrumentSetting(ImmutableMap.of("language", "zh", "country", "CN")),
+            Duration.ofMinutes(1));
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithDefaultLocaleAsTarget_storesSettingWithoutRestore()
+      throws Exception {
+    // The current user has no locale setting, and the device default locale is the target. The
+    // switch APK then changes nothing, so the device default locale is stored as the setting,
+    // including its script, for later switches to skip.
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LOCALE)).thenReturn("sr-Latn-RS");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("");
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "sr", "RS", TIMEOUT, log);
+
+    verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            33,
+            createInstrumentSetting(ImmutableMap.of("language", "sr", "country", "RS")),
+            Duration.ofMinutes(1));
+    verify(adbUtil).settings(API_33_USER_10_ARGS, putSystemLocales("sr-Latn-RS"));
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithNoUserOrDefaultLocale_switchesWithoutBaseline()
+      throws Exception {
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("zh");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("CN");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LOCALE)).thenReturn("");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES)).thenReturn("null");
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "zh", "CN", TIMEOUT, log);
+
+    verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            33,
+            createInstrumentSetting(ImmutableMap.of("language", "zh", "country", "CN")),
+            Duration.ofMinutes(1));
+    assertThat(result).hasValue(new LocaleRestoreState(null, null, 33, true));
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi33WithSystemLocalesReadError_switchesWithoutBaseline()
+      throws Exception {
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("zh");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("CN");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(33);
+    when(androidUserUtil.getCurrentUser(DEVICE_ID, 33)).thenReturn(10);
+    when(adbUtil.settings(API_33_USER_10_ARGS, GET_SYSTEM_LOCALES))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_UTIL_SETTINGS_CMD_ERROR, "Failed to run settings"));
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "zh", "CN", TIMEOUT, log);
+
+    verify(instrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            33,
+            createInstrumentSetting(ImmutableMap.of("language", "zh", "country", "CN")),
+            Duration.ofMinutes(1));
+    assertThat(result).hasValue(new LocaleRestoreState(null, null, 33, true));
+  }
+
+  @Test
+  public void switchLanguage_byDeviceOnApi23WithSameLegacyLocale_skipsSwitch() throws Exception {
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.LANGUAGE)).thenReturn("zh");
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.REGION)).thenReturn("CN");
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(23);
+
+    Optional<LocaleRestoreState> result =
+        languageSettingUtil.switchLanguage(device, "zh", "CN", TIMEOUT, log);
+
+    assertThat(result).isEmpty();
+    verifyNoInteractions(apkInstaller, instrumentationUtil);
+  }
+
   private static AndroidInstrumentationSetting createInstrumentSetting(
       ImmutableMap<String, String> extras) {
     return AndroidInstrumentationSetting.create(
@@ -422,5 +748,20 @@ public final class LanguageSettingUtilTest {
         /* noIsolatedStorage= */ false,
         /* useTestStorageService= */ false,
         /* enableCoverage= */ false);
+  }
+
+  private static AndroidSettings.Spec putSystemLocales(String languageTag) {
+    return AndroidSettings.Spec.create(
+        AndroidSettings.Command.PUT,
+        AndroidSettings.NameSpace.SYSTEM,
+        LanguageSettingUtil.SETTING_SYSTEM_LOCALES + " " + languageTag);
+  }
+
+  /** Matches any command that stores the {@code system_locales} setting. */
+  private static AndroidSettings.Spec anyPutSystemLocales() {
+    return argThat(spec ->
+        spec.commandName().equals(AndroidSettings.Command.PUT.getCommandName())
+            && String.valueOf(spec.extraArgs())
+                .startsWith(LanguageSettingUtil.SETTING_SYSTEM_LOCALES + " "));
   }
 }
