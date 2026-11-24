@@ -36,6 +36,44 @@ mesh network (xDS server).
 
     *   Port `7878` is the RSocket server port.
     *   Port `18000` is the xDS gRPC server port.
+    *   `-p` publishes these ports on all host interfaces. To keep them on the
+        local machine, use `-p 127.0.0.1:7878:7878 -p 127.0.0.1:18000:18000`.
+
+    **Warning:** The Acceptor has no built-in authentication. Read
+    [Securing the Acceptor](#securing-the-acceptor) before you make these ports
+    reachable from outside a trusted network.
+
+### Securing the Acceptor
+
+DualConduit is a connectivity tool. It does not include security hardening on
+the Acceptor side: the Acceptor has no built-in authentication or
+authorization. Anyone who can reach its ports (`7878` and `18000` by default)
+can open conduits through it and read its mesh configuration, so an
+unprotected Acceptor carries risks such as:
+
+*   **Server-side request forgery (SSRF)**: An attacker may use the Acceptor to
+    reach services on its host or network that they cannot reach directly.
+*   **Service impersonation**: An attacker may register a service under a name
+    that belongs to someone else and receive some of its traffic.
+*   **Information disclosure**: An attacker may read the names and addresses of
+    registered services.
+
+Run the Acceptor only where you trust every client that can reach it, such as
+inside a private network. If you expose it more widely, such as to the
+internet, you are responsible for understanding the risks and hardening the
+deployment yourself. For example, put the RSocket port behind an
+authenticating reverse proxy so that only trusted Dialers can connect, and
+limit the xDS port to trusted clients.
+
+If your proxy authenticates clients with JWTs, the Dialer can send one: run the
+Acceptor with `--transport=websocket`, and start the Dialer with
+`--use_sa_token --sa_key_file=KEY_FILE` and a `wss://` `--acceptor_target`.
+The Dialer then sends a self-signed JWT, minted from the service account key,
+in the `Authorization: Bearer` header of the WebSocket handshake. The token's
+audience is the host and port of `--acceptor_target`, as written in the URL.
+The Acceptor does not verify the token; your proxy must. Use `wss://` outside a
+trusted network: with `ws://`, the token and the tunneled traffic are sent
+unencrypted. With a TCP `--acceptor_target`, the Dialer does not send the token.
 
 ### Starting the Dialer
 
