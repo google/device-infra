@@ -22,12 +22,15 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.constant.DeviceProperty;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
@@ -248,6 +251,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     MobileHarnessLogTag.addTag(MobileHarnessLogTag.DEVICE_ID, device.getDeviceId());
 
     boolean needReboot = false;
+    boolean isPrepared = false;
 
     runnerCount.incrementAndGet();
     DeviceReservation deviceReservation = null;
@@ -278,6 +282,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         throw e;
       }
       prepareDevice();
+      isPrepared = true;
       // Release the reservation if it can be successfully initialized.
       if (deviceReservation != null) {
         deviceReservation.close();
@@ -360,7 +365,16 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       }
     } catch (Throwable e) {
       logger.atSevere().withCause(e).log("FATAL ERROR");
-      needReboot = true;
+      if (!isPrepared && isNonRebootRecoverablePrepareError(e)) {
+        // Unrecoverable APK policy/verification failures (e.g. Play Protect blocking install or OEM
+        // denying -g) cannot be fixed by rebooting and would otherwise trap the device in a
+        // 20-minute FailedDevice reboot loop.
+        logger.atWarning().log(
+            "Skip rebooting device %s because setup failed with non-reboot-recoverable error",
+            device.getDeviceId());
+      } else {
+        needReboot = true;
+      }
     } finally {
       // It is for avoiding the thread interrupted when the device is still tear down or reboot.
       // b/30105986.
@@ -997,5 +1011,32 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
 
   private static boolean prepareDeviceAfterTest() {
     return Flags.prepareDeviceAfterTest.getNonNull();
+  }
+
+  private static boolean isNonRebootRecoverablePrepareError(Throwable throwable) {
+    for (Throwable cause : Throwables.getCausalChain(throwable)) {
+      if (cause instanceof MobileHarnessException mhException) {
+        ErrorId errorId = mhException.getErrorId();
+        if (errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_FAILED_VERIFICATION_FAILURE
+            || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_INVALID_APK
+            || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ABI_INCOMPATIBLE
+            || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_OLDER_SDK
+            || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_NEWER_SDK
+            || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_TEST_ONLY
+            || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_VERSION_DOWNGRADE
+            || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE) {
+          return true;
+        }
+      }
+      String message = cause.getMessage();
+      if (message != null
+          && (message.contains("INSTALL_FAILED_VERIFICATION_FAILURE")
+              || message.contains("INSTALL_GRANT_RUNTIME_PERMISSIONS")
+              || message.contains("INSTALL_GRANT_ALL_REQUESTED_PERMISSIONS")
+              || message.contains("INSTALL_FAILED_USER_RESTRICTED"))) {
+        return true;
+      }
+    }
+    return false;
   }
 }
