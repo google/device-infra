@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.master.central.model.lab;
 
-import static com.google.devtools.mobileharness.shared.constant.device.DeviceConstants.HEALTHY_STATUS;
+import static com.google.devtools.mobileharness.shared.util.device.DeviceHealthUtil.HEALTHY_STATUS;
 
 import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.model.proto.Device;

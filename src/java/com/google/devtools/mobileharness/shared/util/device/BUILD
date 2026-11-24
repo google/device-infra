@@ -30,7 +30,6 @@ java_library(
     srcs = ["DeviceHealthUtil.java"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/constant/device:device_constants",
         "@maven//:com_google_guava_guava",
     ],
 )

@@ -22,7 +22,6 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
-import com.google.devtools.mobileharness.shared.constant.device.DeviceConstants;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -96,7 +95,7 @@ public final class DeviceHealthUtilTest {
 
   @Test
   public void calculateHealthCategory_idleWithUnhealthyType_returnsNeedManualRepair() {
-    for (String unhealthyType : DeviceConstants.UNHEALTHY_DEVICE_TYPES) {
+    for (String unhealthyType : DeviceHealthUtil.UNHEALTHY_DEVICE_TYPES) {
       assertWithMessage("IDLE with %s", unhealthyType)
           .that(
               DeviceHealthUtil.calculateHealthCategory(
@@ -107,7 +106,7 @@ public final class DeviceHealthUtilTest {
 
   @Test
   public void calculateHealthCategory_busyWithUnhealthyType_returnsInAutoRecovery() {
-    for (String unhealthyType : DeviceConstants.UNHEALTHY_DEVICE_TYPES) {
+    for (String unhealthyType : DeviceHealthUtil.UNHEALTHY_DEVICE_TYPES) {
       assertWithMessage("BUSY with %s", unhealthyType)
           .that(
               DeviceHealthUtil.calculateHealthCategory(
