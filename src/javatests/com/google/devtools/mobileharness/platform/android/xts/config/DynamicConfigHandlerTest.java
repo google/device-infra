@@ -17,9 +17,12 @@
 package com.google.devtools.mobileharness.platform.android.xts.config;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.gson.JsonSyntaxException;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,5 +62,27 @@ public final class DynamicConfigHandlerTest {
     try (Stream<String> lines = Files.lines(mergedConfigFile.toPath())) {
       lines.forEach(line -> assertThat(expectedMergedConfig).contains(line));
     }
+  }
+
+  @Test
+  public void parseJsonToConfigMap_emptyAndMissingConfigValues() {
+    assertThat(DynamicConfigHandler.parseJsonToConfigMap("{}")).isEmpty();
+    assertThat(
+            DynamicConfigHandler.parseJsonToConfigMap("{\"dynamicConfigEntries\": {\"key1\": {}}}"))
+        .containsExactly("key1", ImmutableList.of());
+  }
+
+  @Test
+  public void parseJsonToConfigMap_invalidShape_throwsJsonSyntaxException() {
+    assertThrows(
+        JsonSyntaxException.class, () -> DynamicConfigHandler.parseJsonToConfigMap("null"));
+    assertThrows(
+        JsonSyntaxException.class,
+        () -> DynamicConfigHandler.parseJsonToConfigMap("{\"dynamicConfigEntries\": 123}"));
+    assertThrows(
+        JsonSyntaxException.class,
+        () ->
+            DynamicConfigHandler.parseJsonToConfigMap(
+                "{\"dynamicConfigEntries\": {\"key1\": {\"configValues\": [{}]}}}"));
   }
 }

@@ -16,13 +16,10 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.config;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
+import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.annotations.SerializedName;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -32,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import org.xmlpull.v1.XmlSerializer;
@@ -45,22 +43,37 @@ public class DynamicConfigHandler {
   private static final String FILE_EXT = ".dynamic";
   private static final String NS = null; // xml constant representing null namespace
   private static final String ENCODING = "UTF-8";
+  private static final Gson GSON = new Gson();
 
   public static File getMergedDynamicConfigFile(
       File localConfigFile,
-      String apbsConfigJson,
+      @Nullable String apbsConfigJson,
+      String moduleName,
+      Map<String, String> valueReplacementMap)
+      throws XmlPullParserException, IOException {
+    return getMergedDynamicConfigFile(
+        localConfigFile,
+        apbsConfigJson == null ? null : parseJsonToConfigMap(apbsConfigJson),
+        moduleName,
+        valueReplacementMap);
+  }
+
+  public static File getMergedDynamicConfigFile(
+      File localConfigFile,
+      @Nullable Map<String, ? extends List<String>> apbsConfig,
       String moduleName,
       Map<String, String> valueReplacementMap)
       throws XmlPullParserException, IOException {
     Map<String, List<String>> dynamicConfig = new HashMap<>();
 
     Map<String, List<String>> localConfig = DynamicConfig.createConfigMap(localConfigFile);
-    Map<String, List<String>> apbsConfig = parseJsonToConfigMap(apbsConfigJson);
-    localConfig.putAll(apbsConfig);
+    if (apbsConfig != null) {
+      localConfig.putAll(apbsConfig);
+    }
 
     localConfig.forEach((k, v) -> dynamicConfig.put(k, updateValues(v, valueReplacementMap)));
 
-    setRemoteConfigRetrieved(dynamicConfig, apbsConfigJson != null);
+    setRemoteConfigRetrieved(dynamicConfig, apbsConfig != null);
     return storeMergedConfigFile(dynamicConfig, moduleName);
   }
 
@@ -83,7 +96,13 @@ public class DynamicConfigHandler {
     config.put(DynamicConfig.REMOTE_CONFIG_RETRIEVED_KEY, val);
   }
 
-  private static Map<String, List<String>> parseJsonToConfigMap(String apbsConfigJson)
+  /**
+   * Parses partner dynamic config JSON into a map of config keys to value lists.
+   *
+   * <p>Returns an empty map if {@code apbsConfigJson} is {@code null} or lacks {@code
+   * dynamicConfigEntries}, and maps entries without {@code configValues} to an empty list.
+   */
+  public static Map<String, List<String>> parseJsonToConfigMap(String apbsConfigJson)
       throws JsonSyntaxException {
 
     Map<String, List<String>> configMap = new HashMap<String, List<String>>();
@@ -91,19 +110,27 @@ public class DynamicConfigHandler {
       return configMap;
     }
 
-    JsonObject rootObj = new Gson().fromJson(apbsConfigJson, JsonObject.class);
-    JsonObject configObject = rootObj.get("dynamicConfigEntries").getAsJsonObject();
-
-    if (configObject == null) {
-      // no config key-value(s) pairs have been defined remotely, return empty map
+    DynamicConfigResponse response = GSON.fromJson(apbsConfigJson, DynamicConfigResponse.class);
+    if (response == null) {
+      throw new JsonSyntaxException("Expected a JSON object for dynamic config");
+    }
+    if (response.entries() == null) {
       return configMap;
     }
 
-    for (String key : configObject.keySet()) {
-      JsonArray jsonValues = configObject.getAsJsonObject(key).getAsJsonArray("configValues");
+    for (Map.Entry<String, DynamicConfigEntry> entry : response.entries().entrySet()) {
+      DynamicConfigEntry value = entry.getValue();
+      if (value == null || (value.configValues() != null && value.configValues().contains(null))) {
+        throw new JsonSyntaxException(
+            String.format(
+                "Invalid dynamic config entry for key %s: %s",
+                entry.getKey(), value == null ? null : value.configValues()));
+      }
       configMap.put(
-          key,
-          jsonValues.asList().stream().map(JsonElement::getAsString).collect(toImmutableList()));
+          entry.getKey(),
+          value.configValues() == null
+              ? ImmutableList.of()
+              : ImmutableList.copyOf(value.configValues()));
     }
 
     return configMap;
@@ -135,4 +162,9 @@ public class DynamicConfigHandler {
   }
 
   private DynamicConfigHandler() {}
+
+  private record DynamicConfigResponse(
+      @SerializedName("dynamicConfigEntries") Map<String, DynamicConfigEntry> entries) {}
+
+  private record DynamicConfigEntry(@SerializedName("configValues") List<String> configValues) {}
 }

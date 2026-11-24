@@ -60,6 +60,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/video",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/businesslogic",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:dynamic_config_resolver",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
