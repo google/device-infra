@@ -18,7 +18,9 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/acceptor:__pkg__",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd:__subpackages__",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/dialer:__pkg__",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/tests:__pkg__",
     ],
 )
@@ -31,6 +33,7 @@ go_library(
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/auth",
         "@com_github_rsocket_rsocket_go//:rsocket-go",
         "@com_github_rsocket_rsocket_go//core",
+        "@com_github_rsocket_rsocket_go//core/framing",
         "@com_github_rsocket_rsocket_go//core/transport",
     ],
 )
@@ -40,7 +43,10 @@ go_test(
     srcs = ["transport_test.go"],
     embed = [":transport"],
     deps = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/nettest",
         "@com_github_rsocket_rsocket_go//:rsocket-go",
+        "@com_github_rsocket_rsocket_go//core",
+        "@com_github_rsocket_rsocket_go//core/framing",
         "@com_github_rsocket_rsocket_go//core/transport",
         "@com_github_rsocket_rsocket_go//payload",
     ],

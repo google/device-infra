@@ -27,7 +27,7 @@ func NewManager() *Manager {
 	}
 }
 
-// Add tracks a new session and registers its onReplace callback.
+// Add tracks a new session and registers its onAdd and onReplace callbacks.
 func (m *Manager) Add(s *Session) error {
 	// Query conduits before locking manager to avoid lock order inversion.
 	cids := s.Conduits()
@@ -42,15 +42,28 @@ func (m *Manager) Add(s *Session) error {
 		m.conduitToSession[cid] = s.ID
 	}
 
-	// Register the update callback to automatically keep index in sync.
-	s.onReplace = func(oldID, newID string) {
+	// Register the update callbacks to automatically keep index in sync.
+	s.onAdd = func(id string) {
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		// If the session has been removed from the manager, do not update the conduit index.
 		if _, ok := m.sessions[s.ID]; !ok {
 			return
 		}
-		delete(m.conduitToSession, oldID)
+		m.conduitToSession[id] = s.ID
+	}
+	s.onReplace = func(oldID, newID string) {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		// The old conduit is gone in any case. Remove may have run since the
+		// session replaced it, and then no longer found it in the session.
+		if m.conduitToSession[oldID] == s.ID {
+			delete(m.conduitToSession, oldID)
+		}
+		// If the session has been removed from the manager, do not update the conduit index.
+		if _, ok := m.sessions[s.ID]; !ok {
+			return
+		}
 		m.conduitToSession[newID] = s.ID
 	}
 
@@ -66,6 +79,17 @@ func (m *Manager) Session(id string) (*Session, error) {
 		return nil, ErrNotFound
 	}
 	return s, nil
+}
+
+// Sessions returns the sessions of the manager.
+func (m *Manager) Sessions() []*Session {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	sessions := make([]*Session, 0, len(m.sessions))
+	for _, s := range m.sessions {
+		sessions = append(sessions, s)
+	}
+	return sessions
 }
 
 // FindByConduitID performs an O(1) lookup to find the session owning the given conduit ID.

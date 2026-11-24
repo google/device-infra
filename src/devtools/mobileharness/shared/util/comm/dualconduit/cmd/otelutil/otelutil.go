@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/metric"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -19,6 +21,43 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
+
+// registerBuildInfo registers the metric dualconduit.build_info on meter. Its
+// value is always 1; its attributes name the version of this binary and the
+// DualConduit protocol version it speaks. Together with the resource
+// attributes of the host it shows which host runs which version.
+func registerBuildInfo(meter metric.Meter) error {
+	buildInfo, err := meter.Int64ObservableGauge(
+		"dualconduit.build_info",
+		metric.WithDescription("Always 1. The attributes name the version of the binary and the DualConduit protocol version it speaks"),
+		metric.WithUnit("1"),
+	)
+	if err != nil {
+		return err
+	}
+	attrs := metric.WithAttributes(
+		attribute.String("version", version.Version),
+		attribute.Int("protocol", version.ProtocolVersion),
+	)
+	_, err = meter.RegisterCallback(func(_ context.Context, obs metric.Observer) error {
+		obs.ObserveInt64(buildInfo, 1, attrs)
+		return nil
+	}, buildInfo)
+	return err
+}
+
+// newMeterProvider returns the MeterProvider of a DualConduit binary. Besides
+// what the packages register, it exports dualconduit.build_info.
+func newMeterProvider(ctx context.Context, res *resource.Resource, reader sdkmetric.Reader) *sdkmetric.MeterProvider {
+	mp := sdkmetric.NewMeterProvider(
+		sdkmetric.WithResource(res),
+		sdkmetric.WithReader(reader),
+	)
+	if err := registerBuildInfo(mp.Meter("dualconduit")); err != nil {
+		slog.ErrorContext(ctx, "Failed to register dualconduit.build_info", "error", err)
+	}
+	return mp
+}
 
 // InitTelemetry initializes OpenTelemetry TracerProvider and MeterProvider.
 // It sets the global providers and TextMapPropagator.
@@ -52,10 +91,7 @@ func InitTelemetry(ctx context.Context, serviceName string) (func(context.Contex
 		_ = tp.Shutdown(ctx) // Clean up tracer
 		return nil, fmt.Errorf("failed to create otlpmetricgrpc exporter: %w", err)
 	}
-	mp := sdkmetric.NewMeterProvider(
-		sdkmetric.WithResource(res),
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter)),
-	)
+	mp := newMeterProvider(ctx, res, sdkmetric.NewPeriodicReader(metricExporter))
 	otel.SetMeterProvider(mp)
 
 	// 4. Initialize Logger

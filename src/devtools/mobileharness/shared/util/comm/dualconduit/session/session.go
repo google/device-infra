@@ -18,8 +18,9 @@ type Session struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 
-	// Callback triggered when a conduit is replaced.
+	// Callbacks triggered when a conduit is added or replaced.
 	// Set by the Manager when the session is added.
+	onAdd     func(id string)
 	onReplace func(oldID, newID string)
 }
 
@@ -39,12 +40,30 @@ func New(ctx context.Context, id string, meta *dconpb.EstablishSessionRequest, c
 	}
 }
 
-// ReplaceConduit replaces a broken conduit ID with a new one.
-// Triggers the onReplace callback if set.
-func (s *Session) ReplaceConduit(oldID, newID string) {
+// AddConduit adds a conduit ID to the session and reports whether it did. It
+// does not if the session is closed. Triggers the onAdd callback if set.
+func (s *Session) AddConduit(id string) bool {
+	s.mu.Lock()
+	added := s.ctx.Err() == nil
+	if added {
+		s.conduitIDs[id] = true
+	}
+	s.mu.Unlock()
+
+	// Call callback outside the lock to prevent lock order inversion / deadlocks.
+	if added && s.onAdd != nil {
+		s.onAdd(id)
+	}
+	return added
+}
+
+// ReplaceConduit replaces a broken conduit ID with a new one and reports
+// whether it did. It does not if the session is closed or does not have the
+// broken conduit. Triggers the onReplace callback if set.
+func (s *Session) ReplaceConduit(oldID, newID string) bool {
 	s.mu.Lock()
 	replaced := false
-	if s.conduitIDs[oldID] {
+	if s.ctx.Err() == nil && s.conduitIDs[oldID] {
 		delete(s.conduitIDs, oldID)
 		s.conduitIDs[newID] = true
 		replaced = true
@@ -55,6 +74,7 @@ func (s *Session) ReplaceConduit(oldID, newID string) {
 	if replaced && s.onReplace != nil {
 		s.onReplace(oldID, newID)
 	}
+	return replaced
 }
 
 // Conduits returns a slice of active conduit IDs in this session.

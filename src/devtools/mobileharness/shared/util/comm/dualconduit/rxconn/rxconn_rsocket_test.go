@@ -567,3 +567,134 @@ func TestRSocket_RequestTravelsWithFirstPayload(t *testing.T) {
 		t.Errorf("Requester received %q, want [a b c]", got)
 	}
 }
+
+// TestRSocket_LateRequestDoesNotDeliverHeldPayload shows why a Responder
+// cannot hold a stream back by requesting late, for example until its
+// destination is connected. A Responder that has subscribed to the inbound
+// Flux without requesting sends no REQUEST_N, is handed nothing, and does not
+// hold up the other streams of the connection. But its later request only
+// sends the REQUEST_N: the payload that opened the stream stays inside
+// reactor-go until another frame of the stream arrives. A client whose whole
+// request fits into that first payload would wait for an answer that never
+// comes.
+func TestRSocket_LateRequestDoesNotDeliverHeldPayload(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	var first atomic.Bool
+	first.Store(true)
+	held := make(chan rx.Subscription, 1)
+	heldReceived := make(chan string, 16)
+	echo := func(incoming flux.Flux) flux.Flux {
+		return flux.Create(func(_ context.Context, sink flux.Sink) {
+			incoming.Subscribe(context.Background(),
+				rx.OnSubscribe(func(_ context.Context, su rx.Subscription) { su.Request(rx.RequestMax) }),
+				rx.OnNext(func(p payload.Payload) error {
+					sink.Next(payload.New(bytes.Clone(p.Data()), nil))
+					return nil
+				}),
+			)
+		})
+	}
+	l := startLink(ctx, t, func(incoming flux.Flux) flux.Flux {
+		if !first.Swap(false) {
+			return echo(incoming)
+		}
+		// The stream that is held: subscribed, nothing requested.
+		incoming.Subscribe(context.Background(),
+			rx.OnSubscribe(func(_ context.Context, su rx.Subscription) { held <- su }),
+			rx.OnNext(func(p payload.Payload) error {
+				heldReceived <- string(p.Data())
+				return nil
+			}),
+		)
+		return flux.Create(func(context.Context, flux.Sink) {})
+	})
+
+	// The stream that is held. Its requests are those rsocket-go makes on the
+	// Requester: one of its own for the payload that opens the stream, then
+	// one for each REQUEST_N of the Responder.
+	requests := make(chan int, 16)
+	heldSink := make(chan flux.Sink, 1)
+	heldOut := flux.Create(func(_ context.Context, sink flux.Sink) {
+		sink.Next(payload.New([]byte("first"), nil))
+		heldSink <- sink
+	}).DoOnRequest(func(n int) { requests <- n })
+	l.client.RequestChannel(heldOut).Subscribe(ctx,
+		rx.OnSubscribe(func(_ context.Context, su rx.Subscription) { su.Request(rx.RequestMax) }))
+
+	var su rx.Subscription
+	select {
+	case su = <-held:
+	case <-time.After(waitTime):
+		t.Fatalf("held stream did not reach the Responder within %v", waitTime)
+	}
+	select {
+	case n := <-requests:
+		if n != 1 {
+			t.Fatalf("first request on the Requester = %d, want 1 (from rsocket-go itself)", n)
+		}
+	case <-time.After(waitTime):
+		t.Fatalf("Requester's outgoing Flux not requested within %v", waitTime)
+	}
+
+	// Another stream of the same connection makes a round trip meanwhile.
+	echoed := make(chan string, 1)
+	otherOut := flux.Create(func(_ context.Context, sink flux.Sink) {
+		sink.Next(payload.New([]byte("other"), nil))
+	})
+	l.client.RequestChannel(otherOut).Subscribe(ctx,
+		rx.OnSubscribe(func(_ context.Context, su rx.Subscription) { su.Request(rx.RequestMax) }),
+		rx.OnNext(func(p payload.Payload) error {
+			echoed <- string(p.Data())
+			return nil
+		}),
+	)
+	select {
+	case got := <-echoed:
+		if got != "other" {
+			t.Errorf("other stream echoed %q, want %q", got, "other")
+		}
+	case <-time.After(waitTime):
+		t.Fatalf("other stream made no round trip within %v while the first stream was held", waitTime)
+	}
+
+	// Still nothing on the held stream.
+	select {
+	case n := <-requests:
+		t.Fatalf("Requester got a request for %d before the Responder requested", n)
+	case got := <-heldReceived:
+		t.Fatalf("Responder was handed %q before it requested", got)
+	case <-time.After(10 * quietTime):
+	}
+
+	su.Request(rx.RequestMax)
+
+	// The REQUEST_N reaches the Requester...
+	select {
+	case n := <-requests:
+		if n < 1 {
+			t.Errorf("request on the Requester after the Responder's request = %d, want >= 1", n)
+		}
+	case <-time.After(waitTime):
+		t.Fatalf("Requester got no request within %v of the Responder's request", waitTime)
+	}
+	// ...but the Responder is not handed the payload it held back.
+	select {
+	case got := <-heldReceived:
+		t.Fatalf("Responder was handed %q on its late request; reactor-go has changed, and a Responder may now hold a stream back by requesting late", got)
+	case <-time.After(20 * quietTime):
+	}
+
+	// The next frame of the stream releases it.
+	(<-heldSink).Next(payload.New([]byte("second"), nil))
+	for _, want := range []string{"first", "second"} {
+		select {
+		case got := <-heldReceived:
+			if got != want {
+				t.Errorf("Responder was handed %q, want %q", got, want)
+			}
+		case <-time.After(waitTime):
+			t.Fatalf("Responder was not handed %q within %v of the second payload", want, waitTime)
+		}
+	}
+}

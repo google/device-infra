@@ -7,8 +7,10 @@ import (
 	"log/slog"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/conduit"
+	"github.com/jjeffcaii/reactor-go/scheduler"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
 	"github.com/rsocket/rsocket-go/payload"
 	"github.com/rsocket/rsocket-go"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/mesh"
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
+	dcontransport "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/attribute"
@@ -26,12 +29,20 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
+// deregisterTimeout limits the call that takes the endpoint of a reverse
+// conduit out of the mesh when the conduit closes.
+const deregisterTimeout = 5 * time.Second
+
 // Service represents the acceptor service for Dual Conduit.
 type Service struct {
 	Manager               *conduit.Manager
 	serverTransporter     rsockettransport.ServerTransporter
 	meshServer            *mesh.Server
 	reverseForwardAddress string
+	// registerEndpoint and deregisterEndpoint are RegisterEndpoint and
+	// DeregisterEndpoint, or their stand-ins in a test.
+	registerEndpoint   func(ctx context.Context, req *dconpb.EstablishConduitRequest, dynamicPort int) (string, error)
+	deregisterEndpoint func(ctx context.Context, req *dconpb.EstablishConduitRequest, dynamicPort int) error
 }
 
 // New creates a new Service with a initialized conduit.Manager and ServerTransporter.
@@ -40,12 +51,17 @@ func New(newTransporter func() (rsockettransport.ServerTransporter, error), mesh
 	if err != nil {
 		return nil, fmt.Errorf("failed to create server transport: %v", err)
 	}
-	return &Service{
-		Manager:               conduit.NewManager(),
-		serverTransporter:     transporter,
+	s := &Service{
+		Manager: conduit.NewManager(),
+		// A conduit is kept for as long as its dialer keeps it: each
+		// connection applies the keep-alive lifetime of its dialer.
+		serverTransporter:     dcontransport.WithClientLifetime(transporter),
 		meshServer:            meshServer,
 		reverseForwardAddress: reverseForwardAddress,
-	}, nil
+	}
+	s.registerEndpoint = s.RegisterEndpoint
+	s.deregisterEndpoint = s.DeregisterEndpoint
+	return s, nil
 }
 
 // RegisterEndpoint registers service discovery with mesh server.
@@ -87,7 +103,7 @@ func (s *Service) Run(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		// A dialer of another protocol is refused.
+		// A dialer whose protocol this acceptor does not serve is refused.
 		switch {
 		case protocolVersion == version.ProtocolVersion:
 		case protocolVersion >= version.MinProtocolVersion && protocolVersion < version.ProtocolVersion:
@@ -131,13 +147,24 @@ func (s *Service) Run(ctx context.Context) error {
 		con.SetPeerProtocol(protocolVersion)
 
 		if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_REVERSE {
-			return s.handleReverseConduit(ctx, conduitID, req, rs, con)
+			responder, err := s.handleReverseConduit(ctx, conduitID, req, rs, con)
+			if err != nil {
+				slog.ErrorContext(ctx, "Refusing reverse conduit", "id", conduitID, "error", err)
+			}
+			return responder, err
 		}
 
 		return s.handleForwardConduit(con, req), nil
 	}
 
+	// All connections share one scheduler. Left to itself, rsocket-go
+	// creates a pool of goroutines for each connection before it asks the
+	// handler above, and releases the pool only when the connection closes.
+	// It never closes a connection whose SETUP the handler refuses, so each
+	// refusal would leave the scavenger goroutine of its pool behind for
+	// good. rsocket-go does not release a scheduler that it is given.
 	return rsocket.Receive().
+		Scheduler(scheduler.Elastic(), nil).
 		Acceptor(handler).
 		Transport(s.serverTransporter).
 		Serve(ctx)
@@ -183,6 +210,24 @@ func (s *Service) parseSetupMetadata(ctx context.Context, setup payload.SetupPay
 	return req, nil, 0, nil
 }
 
+// loopListener is the entry port of a reverse conduit as its listening loop
+// sees it. The loop closes its listener when it ends, which can be before the
+// endpoint has left the mesh; the conduit closes the entry port itself, after
+// that.
+type loopListener struct{ net.Listener }
+
+func (loopListener) Close() error { return nil }
+
+// handleReverseConduit makes the entry point of a reverse conduit ready and
+// sends its locator to the dialer. It does all of it before it returns, so
+// that the conduit cannot close while a part of its entry point is not yet
+// registered to be closed.
+//
+// The conduit is already in the manager. When a step fails, the SETUP is
+// refused with the returned error. rsocket-go reports no close for such a
+// connection, but its handling returns, which ends the context of the
+// connection: the conduit lives under that context and closes with it, and
+// closes what is registered here.
 func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, req *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, con *conduit.Conduit) (rsocket.RSocket, error) {
 	addr := ":0" // ":0" tells the OS to pick a free port
 	if req.EntryPort != 0 {
@@ -190,77 +235,71 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 	}
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		slog.ErrorContext(ctx, "Failed to allocate port for reverse conduit", "id", conduitID, "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to open the entry port: %v", err)
 	}
+	// The entry port closes here and nowhere else. It is registered first,
+	// so that it closes last, after the endpoint has left the mesh: with a
+	// fixed entry port, the next conduit can then not register the same
+	// address before this one has removed it. It also closes the port when
+	// a step below fails.
+	con.AtEntryClose(func() { lis.Close() })
 	tcpAddr, ok := lis.Addr().(*net.TCPAddr)
 	if !ok {
-		lis.Close()
 		return nil, fmt.Errorf("listener address is not a TCP address: %v", lis.Addr())
 	}
 	dynamicPort := tcpAddr.Port
 
-	// Async register and PUSHMETA_DATA to dialer
-	go func() {
-		logicalName, err := s.RegisterEndpoint(ctx, req, dynamicPort)
-		if err != nil {
-			slog.ErrorContext(ctx, "Service register failed", "id", conduitID, "error", err)
-			lis.Close()
-			con.Close()
-			return
+	// The locator that the dialer is sent depends on the protocol. A
+	// protocol without one is refused before the mesh is touched.
+	var newLocator func(logicalName string) *dconpb.ServiceLocator
+	switch req.Protocol {
+	case dconpb.EstablishConduitRequest_PROTOCOL_GRPC:
+		newLocator = func(logicalName string) *dconpb.ServiceLocator {
+			return &dconpb.ServiceLocator{Locator: &dconpb.ServiceLocator_XdsAddress{XdsAddress: "xds:///" + logicalName}}
 		}
+	case dconpb.EstablishConduitRequest_PROTOCOL_HTTP:
+		newLocator = func(logicalName string) *dconpb.ServiceLocator {
+			return &dconpb.ServiceLocator{Locator: &dconpb.ServiceLocator_VirtualHost{VirtualHost: logicalName}}
+		}
+	case dconpb.EstablishConduitRequest_PROTOCOL_TCP:
+		newLocator = func(logicalName string) *dconpb.ServiceLocator {
+			return &dconpb.ServiceLocator{Locator: &dconpb.ServiceLocator_Sni{Sni: logicalName}}
+		}
+	default:
+		return nil, fmt.Errorf("unsupported protocol %v for a reverse conduit", req.Protocol)
+	}
 
-		go func() {
-			<-con.Context().Done()
-			if err := s.DeregisterEndpoint(ctx, req, dynamicPort); err != nil {
-				slog.ErrorContext(ctx, "Service deregister failed", "id", conduitID, "error", err)
-			}
-		}()
+	logicalName, err := s.registerEndpoint(ctx, req, dynamicPort)
+	if err != nil {
+		return nil, fmt.Errorf("failed to register the endpoint in the mesh: %v", err)
+	}
+	// The endpoint leaves the mesh in the step of closing that ends the
+	// context of the conduit, so that the mesh does not route clients to a
+	// conduit that is closing. ctx is the context of the connection, which
+	// may have ended by then, so the call has a context of its own.
+	con.AtEntryClose(func() {
+		deregisterCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), deregisterTimeout)
+		defer cancel()
+		if err := s.deregisterEndpoint(deregisterCtx, req, dynamicPort); err != nil {
+			slog.ErrorContext(ctx, "Service deregister failed", "id", conduitID, "error", err)
+		}
+	})
 
-		var locator *dconpb.ServiceLocator
-		switch req.Protocol {
-		case dconpb.EstablishConduitRequest_PROTOCOL_GRPC:
-			locator = &dconpb.ServiceLocator{
-				Locator: &dconpb.ServiceLocator_XdsAddress{
-					XdsAddress: "xds:///" + logicalName,
-				},
-			}
-		case dconpb.EstablishConduitRequest_PROTOCOL_HTTP:
-			locator = &dconpb.ServiceLocator{
-				Locator: &dconpb.ServiceLocator_VirtualHost{
-					VirtualHost: logicalName,
-				},
-			}
-		case dconpb.EstablishConduitRequest_PROTOCOL_TCP:
-			locator = &dconpb.ServiceLocator{
-				Locator: &dconpb.ServiceLocator_Sni{
-					Sni: logicalName,
-				},
-			}
-		default:
-			slog.ErrorContext(ctx, "Unsupported protocol for reverse conduit", "id", conduitID, "protocol", req.Protocol)
-			lis.Close()
-			con.Close()
-			return
-		}
-
-		resp := &dconpb.EstablishConduitResponse{
-			ConduitId:      conduitID,
-			ServiceLocator: locator,
-		}
-		metadata, err := proto.Marshal(resp)
-		if err != nil {
-			slog.ErrorContext(ctx, "Failed to marshal registration metadata", "id", conduitID, "error", err)
-			lis.Close()
-			con.Close()
-			return
-		}
-		rs.MetadataPush(payload.New(nil, metadata))
-	}()
+	metadata, err := proto.Marshal(&dconpb.EstablishConduitResponse{
+		ConduitId:      conduitID,
+		ServiceLocator: newLocator(logicalName),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal the locator: %v", err)
+	}
+	// MetadataPush only puts the frame into the send queue of the
+	// connection, which is empty here. The frame leaves once rsocket-go has
+	// accepted the SETUP and started to write.
+	rs.MetadataPush(payload.New(nil, metadata))
 
 	go func() {
 		if err := conduit.StartListeningLoop(con, func() (net.Listener, error) {
-			return lis, nil
+			return loopListener{lis}, nil
 		}); err != nil {
 			slog.ErrorContext(ctx, "StartListeningLoop error", "id", conduitID, "error", err)
 		}
@@ -268,14 +307,22 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 
 	// For Reverse conduits, the Acceptor is the Requester, but we listen for CLOSE signal.
 	return rsocket.NewAbstractSocket(
-		rsocket.MetadataPush(func(msg payload.Payload) {
-			metadata, ok := msg.Metadata()
-			if ok && string(metadata) == "CLOSE" {
-				slog.InfoContext(ctx, "Received CLOSE signal from Dialer", "id", conduitID)
-				con.Close()
-			}
-		}),
+		rsocket.MetadataPush(closeSignalHandler(ctx, conduitID, con)),
 	), nil
+}
+
+// closeSignalHandler returns the handler of the METADATA_PUSH frames of a
+// reverse conduit. The CLOSE signal of the dialer starts closing the conduit.
+// The handler runs on a goroutine of rsocket-go, so it does not wait for the
+// conduit to close.
+func closeSignalHandler(ctx context.Context, conduitID string, con *conduit.Conduit) func(payload.Payload) {
+	return func(msg payload.Payload) {
+		metadata, ok := msg.Metadata()
+		if ok && string(metadata) == "CLOSE" {
+			slog.InfoContext(ctx, "Received CLOSE signal from Dialer", "id", conduitID)
+			con.BeginClose()
+		}
+	}
 }
 
 func (s *Service) handleForwardConduit(con *conduit.Conduit, req *dconpb.EstablishConduitRequest) rsocket.RSocket {

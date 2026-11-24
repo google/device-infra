@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jjeffcaii/reactor-go/scheduler"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
 
 	"github.com/rsocket/rsocket-go/payload"
@@ -26,6 +27,7 @@ import (
 	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/session"
+	dcontransport "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -35,10 +37,16 @@ import (
 )
 
 const (
-	defaultKeepAliveTickPeriod = 60 * time.Second
+	// defaultKeepAliveTickPeriod is the keep-alive interval of a dialer that
+	// is not given one.
+	defaultKeepAliveTickPeriod = 20 * time.Second
 	keepAliveAckTimeout        = 15 * time.Second
 	keepAliveMissedAcks        = 3
-	ipv4Loopback               = "127.0.0.1"
+	// keepAliveLifetime is how long a side keeps a connection on which it
+	// has received nothing. The dialer sends it in SETUP, and the acceptor
+	// applies it too.
+	keepAliveLifetime = keepAliveMissedAcks * keepAliveAckTimeout
+	ipv4Loopback      = "127.0.0.1"
 	// defaultConnectTimeout bounds how long one attempt to connect to the
 	// acceptor may take. It is shorter than the keep-alive interval: rsocket-go
 	// starts the keep-alive timer before it dials, so a slower dial would have a
@@ -67,6 +75,12 @@ type Service struct {
 	KeepAliveTickPeriod time.Duration
 	rttHistogram        metric.Float64Histogram
 	connectTimeout      time.Duration
+	// keepAliveLifetime is the keep-alive lifetime of the conduits: the
+	// constant of the same name, or a shorter time in tests.
+	keepAliveLifetime time.Duration
+	// beforeHandOver, if not nil, is called with the ID of a conduit that
+	// is established and about to be handed to its owner. Tests use it.
+	beforeHandOver func(conduitID string)
 	// fatal receives the error after which the dialer cannot work with its
 	// acceptor. See Fatal.
 	fatal chan error
@@ -105,8 +119,44 @@ func (s *Service) connectTimeoutFor(keepAliveTickPeriod time.Duration) time.Dura
 	return timeout
 }
 
+// requestScheduler returns the scheduler on which rsocket-go runs the
+// subscriptions of the streams of every connection of this process.
+//
+// Left to itself, rsocket-go creates a pool of goroutines for each client
+// before it dials, and releases the pool only when the connection closes. A
+// dial that fails never has a connection to close, so each failed dial leaves
+// the scavenger goroutine of its pool behind for good. rsocket-go does not
+// release a scheduler that it is given, so all connections share this one. It
+// is the scheduler that rsocket-go already uses, process-wide, for responses.
+func requestScheduler() scheduler.Scheduler {
+	return scheduler.Elastic()
+}
+
+// checkKeepAlive reports an error unless a connection with the keep-alive
+// interval tickPeriod survives the loss of one keep-alive frame: two
+// intervals must fit into the lifetime.
+func checkKeepAlive(tickPeriod, lifetime time.Duration) error {
+	if tickPeriod <= 0 {
+		return fmt.Errorf("keep-alive interval %v is not positive", tickPeriod)
+	}
+	if 2*tickPeriod >= lifetime {
+		return fmt.Errorf("keep-alive interval %v is too long for the keep-alive lifetime of %v: it must be less than half of it (%v), or an idle conduit is closed when one keep-alive frame is late", tickPeriod, lifetime, lifetime/2)
+	}
+	return nil
+}
+
 // New creates a new Service with an initialized conduit.Manager, session.Manager, and default retry policy.
-func New(ctx context.Context, hostname string, forwardAddress string, newTransporter func() (rsockettransport.ClientTransporter, error), policy RetryPolicy, keepAliveTickPeriod time.Duration) *Service {
+// A keepAliveTickPeriod of 0 selects the default interval. New returns an
+// error if the interval is too long for the keep-alive lifetime.
+func New(ctx context.Context, hostname string, forwardAddress string, newTransporter func() (rsockettransport.ClientTransporter, error), policy RetryPolicy, keepAliveTickPeriod time.Duration) (*Service, error) {
+	tickPeriod := keepAliveTickPeriod
+	if tickPeriod == 0 {
+		tickPeriod = defaultKeepAliveTickPeriod
+	}
+	if err := checkKeepAlive(tickPeriod, keepAliveLifetime); err != nil {
+		return nil, err
+	}
+
 	cm := conduit.NewManager()
 	sm := session.NewManager()
 
@@ -117,11 +167,6 @@ func New(ctx context.Context, hostname string, forwardAddress string, newTranspo
 			},
 			MaxAttempts: 0, // Infinite
 		}
-	}
-
-	tickPeriod := keepAliveTickPeriod
-	if tickPeriod == 0 {
-		tickPeriod = defaultKeepAliveTickPeriod
 	}
 
 	meter := otel.Meter("dualconduit/conduit")
@@ -147,18 +192,67 @@ func New(ctx context.Context, hostname string, forwardAddress string, newTranspo
 		KeepAliveTickPeriod: tickPeriod,
 		rttHistogram:        rttHistogram,
 		connectTimeout:      defaultConnectTimeout,
+		keepAliveLifetime:   keepAliveLifetime,
 		fatal:               make(chan error, 1),
 	}
 	cm.SubscribeToRemove(s.handleConduitRemoved)
-	return s
+	return s, nil
 }
 
 // EstablishConduit handles the gRPC request to establish a forward/reverse conduit.
 func (s *Service) EstablishConduit(ctx context.Context, req *dconpb.EstablishConduitRequest) (*dconpb.EstablishConduitResponse, error) {
-	return s.establishConduit(ctx, req)
+	return s.establishConduit(ctx, req, conduitOwner{ctx: s.ServiceCtx})
 }
 
-func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishConduitRequest) (*dconpb.EstablishConduitResponse, error) {
+// conduitOwner says for whom a new conduit is established and who records
+// it.
+type conduitOwner struct {
+	// ctx is the context of the owner. When it ends, an attempt to connect
+	// the conduit that is in flight ends too.
+	ctx context.Context
+	// claim, if not nil, records the conduit with its owner. It is called
+	// once, while the conduit is ACTIVE and cannot begin to close, so that
+	// the owner knows the conduit before the conduit can be removed. It
+	// reports false if the owner does not take the conduit, as an owner
+	// does that is gone. The conduit is then closed.
+	claim func(conduitID string) bool
+}
+
+// sendCloseSignal tells the acceptor of a reverse conduit that the dialer is
+// closing it, and pauses so that the signal leaves before the streams are
+// ended. The entry port of a reverse conduit is on the acceptor: without the
+// signal, clients would be sent into a conduit that is closing.
+func sendCloseSignal(ctx context.Context, rs interface{ MetadataPush(payload.Payload) }, id string) {
+	slog.InfoContext(ctx, "Sending CLOSE signal to Acceptor", "id", id)
+	// MetadataPush waits while the send queue of the connection is full, as
+	// it is on a connection that has stalled, and closing must not wait for
+	// the peer. The call returns at the latest when the connection closes.
+	queued := make(chan struct{})
+	go func() {
+		defer close(queued)
+		rs.MetadataPush(payload.New(nil, []byte(closeSignal)))
+	}()
+	time.Sleep(reverseConduitCloseSignalDelay)
+	select {
+	case <-queued:
+	default:
+		slog.WarnContext(ctx, "CLOSE signal is still waiting to be sent, the connection has stalled; closing goes on", "id", id)
+	}
+}
+
+// endDialWith returns a ClientTransporter whose dial also ends when ctx ends.
+// Only the dial is bound to ctx, not the connection that it opens.
+func endDialWith(ctx context.Context, dial rsockettransport.ClientTransporter) rsockettransport.ClientTransporter {
+	return func(dialCtx context.Context) (*rsockettransport.Transport, error) {
+		dialCtx, cancel := context.WithCancel(dialCtx)
+		defer cancel()
+		stop := context.AfterFunc(ctx, cancel)
+		defer stop()
+		return dial(dialCtx)
+	}
+}
+
+func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishConduitRequest, owner conduitOwner) (*dconpb.EstablishConduitResponse, error) {
 	slog.InfoContext(ctx, "Received EstablishConduit request", "request", req)
 
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_FORWARD && req.EntryPort == 0 {
@@ -201,7 +295,7 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 	metadataPush := make(chan payload.Payload, 1)
 	errChan := make(chan error, 1)
 
-	rsClient, err := s.startRSocketClient(id, req, setup, condReady, metadataPush, errChan)
+	rsClient, err := s.startRSocketClient(owner.ctx, id, req, setup, condReady, metadataPush, errChan)
 	if err != nil {
 		dialerSpan.End()
 		return nil, err
@@ -209,14 +303,15 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 
 	var beforeClose func()
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_REVERSE {
-		beforeClose = func() {
-			slog.InfoContext(ctx, "Sending CLOSE signal to Acceptor", "id", id)
-			rsClient.MetadataPush(payload.New(nil, []byte(closeSignal)))
-			time.Sleep(reverseConduitCloseSignalDelay)
-		}
+		// The conduit outlives ctx, which is the context of the request
+		// that establishes it and carries its trace.
+		beforeClose = func() { sendCloseSignal(s.ServiceCtx, rsClient, id) }
 	}
 
-	// 4. Create Conduit in the Manager.
+	// 4. Create Conduit in the Manager. It lives under the context of the
+	// service, not of its owner: the end of the context of a conduit ends
+	// its streams at once, and an owner that gives a conduit up closes it
+	// through the steps of Conduit.Close, which signal the peer first.
 	// End the setup span after adding to the manager, so failures in Add are captured.
 	dialerSpan.End()
 	openSpanContext := dialerSpan.SpanContext()
@@ -251,7 +346,30 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 		}
 	}
 
-	// 6. Return response
+	// 6. Hand the conduit to its owner. From here on the owner is told when
+	// the conduit is removed. A conduit that has begun to close before this
+	// point was never handed over, so the attempt has failed.
+	if s.beforeHandOver != nil {
+		s.beforeHandOver(id)
+	}
+	// A caller that has given up never learns the ID of the conduit and
+	// can never tear it down, so it gets none.
+	if err := ctx.Err(); err != nil {
+		con.Close()
+		return nil, status.Errorf(codes.Canceled, "the caller gave up while the conduit was being established: %v", err)
+	}
+	claimed := true
+	active := con.IfActive(func() {
+		if owner.claim != nil {
+			claimed = owner.claim(id)
+		}
+	})
+	if !active || !claimed {
+		con.Close()
+		return nil, status.Error(codes.Unavailable, "conduit closed while it was being established")
+	}
+
+	// 7. Return response
 	return &dconpb.EstablishConduitResponse{
 		ConduitId:      id,
 		ServiceLocator: serviceLocator,
@@ -323,7 +441,15 @@ func (s *Service) reverseConduitAcceptor(connCtx context.Context, id string, des
 	}
 }
 
-func (s *Service) startRSocketClient(id string, req *dconpb.EstablishConduitRequest, setup payload.Payload, condReady <-chan struct{}, metadataPush chan<- payload.Payload, errChan chan<- error) (rsocket.Client, error) {
+// startRSocketClient connects to the acceptor. The connection lives under the
+// context of the service; only the attempt to open it also ends with
+// ownerCtx. A connection must not be closed under its streams, so a conduit
+// whose owner is gone is closed in the steps of Conduit.Close, not by ending
+// the context of its connection.
+func (s *Service) startRSocketClient(ownerCtx context.Context, id string, req *dconpb.EstablishConduitRequest, setup payload.Payload, condReady <-chan struct{}, metadataPush chan<- payload.Payload, errChan chan<- error) (rsocket.Client, error) {
+	if err := ownerCtx.Err(); err != nil {
+		return nil, status.Errorf(codes.Canceled, "the owner of the conduit is gone: %v", err)
+	}
 	connCtx, connCancel := context.WithCancel(s.ServiceCtx)
 	tracked := &closeTrackingRSocket{
 		closers: []func(error){
@@ -336,6 +462,7 @@ func (s *Service) startRSocketClient(id string, req *dconpb.EstablishConduitRequ
 		},
 	}
 	builder := rsocket.Connect().
+		Scheduler(requestScheduler(), nil).
 		OnClose(func(err error) {
 			connCancel()
 			s.reportIfMismatch(err)
@@ -343,7 +470,7 @@ func (s *Service) startRSocketClient(id string, req *dconpb.EstablishConduitRequ
 		}).
 		SetupPayload(setup).
 		ConnectTimeout(s.connectTimeoutFor(s.KeepAliveTickPeriod)).
-		KeepAlive(s.KeepAliveTickPeriod, keepAliveAckTimeout, keepAliveMissedAcks)
+		KeepAlive(s.KeepAliveTickPeriod, s.keepAliveLifetime/keepAliveMissedAcks, keepAliveMissedAcks)
 
 	var starter rsocket.ToClientStarter = builder
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_REVERSE {
@@ -356,9 +483,24 @@ func (s *Service) startRSocketClient(id string, req *dconpb.EstablishConduitRequ
 		return nil, status.Errorf(codes.Internal, "failed to create transport: %v", err)
 	}
 
-	rsClient, err := starter.
-		Transport(trans).
+	// The lifetime runs from the moment the connection opens, so that a
+	// connection that dies before its first frame arrives is given up too.
+	// When the connection is given up, the client is closed: rsocket-go
+	// does not always get there by itself. onDead runs after the connection
+	// has been closed, which makes Start return if it has not yet, so
+	// onDead waits for Start to learn the client.
+	started := make(chan struct{})
+	var rsClient rsocket.Client
+	onDead := func() {
+		<-started
+		if rsClient != nil {
+			_ = rsClient.Close()
+		}
+	}
+	rsClient, err = starter.
+		Transport(endDialWith(ownerCtx, dcontransport.WithLifetimeFromOpen(trans, s.keepAliveLifetime, onDead))).
 		Start(s.ServiceCtx)
+	close(started)
 	if err != nil {
 		connCancel()
 		s.reportIfMismatch(err)
@@ -379,6 +521,13 @@ func (s *Service) startForwardConduit(ctx context.Context, con *conduit.Conduit,
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to listen on port %d: %v", port, err)
 	}
+	// The entry port closes in the step of closing that ends the context of
+	// the conduit. Its close is registered here and not left to the
+	// listening loop, which registers it on its own goroutine: a conduit
+	// that closes before that goroutine has run would return from Close with
+	// the port still bound, and the conduit that replaces it could not
+	// listen.
+	con.AtEntryClose(func() { lis.Close() })
 	serviceLocator := &dconpb.ServiceLocator{
 		Locator: &dconpb.ServiceLocator_HostnamePort{
 			HostnamePort: lis.Addr().String(),
@@ -392,18 +541,17 @@ func (s *Service) startForwardConduit(ctx context.Context, con *conduit.Conduit,
 	// The listener setup happens in EstablishConduit before this goroutine is
 	// started: if net.Listen fails, EstablishConduit returns an error and
 	// this goroutine is not started.
-	// The lifecycle of this goroutine is equivalent to the lifecycle of the Conduit object con,
-	// which is monitored by conduit.Manager via TeardownConduit.
-	// The goroutine terminates when con.Close() is called, which cancels the
-	// conduit context, triggering lis.Close() inside StartListeningLoop.
-	// This causes lis.Accept() to return an error, and StartListeningLoop to exit.
+	// The goroutine lives as long as the Conduit object con. When con closes,
+	// the step of closing that ends the context of the conduit also closes
+	// the listener. lis.Accept() then returns an error, and StartListeningLoop
+	// returns. It also returns when a client connects after closing has begun.
 	// The result of StartListeningLoop is an error which is logged for debugging
 	// purposes if it's non-nil.
 	go func() {
 		if err := conduit.StartListeningLoop(con, func() (net.Listener, error) {
 			return lis, nil
 		}); err != nil {
-			slog.ErrorContext(ctx, "StartListeningLoop error", "error", err)
+			slog.ErrorContext(con.Context(), "StartListeningLoop error", "error", err)
 		}
 	}()
 	return serviceLocator, nil
@@ -474,6 +622,7 @@ func (s *Service) CheckConnection(ctx context.Context) error {
 
 		slog.InfoContext(ctx, "Performing pre-flight check to acceptor")
 		client, err := rsocket.Connect().
+			Scheduler(requestScheduler(), nil).
 			SetupPayload(payload.New([]byte(probeSignal), nil)).
 			ConnectTimeout(s.connectTimeoutFor(rsocketDefaultKeepAliveTickPeriod)).
 			Transport(trans).
@@ -510,11 +659,11 @@ func (s *Service) CheckConnection(ctx context.Context) error {
 }
 
 // establishConduitWithRetry wraps establishConduit with retry logic.
-func (s *Service) establishConduitWithRetry(ctx context.Context, req *dconpb.EstablishConduitRequest, policy RetryPolicy) (*dconpb.EstablishConduitResponse, error) {
+func (s *Service) establishConduitWithRetry(ctx context.Context, req *dconpb.EstablishConduitRequest, policy RetryPolicy, owner conduitOwner) (*dconpb.EstablishConduitResponse, error) {
 	var resp *dconpb.EstablishConduitResponse
 	err := Retry(ctx, policy, func(ctx context.Context) error {
 		var err error
-		resp, err = s.establishConduit(ctx, req)
+		resp, err = s.establishConduit(ctx, req, owner)
 		return err
 	})
 	if err != nil {
@@ -531,8 +680,17 @@ func (s *Service) EstablishSession(ctx context.Context, req *dconpb.EstablishSes
 		return nil, status.Errorf(codes.InvalidArgument, "establish_conduit_request must be set")
 	}
 
-	// 1. Generate Session ID
+	// 1. Create and track the Session, before its conduits: a conduit is
+	// recorded in its session before it can be removed, and the session has
+	// to be found then.
 	sessionID := uuid.NewString()
+	sess := session.New(s.ServiceCtx, sessionID, req, nil)
+	if err := s.Sessions.Add(sess); err != nil {
+		sess.Close()
+		return nil, status.Errorf(codes.Internal, "failed to add session to manager: %v", err)
+	}
+	// The conduits of a session live under the context of the session.
+	owner := conduitOwner{ctx: sess.Context(), claim: sess.AddConduit}
 
 	// 2. Establish initial conduits
 	count := 1
@@ -541,7 +699,6 @@ func (s *Service) EstablishSession(ctx context.Context, req *dconpb.EstablishSes
 	}
 
 	conduitResponses := make([]*dconpb.EstablishConduitResponse, count)
-	conduitIDs := make([]string, count)
 
 	// Establish conduits in parallel. If any fails, we fail fast and cancel others.
 	ctx, cancel := context.WithCancel(ctx)
@@ -555,7 +712,7 @@ func (s *Service) EstablishSession(ctx context.Context, req *dconpb.EstablishSes
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			resp, err := s.establishConduit(ctx, req.EstablishConduitRequest)
+			resp, err := s.establishConduit(ctx, req.EstablishConduitRequest, owner)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -566,29 +723,14 @@ func (s *Service) EstablishSession(ctx context.Context, req *dconpb.EstablishSes
 				return
 			}
 			conduitResponses[index] = resp
-			conduitIDs[index] = resp.ConduitId
 		}(i)
 	}
 	wg.Wait()
 
 	if firstErr != nil {
-		// Cleanup successfully established conduits
-		for _, cid := range conduitIDs {
-			if cid != "" {
-				s.Manager.Remove(cid)
-			}
-		}
+		// Give the session up, with the conduits that were established.
+		s.teardownSession(ctx, sess)
 		return nil, status.Errorf(codes.Unavailable, "failed to establish initial conduits: %v", firstErr)
-	}
-
-	// 3. Create and track Session
-	sess := session.New(s.ServiceCtx, sessionID, req, conduitIDs)
-	if err := s.Sessions.Add(sess); err != nil {
-		// Cleanup established conduits
-		for _, cid := range conduitIDs {
-			s.Manager.Remove(cid)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to add session to manager: %v", err)
 	}
 
 	return &dconpb.EstablishSessionResponse{
@@ -610,23 +752,29 @@ func (s *Service) TeardownSession(ctx context.Context, req *dconpb.TeardownSessi
 		return nil, status.Errorf(codes.Internal, "failed to retrieve session: %v", err)
 	}
 
-	// 2. Remove from SessionManager first so handleConduitRemoved won't find it
-	// and try to reconnect when we remove the conduits.
-	if err := s.Sessions.Remove(req.SessionId); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to remove session: %v", err)
+	s.teardownSession(ctx, sess)
+	return &dconpb.TeardownSessionResponse{}, nil
+}
+
+// teardownSession gives a session up and closes its conduits.
+func (s *Service) teardownSession(ctx context.Context, sess *session.Session) {
+	// 1. Remove from SessionManager first so handleConduitRemoved won't find it
+	// and try to reconnect when the conduits close.
+	if err := s.Sessions.Remove(sess.ID); err != nil {
+		slog.WarnContext(ctx, "Session was already removed", "sessionID", sess.ID, "error", err)
 	}
 
-	// 3. Close the session (cancels its context, stopping any active reconnect loops).
+	// 2. Close the session. That ends its context, and with it an attempt to
+	// reconnect that is in flight. From here on the session takes no
+	// conduit: one that becomes ready only now is refused and closed.
 	sess.Close()
 
-	// 4. Tear down all associated conduits.
-	// We do this by removing them from the low-level conduit manager.
+	// 3. Close the conduits of the session, each through the steps of
+	// Conduit.Close.
 	for _, cid := range sess.Conduits() {
-		slog.InfoContext(ctx, "Tearing down conduit as part of session teardown", "conduitID", cid, "sessionID", req.SessionId)
+		slog.InfoContext(ctx, "Tearing down conduit as part of session teardown", "conduitID", cid, "sessionID", sess.ID)
 		s.Manager.Remove(cid)
 	}
-
-	return &dconpb.TeardownSessionResponse{}, nil
 }
 
 func (s *Service) handleConduitRemoved(id string, meta *dconpb.EstablishConduitRequest) {
@@ -654,13 +802,20 @@ func (s *Service) handleConduitRemoved(id string, meta *dconpb.EstablishConduitR
 }
 
 func (s *Service) reconnect(sess *session.Session, brokenConduitID string, meta *dconpb.EstablishConduitRequest) {
-	// Reconnect runs in the background. We use ServiceCtx to ensure it survives the RPC context.
-	// We also bind it to the session context so if the session is closed, reconnection stops.
+	// Reconnect runs in the background, under the context of the session:
+	// if the session is closed, reconnection stops.
 	reconCtx, cancel := context.WithCancel(sess.Context())
 	defer cancel()
 
 	slog.InfoContext(reconCtx, "Reconnecting conduit", "brokenConduitID", brokenConduitID, "sessionID", sess.ID)
-	resp, err := s.establishConduitWithRetry(reconCtx, meta, s.DefaultRetryPolicy)
+	// The new conduit takes the place of the broken one in the session while
+	// it cannot close yet. If it closes later, however soon, the session is
+	// told and replaces it in turn.
+	owner := conduitOwner{
+		ctx:   sess.Context(),
+		claim: func(newID string) bool { return sess.ReplaceConduit(brokenConduitID, newID) },
+	}
+	resp, err := s.establishConduitWithRetry(reconCtx, meta, s.DefaultRetryPolicy, owner)
 	if err != nil {
 		slog.ErrorContext(reconCtx, "Failed to reconnect conduit after retry policy exhausted", "brokenConduitID", brokenConduitID, "sessionID", sess.ID, "error", err)
 		// What to do if reconnect fails?
@@ -670,5 +825,59 @@ func (s *Service) reconnect(sess *session.Session, brokenConduitID string, meta 
 	}
 
 	slog.InfoContext(reconCtx, "Reconnected conduit successfully", "oldID", brokenConduitID, "newID", resp.ConduitId, "sessionID", sess.ID)
-	sess.ReplaceConduit(brokenConduitID, resp.ConduitId)
+}
+
+// CheckSessions reports an error if a forward session has no ACTIVE conduit:
+// its entry port is then closed, or open without a connection behind it.
+func (s *Service) CheckSessions() error {
+	for _, sess := range s.Sessions.Sessions() {
+		req := sess.Meta.GetEstablishConduitRequest()
+		if req.GetType() != dconpb.EstablishConduitRequest_CONDUIT_TYPE_FORWARD {
+			continue
+		}
+		cids := sess.Conduits()
+		if len(cids) == 0 {
+			// The session is being established: it has had no conduit yet.
+			// A session that has lost its conduit keeps the ID of that
+			// conduit until it has replaced it.
+			continue
+		}
+		active := false
+		for _, cid := range cids {
+			if c, err := s.Manager.Conduit(cid); err == nil && c.State() == conduit.StateActive {
+				active = true
+				break
+			}
+		}
+		if !active {
+			return fmt.Errorf("forward port %d to %s has no active conduit (session %s)", req.GetEntryPort(), req.GetDestinationEndpoint(), sess.ID)
+		}
+	}
+	return nil
+}
+
+// CheckHealth reports whether the dialer serves: the acceptor answers a probe
+// connection, and every forward port has an active conduit. A probe alone
+// does not show a forward port that is dead while the acceptor can be
+// reached.
+func (s *Service) CheckHealth(ctx context.Context) error {
+	if err := s.CheckConnection(ctx); err != nil {
+		return err
+	}
+	return s.CheckSessions()
+}
+
+// WatchHealth runs CheckHealth once every period and passes each result to
+// report: nil if the dialer serves. It returns when ctx ends.
+func (s *Service) WatchHealth(ctx context.Context, period time.Duration, report func(error)) {
+	ticker := time.NewTicker(period)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			report(s.CheckHealth(ctx))
+		}
+	}
 }

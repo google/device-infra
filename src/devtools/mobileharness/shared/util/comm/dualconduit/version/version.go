@@ -7,7 +7,7 @@ import (
 )
 
 // Version is the current semantic version of DualConduit (acceptor, dialer, etc.).
-const Version = "0.2.0"
+const Version = "0.2.1"
 
 // ProtocolVersion names the protocol between a dialer and an acceptor. It
 // goes up only when a change makes the two sides incompatible. The dialer

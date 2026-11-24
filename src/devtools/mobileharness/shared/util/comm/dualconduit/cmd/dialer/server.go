@@ -137,7 +137,11 @@ func main() {
 	} else {
 		defer shutdownTelemetry(dialerCtx)
 	}
-	dialerSvc := dialer.New(dialerCtx, cfg.Hostname, cfg.ForwardAddress, newTransporter, policy, keepAliveTickPeriod)
+	dialerSvc, err := dialer.New(dialerCtx, cfg.Hostname, cfg.ForwardAddress, newTransporter, policy, keepAliveTickPeriod)
+	if err != nil {
+		slog.ErrorContext(dialerCtx, "Invalid keep_alive_tick_period", "error", err)
+		os.Exit(1)
+	}
 	go func() {
 		// The acceptor refused the protocol version of this dialer. Trying
 		// again cannot succeed, so the dialer stops instead of retrying.
@@ -204,22 +208,15 @@ func main() {
 
 	if healthCheckPeriod > 0 {
 		go func() {
-			ticker := time.NewTicker(healthCheckPeriod)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-dialerCtx.Done():
+			dialerSvc.WatchHealth(dialerCtx, healthCheckPeriod, func(err error) {
+				if err != nil {
+					slog.WarnContext(dialerCtx, "Health check failed", "error", err)
 					updateHealthStatus(healthpb.HealthCheckResponse_NOT_SERVING)
-					return
-				case <-ticker.C:
-					if err := dialerSvc.CheckConnection(dialerCtx); err != nil {
-						slog.WarnContext(dialerCtx, "Health check failed", "error", err)
-						updateHealthStatus(healthpb.HealthCheckResponse_NOT_SERVING)
-					} else {
-						updateHealthStatus(healthpb.HealthCheckResponse_SERVING)
-					}
+				} else {
+					updateHealthStatus(healthpb.HealthCheckResponse_SERVING)
 				}
-			}
+			})
+			updateHealthStatus(healthpb.HealthCheckResponse_NOT_SERVING)
 		}()
 	}
 

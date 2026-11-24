@@ -109,3 +109,67 @@ func TestManager_Remove(t *testing.T) {
 		t.Errorf("Remove(\"session-1\") got %v, want ErrNotFound", err)
 	}
 }
+
+// TestManager_ConduitAddedLater checks that a conduit that joins a session
+// after the session was added to the manager is found by its ID. A session is
+// added before its conduits are established, so that it is found when one of
+// them is removed.
+func TestManager_ConduitAddedLater(t *testing.T) {
+	m := NewManager()
+	s := New(context.Background(), "session-1", &dconpb.EstablishSessionRequest{}, nil)
+	if err := m.Add(s); err != nil {
+		t.Fatalf("Add() got unexpected error: %v", err)
+	}
+	if got := m.Sessions(); len(got) != 1 || got[0] != s {
+		t.Errorf("Sessions() = %v, want the one session that was added", got)
+	}
+
+	if !s.AddConduit("c1") {
+		t.Fatalf("AddConduit() = false, want true")
+	}
+
+	if got, ok := m.FindByConduitID("c1"); !ok || got != s {
+		t.Errorf("FindByConduitID(%q) = (%v, %t), want the session", "c1", got, ok)
+	}
+
+	// A conduit that joins after the session was removed is not indexed.
+	if err := m.Remove("session-1"); err != nil {
+		t.Fatalf("Remove() got unexpected error: %v", err)
+	}
+	s.AddConduit("c2")
+	if _, ok := m.FindByConduitID("c2"); ok {
+		t.Errorf("FindByConduitID(%q) found a session that was removed", "c2")
+	}
+}
+
+// TestManager_ReplaceAfterRemoveLeavesNoIndexEntry covers a session that is
+// removed between the moment it replaces a conduit and the moment the
+// manager updates its index. The index must not keep the conduit that was
+// replaced.
+func TestManager_ReplaceAfterRemoveLeavesNoIndexEntry(t *testing.T) {
+	m := NewManager()
+	s := New(context.Background(), "session-1", &dconpb.EstablishSessionRequest{}, []string{"c1"})
+	if err := m.Add(s); err != nil {
+		t.Fatalf("Add() got unexpected error: %v", err)
+	}
+	// The session is removed after it has replaced the conduit and before
+	// the manager is told.
+	updateIndex := s.onReplace
+	s.onReplace = func(oldID, newID string) {
+		if err := m.Remove(s.ID); err != nil {
+			t.Errorf("Remove() got unexpected error: %v", err)
+		}
+		updateIndex(oldID, newID)
+	}
+
+	s.ReplaceConduit("c1", "c2")
+
+	for _, id := range []string{"c1", "c2"} {
+		if _, ok := m.FindByConduitID(id); ok {
+			t.Errorf("FindByConduitID(%q) found a session that was removed", id)
+		}
+	}
+	if got := len(m.conduitToSession); got != 0 {
+		t.Errorf("the index of the manager has %d entries after its only session was removed, want 0: %v", got, m.conduitToSession)
+	}
+}

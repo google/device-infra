@@ -39,15 +39,19 @@ type Manager struct {
 
 // NewManager creates an empty manager for Conduits.
 func NewManager() *Manager {
+	return newManager(otel.Meter("dualconduit/conduit"))
+}
+
+// newManager creates an empty manager that reports its metrics to meter.
+func newManager(meter metric.Meter) *Manager {
 	m := &Manager{
 		conduits: make(map[string]*Conduit),
 	}
-	m.registerMetrics()
+	m.registerMetrics(meter)
 	return m
 }
 
-func (m *Manager) registerMetrics() {
-	meter := otel.Meter("dualconduit/conduit")
+func (m *Manager) registerMetrics(meter metric.Meter) {
 
 	boundaries := []float64{1, 10, 60, 600, 3600, 86400, 604800}
 	durationHistogram, err := meter.Float64Histogram(
@@ -84,7 +88,7 @@ func (m *Manager) registerMetrics() {
 
 	activeCounter, err := meter.Int64ObservableUpDownCounter(
 		"conduit.active_count",
-		metric.WithDescription("Number of active conduits"),
+		metric.WithDescription("Number of active conduits, by dialer and by the DualConduit protocol version of the other side"),
 		metric.WithUnit("1"),
 	)
 	if err != nil {
@@ -101,16 +105,30 @@ func (m *Manager) registerMetrics() {
 			dialerID string
 			age      float64
 		}
+		// activeGroup is the attribute set of one series of
+		// conduit.active_count.
+		type activeGroup struct {
+			dialerID string
+			// peerProtocol is the DualConduit protocol version of the other
+			// side. On an acceptor it tells which dialers still speak an old
+			// protocol. A dialer does not learn the protocol of its
+			// acceptor, so there it is the dialer's own.
+			peerProtocol int32
+		}
 		var active []conduitInfo
-		countsByDialerID := make(map[string]int64)
+		counts := make(map[activeGroup]int64)
 
 		m.mu.RLock()
 		for _, c := range m.conduits {
+			// A conduit stays in the manager while it closes.
+			if c.State() != StateActive {
+				continue
+			}
 			var dialerID string
 			if c.metadata != nil {
 				dialerID = c.metadata.GetInstanceId()
 			}
-			countsByDialerID[dialerID]++
+			counts[activeGroup{dialerID: dialerID, peerProtocol: c.peerProtocol.Load()}]++
 			active = append(active, conduitInfo{
 				id:       c.ID,
 				dialerID: dialerID,
@@ -119,8 +137,11 @@ func (m *Manager) registerMetrics() {
 		}
 		m.mu.RUnlock()
 
-		for dialerID, count := range countsByDialerID {
-			obs.ObserveInt64(activeCounter, count, metric.WithAttributes(attribute.String("conduit.dialer_id", dialerID)))
+		for group, count := range counts {
+			obs.ObserveInt64(activeCounter, count, metric.WithAttributes(
+				attribute.String("conduit.dialer_id", group.dialerID),
+				attribute.Int("conduit.peer_protocol", int(group.peerProtocol)),
+			))
 		}
 
 		for _, info := range active {
@@ -146,8 +167,8 @@ func (m *Manager) Add(ctx context.Context, id string, meta *dconpb.EstablishCond
 		return nil, ErrAlreadyExists
 	}
 
-	// onRemove only untracks the conduit from the map. It does NOT call Close()
-	// to avoid recursive sync.Once deadlocks when Close() triggers onRemove.
+	// onRemove only untracks the conduit from the map. It is the last step
+	// of closing the conduit, so it must not call Close().
 	onRemove := func() {
 		m.mu.Lock()
 		delete(m.conduits, id)
@@ -164,7 +185,8 @@ func (m *Manager) Add(ctx context.Context, id string, meta *dconpb.EstablishCond
 	return c, nil
 }
 
-// Conduit retrieves an active conduit by its unique ID.
+// Conduit retrieves a conduit by its unique ID. The conduit is ACTIVE or
+// CLOSING, or CLOSED for the moment in which it leaves the manager.
 func (m *Manager) Conduit(id string) (*Conduit, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -176,14 +198,12 @@ func (m *Manager) Conduit(id string) (*Conduit, error) {
 	return c, nil
 }
 
-// Remove shuts down the conduit via standard Close() and scrubs it from the active map.
+// Remove closes the conduit and returns when it is CLOSED. The conduit stays
+// in the manager while it closes and leaves it as the last step of closing.
 func (m *Manager) Remove(id string) {
-	m.mu.Lock()
+	m.mu.RLock()
 	c, ok := m.conduits[id]
-	if ok {
-		delete(m.conduits, id)
-	}
-	m.mu.Unlock()
+	m.mu.RUnlock()
 
 	if ok {
 		c.Close()
@@ -198,8 +218,8 @@ func (m *Manager) SubscribeToRemove(handler RemoveHandler) {
 }
 
 // Shutdown gracefully terminates all tracked conduits.
-// Since c.Close() synchronously calls onRemove (which removes the conduit from the map),
-// when Shutdown returns, the manager's conduit map is guaranteed to be empty
+// c.Close() returns when the conduit is CLOSED and out of the map, so when
+// Shutdown returns, none of the conduits that it found is left in the manager.
 func (m *Manager) Shutdown() {
 	m.mu.Lock()
 	// Create a copy to prevent deadlock while iterating and closing.

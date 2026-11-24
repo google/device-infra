@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net"
+	"time"
 
 	"github.com/rsocket/rsocket-go/rx/flux"
 
@@ -18,11 +19,9 @@ func StartListeningLoop(c *Conduit, listen func() (net.Listener, error)) error {
 	}
 
 	defer lis.Close()
-	// Shut down the listener if the conduit context cancels.
-	go func() {
-		<-c.Context().Done()
-		lis.Close()
-	}()
+	// The listener closes in the step of closing that ends the context of
+	// the conduit, not on a goroutine that runs some time later.
+	c.AtEntryClose(func() { lis.Close() })
 
 	for {
 		conn, err := lis.Accept()
@@ -79,21 +78,49 @@ func handleIngressConnection(c *Conduit, conn net.Conn) {
 	rc.Wait()
 }
 
+// endedContext is a context that has ended.
+var endedContext = func() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	return ctx
+}()
+
+// destinationDialTimeout limits the dial of the destination of a stream.
+// rsocket-go hands the Responder the frames of all streams of a conduit on
+// one goroutine, and the dial runs on it, so that a stream sends only its
+// first payload until its destination is connected. A dial that hangs holds
+// up the other streams of the conduit for this long at most.
+const destinationDialTimeout = 10 * time.Second
+
+// dialDestination connects to the destination of a stream. The dial ends
+// when its time limit runs out or the conduit begins to close.
+func (c *Conduit) dialDestination(address string) (net.Conn, error) {
+	ctx, cancel := context.WithTimeout(c.Context(), c.dialTimeout)
+	defer cancel()
+	return c.dial(ctx, "tcp", address)
+}
+
 // AcceptStream handles an incoming RSocket channel, dials the target service, and bridges the streams.
 // This implements the Responder Role.
 func AcceptStream(c *Conduit, destEndpoint string, downstream flux.Flux) flux.Flux {
-	if c.Context().Err() != nil {
-		return refuseStream(c, downstream)
+	if c.State() != StateActive {
+		// A stream that arrives while its conduit is closing is not
+		// answered and its destination is not dialled: the Requester ends
+		// it when it closes its own side. Subscribing still requests, so a
+		// REQUEST_N frame is sent.
+		return rxconn.Refuse(endedContext, downstream, nil)
 	}
-	conn, err := net.Dial("tcp", destEndpoint)
+	conn, err := c.dialDestination(destEndpoint)
 	if err != nil {
 		slog.WarnContext(c.Context(), "Conduit AcceptStream: destination cannot be reached, refusing the stream", "id", c.ID, "backend", destEndpoint, "error", err)
 		return refuseStream(c, downstream)
 	}
 
 	if !c.streamStarted() {
+		// The conduit began to close during the dial. Its context may not
+		// have ended yet, and the stream is not answered either way.
 		resetConn(conn)
-		return rxconn.Refuse(c.Context(), downstream, nil)
+		return rxconn.Refuse(endedContext, downstream, nil)
 	}
 	streamCtx, cancel := context.WithCancel(c.Context())
 	rc, upstream, err := rxconn.Accept(streamCtx, conn, downstream, c.streamOptions()...)
@@ -115,10 +142,10 @@ func AcceptStream(c *Conduit, destEndpoint string, downstream flux.Flux) flux.Fl
 // refuseStream answers an incoming RSocket channel that cannot be served, in
 // the way a destination that cannot be reached is answered: with the RST
 // marker. While the conduit is open, the stream is counted until the Requester
-// has completed it.
+// has completed it. A stream whose conduit has begun to close is not answered.
 func refuseStream(c *Conduit, downstream flux.Flux) flux.Flux {
 	if !c.streamStarted() {
-		return rxconn.Refuse(c.Context(), downstream, nil)
+		return rxconn.Refuse(endedContext, downstream, nil)
 	}
 	return rxconn.Refuse(c.Context(), downstream, c.streamFinished)
 }

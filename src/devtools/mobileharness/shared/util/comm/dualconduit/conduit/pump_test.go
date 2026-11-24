@@ -578,3 +578,295 @@ func TestConduitClose_ConcurrentWithStreamStart(t *testing.T) {
 		cancel()
 	}
 }
+
+// hangingDial is a dial of a destination that does not answer: it returns
+// only when its context ends.
+func hangingDial(ctx context.Context, _, _ string) (net.Conn, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+// TestAcceptStream_DestinationDialHasTimeLimit covers a destination that does
+// not answer the dial. The dial runs on the goroutine that handles the frames
+// of all streams of the conduit, so it must be given up after its time limit.
+// The stream is then refused like one whose destination cannot be reached:
+// its client is reset.
+//
+// In version 0.2.0 and older the dial had no limit of its own and held up
+// every stream of the conduit until the operating system gave up.
+func TestAcceptStream_DestinationDialHasTimeLimit(t *testing.T) {
+	const limit = 200 * time.Millisecond
+	c := New(t.Context(), "test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() {}, nil, trace.SpanContext{}, nil, nil)
+	c.dial = hangingDial
+	c.dialTimeout = limit
+
+	in := flux.CreateProcessor()
+	accepted := make(chan flux.Flux, 1)
+	start := time.Now()
+	go func() { accepted <- AcceptStream(c, "192.0.2.1:9", in) }()
+	var out flux.Flux
+	select {
+	case out = <-accepted:
+		if got := time.Since(start); got < limit/2 {
+			t.Errorf("AcceptStream() returned after %v, want not before the time limit of %v", got, limit)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("AcceptStream() did not return within 5s for a dial that hangs, want it to give up after %v", limit)
+	}
+
+	var markers []string
+	outDone := make(chan struct{})
+	out.Subscribe(t.Context(),
+		rx.OnSubscribe(func(_ context.Context, su rx.Subscription) { su.Request(rx.RequestMax) }),
+		rx.OnNext(func(p payload.Payload) error {
+			meta, _ := p.Metadata()
+			markers = append(markers, string(meta))
+			return nil
+		}),
+		rx.OnComplete(func() { close(outDone) }),
+	)
+	select {
+	case <-outDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("AcceptStream() outgoing Flux did not complete within 5s")
+	}
+	if len(markers) != 1 || markers[0] != "dcon:rst" {
+		t.Errorf("AcceptStream() markers = %q, want [\"dcon:rst\"]", markers)
+	}
+	in.Complete()
+}
+
+// TestAcceptStream_ConduitCloseEndsDestinationDial covers a conduit that
+// closes while the Responder dials a destination that does not answer. The
+// dial must end at once: closing does not wait for it, and neither does the
+// goroutine that handles the frames.
+func TestAcceptStream_ConduitCloseEndsDestinationDial(t *testing.T) {
+	c := New(t.Context(), "test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() {}, nil, trace.SpanContext{}, nil, nil)
+	dialing := make(chan struct{})
+	c.dial = func(ctx context.Context, network, address string) (net.Conn, error) {
+		close(dialing)
+		return hangingDial(ctx, network, address)
+	}
+	c.dialTimeout = time.Minute
+
+	accepted := make(chan struct{})
+	go func() {
+		AcceptStream(c, "192.0.2.1:9", flux.CreateProcessor())
+		close(accepted)
+	}()
+	waitClosed(t, dialing, "the dial of the destination")
+
+	c.BeginClose()
+
+	select {
+	case <-accepted:
+	case <-time.After(5 * time.Second):
+		t.Errorf("AcceptStream() did not return within 5s after the conduit began to close")
+	}
+	select {
+	case <-c.Done():
+	case <-time.After(5 * time.Second):
+		t.Errorf("conduit is %v 5s after it began to close, want %v", c.State(), StateClosed)
+	}
+}
+
+// blockingCloseListener is a listener whose Close does not return until
+// release is closed.
+type blockingCloseListener struct {
+	net.Listener
+	closing chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func (l *blockingCloseListener) Close() error {
+	l.once.Do(func() { close(l.closing) })
+	<-l.release
+	return l.Listener.Close()
+}
+
+// TestStartListeningLoop_ListenerClosesWithinClosing checks that the listener
+// of the entry port is closed as a step of closing the conduit, before the
+// connection is closed and the conduit is removed, and not by a goroutine
+// that runs some time later: closing does not go on until the listener is
+// closed.
+func TestStartListeningLoop_ListenerClosesWithinClosing(t *testing.T) {
+	removed := make(chan struct{})
+	c := New(t.Context(), "test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() { close(removed) }, nil, trace.SpanContext{}, nil, nil)
+	inner, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen got unexpected error: %v", err)
+	}
+	lis := &blockingCloseListener{Listener: inner, closing: make(chan struct{}), release: make(chan struct{})}
+	loopDone := make(chan struct{})
+	go func() {
+		StartListeningLoop(c, func() (net.Listener, error) { return lis, nil })
+		close(loopDone)
+	}()
+	// The loop is running once it has counted the stream of a client.
+	conn, err := net.Dial("tcp", inner.Addr().String())
+	if err != nil {
+		t.Fatalf("net.Dial got unexpected error: %v", err)
+	}
+	for deadline := time.Now().Add(5 * time.Second); c.ActiveStreams() != 1 && time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
+	}
+	conn.Close()
+	for deadline := time.Now().Add(5 * time.Second); c.ActiveStreams() != 0 && time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
+	}
+	if got := c.ActiveStreams(); got != 0 {
+		t.Fatalf("ActiveStreams() after the client left = %d, want 0", got)
+	}
+
+	c.BeginClose()
+
+	select {
+	case <-lis.closing:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("the listener was not closed within 5s after the conduit began to close")
+	}
+	select {
+	case <-removed:
+		t.Errorf("the conduit was removed while its listener was still being closed")
+	case <-time.After(200 * time.Millisecond):
+	}
+	if got := c.State(); got != StateClosing {
+		t.Errorf("State() while the listener is being closed = %v, want %v", got, StateClosing)
+	}
+
+	close(lis.release)
+	select {
+	case <-removed:
+	case <-time.After(5 * time.Second):
+		t.Errorf("the conduit was not removed within 5s after its listener closed")
+	}
+	waitClosed(t, loopDone, "the return of StartListeningLoop")
+}
+
+// TestAcceptStream_ConduitClosingIsNotAnswered covers a stream that arrives
+// while its conduit is closing, before the context of the conduit has ended:
+// the dialer of a reverse conduit pauses there after it has sent the CLOSE
+// signal. The Responder must not dial the destination for such a stream and
+// must send no marker: the Requester ends the stream on its own side.
+func TestAcceptStream_ConduitClosingIsNotAnswered(t *testing.T) {
+	inPause, release := make(chan struct{}), make(chan struct{})
+	c := New(t.Context(), "test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() {}, func() {
+		close(inPause)
+		<-release
+	}, trace.SpanContext{}, nil, nil)
+	defer close(release)
+	var dials atomic.Int32
+	c.dial = func(ctx context.Context, network, address string) (net.Conn, error) {
+		dials.Add(1)
+		return nil, errors.New("not expected")
+	}
+	c.BeginClose()
+	waitClosed(t, inPause, "the pause of closing")
+	if err := c.Context().Err(); err != nil {
+		t.Fatalf("Context() has ended in the pause of closing: %v", err)
+	}
+
+	out := AcceptStream(c, "192.0.2.1:9", flux.CreateProcessor())
+
+	sent := make(chan string, 4)
+	out.Subscribe(t.Context(),
+		rx.OnSubscribe(func(_ context.Context, su rx.Subscription) { su.Request(rx.RequestMax) }),
+		rx.OnNext(func(p payload.Payload) error {
+			meta, _ := p.Metadata()
+			sent <- "marker " + string(meta)
+			return nil
+		}),
+		rx.OnComplete(func() { sent <- "complete" }),
+	)
+	select {
+	case got := <-sent:
+		t.Errorf("AcceptStream() on a closing conduit sent %q, want nothing", got)
+	case <-time.After(200 * time.Millisecond):
+	}
+	if got := dials.Load(); got != 0 {
+		t.Errorf("AcceptStream() on a closing conduit dialled the destination %d time(s), want 0", got)
+	}
+	if got := c.ActiveStreams(); got != 0 {
+		t.Errorf("ActiveStreams() = %d after a stream arrived on a closing conduit, want 0", got)
+	}
+}
+
+// TestAcceptStream_ConduitBeginsToCloseDuringDial covers a stream whose
+// destination is still being dialled when its conduit begins to close. When
+// the dial returns, the conduit is CLOSING but its context has not ended yet:
+// closing is in the pause after the CLOSE signal. Like a stream that arrives
+// while the conduit is closing, the stream must not be answered and must not
+// be counted, and a destination that was reached must be let go.
+func TestAcceptStream_ConduitBeginsToCloseDuringDial(t *testing.T) {
+	tests := []struct {
+		name string
+		// dialErr is what the dial of the destination fails with. If it is
+		// nil, the dial succeeds.
+		dialErr error
+	}{
+		{name: "dial_succeeds"},
+		{name: "dial_fails", dialErr: errors.New("connection refused")},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			inPause, release := make(chan struct{}), make(chan struct{})
+			c := New(t.Context(), "test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() {}, func() {
+				close(inPause)
+				<-release
+			}, trace.SpanContext{}, nil, nil)
+			defer close(release)
+			dialing, finishDial := make(chan struct{}), make(chan struct{})
+			destination, destinationPeer := net.Pipe()
+			defer destinationPeer.Close()
+			c.dial = func(context.Context, string, string) (net.Conn, error) {
+				close(dialing)
+				<-finishDial
+				if tc.dialErr != nil {
+					return nil, tc.dialErr
+				}
+				return destination, nil
+			}
+
+			accepted := make(chan flux.Flux, 1)
+			go func() { accepted <- AcceptStream(c, "192.0.2.1:9", flux.CreateProcessor()) }()
+			waitClosed(t, dialing, "the dial of the destination")
+			c.BeginClose()
+			waitClosed(t, inPause, "the pause of closing")
+			if err := c.Context().Err(); err != nil {
+				t.Fatalf("Context() has ended in the pause of closing: %v", err)
+			}
+			close(finishDial)
+
+			var out flux.Flux
+			select {
+			case out = <-accepted:
+			case <-time.After(5 * time.Second):
+				t.Fatalf("AcceptStream() did not return within 5s after the dial of its destination ended")
+			}
+			sent := make(chan string, 4)
+			out.Subscribe(t.Context(),
+				rx.OnSubscribe(func(_ context.Context, su rx.Subscription) { su.Request(rx.RequestMax) }),
+				rx.OnNext(func(p payload.Payload) error {
+					meta, _ := p.Metadata()
+					sent <- "marker " + string(meta)
+					return nil
+				}),
+				rx.OnComplete(func() { sent <- "complete" }),
+			)
+			select {
+			case got := <-sent:
+				t.Errorf("AcceptStream() sent %q for a stream whose conduit began to close during the dial, want nothing", got)
+			case <-time.After(200 * time.Millisecond):
+			}
+			if got := c.ActiveStreams(); got != 0 {
+				t.Errorf("ActiveStreams() = %d after a stream whose conduit began to close during the dial, want 0", got)
+			}
+			if tc.dialErr == nil {
+				// The destination was reached, and is let go.
+				destinationPeer.SetReadDeadline(time.Now().Add(5 * time.Second))
+				if _, err := destinationPeer.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
+					t.Errorf("the destination read error %v, want %v: its connection is closed", err, io.EOF)
+				}
+			}
+		})
+	}
+}

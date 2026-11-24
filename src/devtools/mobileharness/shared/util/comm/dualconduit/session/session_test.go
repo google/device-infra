@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
@@ -81,5 +82,35 @@ func TestReplaceConduit_NotFound(t *testing.T) {
 
 	if callbackCalled {
 		t.Error("expected onReplace callback NOT to be called")
+	}
+}
+
+// TestSession_ConduitsOfClosedSession checks that a closed session takes no
+// conduit: a conduit that is established after its session was torn down
+// belongs to nobody and must be closed by the caller.
+func TestSession_ConduitsOfClosedSession(t *testing.T) {
+	s := New(t.Context(), "session-1", &dconpb.EstablishSessionRequest{}, []string{"c1"})
+	if !s.AddConduit("c2") {
+		t.Errorf("AddConduit() on an open session = false, want true")
+	}
+	if !s.ReplaceConduit("c1", "c3") {
+		t.Errorf("ReplaceConduit() of a conduit of an open session = false, want true")
+	}
+	if s.ReplaceConduit("c1", "c4") {
+		t.Errorf("ReplaceConduit() of a conduit that the session does not have = true, want false")
+	}
+
+	s.Close()
+
+	if s.AddConduit("c5") {
+		t.Errorf("AddConduit() on a closed session = true, want false")
+	}
+	if s.ReplaceConduit("c2", "c6") {
+		t.Errorf("ReplaceConduit() on a closed session = true, want false")
+	}
+	got := s.Conduits()
+	slices.Sort(got)
+	if want := []string{"c2", "c3"}; !slices.Equal(got, want) {
+		t.Errorf("Conduits() = %v, want %v", got, want)
 	}
 }

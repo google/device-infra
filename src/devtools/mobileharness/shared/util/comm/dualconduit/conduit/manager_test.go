@@ -2,13 +2,18 @@ package conduit
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 	"sync"
 	"testing"
 	"time"
 
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version"
 	"github.com/rsocket/rsocket-go"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -350,5 +355,137 @@ func TestManagerActiveCounterWithDialerID(t *testing.T) {
 	fetched2, err := m.Conduit("conduit-2")
 	if err != nil || fetched2 != c2 {
 		t.Errorf("Conduit(conduit-2) = (%v, %v), want (%v, nil)", fetched2, err, c2)
+	}
+}
+
+// TestManagerRemove_ConduitLeavesManagerLast checks that a conduit stays in
+// the manager while it closes and leaves it as the last step: until then its
+// connection and its entry port still exist.
+func TestManagerRemove_ConduitLeavesManagerLast(t *testing.T) {
+	m := NewManager()
+	inSignal, release := make(chan struct{}), make(chan struct{})
+	beforeClose := func() {
+		close(inSignal)
+		<-release
+	}
+	if _, err := m.Add(t.Context(), "c1", nil, newMockRSocket(), beforeClose, trace.SpanContext{}); err != nil {
+		t.Fatalf("Add() got unexpected error: %v", err)
+	}
+	handled := make(chan error, 1)
+	m.SubscribeToRemove(func(id string, _ *dconpb.EstablishConduitRequest) {
+		_, err := m.Conduit(id)
+		handled <- err
+	})
+
+	removed := make(chan struct{})
+	go func() {
+		m.Remove("c1")
+		close(removed)
+	}()
+	select {
+	case <-inSignal:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("Remove() did not start closing the conduit within 5s")
+	}
+	c, err := m.Conduit("c1")
+	if err != nil {
+		t.Fatalf("Conduit() of a conduit that is closing got error %v, want the conduit", err)
+	}
+	if got := c.State(); got != StateClosing {
+		t.Errorf("State() of a conduit that is closing = %v, want %v", got, StateClosing)
+	}
+	select {
+	case <-removed:
+		t.Errorf("Remove() returned while the conduit was still closing")
+	default:
+	}
+
+	close(release)
+	select {
+	case <-removed:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("Remove() did not return within 5s after closing went on")
+	}
+	if _, err := m.Conduit("c1"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("Conduit() after Remove() got error %v, want %v", err, ErrNotFound)
+	}
+	select {
+	case err := <-handled:
+		if !errors.Is(err, ErrNotFound) {
+			t.Errorf("Conduit() in the removal handler got error %v, want %v", err, ErrNotFound)
+		}
+	case <-time.After(5 * time.Second):
+		t.Errorf("removal handler was not called within 5s")
+	}
+}
+
+// TestManagerActiveCount_ByDialerAndPeerProtocol checks the metric that tells
+// which dialers still speak an old protocol: conduit.active_count has one
+// series per dialer and protocol version of the other side, and counts only
+// the conduits that are ACTIVE.
+func TestManagerActiveCount_ByDialerAndPeerProtocol(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	defer provider.Shutdown(t.Context())
+	m := newManager(provider.Meter("test"))
+
+	add := func(id, dialerID string, peerProtocol int32, beforeClose func()) *Conduit {
+		t.Helper()
+		c, err := m.Add(t.Context(), id, &dconpb.EstablishConduitRequest{InstanceId: dialerID}, newMockRSocket(), beforeClose, trace.SpanContext{})
+		if err != nil {
+			t.Fatalf("Add(%q) got unexpected error: %v", id, err)
+		}
+		c.SetPeerProtocol(peerProtocol)
+		return c
+	}
+	add("c1", "worker-1", version.ProtocolVersion, nil)
+	add("c2", "worker-1", version.ProtocolVersion, nil)
+	add("c3", "worker-2", 0, nil)
+	add("c4", "worker-2", 0, nil)
+	add("c5", "worker-2", 0, nil)
+	// A conduit that is closing is still in the manager and must not count.
+	inSignal, release := make(chan struct{}), make(chan struct{})
+	closing := add("c6", "worker-3", version.ProtocolVersion, func() {
+		close(inSignal)
+		<-release
+	})
+	defer close(release)
+	closing.BeginClose()
+	waitClosed(t, inSignal, "the closing step of the conduit")
+
+	var got metricdata.ResourceMetrics
+	if err := reader.Collect(t.Context(), &got); err != nil {
+		t.Fatalf("reader.Collect() got unexpected error: %v", err)
+	}
+	type series struct {
+		dialerID     string
+		peerProtocol int64
+	}
+	counts := make(map[series]int64)
+	for _, sm := range got.ScopeMetrics {
+		for _, metric := range sm.Metrics {
+			if metric.Name != "conduit.active_count" {
+				continue
+			}
+			sum, ok := metric.Data.(metricdata.Sum[int64])
+			if !ok {
+				t.Fatalf("conduit.active_count has data of type %T, want metricdata.Sum[int64]", metric.Data)
+			}
+			for _, point := range sum.DataPoints {
+				dialerID, _ := point.Attributes.Value("conduit.dialer_id")
+				peerProtocol, ok := point.Attributes.Value("conduit.peer_protocol")
+				if !ok {
+					t.Errorf("conduit.active_count series of dialer %q has no attribute conduit.peer_protocol", dialerID.AsString())
+				}
+				counts[series{dialerID.AsString(), peerProtocol.AsInt64()}] += point.Value
+			}
+		}
+	}
+	want := map[series]int64{
+		{"worker-1", int64(version.ProtocolVersion)}: 2,
+		{"worker-2", 0}: 3,
+	}
+	if !maps.Equal(counts, want) {
+		t.Errorf("conduit.active_count by dialer and peer protocol = %v, want %v", counts, want)
 	}
 }

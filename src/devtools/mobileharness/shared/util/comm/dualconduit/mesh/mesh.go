@@ -125,6 +125,22 @@ func (s *Server) RegisterEndpoint(ctx context.Context, serviceName, hostname, ph
 	return logicalName, nil
 }
 
+// Endpoints returns the physical addresses that are registered for a service
+// of a host.
+func (s *Server) Endpoints(serviceName, hostname string) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	info, ok := s.services[fmt.Sprintf("%s.%s.dcon", serviceName, hostname)]
+	if !ok {
+		return nil
+	}
+	addresses := make([]string, 0, len(info.PhysicalAddresses))
+	for address := range info.PhysicalAddresses {
+		addresses = append(addresses, address)
+	}
+	return addresses
+}
+
 // DeregisterEndpoint removes an endpoint and pushes a new snapshot.
 func (s *Server) DeregisterEndpoint(ctx context.Context, serviceName, hostname, physicalAddress string) error {
 	s.mu.Lock()

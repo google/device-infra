@@ -209,14 +209,14 @@ socat TCP-LISTEN:local-port,reuseaddr,fork OPENSSL:envoy-proxy:port,verify=0,sni
 
 The Dialer and the Acceptor of a conduit should speak the same protocol version
 (`ProtocolVersion` in `version/version.go`). Versions 0.1.2 and older speak
-protocol version 0, and version 0.2.0 speaks protocol version 1. The Dialer
-sends its protocol version when it sets up a conduit, and the Acceptor compares
-it with its own:
+protocol version 0, and versions 0.2.0 and 0.2.1 speak protocol version 1. The
+Dialer sends its protocol version when it sets up a conduit, and the Acceptor
+compares it with its own:
 
 *   A Dialer of an older protocol version that the Acceptor still serves is
     served in that version, and the Acceptor logs a warning. A Dialer of version
     0.1.2 or older keeps working as it did before the Acceptor was upgraded, and
-    gets the behavior of 0.2.0 when it is upgraded itself.
+    gets the behavior of the new version when it is upgraded itself.
 *   Any other Dialer whose protocol version differs is refused with an error
     that says which side to upgrade. The Dialer logs the error and exits.
 
