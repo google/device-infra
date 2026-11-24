@@ -74,11 +74,21 @@ class TradefedCommandArgsBuilder {
                     getTestNameArg().stream(),
                     getShardCountArg().stream(),
                     getFilterArgs(),
-                    getMetadataFilters(),
-                    getSystemCheckersAndLogs(),
-                    getExecutionFlags(),
-                    getModuleAndExtraArgs())
+                    buildCommonArgs())
                 .collect(toImmutableList()));
+  }
+
+  /**
+   * Builds Tradefed command arguments shared across sharding modes (metadata filters, system
+   * checkers and log flags, execution flags, module args, and extra args).
+   */
+  Stream<String> buildCommonArgs() {
+    checkNotNull(sessionRequestInfo, "sessionRequestInfo must be set");
+    return Streams.concat(
+        getMetadataFilters(),
+        getSystemCheckersAndLogs(),
+        getExecutionFlags(),
+        getModuleAndExtraArgs());
   }
 
   private ImmutableList<String> getModuleFilters() {

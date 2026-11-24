@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
 import com.google.devtools.mobileharness.infra.ats.common.ShardConstants;
+import com.google.devtools.mobileharness.infra.ats.common.proto.FilterValues;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
@@ -314,5 +315,171 @@ public final class ModuleShardingArgsGeneratorTest {
                 + " --skip-preconditions");
     assertThat(shardingArgsMap.get("mock_module2"))
         .containsExactly("--include-filter \"mock_module2\" --skip-preconditions");
+  }
+
+  @Test
+  public void generateShardingArgsMap_forwardsCommonTradefedOptions() throws Exception {
+    String largeModule = ShardConstants.LARGE_MODULES.iterator().next();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setShardingMode(ShardingMode.MODULE)
+                .putModuleMetadataIncludeFilters(
+                    "metaKey1", FilterValues.newBuilder().addValues("metaVal1").build())
+                .putModuleMetadataExcludeFilters(
+                    "metaKey2", FilterValues.newBuilder().addValues("metaVal2").build())
+                .setReportSystemCheckers(true)
+                .setSkipDeviceInfo(true)
+                .setEnableDefaultLogs(false)
+                .setEnableTokenSharding(true)
+                .setBusinessLogicUrl("https://example.com/logic")
+                .setIgnoreBusinessLogicFailure(true)
+                .addModuleArgs("mock_module:opt:\"val\"")
+                .addExtraArgs("--flag \"val\"")
+                .addExtraArgs("path\\to\\dir"));
+
+    ImmutableListMultimap<String, String> shardingArgsMap =
+        moduleShardingArgsGenerator.generateShardingArgsMap(
+            sessionRequestInfo, ImmutableList.of("mock_module", largeModule));
+
+    String expectedCommonArgs =
+        " --skip-preconditions"
+            + " --module-metadata-include-filter \"metaKey1\" \"metaVal1\""
+            + " --module-metadata-exclude-filter \"metaKey2\" \"metaVal2\""
+            + " --report-system-checkers"
+            + " --skip-device-info true"
+            + " --enable-default-logs false"
+            + " --enable-token-sharding"
+            + " --business-logic-url https://example.com/logic"
+            + " --ignore-business-logic-failure"
+            + " --module-arg \"mock_module:opt:\\\"val\\\"\""
+            + " \"--flag \\\"val\\\"\""
+            + " path\\\\to\\\\dir";
+    assertThat(shardingArgsMap.get("mock_module"))
+        .containsExactly("-m mock_module" + expectedCommonArgs);
+    assertThat(shardingArgsMap.get(largeModule))
+        .containsExactly(
+            String.format(
+                "-m %s --shard-count %d --shard-index 0%s",
+                largeModule, LARGE_MODULE_SHARDS, expectedCommonArgs),
+            String.format(
+                "-m %s --shard-count %d --shard-index 1%s",
+                largeModule, LARGE_MODULE_SHARDS, expectedCommonArgs),
+            String.format(
+                "-m %s --shard-count %d --shard-index 2%s",
+                largeModule, LARGE_MODULE_SHARDS, expectedCommonArgs),
+            String.format(
+                "-m %s --shard-count %d --shard-index 3%s",
+                largeModule, LARGE_MODULE_SHARDS, expectedCommonArgs),
+            String.format(
+                "-m %s --shard-count %d --shard-index 4%s",
+                largeModule, LARGE_MODULE_SHARDS, expectedCommonArgs));
+  }
+
+  @Test
+  public void generateShardingArgsMap_csuiteAppCrawl_omitsSkipDeviceInfo() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("csuite-app-crawl")
+                .setCommandLineArgs("csuite-app-crawl")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setShardingMode(ShardingMode.MODULE)
+                .setSkipDeviceInfo(true));
+
+    ImmutableListMultimap<String, String> shardingArgsMap =
+        moduleShardingArgsGenerator.generateShardingArgsMap(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
+
+    assertThat(shardingArgsMap.get("mock_module"))
+        .containsExactly("-m mock_module --skip-preconditions");
+  }
+
+  @Test
+  public void
+      generateShardingArgsMap_strictIncludeFilters_forwardsSpecificityAndIgnoresOtherFilters()
+          throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setShardingMode(ShardingMode.MODULE)
+                .addAllStrictIncludeFilters(
+                    ImmutableList.of("arm64-v8a mock_module1[instant] class#test", "mock_module2"))
+                .addAllIncludeFilters(ImmutableList.of("mock_module3"))
+                .addAllExcludeFilters(
+                    ImmutableList.of("arm64-v8a mock_module1[instant] class#test")));
+
+    ImmutableListMultimap<String, String> shardingArgsMap =
+        moduleShardingArgsGenerator.generateShardingArgsMap(
+            sessionRequestInfo, ImmutableList.of("mock_module1", "mock_module2", "mock_module3"));
+
+    assertThat(shardingArgsMap.keySet()).containsExactly("mock_module1", "mock_module2");
+    assertThat(shardingArgsMap.get("mock_module1"))
+        .containsExactly(
+            "--strict-include-filter \"arm64-v8a mock_module1[instant] class#test\""
+                + " --skip-preconditions");
+    assertThat(shardingArgsMap.get("mock_module2"))
+        .containsExactly("--strict-include-filter \"mock_module2\" --skip-preconditions");
+  }
+
+  @Test
+  public void generateShardingArgsMap_strictIncludeFiltersOnLargeModules_shardsOnlyModuleLevel()
+      throws Exception {
+    ImmutableList<String> largeModules = ShardConstants.LARGE_MODULES.asList();
+    String testOnlyLargeModule = largeModules.get(0);
+    String abiOnlyLargeModule = largeModules.get(1);
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setShardingMode(ShardingMode.MODULE)
+                .addAllStrictIncludeFilters(
+                    ImmutableList.of(
+                        String.format("arm64-v8a %s class#test", testOnlyLargeModule),
+                        String.format("arm64-v8a %s", abiOnlyLargeModule))));
+
+    ImmutableListMultimap<String, String> shardingArgsMap =
+        moduleShardingArgsGenerator.generateShardingArgsMap(
+            sessionRequestInfo, ImmutableList.of(testOnlyLargeModule, abiOnlyLargeModule));
+
+    assertThat(shardingArgsMap.get(testOnlyLargeModule))
+        .containsExactly(
+            String.format(
+                "--strict-include-filter \"arm64-v8a %s class#test\" --skip-preconditions",
+                testOnlyLargeModule));
+    assertThat(shardingArgsMap.get(abiOnlyLargeModule))
+        .containsExactly(
+            String.format(
+                "--strict-include-filter \"arm64-v8a %s\" --shard-count %d --shard-index 0"
+                    + " --skip-preconditions",
+                abiOnlyLargeModule, LARGE_MODULE_SHARDS),
+            String.format(
+                "--strict-include-filter \"arm64-v8a %s\" --shard-count %d --shard-index 1"
+                    + " --skip-preconditions",
+                abiOnlyLargeModule, LARGE_MODULE_SHARDS),
+            String.format(
+                "--strict-include-filter \"arm64-v8a %s\" --shard-count %d --shard-index 2"
+                    + " --skip-preconditions",
+                abiOnlyLargeModule, LARGE_MODULE_SHARDS),
+            String.format(
+                "--strict-include-filter \"arm64-v8a %s\" --shard-count %d --shard-index 3"
+                    + " --skip-preconditions",
+                abiOnlyLargeModule, LARGE_MODULE_SHARDS),
+            String.format(
+                "--strict-include-filter \"arm64-v8a %s\" --shard-count %d --shard-index 4"
+                    + " --skip-preconditions",
+                abiOnlyLargeModule, LARGE_MODULE_SHARDS));
   }
 }

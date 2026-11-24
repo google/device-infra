@@ -53,14 +53,20 @@ class ModuleShardingArgsGenerator {
       throws MobileHarnessException {
     ImmutableSet<String> targetModules = ImmutableSet.copyOf(tfModules);
 
+    boolean hasStrictIncludeFilters = !sessionRequestInfo.getStrictIncludeFiltersList().isEmpty();
+    // When --strict-include-filter is set, ignore --include-filter and --exclude-filter to match
+    // Tradefed's GlobalTestFilter behavior.
     ImmutableList<SuiteTestFilter> originalIncludeFilters =
-        sessionRequestInfo.getIncludeFiltersList().stream()
-            .map(SuiteTestFilter::create)
-            .collect(toImmutableList());
+        (hasStrictIncludeFilters
+                ? sessionRequestInfo.getStrictIncludeFiltersList()
+                : sessionRequestInfo.getIncludeFiltersList())
+            .stream().map(SuiteTestFilter::create).collect(toImmutableList());
     ImmutableList<SuiteTestFilter> originalExcludeFilters =
-        sessionRequestInfo.getExcludeFiltersList().stream()
-            .map(SuiteTestFilter::create)
-            .collect(toImmutableList());
+        hasStrictIncludeFilters
+            ? ImmutableList.of()
+            : sessionRequestInfo.getExcludeFiltersList().stream()
+                .map(SuiteTestFilter::create)
+                .collect(toImmutableList());
 
     ImmutableListMultimap.Builder<String, String> shardingArgs = ImmutableListMultimap.builder();
 
@@ -74,6 +80,7 @@ class ModuleShardingArgsGenerator {
                 sessionRequestInfo,
                 originalIncludeFilters,
                 originalExcludeFilters,
+                hasStrictIncludeFilters,
                 SHARD_MODULE_SHARDS));
       }
     }
@@ -88,6 +95,7 @@ class ModuleShardingArgsGenerator {
                 sessionRequestInfo,
                 originalIncludeFilters,
                 originalExcludeFilters,
+                hasStrictIncludeFilters,
                 LARGE_MODULE_SHARDS));
       }
     }
@@ -103,6 +111,7 @@ class ModuleShardingArgsGenerator {
                 sessionRequestInfo,
                 originalIncludeFilters,
                 originalExcludeFilters,
+                hasStrictIncludeFilters,
                 /* shardCount= */ 1));
       }
     }
@@ -115,9 +124,9 @@ class ModuleShardingArgsGenerator {
       SessionRequestInfo sessionRequestInfo,
       ImmutableList<SuiteTestFilter> originalIncludeFilters,
       ImmutableList<SuiteTestFilter> originalExcludeFilters,
+      boolean useStrictIncludeFilters,
       int shardCount) {
     ImmutableSet.Builder<String> shardingArgs = ImmutableSet.builder();
-    ImmutableList<String> extraArgs = ImmutableList.copyOf(sessionRequestInfo.getExtraArgsList());
 
     ImmutableList<SuiteTestFilter> matchedIncludeFilters =
         findMatchedFilters(module, originalIncludeFilters);
@@ -133,15 +142,22 @@ class ModuleShardingArgsGenerator {
       for (int index = 0; index < shardCount; index++) {
         String sessionRequestInfoArgs =
             createSessionRequestInfoArgs(
-                matchedIncludeFilters, matchedExcludeFilters, extraArgs, module, shardCount, index);
+                sessionRequestInfo,
+                matchedIncludeFilters,
+                matchedExcludeFilters,
+                useStrictIncludeFilters,
+                module,
+                shardCount,
+                index);
         shardingArgs.add(sessionRequestInfoArgs);
       }
     } else {
       String sessionRequestInfoArgs =
           createSessionRequestInfoArgs(
+              sessionRequestInfo,
               matchedIncludeFilters,
               matchedExcludeFilters,
-              extraArgs,
+              useStrictIncludeFilters,
               module,
               /* shardCount= */ 1,
               /* shardIndex= */ 0);
@@ -197,12 +213,15 @@ class ModuleShardingArgsGenerator {
   }
 
   private static String createSessionRequestInfoArgs(
+      SessionRequestInfo sessionRequestInfo,
       ImmutableList<SuiteTestFilter> includeFilters,
       ImmutableList<SuiteTestFilter> excludeFilters,
-      ImmutableList<String> extraArgs,
+      boolean useStrictIncludeFilters,
       String moduleName,
       int shardCount,
       int shardIndex) {
+    String includeFilterFlag =
+        useStrictIncludeFilters ? "--strict-include-filter" : "--include-filter";
     return Joiner.on(' ')
         .join(
             Streams.concat(
@@ -212,7 +231,8 @@ class ModuleShardingArgsGenerator {
                         : Stream.empty(),
                     includeFilters.stream()
                         .map(includeFilter ->
-                            String.format("--include-filter \"%s\"", includeFilter.filterString())),
+                            String.format(
+                                "%s \"%s\"", includeFilterFlag, includeFilter.filterString())),
                     excludeFilters.stream()
                         .map(excludeFilter ->
                             String.format("--exclude-filter \"%s\"", excludeFilter.filterString())),
@@ -221,11 +241,12 @@ class ModuleShardingArgsGenerator {
                             Stream.of(String.format("--shard-count %s", shardCount)),
                             Stream.of(String.format("--shard-index %s", shardIndex)))
                         : Stream.empty(),
-                    extraArgs.contains("--skip-preconditions")
+                    sessionRequestInfo.getExtraArgsList().contains("--skip-preconditions")
                         ? Stream.empty()
                         : Stream.of("--skip-preconditions"),
-                    extraArgs.stream()
-                        .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
+                    TradefedCommandArgsBuilder.builder()
+                        .setSessionRequestInfo(sessionRequestInfo)
+                        .buildCommonArgs())
                 .collect(toImmutableList()));
   }
 }
