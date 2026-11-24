@@ -114,8 +114,8 @@ java_library(
         ":api_config_listener",
         ":api_config_service",
         ":config",
-        ":has_default_synced",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
+        "@maven//:com_google_inject_extensions_guice_assistedinject",
         "@maven//:com_google_inject_guice",
     ],
 )
@@ -126,13 +126,13 @@ java_library(
     deps = [
         ":api_config_listener",
         ":config",
-        ":has_default_synced",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_assistedinject",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
@@ -147,13 +147,5 @@ java_library(
     ],
     deps = [
         "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "has_default_synced",
-    srcs = ["HasDefaultSynced.java"],
-    deps = [
-        "@maven//:com_google_inject_guice",
     ],
 )

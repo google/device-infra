@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.controller.device.config;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.inject.assistedinject.Assisted;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import java.util.Set;
 import javax.inject.Inject;
@@ -35,6 +36,7 @@ final class ApiConfigService extends AbstractIdleService {
   private final NetUtil netUtil;
   private final SystemUtil systemUtil;
   private final boolean hasDefaultSynced;
+  private final boolean isDefaultPublic;
 
   @Inject
   ApiConfigService(
@@ -42,12 +44,20 @@ final class ApiConfigService extends AbstractIdleService {
       Set<ApiConfigListener> listeners,
       NetUtil netUtil,
       SystemUtil systemUtil,
-      @HasDefaultSynced boolean hasDefaultSynced) {
+      @Assisted("hasDefaultSynced") boolean hasDefaultSynced,
+      @Assisted("isDefaultPublic") boolean isDefaultPublic) {
     this.apiConfig = apiConfig;
     this.listeners = listeners;
     this.netUtil = netUtil;
     this.systemUtil = systemUtil;
     this.hasDefaultSynced = hasDefaultSynced;
+    this.isDefaultPublic = isDefaultPublic;
+  }
+
+  interface Factory {
+    ApiConfigService create(
+        @Assisted("hasDefaultSynced") boolean hasDefaultSynced,
+        @Assisted("isDefaultPublic") boolean isDefaultPublic);
   }
 
   @Override
@@ -56,11 +66,15 @@ final class ApiConfigService extends AbstractIdleService {
       apiConfig.addListener(listener);
     }
     apiConfig.initialize(
-        /* isDefaultPublic= */ true,
+        /* isDefaultPublic= */ isDefaultPublic || isDefaultPublicForEnvironment(),
         /* isDefaultSynced= */ hasDefaultSynced,
         netUtil.getLocalHostName());
   }
 
   @Override
   protected void shutDown() {}
+
+  private boolean isDefaultPublicForEnvironment() {
+    return true;
+  }
 }

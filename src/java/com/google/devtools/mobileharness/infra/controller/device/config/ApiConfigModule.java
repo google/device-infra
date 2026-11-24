@@ -19,15 +19,25 @@ package com.google.devtools.mobileharness.infra.controller.device.config;
 import com.google.devtools.mobileharness.shared.util.concurrent.ServiceModule;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.Multibinder;
 
 /** Module for providing {@link ApiConfig}. */
 public final class ApiConfigModule extends AbstractModule {
   private final boolean hasDefaultSynced;
+  private final boolean isDefaultPublic;
 
   /** Constructs an {@link ApiConfigModule} with the given {@code hasDefaultSynced} value. */
   public ApiConfigModule(boolean hasDefaultSynced) {
+    this(hasDefaultSynced, /* isDefaultPublic= */ false);
+  }
+
+  /**
+   * Constructs an {@link ApiConfigModule} with the given default synced and default public values.
+   */
+  public ApiConfigModule(boolean hasDefaultSynced, boolean isDefaultPublic) {
     this.hasDefaultSynced = hasDefaultSynced;
+    this.isDefaultPublic = isDefaultPublic;
   }
 
   @Override
@@ -36,9 +46,14 @@ public final class ApiConfigModule extends AbstractModule {
     // without the use of Guice. Static injection is required to inject the dependencies of
     // ApiConfigV5 without refactoring all of its consumers.
     requestStaticInjection(ApiConfigV5.class);
+    install(new FactoryModuleBuilder().build(ApiConfigService.Factory.class));
     install(ServiceModule.forService(ApiConfigService.class));
     Multibinder.newSetBinder(binder(), ApiConfigListener.class);
-    bind(Boolean.class).annotatedWith(HasDefaultSynced.class).toInstance(hasDefaultSynced);
+  }
+
+  @Provides
+  ApiConfigService provideApiConfigService(ApiConfigService.Factory configServiceFactory) {
+    return configServiceFactory.create(hasDefaultSynced, isDefaultPublic);
   }
 
   @Provides
