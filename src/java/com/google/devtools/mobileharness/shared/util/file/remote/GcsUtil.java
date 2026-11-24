@@ -48,8 +48,12 @@ import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -88,6 +92,9 @@ public abstract class GcsUtil {
 
   /** Most rewrite calls {@link #renewIfOlderThan} makes for one object before giving up. */
   protected static final int MAX_REWRITE_CALLS = 100;
+
+  /** Buffer size for positional shard writes to reduce {@code pwrite} syscall overhead. */
+  private static final int PARALLEL_DOWNLOAD_BUFFER_BYTES = 64 * 1024;
 
   /** What {@link #renewIfOlderThan} did to an object. */
   public enum RenewResult {
@@ -436,6 +443,23 @@ public abstract class GcsUtil {
       throws MobileHarnessException, InterruptedException;
 
   /**
+   * Copies bytes [from, from + size) from {@code gcsFile} into {@code localFile} starting at byte
+   * offset {@code localOffset} without truncating other ranges of {@code localFile}.
+   *
+   * @param gcsFile file to download from GCS
+   * @param localFile pre-created local file to write into
+   * @param from byte offset in {@code gcsFile} to start reading from; must be >= 0
+   * @param size exact number of bytes to download; must be > 0
+   * @param localOffset byte offset in {@code localFile} to start writing at; must be >= 0
+   */
+  protected void copyFileToLocalAtOffset(
+      GcsApiObject gcsFile, Path localFile, long from, long size, long localOffset)
+      throws MobileHarnessException, InterruptedException {
+    throw new UnsupportedOperationException(
+        "Positional shard download is not supported by " + getClass().getName());
+  }
+
+  /**
    * Copies {@code gcsFile} from Google Cloud Storage to local {@code localFile}. file {@code
    * gcsFile} will be split into shards with size {@code shardSize} and copied in parallel.
    */
@@ -470,34 +494,43 @@ public abstract class GcsUtil {
         "Copying GCS file gs://%s/%s(size %d) to local %s in %s shards,",
         storageParams.bucketName, gcsFile.path(), fileSize, localFile, shardCount);
 
-    String shardNamePrefix =
-        String.format(".%s.%s", localFile.getFileName(), Integer.toUnsignedLong(random.nextInt()));
+    Path tempFile =
+        localFile.resolveSibling(
+            String.format(
+                ".%s.%s.tmp", localFile.getFileName(), Integer.toUnsignedLong(random.nextInt())));
+    localFileUtil.prepareParentDir(tempFile);
+    try {
+      // Pre-create one staging file before submitting shard tasks so workers only open with WRITE
+      // and cannot recreate a temp file after cancellation cleanup deletes it.
+      Files.createFile(tempFile);
+    } catch (IOException e) {
+      if (e.getMessage() != null && e.getMessage().contains(OUTPUT_NO_SPACE)) {
+        throw new MobileHarnessException(
+            BasicErrorId.GCS_DOWNLOAD_FILE_NO_SPACE_ERROR,
+            "Please clean the lab machine to make space for GCS file downloading",
+            e);
+      }
+      throw new MobileHarnessException(
+          BasicErrorId.GCS_DOWNLOAD_FILE_ERROR,
+          String.format(
+              "Failed to create temporary file %s for parallel download of gs://%s/%s",
+              tempFile, storageParams.bucketName, gcsFile),
+          e);
+    }
+
     Instant startTime = currentTime();
     List<ListenableFuture<?>> results = new ArrayList<>();
-    List<Path> shards = new ArrayList<>();
     for (int i = 0; i < shardCount; i++) {
-      Path localFileShard = localFile.resolveSibling(String.format("%s.%s", shardNamePrefix, i));
       long from = (long) i * shardSize;
-      long size = i < shardCount - 1 ? shardSize : -1;
-      shards.add(localFileShard);
+      long size = Math.min(shardSize, fileSize - from);
 
       results.add(
           Holder.copyFileToLocalThreadpool.submit(() -> {
             try {
-              copyFileToLocal(gcsFile, localFileShard, from, size);
+              copyFileToLocalAtOffset(gcsFile, tempFile, from, size, from);
             } catch (InterruptedException e) {
-              // Restore the interrupt flag because throwing InterruptedException clears it,
-              // which would cause the cleanup check in the finally block to fail.
               Thread.currentThread().interrupt();
               throw e;
-            } finally {
-              // Even if the blocking I/O in copyFileToLocal ignores the interrupt and finishes
-              // the download, the thread's interrupt flag will still be set by
-              // future.cancel(true).
-              // We check the flag here to delete the orphaned shard if the task was cancelled.
-              if (Thread.currentThread().isInterrupted()) {
-                tryRemoveFile(localFileShard);
-              }
             }
             return null;
           }));
@@ -508,25 +541,13 @@ public abstract class GcsUtil {
       future.get();
       logger.atInfo().log(
           "Downloaded the gcs file %s with %s shards to %s in %s",
-          gcsFile, shards.size(), localFile, Duration.between(startTime, currentTime()));
-
-      for (int i = 1; i < shards.size(); i++) {
-        localFileUtil.appendToFile(shards.get(i), shards.get(0));
-        // Removes each merged shard right away so the peak disk and page-cache usage stays around
-        // the file size plus one shard instead of twice the file size.
-        tryRemoveFile(shards.get(i));
-        // tryRemoveFile() restores but does not throw on interruption, so stop merging here.
-        if (Thread.interrupted()) {
-          throw new InterruptedException("Interrupted while merging the split gcs file");
-        }
-      }
-      logger.atInfo().log("Merged the split gcs file %s to one", gcsFile);
+          gcsFile, shardCount, localFile, Duration.between(startTime, currentTime()));
 
       if (localFileUtil.isFileOrDirExist(localFile)) {
         localFileUtil.removeFileOrDir(localFile);
       }
-      localFileUtil.moveFileOrDir(shards.get(0), localFile);
-      logger.atInfo().log("Moved the merged gcs file %s to %s", gcsFile, localFile);
+      localFileUtil.moveFileOrDir(tempFile, localFile);
+      logger.atInfo().log("Moved the downloaded gcs file %s to %s", gcsFile, localFile);
     } catch (Throwable e) {
       future.cancel(true);
       for (ListenableFuture<?> res : results) {
@@ -543,10 +564,7 @@ public abstract class GcsUtil {
               storageParams.bucketName, gcsFile, localFile),
           e);
     } finally {
-      // Remove all temporary files at last
-      for (Path shard : shards) {
-        tryRemoveFile(shard);
-      }
+      tryRemoveFile(tempFile);
     }
   }
 
@@ -1244,6 +1262,126 @@ public abstract class GcsUtil {
   private static BufferedOutputStream getOutputStreamFromLocalFile(Path localFile)
       throws IOException {
     return new BufferedOutputStream(new FileOutputStream(localFile.toFile()));
+  }
+
+  /**
+   * Opens a buffered positional stream backed by {@link FileChannel#write(ByteBuffer, long)}
+   * ({@code pwrite(2)}), writing up to {@code expectedSize} bytes starting at {@code offset}.
+   */
+  protected PositionalOutputStream openPositionalOutputStream(
+      Path localFile, long offset, long expectedSize) throws IOException {
+    return new PositionalOutputStream(localFile, offset, expectedSize);
+  }
+
+  /**
+   * Buffered positional {@link OutputStream} backed by {@link FileChannel#write(ByteBuffer, long)}.
+   * Each shard opens its own channel so concurrent disjoint writes are lock-free and thread
+   * interruption closes only the interrupted shard's channel.
+   */
+  protected static final class PositionalOutputStream extends OutputStream {
+    private final FileChannel channel;
+    private final long startOffset;
+    private final long expectedSize;
+    private final byte[] buffer = new byte[PARALLEL_DOWNLOAD_BUFFER_BYTES];
+    private int bufferedBytes;
+    private long bytesWritten;
+
+    PositionalOutputStream(Path file, long startOffset, long expectedSize) throws IOException {
+      this.channel = FileChannel.open(file, StandardOpenOption.WRITE);
+      this.startOffset = startOffset;
+      this.expectedSize = expectedSize;
+    }
+
+    @Override
+    public void write(int b) throws IOException {
+      if (bytesWritten + bufferedBytes >= expectedSize) {
+        throw new IOException(
+            String.format(
+                "Shard write at offset %d exceeds expected size %d", startOffset, expectedSize));
+      }
+      if (bufferedBytes == buffer.length) {
+        flushBuffer();
+      }
+      buffer[bufferedBytes++] = (byte) b;
+    }
+
+    @Override
+    public void write(byte[] b, int off, int len) throws IOException {
+      if (len < 0 || off < 0 || off > b.length - len) {
+        throw new IndexOutOfBoundsException();
+      }
+      if (len == 0) {
+        return;
+      }
+      if (len > expectedSize - bytesWritten - bufferedBytes) {
+        throw new IOException(
+            String.format(
+                "Shard write at offset %d exceeds expected size %d (attempted %d bytes)",
+                startOffset, expectedSize, bytesWritten + bufferedBytes + len));
+      }
+      if (len >= buffer.length) {
+        flushBuffer();
+        writeDirect(b, off, len);
+        return;
+      }
+      if (len > buffer.length - bufferedBytes) {
+        flushBuffer();
+      }
+      System.arraycopy(b, off, buffer, bufferedBytes, len);
+      bufferedBytes += len;
+    }
+
+    @Override
+    public void flush() throws IOException {
+      flushBuffer();
+    }
+
+    /** Flushes remaining buffered bytes and verifies exactly {@code expectedSize} were written. */
+    public void verifyExpectedSize() throws IOException {
+      flushBuffer();
+      if (bytesWritten != expectedSize) {
+        throw new IOException(
+            String.format(
+                "Unexpected shard byte count at offset %d: expected %d bytes, wrote %d bytes",
+                startOffset, expectedSize, bytesWritten));
+      }
+    }
+
+    private void flushBuffer() throws IOException {
+      if (bufferedBytes > 0) {
+        int toWrite = bufferedBytes;
+        bufferedBytes = 0;
+        writeDirect(buffer, 0, toWrite);
+      }
+    }
+
+    private void writeDirect(byte[] b, int off, int len) throws IOException {
+      if (len > expectedSize - bytesWritten) {
+        throw new IOException(
+            String.format(
+                "Shard write at offset %d exceeds expected size %d (attempted %d bytes)",
+                startOffset, expectedSize, bytesWritten + len));
+      }
+      ByteBuffer buf = ByteBuffer.wrap(b, off, len);
+      while (buf.hasRemaining()) {
+        int written = channel.write(buf, startOffset + bytesWritten);
+        if (written <= 0) {
+          throw new IOException("FileChannel.write made no progress");
+        }
+        bytesWritten += written;
+      }
+    }
+
+    @Override
+    public void close() throws IOException {
+      try {
+        if (channel.isOpen()) {
+          flushBuffer();
+        }
+      } finally {
+        channel.close();
+      }
+    }
   }
 
   private InputStream getInputStream(Path localFile) throws MobileHarnessException {
