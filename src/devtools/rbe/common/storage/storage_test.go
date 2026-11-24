@@ -530,3 +530,58 @@ func TestStorage_RemoveCorruptBlob_LosesTheRaceQuietly(t *testing.T) {
 		t.Errorf("Stats().CorruptBlobs = %d, want 1: the corrupt file was still found", got)
 	}
 }
+
+// TestStorage_Delete checks that Delete unlinks a cached blob so that it
+// misses, that the blob can then be cached again, and that deleting a blob
+// that is not there is not an error.
+func TestStorage_Delete(t *testing.T) {
+	s := setupTestStorage(t)
+	hash := testHash("d0")
+	if err := s.Write(hash, []byte("corrupt")); err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+
+	if err := s.Delete(hash); err != nil {
+		t.Fatalf("Delete(%q) of a cached blob failed: %v", hash, err)
+	}
+	if s.Has(hash) {
+		t.Errorf("Has(%q) after Delete = true, want false", hash)
+	}
+	if _, err := s.Read(hash); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("Read(%q) after Delete returned err = %v, want %v", hash, err, os.ErrNotExist)
+	}
+	if got := s.Stats().CorruptBlobs; got != 0 {
+		t.Errorf("Stats().CorruptBlobs after Delete = %d, want 0", got)
+	}
+
+	if err := s.Delete(hash); err != nil {
+		t.Errorf("Delete(%q) of a blob that is already gone returned %v, want nil", hash, err)
+	}
+
+	clean := []byte("clean")
+	if err := s.Write(hash, clean); err != nil {
+		t.Fatalf("Write after Delete failed: %v", err)
+	}
+	got, err := s.Read(hash)
+	if err != nil {
+		t.Fatalf("Read(%q) after re-Write failed: %v", hash, err)
+	}
+	if !bytes.Equal(got, clean) {
+		t.Errorf("Read(%q) after re-Write = %q, want %q", hash, got, clean)
+	}
+}
+
+// TestStorage_Delete_ReportsUnremovableBlob checks that a blob that cannot be
+// unlinked is reported as an error. A non-empty directory at the blob path is
+// the portable way to make the unlink fail.
+func TestStorage_Delete_ReportsUnremovableBlob(t *testing.T) {
+	s := setupTestStorage(t)
+	hash := testHash("d1")
+	if err := os.MkdirAll(filepath.Join(s.blobPath(hash), "occupant"), 0755); err != nil {
+		t.Fatalf("Failed to seed the blocking directory: %v", err)
+	}
+
+	if err := s.Delete(hash); err == nil {
+		t.Errorf("Delete(%q) returned nil error for a blob it could not unlink", hash)
+	}
+}

@@ -231,6 +231,20 @@ func (s *Storage) TouchIfOlderThan(hash string, interval time.Duration) bool {
 	return true
 }
 
+// Delete unlinks the cached blob for hash so that the next request for it
+// misses and fetches a fresh copy. A caller uses it to evict a blob whose
+// content it has found does not match hash.
+//
+// Unlike RemoveCorruptBlob, Delete is unconditional and is not counted in
+// Stats. A blob that is already gone is not an error, so concurrent callers
+// that found the same corrupt blob can all call Delete safely.
+func (s *Storage) Delete(hash string) error {
+	if err := os.Remove(s.blobPath(hash)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
 // RemoveCorruptBlob unlinks the cached blob for hash if it is still the
 // corrupt file a caller found, and counts the finding in Stats.CorruptBlobs.
 //
