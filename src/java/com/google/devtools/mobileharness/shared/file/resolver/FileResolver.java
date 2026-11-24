@@ -74,6 +74,18 @@ public interface FileResolver {
     return Optional.empty();
   }
 
+  /**
+   * Finds the error in the cause chain of {@code failure}, a failure of resolving files, that is
+   * the user's fault (e.g., an invalid file spec, or no permission to the file), if any.
+   *
+   * <p>A caller that wraps resolve failures in its own error (e.g., an INFRA_ISSUE error of failing
+   * to send files to the lab) can throw this error instead, so that the user's fault is the
+   * critical error.
+   */
+  default Optional<MobileHarnessException> findUserError(Throwable failure) {
+    return Optional.empty();
+  }
+
   /** Resolved file. */
   @Immutable
   @AutoValue

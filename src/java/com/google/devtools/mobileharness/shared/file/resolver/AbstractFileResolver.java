@@ -277,6 +277,27 @@ public abstract class AbstractFileResolver implements FileResolver {
     return Optional.empty();
   }
 
+  @Override
+  public final Optional<MobileHarnessException> findUserError(Throwable failure) {
+    for (Throwable current = failure; current != null; current = current.getCause()) {
+      if (current instanceof MobileHarnessException error && isUserError(error)) {
+        return Optional.of(error);
+      }
+    }
+    if (successor != null) {
+      return successor.findUserError(failure);
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Returns whether {@code error}, thrown by this resolver, is the user's fault. See {@link
+   * FileResolver#findUserError}.
+   */
+  protected boolean isUserError(MobileHarnessException error) {
+    return false;
+  }
+
   /**
    * Pre step for files resolve.
    *
