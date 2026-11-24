@@ -98,8 +98,7 @@ public class AndroidLabTestSupportSettingsDecorator extends SetupOnlyDecorator
         && !labTestSupportHelper.disableSmartLockForPasswordsAndFastPair(
             deviceId, deviceSdkVersion)) {
       throw new MobileHarnessException(
-          AndroidErrorId
-              .ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_DISABLE_SMART_LOCK_FOR_PASSWORDS_AND_FAST_PAIR_ERROR,
+          AndroidErrorId.ANDROID_LAB_TEST_SUPPORT_DISABLE_SMART_LOCK_AND_FAST_PAIR_ERROR,
           String.format(
               "Failed to disable the features of \"smart lock for passwords\" and \"fast pair with"
                   + " smartwatches/headphones\" on device %s",
@@ -109,7 +108,7 @@ public class AndroidLabTestSupportSettingsDecorator extends SetupOnlyDecorator
     if (spec.getEnableAdsDebugLogging()
         && !labTestSupportHelper.enableAdsDebuggingLogging(deviceId, deviceSdkVersion)) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_ENABLE_ADS_DEBUG_LOGGING_ERROR,
+          AndroidErrorId.ANDROID_LAB_TEST_SUPPORT_ENABLE_ADS_DEBUG_LOGGING_ERROR,
           String.format("Failed to enable ads debugging logging on device %s", deviceId));
     }
 
@@ -119,8 +118,7 @@ public class AndroidLabTestSupportSettingsDecorator extends SetupOnlyDecorator
       var signature = localFileUtil.readFile(spec.getSignatureFile());
       if (signature.isEmpty()) {
         throw new MobileHarnessException(
-            AndroidErrorId
-                .ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_APPLY_SIGNATURE_MASQUERADING_ERROR,
+            AndroidErrorId.ANDROID_LAB_TEST_SUPPORT_APPLY_SIGNATURE_MASQUERADING_ERROR,
             "Signature file empty.");
       }
       var signatureHash = computeSha1(signature);
@@ -130,8 +128,7 @@ public class AndroidLabTestSupportSettingsDecorator extends SetupOnlyDecorator
           getUidOfPackage(deviceId, deviceSdkVersion, spec.getSignatureMasqueradingPackageId());
       if (targetPackageUid.isEmpty()) {
         throw new MobileHarnessException(
-            AndroidErrorId
-                .ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_APPLY_SIGNATURE_MASQUERADING_ERROR,
+            AndroidErrorId.ANDROID_LAB_TEST_SUPPORT_APPLY_SIGNATURE_MASQUERADING_ERROR,
             String.format(
                 "Failed to apply signature masquerading on device %s. Target package UID absent.",
                 deviceId));
@@ -141,8 +138,7 @@ public class AndroidLabTestSupportSettingsDecorator extends SetupOnlyDecorator
       if (!labTestSupportHelper.applySignatureMasquerading(
           deviceId, deviceSdkVersion, targetPackageUid.get(), signatureHash)) {
         throw new MobileHarnessException(
-            AndroidErrorId
-                .ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_APPLY_SIGNATURE_MASQUERADING_ERROR,
+            AndroidErrorId.ANDROID_LAB_TEST_SUPPORT_APPLY_SIGNATURE_MASQUERADING_ERROR,
             String.format(
                 "Failed to apply signature masquerading on device %s. Instrumentation failed",
                 deviceId));
@@ -172,8 +168,7 @@ public class AndroidLabTestSupportSettingsDecorator extends SetupOnlyDecorator
       return BaseEncoding.base16().lowerCase().encode(sha1Hash);
     } catch (NoSuchAlgorithmException e) {
       throw new MobileHarnessException(
-          AndroidErrorId
-              .ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_APPLY_SIGNATURE_MASQUERADING_ERROR,
+          AndroidErrorId.ANDROID_LAB_TEST_SUPPORT_APPLY_SIGNATURE_MASQUERADING_ERROR,
           "Error computing SHA-1 hash for supplied signature.",
           e);
     }

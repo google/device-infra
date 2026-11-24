@@ -179,7 +179,7 @@ public class AndroidAtsDynamicConfigPusherSetupOnlyDecorator extends SetupOnlyDe
                   suiteName, spec.getXtsTestDir(), lookupName);
       if (localConfigFile == null) {
         throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_LOCAL_CONFIG_NOT_FOUND,
+            AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_LOCAL_CONFIG_NOT_FOUND,
             String.format("Fail to find '%s' in tradefed jar", fileName));
       }
       return localConfigFile;
@@ -191,7 +191,7 @@ public class AndroidAtsDynamicConfigPusherSetupOnlyDecorator extends SetupOnlyDe
         .findFirst()
         .orElseThrow(() ->
             new MobileHarnessException(
-                AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_LOCAL_CONFIG_NOT_FOUND,
+                AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_LOCAL_CONFIG_NOT_FOUND,
                 String.format("Config file %s not found.", fileName)));
   }
 
@@ -225,7 +225,7 @@ public class AndroidAtsDynamicConfigPusherSetupOnlyDecorator extends SetupOnlyDe
           localConfigFile, apfeConfig, spec.getConfigFilename(), new HashMap<>());
     } catch (IOException | XmlPullParserException e) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_MERGE_DYNAMIC_CONFIG_ERROR,
+          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_MERGE_CONFIG_ERROR,
           "Failed to merged dynamic config file.",
           e);
     } finally {
