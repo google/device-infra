@@ -126,8 +126,7 @@ public final class XtsDeviceCompatibilityCheckerTest {
                     SkipTestException.class,
                     () -> xtsDeviceCompatibilityChecker.onTestStarted(event))
                 .errorId())
-        .isEqualTo(
-            AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
+        .isEqualTo(AndroidErrorId.XTS_DEVICE_COMPAT_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
     assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isTrue();
   }
 
@@ -186,8 +185,7 @@ public final class XtsDeviceCompatibilityCheckerTest {
                     SkipTestException.class,
                     () -> xtsDeviceCompatibilityChecker.onTestStarted(event))
                 .errorId())
-        .isEqualTo(
-            AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
+        .isEqualTo(AndroidErrorId.XTS_DEVICE_COMPAT_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
     assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isTrue();
   }
 
@@ -212,8 +210,7 @@ public final class XtsDeviceCompatibilityCheckerTest {
                     SkipTestException.class,
                     () -> xtsDeviceCompatibilityChecker.onTestStarted(event))
                 .errorId())
-        .isEqualTo(
-            AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
+        .isEqualTo(AndroidErrorId.XTS_DEVICE_COMPAT_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
     assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isTrue();
   }
 

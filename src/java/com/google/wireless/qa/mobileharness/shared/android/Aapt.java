@@ -338,7 +338,7 @@ public class Aapt {
       }
     }
     throw new MobileHarnessException(
-        AndroidErrorId.ANDROID_AAPT_GET_APK_PACKAGE_NAME_ERROR,
+        AndroidErrorId.ANDROID_GET_APK_PACKAGE_NAME_ERROR,
         "Fail to find the package name of " + apkPath + ": " + output);
   }
 

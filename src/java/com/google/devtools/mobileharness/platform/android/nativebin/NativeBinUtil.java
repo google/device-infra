@@ -125,7 +125,7 @@ public class NativeBinUtil {
             AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_TIMEOUT, e.getMessage(), e);
       } else if (e.getErrorId() == AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE) {
         throw new MobileHarnessException(
-            AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_FAILURE, e.getMessage(), e);
+            AndroidErrorId.ANDROID_RUN_NATIVE_BIN_FAILURE, e.getMessage(), e);
       }
       throw e;
     }
