@@ -1461,7 +1461,7 @@ public class JobRunner implements Runnable {
           jobInfo.resultWithCause(),
           Test.TestResult.FAIL,
           createExceptionWithoutStackTrace(
-              InfraErrorId.CLIENT_JR_JOB_HAS_FAIL_TEST,
+              InfraErrorId.JOB_HAS_FAIL_TEST,
               "Job has >=1 FAIL test(s). You can get the detailed FAIL info in the test"
                   + " level, "),
           /* logStackTrace= */ false);
@@ -1512,8 +1512,7 @@ public class JobRunner implements Runnable {
             jobInfo.resultWithCause(),
             Test.TestResult.SKIP,
             createExceptionWithoutStackTrace(
-                InfraErrorId.CLIENT_JR_JOB_HAS_ALL_SKIPPED_TESTS,
-                "All tests of the job are skipped"),
+                InfraErrorId.JOB_HAS_ALL_SKIPPED_TESTS, "All tests of the job are skipped"),
             /* logStackTrace= */ false);
       } else {
         jobInfo.resultWithCause().setPass();

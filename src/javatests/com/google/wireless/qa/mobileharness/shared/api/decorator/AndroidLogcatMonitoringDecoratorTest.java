@@ -340,7 +340,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
     assertThat(report.hasCrashDialogPackage()).isFalse();
     assertTestIssueFinding(
         getOnlyElement(findings.getAll()),
-        AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED,
+        AndroidErrorId.ANDROID_LOGCAT_MONITORING_APP_UNDER_TEST_PROCESS_CRASHED,
         "App under test crashed.",
         "package_names",
         "com.test.me");
@@ -456,15 +456,11 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     assertThat(findings.getAll()).hasSize(2);
     assertThat(
-            findings.get(
-                AndroidErrorId
-                    .ANDROID_LOGCAT_MONITORING_DECORATOR_LICENSING_PROTECTION_TERMINATION))
+            findings.get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_LICENSING_PROTECTION_TERMINATION))
         .hasSize(1);
     assertThat(
             findings
-                .get(
-                    AndroidErrorId
-                        .ANDROID_LOGCAT_MONITORING_DECORATOR_LICENSING_PROTECTION_TERMINATION)
+                .get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_LICENSING_PROTECTION_TERMINATION)
                 .get(0)
                 .getSeverity())
         .isEqualTo(Severity.SEVERE);
@@ -581,8 +577,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
     MobileHarnessException thrown =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
     assertThat(thrown.getErrorId())
-        .isEqualTo(
-            AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ORCHESTRATOR_CONNECTION_FAILURE);
+        .isEqualTo(AndroidErrorId.ANDROID_LOGCAT_MONITORING_ORCHESTRATOR_CONNECTION_FAILURE);
   }
 
   @Test
@@ -621,8 +616,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     assertThat(result.get().type()).isEqualTo(TestResult.FAIL);
     assertThat(result.get().causeExceptionNonEmpty().getErrorId())
-        .isEqualTo(
-            AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED);
+        .isEqualTo(AndroidErrorId.ANDROID_LOGCAT_MONITORING_APP_UNDER_TEST_PROCESS_CRASHED);
     assertThat(findings.isEmpty()).isTrue();
   }
 
@@ -662,12 +656,11 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     assertThat(result.get().type()).isEqualTo(TestResult.PASS);
     assertThat(
-            findings.get(
-                AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED))
+            findings.get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_APP_UNDER_TEST_PROCESS_CRASHED))
         .hasSize(1);
     Finding finding =
         findings
-            .get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED)
+            .get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_APP_UNDER_TEST_PROCESS_CRASHED)
             .get(0);
     assertThat(finding.getSeverity()).isEqualTo(Severity.SEVERE);
     assertThat(finding.getMetadata()).containsExactly("package_names", "com.test.app");
@@ -716,12 +709,11 @@ public class AndroidLogcatMonitoringDecoratorTest {
     assertThat(result.get().causeExceptionNonEmpty().getErrorId())
         .isEqualTo(BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_FAIL);
     assertThat(
-            findings.get(
-                AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED))
+            findings.get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_APP_UNDER_TEST_PROCESS_CRASHED))
         .hasSize(1);
     Finding finding =
         findings
-            .get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED)
+            .get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_APP_UNDER_TEST_PROCESS_CRASHED)
             .get(0);
     assertThat(finding.getSeverity()).isEqualTo(Severity.SEVERE);
     assertThat(finding.getMetadata()).containsExactly("package_names", "com.test.app");
