@@ -91,6 +91,8 @@ java_library(
     srcs = ["InstallApkStepConstants.java"],
     deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "@maven//:com_google_guava_guava",
     ],
 )
 
