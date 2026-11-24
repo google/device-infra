@@ -457,6 +457,61 @@ public class ErrorModelConverterTest {
   }
 
   @Test
+  public void getCriticalErrorSummary_withoutCriticalErrorId_returnsSummary() {
+    ExceptionSummary summary =
+        ExceptionSummary.newBuilder()
+            .setErrorId(
+                ErrorId.newBuilder()
+                    .setCode(1)
+                    .setType(ErrorType.UNDETERMINED)
+                    .setNamespace(Namespace.MH))
+            .build();
+    FlattenedExceptionDetail detail =
+        FlattenedExceptionDetail.newBuilder().setSummary(summary).build();
+
+    assertThat(ErrorModelConverter.getCriticalErrorSummary(detail)).isEqualTo(summary);
+  }
+
+  @Test
+  public void getCriticalErrorSummary_matchingCause_returnsCauseSummary() {
+    ErrorId rootErrorId = ErrorId.newBuilder().setCode(1).setType(ErrorType.UNDETERMINED).build();
+    ErrorId causeErrorId =
+        ErrorId.newBuilder().setCode(2).setType(ErrorType.CUSTOMER_ISSUE).build();
+    ExceptionSummary rootSummary =
+        ExceptionSummary.newBuilder().setErrorId(rootErrorId).setMessage("root").build();
+    ExceptionSummary causeSummary =
+        ExceptionSummary.newBuilder().setErrorId(causeErrorId).setMessage("cause").build();
+    FlattenedExceptionDetail detail =
+        FlattenedExceptionDetail.newBuilder()
+            .setSummary(rootSummary)
+            .addCause(causeSummary)
+            .setCriticalErrorId(causeErrorId)
+            .build();
+
+    assertThat(ErrorModelConverter.getCriticalErrorSummary(detail)).isEqualTo(causeSummary);
+  }
+
+  @Test
+  public void getCriticalErrorSummary_unmatchedCriticalErrorId_returnsRootSummary() {
+    ExceptionSummary rootSummary =
+        ExceptionSummary.newBuilder()
+            .setErrorId(ErrorId.newBuilder().setCode(1).setType(ErrorType.UNDETERMINED))
+            .build();
+    ExceptionSummary causeSummary =
+        ExceptionSummary.newBuilder()
+            .setErrorId(ErrorId.newBuilder().setCode(2).setType(ErrorType.UNCLASSIFIED))
+            .build();
+    FlattenedExceptionDetail detail =
+        FlattenedExceptionDetail.newBuilder()
+            .setSummary(rootSummary)
+            .addCause(causeSummary)
+            .setCriticalErrorId(ErrorId.newBuilder().setCode(999).setType(ErrorType.INFRA_ISSUE))
+            .build();
+
+    assertThat(ErrorModelConverter.getCriticalErrorSummary(detail)).isEqualTo(rootSummary);
+  }
+
+  @Test
   public void hasInfraIssue() {
     ExceptionProto.ExceptionDetail error =
         ExceptionProto.ExceptionDetail.newBuilder()

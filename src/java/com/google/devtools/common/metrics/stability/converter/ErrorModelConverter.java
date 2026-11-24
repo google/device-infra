@@ -20,6 +20,8 @@ import static com.google.common.base.Strings.nullToEmpty;
 import static java.util.Arrays.stream;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
@@ -322,6 +324,22 @@ public class ErrorModelConverter {
       }
       current = current.getCause();
     }
+  }
+
+  /** Returns the critical error summary. */
+  public static ExceptionSummary getCriticalErrorSummary(FlattenedExceptionDetail detail) {
+    if (!detail.hasCriticalErrorId()) {
+      return detail.getSummary();
+    }
+    ErrorIdProto.ErrorId criticalErrorId = detail.getCriticalErrorId();
+    for (ExceptionSummary current :
+        Iterables.concat(ImmutableList.of(detail.getSummary()), detail.getCauseList())) {
+      if (current.getErrorId().equals(criticalErrorId)) {
+        return current;
+      }
+    }
+    // Should not happen.
+    return detail.getSummary();
   }
 
   /** Gets the determined error type if exists. */
