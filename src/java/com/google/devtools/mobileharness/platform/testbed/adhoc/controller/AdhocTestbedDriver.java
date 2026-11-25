@@ -316,7 +316,7 @@ public class AdhocTestbedDriver extends BaseDriver {
 
       if (errorTestsTotalCnt > 0) {
         ExtErrorId errorResultErrorId =
-            ExtErrorId.MOBLY_TESTBED_ADHOC_DRIVER_SUBTEST_WITH_UNDETERMINED_ERROR_RESULT;
+            ExtErrorId.MOBLY_TESTBED_ADHOC_SUBTEST_WITH_UNDETERMINED_ERROR_RESULT;
         if (infraErrorTestsCnt > 0) {
           errorResultErrorId =
               ExtErrorId.MOBLY_TESTBED_ADHOC_DRIVER_SUBTEST_WITH_INFRA_ERROR_RESULT;
