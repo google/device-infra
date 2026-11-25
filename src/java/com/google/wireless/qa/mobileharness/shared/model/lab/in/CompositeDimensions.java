@@ -78,6 +78,10 @@ public class CompositeDimensions {
         }
         continue;
       }
+      // Optional dimensions are soft preferences and do not block device matching when absent.
+      if (jobDimensionValue.startsWith(Dimension.Value.PREFIX_OPTIONAL)) {
+        continue;
+      }
 
       boolean match = false;
       for (String deviceDimensionValue : deviceDimensions.get(jobDimensionName)) {
@@ -136,7 +140,10 @@ public class CompositeDimensions {
                         jobDimensionValue.substring(Dimension.Value.PREFIX_NOT_REGEX.length())))
                 || ((jobDimensionValue.startsWith(ValueComparator.PREFIX_INT_COMPARISON)
                         || jobDimensionValue.startsWith(ValueComparator.PREFIX_STR_COMPARISON))
-                    && ValueComparator.match(jobDimensionValue, deviceDimensionValue));
+                    && ValueComparator.match(jobDimensionValue, deviceDimensionValue))
+                || (jobDimensionValue.startsWith(Dimension.Value.PREFIX_OPTIONAL)
+                    && deviceDimensionValue.equals(
+                        jobDimensionValue.substring(Dimension.Value.PREFIX_OPTIONAL.length())));
       }
       if (!satisfied) {
         unsatisfiedDeviceDimensions.put(deviceDimensionName, deviceDimensionValue);
