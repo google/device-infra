@@ -174,6 +174,68 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
   };
 
 /**
+ * Summary of host device counts partitioned into Green, Yellow, and Red health
+ * buckets.
+ */
+export interface DeviceHealthCounts {
+  readonly total: number;
+  readonly green: number;
+  readonly yellow: number;
+  readonly red: number;
+}
+
+type HealthBucket = 'green' | 'yellow' | 'red';
+
+/**
+ * Exhaustive mapping from every known HealthState to its summary bucket so
+ * green + yellow + red always equals the total device count on the host.
+ *
+ * - Green: healthy devices actively serving tests (idle or busy).
+ * - Yellow: devices temporarily unavailable due to automated recovery, routine
+ *   maintenance, or unknown transitional states.
+ * - Red: devices requiring manual attention (needs fixing or quarantined).
+ */
+const HEALTH_BUCKET_BY_STATE: Record<HealthState, HealthBucket> = {
+  'IN_SERVICE_IDLE': 'green',
+  'IN_SERVICE_BUSY': 'green',
+  'OUT_OF_SERVICE_RECOVERING': 'yellow',
+  'OUT_OF_SERVICE_TEMP_MAINT': 'yellow',
+  'UNKNOWN': 'yellow',
+  'OUT_OF_SERVICE_NEEDS_FIXING': 'red',
+  'IDLE_BUT_QUARANTINED': 'red',
+};
+
+function summarizeDeviceHealth(
+  devices: readonly DeviceSummary[],
+): DeviceHealthCounts {
+  let green = 0;
+  let yellow = 0;
+  let red = 0;
+
+  for (const device of devices) {
+    const health = device.healthState?.health;
+    // Fall back to 'yellow' if an unrecognized runtime value arrives from a
+    // newer backend so green + yellow + red === total always holds.
+    const bucket: HealthBucket =
+      (health != null ? HEALTH_BUCKET_BY_STATE[health] : undefined) ?? 'yellow';
+    if (bucket === 'green') {
+      green++;
+    } else if (bucket === 'red') {
+      red++;
+    } else {
+      yellow++;
+    }
+  }
+
+  return {
+    total: devices.length,
+    green,
+    yellow,
+    red,
+  };
+}
+
+/**
  * Component for displaying an overview of a host, including its basic
  * information, lab server status, devices, daemon server status, and host
  * properties.
@@ -269,6 +331,12 @@ export class HostOverviewPage {
   readonly refresh = output<void>();
 
   protected readonly localHost = linkedSignal(() => this.host());
+
+  private readonly devices = signal<readonly DeviceSummary[]>([]);
+
+  readonly deviceHealthCounts = computed<DeviceHealthCounts>(() =>
+    summarizeDeviceHealth(this.devices()),
+  );
 
   constructor() {
     effect(() => {
@@ -642,7 +710,7 @@ export class HostOverviewPage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
-          this.deviceDataSource.data = response.deviceSummaries ?? [];
+          this.setDevices(response.deviceSummaries ?? []);
           this.isDeviceLoading.set(false);
         },
         error: (err) => {
@@ -743,8 +811,10 @@ export class HostOverviewPage {
       .pipe(
         tap(() => {
           const decommissionedIds = new Set(devices.map((d) => d.id));
-          this.deviceDataSource.data = this.deviceDataSource.data.filter(
-            (d) => !decommissionedIds.has(d.id),
+          this.setDevices(
+            this.deviceDataSource.data.filter(
+              (d) => !decommissionedIds.has(d.id),
+            ),
           );
           this.selection.clear();
           const deviceLabel = devices.length === 1 ? 'device' : 'devices';
@@ -753,6 +823,11 @@ export class HostOverviewPage {
           );
         }),
       );
+  }
+
+  private setDevices(devices: DeviceSummary[]): void {
+    this.deviceDataSource.data = devices;
+    this.devices.set(devices);
   }
 
   /**

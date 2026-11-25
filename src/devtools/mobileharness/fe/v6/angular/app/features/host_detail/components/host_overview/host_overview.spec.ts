@@ -22,7 +22,10 @@ import {
   ConfigurableDimension,
   DimensionList,
 } from '../../../../core/models/device_config_models';
-import {SubDeviceInfo} from '../../../../core/models/device_overview';
+import {
+  HealthState,
+  SubDeviceInfo,
+} from '../../../../core/models/device_overview';
 import {PreflightLabServerReleaseResponse} from '../../../../core/models/host_action';
 import {
   DeviceSummary,
@@ -1425,6 +1428,188 @@ describe('HostOverview Component', () => {
       expect(configServiceSpy.getConfigurableDimensions).toHaveBeenCalledTimes(
         1,
       );
+    });
+  });
+
+  describe('device health breakdown', () => {
+    let getHostDeviceSummariesSpy: jasmine.Spy<
+      FakeHostService['getHostDeviceSummaries']
+    >;
+
+    beforeEach(() => {
+      // FakeHostService responds asynchronously with an empty device list for
+      // mockHost, so stub it synchronously for deterministic rendering checks.
+      getHostDeviceSummariesSpy = spyOn(
+        hostService,
+        'getHostDeviceSummaries',
+      ).and.returnValue(of({deviceSummaries: []}));
+    });
+
+    function createDeviceSummary(
+      id: string,
+      health: HealthState,
+      status = 'IDLE',
+    ): DeviceSummary {
+      return {
+        id,
+        healthState: {
+          health,
+          title: health,
+          tooltip: health,
+        },
+        deviceStatus: {status, isCritical: status === 'MISSING'},
+      } as unknown as DeviceSummary;
+    }
+
+    function initComponentWithDevices(devices: DeviceSummary[]) {
+      getHostDeviceSummariesSpy.and.returnValue(of({deviceSummaries: devices}));
+      fixture = TestBed.createComponent(HostOverviewPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('host', mockHost);
+      fixture.detectChanges();
+      fixture.detectChanges();
+    }
+
+    function expectToolbarHeaderText(expectedText: string) {
+      const header = (fixture.nativeElement as HTMLElement).querySelector(
+        '.device-toolbar-header',
+      );
+      expect(header).not.toBeNull();
+      const normalized = header!.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+      expect(normalized).toBe(expectedText);
+    }
+
+    it('renders Green, Yellow, and Red counts across all HealthState values', () => {
+      const devices: DeviceSummary[] = [
+        createDeviceSummary('dev-1', 'IN_SERVICE_IDLE'),
+        createDeviceSummary('dev-2', 'IN_SERVICE_BUSY'),
+        createDeviceSummary('dev-3', 'OUT_OF_SERVICE_RECOVERING'),
+        createDeviceSummary('dev-4', 'OUT_OF_SERVICE_TEMP_MAINT'),
+        createDeviceSummary('dev-5', 'UNKNOWN'),
+        createDeviceSummary('dev-6', 'OUT_OF_SERVICE_NEEDS_FIXING'),
+        createDeviceSummary('dev-7', 'IDLE_BUT_QUARANTINED'),
+      ];
+
+      initComponentWithDevices(devices);
+
+      expectToolbarHeaderText('Total Devices (7) = 2 Green + 3 Yellow + 2 Red');
+      expect(component.deviceHealthCounts()).toEqual({
+        total: 7,
+        green: 2,
+        yellow: 3,
+        red: 2,
+      });
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelectorAll(
+          '.device-toolbar-header .health-bucket.is-zero',
+        ).length,
+      ).toBe(0);
+    });
+
+    it('marks zero-count buckets with is-zero while preserving total sum', () => {
+      const greenDevices = Array.from({length: 9}, (_, idx) =>
+        createDeviceSummary(`green-${idx + 1}`, 'IN_SERVICE_IDLE'),
+      );
+      const redDevices = Array.from({length: 3}, (_, idx) =>
+        createDeviceSummary(`red-${idx + 1}`, 'OUT_OF_SERVICE_NEEDS_FIXING'),
+      );
+
+      initComponentWithDevices([...greenDevices, ...redDevices]);
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expectToolbarHeaderText(
+        'Total Devices (12) = 9 Green + 0 Yellow + 3 Red',
+      );
+      expect(
+        compiled
+          .querySelector('.device-toolbar-header .health-bucket-green')
+          ?.classList.contains('is-zero'),
+      ).toBeFalse();
+      expect(
+        compiled
+          .querySelector('.device-toolbar-header .health-bucket-yellow')
+          ?.classList.contains('is-zero'),
+      ).toBeTrue();
+      expect(
+        compiled
+          .querySelector('.device-toolbar-header .health-bucket-red')
+          ?.classList.contains('is-zero'),
+      ).toBeFalse();
+    });
+
+    it('preserves the full host health breakdown when device filtering narrows visible rows', () => {
+      const devices: DeviceSummary[] = [
+        createDeviceSummary('pixel-1', 'IN_SERVICE_IDLE'),
+        createDeviceSummary('pixel-2', 'IN_SERVICE_BUSY'),
+        createDeviceSummary('device-red', 'OUT_OF_SERVICE_NEEDS_FIXING'),
+      ];
+      initComponentWithDevices(devices);
+
+      component.deviceFilterInput = 'device-red';
+      component.applyDeviceFilter();
+      fixture.detectChanges();
+
+      expect(component.deviceDataSource.filteredData.length).toBe(1);
+      expectToolbarHeaderText('Total Devices (3) = 2 Green + 0 Yellow + 1 Red');
+      expect(component.deviceHealthCounts()).toEqual({
+        total: 3,
+        green: 2,
+        yellow: 0,
+        red: 1,
+      });
+    });
+
+    it('updates total and bucket counts immediately after decommissioning missing devices', () => {
+      const healthyDevice = createDeviceSummary('device-1', 'IN_SERVICE_IDLE');
+      const missingYellowDevice = createDeviceSummary(
+        'missing-yellow',
+        'OUT_OF_SERVICE_TEMP_MAINT',
+        'MISSING',
+      );
+      const missingRedDevice = createDeviceSummary(
+        'missing-red-1',
+        'OUT_OF_SERVICE_NEEDS_FIXING',
+        'MISSING',
+      );
+      const remainingRedDevice = createDeviceSummary(
+        'red-2',
+        'IDLE_BUT_QUARANTINED',
+      );
+      const decommissionSpy = spyOn(
+        hostService,
+        'decommissionMissingDevices',
+      ).and.returnValue(of(undefined));
+      initComponentWithDevices([
+        healthyDevice,
+        missingYellowDevice,
+        missingRedDevice,
+        remainingRedDevice,
+      ]);
+      expectToolbarHeaderText('Total Devices (4) = 1 Green + 1 Yellow + 2 Red');
+
+      component.decommission([missingYellowDevice, missingRedDevice]);
+      const dialogConfig = dialogSpy.open.calls.mostRecent().args[1] as {
+        data: {onConfirm: () => Observable<void>};
+      };
+      dialogConfig.data.onConfirm().subscribe();
+      fixture.detectChanges();
+
+      expect(decommissionSpy).toHaveBeenCalledWith(mockHost.hostName, [
+        'missing-yellow',
+        'missing-red-1',
+      ]);
+      expectToolbarHeaderText('Total Devices (2) = 1 Green + 0 Yellow + 1 Red');
+      expect(component.deviceHealthCounts()).toEqual({
+        total: 2,
+        green: 1,
+        yellow: 0,
+        red: 1,
+      });
+      expect(
+        (fixture.nativeElement as HTMLElement)
+          .querySelector('.device-toolbar-header .health-bucket-yellow')
+          ?.classList.contains('is-zero'),
+      ).toBeTrue();
     });
   });
 });
