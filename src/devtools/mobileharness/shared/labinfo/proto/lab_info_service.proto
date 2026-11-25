@@ -19,6 +19,7 @@ syntax = "proto3";
 package mobileharness.shared.labinfo;
 
 import "google/protobuf/duration.proto";
+import "src/devtools/mobileharness/api/model/proto/device.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/api/query/proto/lab_query.proto";
 
@@ -35,6 +36,22 @@ service LabInfoService {
   // Gets all device dimensions across all labs and devices with device counts.
   rpc GetAllDeviceDimensions(GetAllDeviceDimensionsRequest)
       returns (GetAllDeviceDimensionsResponse) {}
+
+  // Gets errors of a device.
+  rpc GetDeviceErrors(GetDeviceErrorsRequest)
+      returns (GetDeviceErrorsResponse) {}
+}
+
+message GetDeviceErrorsRequest {
+  // Required. Device UUID.
+  string device_id = 1;
+
+  // Required. Lab host name. Only the device on this host is looked up.
+  string host_name = 2;
+}
+
+message GetDeviceErrorsResponse {
+  repeated mobileharness.api.model.DeviceError device_errors = 1;
 }
 
 message GetAllDeviceDimensionsRequest {}

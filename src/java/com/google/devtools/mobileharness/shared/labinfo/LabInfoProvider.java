@@ -16,7 +16,9 @@
 
 package com.google.devtools.mobileharness.shared.labinfo;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceError;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
@@ -41,5 +43,20 @@ public interface LabInfoProvider {
       Filter filter, CompiledLabInfoMask labInfoMask, CompiledDeviceInfoMask deviceInfoMask)
       throws MobileHarnessException {
     return MaskUtils.trimLabView(getLabInfos(filter), labInfoMask, deviceInfoMask);
+  }
+
+  /**
+   * Gets the device errors reported from the lab for the device {@code deviceId} on the lab host
+   * {@code hostName}. Both are required, and only that host is looked up.
+   *
+   * <p>The default returns an empty list, for providers that do not support it yet.
+   *
+   * @throws MobileHarnessException if the lab or the device is not found
+   */
+  // TODO: b/585438621 - Implement getDeviceErrors in OSS providers (LocalLabInfoProvider and
+  // RemoteDeviceManager).
+  default ImmutableList<DeviceError> getDeviceErrors(String deviceId, String hostName)
+      throws MobileHarnessException {
+    return ImmutableList.of();
   }
 }
