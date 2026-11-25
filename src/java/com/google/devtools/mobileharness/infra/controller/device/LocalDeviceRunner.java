@@ -316,15 +316,29 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
                   .properties()
                   .put(DEVICE_PROPERTY_RESERVATION_ID, deviceReservation.getReservationId());
             }
+
             // Check if the device is allocated before checking the device state. This will prevent
             // devices allocated for remote use from cleaning up or interfering with the remote
             // usage.
-            if (!isAllocated() && checkDevice()) {
-              postDeviceChangeEvent("changed detected");
+            if (!isAllocated()) {
+              // Core step 1 of the loop: the periodical device check. It runs Device.checkDevice()
+              // once check_device_interval has passed since the last check, and returns immediately
+              // otherwise.
+              boolean deviceChanged = checkDevice();
+
+              if (deviceChanged) {
+                postDeviceChangeEvent("changed detected");
+              }
             }
+
             if (test != null) {
               deviceReservation.markRunningTest();
-              if (checkNRunTest()) {
+
+              // Core step 2 of the loop: runs the test reserved on this device. It blocks until the
+              // test finishes, so this single call is where the runner spends the whole test.
+              boolean needRebootAfterTest = checkNRunTest();
+
+              if (needRebootAfterTest) {
                 needReboot = true;
               }
               // prepare the device if needed.
