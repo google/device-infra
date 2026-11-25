@@ -71,6 +71,22 @@ public class GcsFileManager {
   private static final int CLEANUP_THREAD_POOL_MAX_SIZE = 4;
 
   /**
+   * Content type of the object of a file. {@link #isCompressed} reads "application/zip" as a zipped
+   * directory.
+   */
+  private static final String FILE_CONTENT_TYPE = "text/plain";
+
+  /** What {@link #copyFromGcs} did. */
+  public enum ServerCopyOutcome {
+    /** GCS copied the source to the object. */
+    COPIED,
+    /** The object was already fresh once other transfers of it finished, so nothing was copied. */
+    REUSED,
+    /** GCS did not copy the source, so the caller is to upload the file instead. */
+    NOT_COPIED,
+  }
+
+  /**
    * Thread pool for removing the home directories that new instances replace. Shared and bounded,
    * since callers create an instance per file transfer client and nobody waits on the removal.
    */
@@ -308,18 +324,8 @@ public class GcsFileManager {
    */
   private CacheInfo downloadGcsFileIfNonExisting(GcsApiObject gcsFile)
       throws MobileHarnessException, InterruptedException {
-    // Acquire the lock to download |gcsFile|. There is only one downloading thread allowed for
-    // each gcsFile.
-    CountDownLatch latch = new CountDownLatch(1);
-    while (true) {
-      CountDownLatch running = transferringLocks.putIfAbsent(gcsFile.path(), latch);
-      if (running == null) {
-        // Acquired.
-        break;
-      }
-      running.await();
-    }
-
+    // Only one downloading thread is allowed for each gcsFile.
+    CountDownLatch latch = acquireTransferLock(gcsFile.path());
     try {
       Optional<String> checksum = gcsUtil.getCrc32c(gcsFile);
       MobileHarnessExceptions.check(
@@ -334,9 +340,7 @@ public class GcsFileManager {
       return loadCacheIfNonExisting(
           decodedChecksum, localCache -> downloadGcsFile(gcsFile, localCache));
     } finally {
-      // Remove the item first before counting down.
-      transferringLocks.remove(gcsFile.path());
-      latch.countDown();
+      releaseTransferLock(gcsFile.path(), latch);
     }
   }
 
@@ -462,7 +466,7 @@ public class GcsFileManager {
             long fileSize = gcsUtil.getFileSize(fileOrDir);
             return ExecutionInfo.create(
                 fileSize,
-                !uploadFile(fileOrDir, Path.of(decodedChecksum), "text/plain"),
+                !uploadFile(fileOrDir, Path.of(decodedChecksum), FILE_CONTENT_TYPE),
                 decodedChecksum);
           }
           throw new MobileHarnessException(
@@ -495,7 +499,7 @@ public class GcsFileManager {
   @CanIgnoreReturnValue
   public boolean uploadFile(Path localFile, Path gcsFilePath)
       throws MobileHarnessException, InterruptedException {
-    return uploadFile(localFile, gcsFilePath, "text/plain");
+    return uploadFile(localFile, gcsFilePath, FILE_CONTENT_TYPE);
   }
 
   /**
@@ -506,17 +510,8 @@ public class GcsFileManager {
   @CanIgnoreReturnValue
   public boolean uploadFile(Path localFile, Path gcsFilePath, String contentType)
       throws MobileHarnessException, InterruptedException {
-    // Acquire the lock to upload |gcsFile|. There is only one uploading thread allowed for
-    // each gcsFile.
-    CountDownLatch latch = new CountDownLatch(1);
-    while (true) {
-      CountDownLatch running = transferringLocks.putIfAbsent(gcsFilePath, latch);
-      if (running == null) {
-        // Acquired.
-        break;
-      }
-      running.await();
-    }
+    // Only one uploading thread is allowed for each gcsFile.
+    CountDownLatch latch = acquireTransferLock(gcsFilePath);
     try {
       if (cloudCacheTtl.isPresent()) {
         if (uploadShardSize.isPresent()) {
@@ -536,10 +531,53 @@ public class GcsFileManager {
         return true;
       }
     } finally {
-      // Remove the item first before counting down.
-      transferringLocks.remove(gcsFilePath);
-      latch.countDown();
+      releaseTransferLock(gcsFilePath, latch);
     }
+  }
+
+  /**
+   * Has GCS copy {@code source} to {@code gcsFile} as the kind of object {@link #upload} makes of a
+   * file, so the bytes do not pass through this process. Skips the copy if {@code gcsFile} is fresh
+   * once the transfers of it by other threads are over.
+   *
+   * @param localCopy a local file whose bytes the object is to hold, in which case the source is
+   *     copied only if its size and CRC32C match
+   */
+  public ServerCopyOutcome copyFromGcs(GcsUri source, Path gcsFile, Optional<Path> localCopy)
+      throws MobileHarnessException, InterruptedException {
+    // The lock uploadFile takes, so an upload and a copy of one object do not run at once.
+    CountDownLatch latch = acquireTransferLock(gcsFile);
+    try {
+      if (fileExistAndFresh(gcsFile)) {
+        return ServerCopyOutcome.REUSED;
+      }
+      GcsUtil.ServerCopyResult result =
+          gcsUtil.copyFromGcs(source, gcsFile, FILE_CONTENT_TYPE, localCopy);
+      if (result == GcsUtil.ServerCopyResult.COPIED) {
+        return ServerCopyOutcome.COPIED;
+      }
+      logger.atInfo().log("Did not copy %s to %s on the server: %s", source, gcsFile, result);
+      return ServerCopyOutcome.NOT_COPIED;
+    } finally {
+      releaseTransferLock(gcsFile, latch);
+    }
+  }
+
+  private static CountDownLatch acquireTransferLock(Path gcsFilePath) throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    while (true) {
+      CountDownLatch running = transferringLocks.putIfAbsent(gcsFilePath, latch);
+      if (running == null) {
+        return latch;
+      }
+      running.await();
+    }
+  }
+
+  private static void releaseTransferLock(Path gcsFilePath, CountDownLatch latch) {
+    // Remove the entry before counting down so waiters acquire cleanly.
+    transferringLocks.remove(gcsFilePath);
+    latch.countDown();
   }
 
   /**

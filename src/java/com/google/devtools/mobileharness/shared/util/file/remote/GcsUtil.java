@@ -86,7 +86,7 @@ public abstract class GcsUtil {
    */
   protected static final String RENEWED_AT_METADATA_KEY = "mh_renewed_at";
 
-  /** Most rewrite calls {@link #renewIfOlderThan} makes for one object before giving up. */
+  /** Most rewrite calls made for one object before giving up. */
   protected static final int MAX_REWRITE_CALLS = 100;
 
   /** What {@link #renewIfOlderThan} did to an object. */
@@ -102,6 +102,22 @@ public abstract class GcsUtil {
     LOST_RACE,
     /** No such object. */
     MISSING,
+  }
+
+  /** What {@link #copyFromGcs} did. */
+  public enum ServerCopyResult {
+    /** GCS copied the source, so the object holds its bytes. */
+    COPIED,
+    /** No such source object. */
+    SOURCE_MISSING,
+    /**
+     * The stored bytes of the source cannot be safely copied as an upload would send them: the
+     * source has no generation, has a content encoding, differs in size or checksum from the local
+     * copy, or was replaced during the copy.
+     */
+    SOURCE_UNSUITABLE,
+    /** This implementation cannot have GCS copy an object. */
+    UNSUPPORTED,
   }
 
   /** Thread pools for uploading/downloading GCS files in parallel. */
@@ -1102,6 +1118,26 @@ public abstract class GcsUtil {
    */
   public abstract RenewResult renewIfOlderThan(Path gcsFile, Duration threshold)
       throws MobileHarnessException, InterruptedException;
+
+  /**
+   * Has GCS copy {@code source} to {@code gcsFile}, so the bytes do not pass through this process.
+   * The copy gets {@code contentType} and none of the metadata of the source, and copies only
+   * metadata when the two buckets share a location and a storage class.
+   *
+   * @param source the object to copy, in any bucket the credential can read
+   * @param gcsFile name of the object in the bucket of this util, replaced if it exists
+   * @param localCopy a local file whose bytes the object is to hold, in which case the source is
+   *     copied only if its size (when present in metadata) and CRC32C match (hashed only after the
+   *     source is found copyable and matches size)
+   * @throws MobileHarnessException if reading the metadata of the source, hashing {@code
+   *     localCopy}, or the copy fails, or the copy is not done after {@link #MAX_REWRITE_CALLS}
+   *     calls
+   */
+  public ServerCopyResult copyFromGcs(
+      GcsUri source, Path gcsFile, String contentType, Optional<Path> localCopy)
+      throws MobileHarnessException, InterruptedException {
+    return ServerCopyResult.UNSUPPORTED;
+  }
 
   /** Returns whether an object created at {@code createdTime} is older than {@code threshold}. */
   protected final boolean isOlderThan(Instant createdTime, Duration threshold) {
