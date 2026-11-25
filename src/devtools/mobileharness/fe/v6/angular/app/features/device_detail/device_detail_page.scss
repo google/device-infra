@@ -1,5 +1,6 @@
 @use '../../shared/styles/action_bar';
 @use '../../shared/styles/common';
+@use '../../shared/styles/typography';
 
 :host {
   @include common.page-host();
@@ -32,6 +33,7 @@
   display: flex;
   align-items: center;
   font-size: 1.125rem; // text-lg
+  font-family: typography.$labconsole-headline-font;
   color: #6b7280; // text-gray-500
   min-width: 0;
   flex-grow: 1;
@@ -109,6 +111,7 @@
 
     .device-title {
       font-size: 1.5rem; // text-2xl
+      font-family: typography.$labconsole-headline-font;
       font-weight: 500;
       color: #1f2937; // text-gray-800
       white-space: nowrap;

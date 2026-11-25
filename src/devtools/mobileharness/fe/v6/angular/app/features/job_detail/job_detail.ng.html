@@ -165,7 +165,7 @@
 
                           <!-- Device requirement hover details panel -->
                           <div class="device-requirement-hover-panel">
-                            <div class="panel-title-upper">Device {{ $index + 1 }} Requirements</div>
+                            <div class="hover-panel-title">Device {{ $index + 1 }} Requirements</div>
                             <div class="hover-grid">
                               <span class="lbl">Device Type</span>
                               <span class="val text-truncate">{{ dev.deviceType }}</span>
@@ -219,7 +219,7 @@
                       </span>
                       <!-- Dimensions hover panel -->
                       <div class="device-requirement-hover-panel">
-                        <div class="panel-title-upper">Configured Dimensions</div>
+                        <div class="hover-panel-title">Configured Dimensions</div>
                         <div class="hover-dimensions-stack">
                           @if (dimCount > 0) {
                             @for (dim of dims | keyvalue; track dim.key) {
@@ -242,7 +242,7 @@
                       </span>
                       <!-- Decorators hover panel -->
                       <div class="device-requirement-hover-panel">
-                        <div class="panel-title-upper">Active Decorators</div>
+                        <div class="hover-panel-title">Active Decorators</div>
                         <div class="hover-dimensions-stack">
                           @if (decsList.length > 0) {
                             <div class="text-success value-stack-container">
@@ -274,7 +274,7 @@
                   @if (job.status === 'JOB_STATUS_RUNNING') {
                     <span class="live-badge">
                       <span class="live-dot"></span>
-                      <span>LIVE</span>
+                      <span>Live</span>
                     </span>
                   }
                 </span>

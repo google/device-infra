@@ -1,1 +1,5 @@
 $labconsole-font: Roboto, sans-serif;
+
+// Headline font for titles of 16px and up. Falls back to Roboto wherever
+// Google Sans is not loaded.
+$labconsole-headline-font: 'Google Sans', Roboto, sans-serif;

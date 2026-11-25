@@ -932,19 +932,15 @@ textarea {
   position: relative;
 }
 
+// File size after the name, separated by spacing only.
 .file-meta-subline {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  margin-left: 0.25rem;
+  margin-left: 0.5rem;
   color: #70757a;
   flex-shrink: 0;
   white-space: nowrap;
-
-  .meta-sep {
-    font-size: 0.75rem;
-    font-weight: 700;
-  }
 
   .meta-text {
     font-size: 0.75rem;

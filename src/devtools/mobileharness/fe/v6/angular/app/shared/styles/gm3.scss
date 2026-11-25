@@ -1,0 +1,26 @@
+// Google Material 3 (GM3) color roles for the detail pages, using the GM3
+// light theme baseline values. The app theme is still Material 2, so these are
+// plain Sass colors instead of `--mat-sys-*` system variables.
+
+$primary: #0b57d0;
+$primary-hover: #0842a0;
+$on-primary: #fff;
+
+$surface: #fff;
+$surface-container: #f0f4f9;
+$on-surface: #1f1f1f;
+$on-surface-variant: #444746;
+$outline: #747775;
+$outline-variant: #c4c7c5;
+
+$error: #b3261e;
+$error-container: #fce8e6;
+$on-error-container: #410e0b;
+
+// Material 3 has no warning role, so these come from the GM3 yellow palette.
+$warning: #8c4a00;
+$warning-container: #fef7e0;
+$on-warning-container: #421f00;
+
+$success: #146c2e;
+$success-container: #e6f4ea;

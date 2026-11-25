@@ -328,7 +328,7 @@ describe('TestDetail Component', () => {
       runningFixture.componentInstance.killActionState()?.visible,
     ).toBeTrue();
     expect(compiled.querySelector('.live-badge')?.textContent).toContain(
-      'LIVE',
+      'Live',
     );
   }));
 

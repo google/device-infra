@@ -1,5 +1,6 @@
 @use '../../shared/styles/overview';
 @use '../../shared/styles/common';
+@use '../../shared/styles/gm3';
 
 :host {
   @include common.page-host();
@@ -63,6 +64,7 @@
     display: flex;
     align-items: center;
     font-size: 1.125rem;
+    font-family: overview.$labconsole-headline-font;
     color: #6b7280;
     min-width: 0;
   }
@@ -104,6 +106,7 @@
   flex-shrink: 0;
 }
 
+// GM3 outlined pill button in the error color.
 :host ::ng-deep button.m3-action-button.filled.kill-job-btn,
 :host ::ng-deep button.m3-action-button.kill-job-btn,
 :host ::ng-deep button.kill-job-btn {
@@ -112,19 +115,19 @@
   justify-content: center;
   gap: 6px;
   box-sizing: border-box;
-  height: 32px;
+  height: 36px;
   min-height: unset;
-  padding: 0 16px;
-  border-radius: 8px;
-  border: 1px solid #fca5a5;
-  font-size: 0.75rem;
+  padding: 0 14px 0 12px;
+  border-radius: 9999px;
+  border: 1px solid #f2b8b5;
+  font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: none;
   transition: all 0.2s;
-  background-color: white;
-  color: #dc2626;
+  background-color: gm3.$surface;
+  color: gm3.$error;
 
   mat-icon {
     font-size: 16px;
@@ -134,49 +137,51 @@
   }
 
   &:hover:not(:disabled) {
-    background-color: #fee2e2;
-    color: #dc2626;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    background-color: gm3.$error-container;
+    border-color: gm3.$error;
+    color: gm3.$error;
   }
 
   &:disabled,
   &.kill-disabled {
-    background-color: #fff5f5;
-    border-color: #fecaca;
-    color: #fca5a5;
-    opacity: 0.6;
+    background-color: transparent;
+    border-color: rgba(gm3.$on-surface, 0.12);
+    color: rgba(gm3.$on-surface, 0.38);
     cursor: not-allowed;
     pointer-events: none;
   }
 }
 
+// GM3 outlined pill button.
 .sponge-link-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   box-sizing: border-box;
-  height: 32px;
-  padding: 0 16px;
-  border-radius: 8px;
-  border: 1px solid #d2e3fc;
-  background-color: #f8fafd;
-  color: #1a73e8;
+  height: 36px;
+  padding: 0 12px 0 14px;
+  border-radius: 9999px;
+  border: 1px solid gm3.$outline-variant;
+  background-color: gm3.$surface;
+  color: gm3.$primary;
   text-decoration: none;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  transition: background-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
 
   &:hover {
-    background-color: #e8f0fe;
+    background-color: gm3.$surface-container;
+    border-color: gm3.$primary;
   }
 
   mat-icon {
-    font-size: 12px;
-    width: 12px;
-    height: 12px;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
   }
 }
 
@@ -214,17 +219,19 @@
     min-width: 0;
   }
 
+  // M3 label-medium, no uppercase.
   .title-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #9aa0a6;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: gm3.$on-surface-variant;
     margin-bottom: 0.25rem;
   }
 
   .job-title {
     font-size: 1.25rem;
+    font-family: overview.$labconsole-headline-font;
     font-weight: 500;
     color: #202124;
     margin: 0 0 0.75rem 0;
@@ -338,11 +345,11 @@
       line-height: 1.4;
 
       .panel-section-title {
-        font-size: 9px;
-        font-weight: 600;
+        font-size: 11px;
+        line-height: 1rem;
+        font-weight: 500;
         color: #9ca3af;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.5px;
         margin-bottom: 4px;
       }
 
@@ -671,27 +678,27 @@
     gap: 0.25rem;
   }
 
+  // GM3 success tonal pill, no uppercase.
   .live-badge {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
-    padding: 1px 5px;
-    border-radius: 4px;
-    font-size: 9px;
-    font-weight: 600;
-    background-color: #e6f4ea;
-    color: #1e8e3e;
+    gap: 4px;
+    padding: 1px 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    line-height: 1rem;
+    font-weight: 500;
+    background-color: gm3.$success-container;
+    color: gm3.$success;
     margin-left: 0.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     animation: pulse-animation-live 2s infinite ease-in-out;
     vertical-align: middle;
 
     .live-dot {
-      width: 4px;
-      height: 4px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background-color: #1e8e3e;
+      background-color: gm3.$success;
     }
   }
 }

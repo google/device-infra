@@ -4,7 +4,7 @@
     @if (icon()) {
       <mat-icon class="header-icon">{{ icon() }}</mat-icon>
     }
-    <span>{{ cardTitle() }}</span>
+    <span class="title-text">{{ cardTitle() }}</span>
     <ng-content select="[titleAction]"></ng-content>
   </span>
   <div class="header-right">

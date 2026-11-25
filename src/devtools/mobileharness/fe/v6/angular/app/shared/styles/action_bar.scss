@@ -1,12 +1,13 @@
+@use 'gm3';
 @use 'typography';
 
-// Common styles for buttons used in dialog footers.
+// Common styles for buttons used in dialog footers: GM3 pill buttons.
 .dialog-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 1.25rem;
-  border-radius: 0.25rem;
+  padding: 0.5rem 1.5rem;
+  border-radius: 9999px;
   font-weight: 500;
   transition: all 0.2s;
   border: 1px solid transparent;
@@ -41,39 +42,54 @@
 }
 
 .dialog-button:disabled {
-  background-color: #e2e8f0;
-  color: #94a3b8;
+  background-color: rgba(gm3.$on-surface, 0.12);
+  color: rgba(gm3.$on-surface, 0.38);
   cursor: not-allowed;
-  border: none;
+  border-color: transparent;
 }
 
 .dialog-button-primary {
-  background-color: #0b57d0;
-  color: white;
+  background-color: gm3.$primary;
+  color: gm3.$on-primary;
 }
 
 .dialog-button-primary:not(:disabled):hover {
-  background-color: #0a4cb8;
+  background-color: gm3.$primary-hover;
 }
 
 .dialog-button-secondary {
-  background-color: white;
-  color: #0b57d0;
-  border-color: #c2c2c2;
+  background-color: gm3.$surface;
+  color: gm3.$primary;
+  border-color: gm3.$outline;
 }
 
 .dialog-button-secondary:not(:disabled):hover {
-  background-color: #f0f5fe;
+  background-color: rgba(gm3.$primary, 0.06);
+  border-color: gm3.$primary;
 }
 
 .dialog-button-tertiary {
   background-color: transparent;
-  color: #475569;
-  border-color: #c2c2c2;
+  color: gm3.$on-surface-variant;
+  border-color: gm3.$outline-variant;
 }
 
 .dialog-button-tertiary:not(:disabled):hover {
-  background-color: #f1f5f9;
+  background-color: rgba(gm3.$on-surface-variant, 0.08);
+}
+
+.dialog-button-text {
+  background-color: transparent;
+  color: gm3.$primary;
+  border-color: transparent;
+}
+
+.dialog-button-text:not(:disabled):hover {
+  background-color: rgba(gm3.$primary, 0.08);
+}
+
+.dialog-button-text:disabled {
+  background-color: transparent;
 }
 
 // Basic styles for m3-action-button, more specific in component scss
@@ -106,7 +122,6 @@
     color: #1967d2; // darker blue
     &:hover {
       background-color: #d2e3fc;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
   }
 
@@ -157,7 +172,6 @@
   background-color: #e8f0fe;
   color: #1967d2;
   height: 36px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .m3-split-button {

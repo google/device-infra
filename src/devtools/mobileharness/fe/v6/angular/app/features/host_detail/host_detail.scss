@@ -1,5 +1,6 @@
 @use '../../shared/styles/action_bar';
 @use '../../shared/styles/common';
+@use '../../shared/styles/typography';
 
 :host {
   @include common.page-host();
@@ -40,6 +41,7 @@
     display: flex;
     align-items: center;
     font-size: 1.125rem; // text-lg
+    font-family: typography.$labconsole-headline-font;
     color: #6b7280; // text-gray-500
     min-width: 0;
     flex-grow: 1;
@@ -202,6 +204,7 @@
 
   .host-title {
     font-size: 1.5rem;
+    font-family: typography.$labconsole-headline-font;
     line-height: 2rem;
     margin: 0;
     overflow: hidden;

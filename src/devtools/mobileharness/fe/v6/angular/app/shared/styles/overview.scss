@@ -1,4 +1,5 @@
 @use 'common';
+@use 'gm3';
 @use 'typography';
 @forward 'typography';
 @use '@angular/material' as mat;
@@ -65,7 +66,6 @@
 
     &:hover:not(:disabled) {
       background-color: #d2e3fc;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
 
     &:disabled {
@@ -287,12 +287,13 @@
     background: transparent;
   }
 
+  // M3 label-small, no uppercase.
   .panel-header-title {
-    font-size: 9px;
-    font-weight: 600;
+    font-size: 11px;
+    line-height: 1rem;
+    font-weight: 500;
     color: #5f6368;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.5px;
     margin-bottom: 8px;
     font-family: Roboto, sans-serif;
   }
@@ -333,81 +334,93 @@
   }
 }
 
-// Custom error info card overrides
-.error-info-card {
-  color: #721c24;
+/// Styles an error or warning info card as a GM3 tonal container: one outline
+/// in the card hue, a tinted header and no drop shadow.
+@mixin tonal-info-card(
+  $accent,
+  $on-container,
+  $container,
+  $header-container,
+  $outline,
+  $trace-container,
+  $trace-outline
+) {
+  color: $on-container;
 
-  .error-msg-text {
-    color: #721c24;
+  // Together with the `app-info-card` element selector, this outranks the
+  // neutral `.info-card` frame that the master detail layout gives each card.
+  &.info-card {
+    border-color: $outline;
+    background-color: $container;
+  }
+
+  .accordion-item {
+    &:not(:last-child) {
+      border-bottom: 1px solid $outline;
+    }
+    &.expanded {
+      background-color: rgba($accent, 0.02);
+    }
+  }
+
+  .count-badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-weight: 500;
+    line-height: 1.2;
+    margin-right: 8px;
+    background-color: rgba($accent, 0.1);
+    color: $accent;
+  }
+
+  .trace-pre {
+    background-color: $trace-container;
+    color: $on-container;
+    border: 1px solid $trace-outline;
+    border-radius: 0.5rem;
   }
 
   ::ng-deep {
-    .panel-header {
-      background-color: #fef5f5;
-      color: #721c24;
-      border: 1px solid #f8d7da;
-      border-radius: 0.5rem;
-      &.collapsed {
-        border-radius: 0.5rem;
-      }
-      &:not(.collapsed) {
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-      .header-icon {
-        color: #721c24;
+    .accordion-trigger {
+      color: $on-container;
+      &:hover {
+        background-color: rgba($accent, 0.08);
       }
     }
-    .panel-content {
-      border-left: 1px solid #f8d7da;
-      border-right: 1px solid #f8d7da;
-      border-bottom: 1px solid #f8d7da;
-      border-bottom-left-radius: 0.5rem;
-      border-bottom-right-radius: 0.5rem;
-      background-color: #fef5f5;
+    .panel-header {
+      background-color: $header-container;
+      color: $accent;
+      border-bottom-color: $outline;
+      .header-icon {
+        color: $accent;
+      }
     }
   }
 }
 
-// Custom warning info card overrides
-.warning-info-card {
-  color: #b78103;
+app-info-card.error-info-card {
+  @include tonal-info-card(
+    $accent: gm3.$error,
+    $on-container: gm3.$on-error-container,
+    $container: #fffbfa,
+    $header-container: #fdf2f1,
+    $outline: #f5c2c0,
+    $trace-container: gm3.$error-container,
+    $trace-outline: #f9dedc
+  );
+}
 
-  .warning-msg-text {
-    color: #b78103;
-  }
-
-  .trace-pre {
-    background-color: #fff3cd;
-    color: #664d03;
-  }
-
-  ::ng-deep {
-    .panel-header {
-      background-color: #fff8e1;
-      color: #b78103;
-      border: 1px solid #ffe082;
-      border-radius: 0.5rem;
-      &.collapsed {
-        border-radius: 0.5rem;
-      }
-      &:not(.collapsed) {
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-      .header-icon {
-        color: #f59e0b;
-      }
-    }
-    .panel-content {
-      border-left: 1px solid #ffe082;
-      border-right: 1px solid #ffe082;
-      border-bottom: 1px solid #ffe082;
-      border-bottom-left-radius: 0.5rem;
-      border-bottom-right-radius: 0.5rem;
-      background-color: #fff8e1;
-    }
-  }
+app-info-card.warning-info-card {
+  @include tonal-info-card(
+    $accent: gm3.$warning,
+    $on-container: gm3.$on-warning-container,
+    $container: #fffdf7,
+    $header-container: gm3.$warning-container,
+    $outline: #f3d689,
+    $trace-container: gm3.$warning-container,
+    $trace-outline: #f3d689
+  );
 }
 
 .info-card-content {
@@ -426,10 +439,10 @@
 }
 
 .trace-pre {
-  background-color: #fbeae5;
-  color: #541d22;
+  background-color: gm3.$error-container;
+  color: gm3.$on-error-container;
   padding: 0.75rem;
-  border-radius: 0.25rem;
+  border-radius: 0.5rem;
   max-height: 250px;
   overflow-y: auto;
   @include common.shared-scrollbar-style();
@@ -505,12 +518,13 @@
   line-height: 1.4;
   font-family: Roboto, sans-serif;
 
-  .panel-title-upper {
+  // M3 label-small, no uppercase.
+  .hover-panel-title {
     font-size: 11px;
-    font-weight: 600;
+    line-height: 1rem;
+    font-weight: 500;
     color: #5f6368;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.5px;
     margin-bottom: 8px;
   }
 
