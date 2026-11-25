@@ -67,6 +67,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -585,9 +586,17 @@ public class CloudFileTransferServiceImpl {
     }
 
     GetFileResponse.Builder response = GetFileResponse.newBuilder();
+    if (request.getFileSizeByteLimit() < 0) {
+      logger.atInfo().log(
+          "Failed to get file %s directly, because file size limit %s is negative",
+          request.getPath(), request.getFileSizeByteLimit());
+      return response.setSizeExceed(true).build();
+    }
     if (localFileUtil.isDirExist(src)) {
       long totalFileSize = 0;
-      for (Path file : localFileUtil.listFilePaths(src, true)) {
+      // Skip non-regular files such as dangling symlinks so getFileSize() does not fail.
+      for (Path file :
+          localFileUtil.listFilePaths(src, /* recursively= */ true, Files::isRegularFile)) {
         totalFileSize += localFileUtil.getFileSize(file);
         if (totalFileSize > request.getFileSizeByteLimit()) {
           logger.atInfo().log(

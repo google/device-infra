@@ -684,6 +684,9 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
    */
   private FileOperationStatus getFileDirectlyIfSmall(Path remote, Path local)
       throws MobileHarnessException, InterruptedException {
+    if (params.smallFileSize() < 0) {
+      return FileOperationStatus.create(false, -1L);
+    }
     try {
       GetFileResponse response =
           stub.getFile(
