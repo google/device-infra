@@ -16,6 +16,8 @@
 
 package com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -651,6 +653,7 @@ public class Adb {
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
+  @CanIgnoreReturnValue
   public String runShellWithRetry(String serial, String command)
       throws MobileHarnessException, InterruptedException {
     return runShellWithRetry(serial, command, /* timeout= */ null, /* lineCallback= */ null);
@@ -718,6 +721,64 @@ public class Adb {
               String.format(
                   "adb shell command succeed after retry %s times, last error:%n%s",
                   i, error.getMessage()));
+        }
+        return output;
+      } catch (MobileHarnessException e) {
+        error = e;
+      }
+      sleeper.sleep(RETRY_INTERVAL);
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.ANDROID_ADB_CMD_RETRY_ERROR,
+        String.format(
+            "Abort adb shell command after attempting %d times:%n%s",
+            DEFAULT_RETRY_ATTEMPTS, error.getMessage()),
+        error);
+  }
+
+  /**
+   * Runs an adb shell command with retry, piping {@code stdinInput} as a single sensitive line to
+   * standard input and closing stdin immediately afterward so sensitive values do not appear in
+   * command arguments or stdin failure logs.
+   *
+   * <p>The command length must not exceed 4090 UTF-8 bytes (script file fallback is not supported),
+   * and {@code stdinInput} must not contain newline characters.
+   *
+   * @param serial device serial number
+   * @param command the shell command
+   * @param stdinInput single-line sensitive input piped to the shell command's standard input
+   * @return command std output
+   * @throws MobileHarnessException if fails to execute the command or timeout
+   * @throws InterruptedException if the thread executing the command is interrupted
+   */
+  @CanIgnoreReturnValue
+  public String runShellWithSensitiveStdinWithRetry(
+      String serial, String command, String stdinInput)
+      throws MobileHarnessException, InterruptedException {
+    checkNotNull(stdinInput);
+    checkArgument(
+        stdinInput.indexOf('\n') < 0 && stdinInput.indexOf('\r') < 0,
+        "stdinInput must not contain newline characters");
+    if (StrUtil.isEmptyOrWhitespace(command)) {
+      return "";
+    }
+    checkArgument(
+        Utf8.encodedLength(command) <= MAX_ADB_SHELL_COMMAND_SIZE,
+        "Command length exceeds limit %s UTF-8 bytes",
+        MAX_ADB_SHELL_COMMAND_SIZE);
+    Command adbCommand =
+        getAdbCommand()
+            .args("-s", serial, "shell", command)
+            .sensitiveInputLn(stdinInput)
+            .closeStdinAfterInput();
+    MobileHarnessException error = null;
+    for (int i = 0; i < DEFAULT_RETRY_ATTEMPTS; i++) {
+      try {
+        String output = syncCommand(adbCommand).stdoutWithoutTrailingLineTerminator();
+        if (error != null) {
+          logger.atWarning().log(
+              "adb shell command succeed after retry %s times, last error:%n%s",
+              i, error.getMessage());
         }
         return output;
       } catch (MobileHarnessException e) {
