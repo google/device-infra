@@ -35,16 +35,29 @@ export function useBulkConfigActions(options: BulkConfigActionsOptions) {
   const configService = inject(CONFIG_SERVICE, {optional: true});
   const featureEnablementService = inject(FeatureEnablementService);
 
+  /** Whether the bulk Wi-Fi configuration action is available. */
+  const isWifiConfigAvailable = computed(
+    () =>
+      Boolean(configService) &&
+      featureEnablementService.isBulkWifiConfigEnabled() &&
+      options.isOwnFleetDevices(),
+  );
+
+  /** Whether the bulk dimension configuration action is available. */
+  const isDimensionConfigAvailable = computed(
+    () =>
+      Boolean(configService) &&
+      featureEnablementService.isBulkDimensionConfigEnabled() &&
+      options.isOwnFleetDevices(),
+  );
+
   /**
    * Bulk configuration availability is gated by `FeatureEnablementService`:
    * when it is disabled, no bulk configuration action is shown and no dimension
    * loading is triggered.
    */
   const isBulkConfigAvailable = computed(
-    () =>
-      Boolean(configService) &&
-      featureEnablementService.isBulkConfigEnabled() &&
-      options.isOwnFleetDevices(),
+    () => isWifiConfigAvailable() || isDimensionConfigAvailable(),
   );
 
   /**
@@ -128,6 +141,7 @@ export function useBulkConfigActions(options: BulkConfigActionsOptions) {
 
   /** Opens the Bulk Wi-Fi configuration dialog for currently selected devices. */
   const openWifiDialog = (): void => {
+    if (!isWifiConfigAvailable()) return;
     openDialog(BulkConfigWifiDialog);
   };
 
@@ -135,6 +149,7 @@ export function useBulkConfigActions(options: BulkConfigActionsOptions) {
   const openDimensionDialog = (
     target: ConfigurableDimension | 'supported' | 'required',
   ): void => {
+    if (!isDimensionConfigAvailable()) return;
     openDialog(
       BulkConfigDimensionDialog,
       typeof target === 'object'
@@ -150,6 +165,8 @@ export function useBulkConfigActions(options: BulkConfigActionsOptions) {
 
   return {
     dimensionConfig,
+    isWifiConfigAvailable,
+    isDimensionConfigAvailable,
     retryDimensions,
     openWifiDialog,
     openDimensionDialog,

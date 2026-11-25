@@ -295,7 +295,7 @@
       Quarantine
     </button>
     @let dimConfig = bulkConfig.dimensionConfig();
-    @if (dimConfig.enabled) {
+    @if (dimConfig.enabled && bulkConfig.isWifiConfigAvailable()) {
       <button
         class="rt-btn-text"
         [disabled]="dimConfig.isLoading || !!dimConfig.error"
@@ -304,6 +304,8 @@
         <mat-icon class="material-symbols-outlined">wifi</mat-icon>
         Configure Wi-Fi
       </button>
+    }
+    @if (dimConfig.enabled && bulkConfig.isDimensionConfigAvailable()) {
       <button
         class="rt-btn-text"
         [class.is-loading]="dimConfig.isLoading"

@@ -24,6 +24,7 @@ import {ActionButtonState} from '../../../../core/models/action_common';
 import {HostActions} from '../../../../core/models/host_action';
 import type {HostOverviewPageData} from '../../../../core/models/host_overview';
 import {Environment} from '../../../../core/services/environment';
+import {FeatureEnablementService} from '../../../../core/services/feature_enablement_service';
 import {ActionButton} from '../../../../shared/components/action_button/action_button';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {HostAdvancedOpsDialog} from '../host_advanced_ops_dialog/host_advanced_ops_dialog';
@@ -54,6 +55,7 @@ import {HostDecommissionDialog} from '../host_decommission_dialog/host_decommiss
 export class HostActionBar implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly environment = inject(Environment);
+  private readonly featureEnablementService = inject(FeatureEnablementService);
   private readonly comingSoonService = inject(ComingSoonService);
   private readonly appData = inject(APP_DATA);
   private readonly route = inject(ActivatedRoute);
@@ -150,6 +152,11 @@ export class HostActionBar implements OnInit {
   );
 
   readonly onConfiguration = () => {
+    // Also reached by the `openHostConfig=true` deep link, which is ignored
+    // unless FeatureEnablementService enables the host configuration.
+    if (!this.featureEnablementService.isHostConfigEnabled()) {
+      return;
+    }
     const dialogRef = this.dialog.open(HostConfig, {
       data: {hostName: this.hostName()},
       autoFocus: false,
@@ -292,6 +299,13 @@ export class HostActionBar implements OnInit {
   }
 
   getAction(key: keyof HostActions): ActionButtonState | undefined {
+    // The Configuration action is gated by FeatureEnablementService.
+    if (
+      key === 'configuration' &&
+      !this.featureEnablementService.isHostConfigEnabled()
+    ) {
+      return undefined;
+    }
     return (
       this.actions() as unknown as Record<string, ActionButtonState | undefined>
     )?.[key];

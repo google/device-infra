@@ -17,6 +17,7 @@ import {ActivatedRoute, Router} from '@angular/router';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
 import {throwError} from 'rxjs';
 import {catchError, take, tap} from 'rxjs/operators';
+import {FeatureEnablementService} from '../../../../core/services/feature_enablement_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {DecommissionContent} from '../../../../shared/components/decommission_content/decommission_content';
@@ -149,6 +150,7 @@ export class DeviceActionBar implements OnInit {
   private readonly router = inject(Router);
   private readonly snackBar = inject(SnackBarService);
   private readonly urlService = inject(UrlService);
+  private readonly featureEnablementService = inject(FeatureEnablementService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
@@ -244,6 +246,11 @@ export class DeviceActionBar implements OnInit {
   };
 
   readonly onConfiguration = () => {
+    // Also reached by the `openDeviceConfig=true` deep link, which is ignored
+    // unless FeatureEnablementService enables the device configuration.
+    if (!this.featureEnablementService.isDeviceConfigEnabled()) {
+      return;
+    }
     this.deviceActions.configureDevice(
       this.deviceId(),
       this.hostName(),
@@ -328,6 +335,13 @@ export class DeviceActionBar implements OnInit {
   getAction(key: keyof DeviceActions): ActionButtonState | undefined {
     if (key === 'flash') {
       return this.actions()?.flash?.state;
+    }
+    // The Configuration action is gated by FeatureEnablementService.
+    if (
+      key === 'configuration' &&
+      !this.featureEnablementService.isDeviceConfigEnabled()
+    ) {
+      return undefined;
     }
     return (this.actions() as unknown as Record<string, ActionButtonState>)?.[
       key

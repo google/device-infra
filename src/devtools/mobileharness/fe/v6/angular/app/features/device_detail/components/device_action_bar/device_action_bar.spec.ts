@@ -12,6 +12,7 @@ import {
 } from '../../../../core/models/device_action';
 import {DeviceOverviewPageData} from '../../../../core/models/device_overview';
 import {Environment} from '../../../../core/services/environment';
+import {FeatureEnablementService} from '../../../../core/services/feature_enablement_service';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
@@ -97,6 +98,7 @@ describe('DeviceActionBar', () => {
   };
 
   let mockEnvironment: jasmine.SpyObj<Environment>;
+  let featureEnablementService: jasmine.SpyObj<FeatureEnablementService>;
 
   beforeEach(async () => {
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
@@ -109,6 +111,10 @@ describe('DeviceActionBar', () => {
 
     mockEnvironment = jasmine.createSpyObj('Environment', ['isGoogleInternal']);
     mockEnvironment.isGoogleInternal.and.returnValue(true);
+    featureEnablementService = jasmine.createSpyObj('FeatureEnablementService', [
+      'isDeviceConfigEnabled',
+    ]);
+    featureEnablementService.isDeviceConfigEnabled.and.returnValue(true);
 
     remoteControlService = jasmine.createSpyObj('RemoteControlService', [
       'startRemoteControl',
@@ -141,6 +147,10 @@ describe('DeviceActionBar', () => {
         {provide: DeviceActionService, useValue: deviceActionService},
         {provide: APP_DATA, useValue: {applicationId: 'test-app'}},
         {provide: Environment, useValue: mockEnvironment},
+        {
+          provide: FeatureEnablementService,
+          useValue: featureEnablementService,
+        },
       ],
     }).compileComponents();
 
@@ -469,5 +479,31 @@ describe('DeviceActionBar', () => {
     decommissionSpy.and.returnValue(throwError(() => ({})));
     dialogConfig.data.onConfirm().subscribe({error: () => {}});
     expect(showErrorSpy).toHaveBeenCalledWith('Failed to remove device');
+  });
+
+  describe('when the device configuration is not enabled', () => {
+    beforeEach(() => {
+      featureEnablementService.isDeviceConfigEnabled.and.returnValue(false);
+      const cdr = fixture.debugElement.injector.get(ChangeDetectorRef);
+      cdr.markForCheck();
+      fixture.detectChanges();
+    });
+
+    it('should hide the configuration button', () => {
+      expect(component.getAction('configuration')).toBeUndefined();
+      expect(
+        fixture.nativeElement.querySelector(
+          '[data-testid="configuration-button-2xl"]',
+        ),
+      ).toBeNull();
+    });
+
+    it('ignores openDeviceConfig=true', async () => {
+      await TestBed.inject(Router).navigate([], {
+        queryParams: {'openDeviceConfig': 'true'},
+      });
+
+      expect(deviceActionService.configureDevice).not.toHaveBeenCalled();
+    });
   });
 });

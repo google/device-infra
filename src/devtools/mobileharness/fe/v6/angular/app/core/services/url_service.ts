@@ -124,7 +124,9 @@ export class UrlService implements OnDestroy {
       if (data.type === 'GET_EXTERNAL_URL_RESPONSE') {
         this.responses$.next(data);
       } else if (data.type === 'NAVIGATE') {
-        this.navigate$.next(data.url);
+        if (!this.isAlreadyShown(data.url)) {
+          this.navigate$.next(data.url);
+        }
       } else if (data.type === 'EMBEDDED_HEADER_SLOT') {
         this.onEmbeddedHeaderSlotMessage(data);
       } else {
@@ -372,4 +374,78 @@ export class UrlService implements OnDestroy {
       borderColor: typeof borderColor === 'string' ? borderColor : undefined,
     });
   }
+
+  /**
+   * Whether a NAVIGATE request asks for the page this app already shows: the
+   * same path and the same query parameters in any order or encoding, apart
+   * from the `host_name` hint of the device detail page.
+   *
+   * Explanation: The host (e.g. MTT UI2) builds the URL of the page it shows
+   * from its own route. It lists the query parameters in its own order, and it
+   * doesn't know this app's `host_name` hint. Following such a request would
+   * add a history entry, so that the host's back navigation would need an
+   * extra step (and, without the hint, load the device again).
+   */
+  private isAlreadyShown(url: string): boolean {
+    if (!this.win) {
+      return false;
+    }
+    let current: URL;
+    let target: URL;
+    try {
+      current = new URL(this.win.location.href);
+      target = new URL(url, current);
+    } catch {
+      // Not a valid URL: leave it to the router.
+      return false;
+    }
+    // The requested path is relative to the base href (e.g. /labui/ in ATS).
+    const basePath = new URL(this.document?.baseURI ?? '/', current).pathname;
+    const targetPath = decodedPath(target);
+    if (
+      relativePath(current, basePath) !== targetPath ||
+      current.hash !== target.hash
+    ) {
+      return false;
+    }
+    // The host doesn't know the `host_name` hint of the device detail page.
+    if (
+      /^\/devices\/[^/]+$/.test(targetPath) &&
+      !target.searchParams.has('host_name')
+    ) {
+      current.searchParams.delete('host_name');
+    }
+    return (
+      sortedQuery(current.searchParams) === sortedQuery(target.searchParams)
+    );
+  }
+}
+
+/** Returns the decoded path of a URL, or the raw one if it can't be decoded. */
+function decodedPath(url: URL): string {
+  try {
+    return decodeURIComponent(url.pathname);
+  } catch {
+    return url.pathname;
+  }
+}
+
+/** Returns the decoded path of a URL relative to a base path, e.g. '/hosts'. */
+function relativePath(url: URL, basePath: string): string {
+  const path = decodedPath(url);
+  const base = basePath.replace(/\/$/, '');
+  return path.startsWith(`${base}/`) ? path.slice(base.length) : path;
+}
+
+/**
+ * Returns query parameters as a string that doesn't depend on their order or
+ * encoding. Each key and value is encoded again, so that an `&` or `=` in it
+ * can't pass for a separator.
+ */
+function sortedQuery(params: URLSearchParams): string {
+  const entries: string[] = [];
+  params.forEach((value, key) => {
+    entries.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+  });
+  return entries.sort().join('&');
 }

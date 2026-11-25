@@ -4,7 +4,7 @@ import {TestBed} from '@angular/core/testing';
 import {Environment} from './environment';
 import {UrlService} from './url_service';
 interface MockWindow {
-  location: {search: string};
+  location: {search: string; href?: string};
   addEventListener: jasmine.Spy;
   removeEventListener: jasmine.Spy;
   parent: {postMessage: jasmine.Spy};
@@ -14,6 +14,7 @@ interface MockWindow {
 
 interface MockDocument {
   defaultView: MockWindow;
+  baseURI?: string;
 }
 
 describe('UrlService', () => {
@@ -358,6 +359,175 @@ describe('UrlService', () => {
       service.notifyEmbeddedBackdropChanged(true);
 
       expect(mockWin.parent.postMessage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('NAVIGATE messages from the parent window', () => {
+    const DEVICE_PAGE =
+      'http://localhost/labui/devices/h1:d1?is_embedded_mode=true&force_ready=search&host_name=h1';
+    let navigatedUrls: string[];
+
+    /**
+     * Sets up the service embedded at the given page URL, under the given base
+     * href (/labui/ as in ATS by default), and returns its message listener.
+     */
+    function setUpEmbeddedAt(
+      href: string,
+      baseUri = 'http://localhost/labui/',
+    ): (event: unknown) => void {
+      mockWin.location = {search: new URL(href).search, href};
+      mockWin.self = {id: 'iframe'};
+      mockWin.top = {id: 'parent'};
+      mockDocument.baseURI = baseUri;
+      TestBed.configureTestingModule({
+        providers: [UrlService, {provide: DOCUMENT, useValue: mockDocument}],
+      });
+      service = TestBed.inject(UrlService);
+      navigatedUrls = [];
+      service.navigate$.subscribe((url) => {
+        navigatedUrls.push(url);
+      });
+      return mockWin.addEventListener.calls
+        .all()
+        .find((call) => call.args[0] === 'message')?.args[1];
+    }
+
+    it('forwards a request for another page', () => {
+      const messageListener = setUpEmbeddedAt(DEVICE_PAGE);
+
+      messageListener({
+        data: {type: 'NAVIGATE', url: '/devices?is_embedded_mode=true'},
+      });
+
+      expect(navigatedUrls).toEqual(['/devices?is_embedded_mode=true']);
+    });
+
+    it('ignores a request for the current device page that only drops host_name', () => {
+      const messageListener = setUpEmbeddedAt(DEVICE_PAGE);
+
+      messageListener({
+        data: {
+          type: 'NAVIGATE',
+          url: '/devices/h1:d1?force_ready=search&is_embedded_mode=true',
+        },
+      });
+
+      expect(navigatedUrls).toEqual([]);
+    });
+
+    it('ignores such a request without a base href too', () => {
+      const messageListener = setUpEmbeddedAt(
+        'http://localhost/devices/h1:d1?is_embedded_mode=true&host_name=h1',
+        'http://localhost/',
+      );
+
+      messageListener({
+        data: {type: 'NAVIGATE', url: '/devices/h1:d1?is_embedded_mode=true'},
+      });
+
+      expect(navigatedUrls).toEqual([]);
+    });
+
+    it('ignores a request for the current page when it is outside the base href', () => {
+      const messageListener = setUpEmbeddedAt(
+        'http://localhost/devices/h1:d1?is_embedded_mode=true',
+        'http://localhost/labui/',
+      );
+
+      messageListener({
+        data: {type: 'NAVIGATE', url: '/devices/h1:d1?is_embedded_mode=true'},
+      });
+
+      expect(navigatedUrls).toEqual([]);
+    });
+
+    it('forwards a request for the current device page when other params differ too', () => {
+      const messageListener = setUpEmbeddedAt(DEVICE_PAGE);
+
+      messageListener({
+        data: {type: 'NAVIGATE', url: '/devices/h1:d1?is_embedded_mode=true'},
+      });
+
+      expect(navigatedUrls).toEqual(['/devices/h1:d1?is_embedded_mode=true']);
+    });
+
+    it('forwards a request for another device page', () => {
+      const messageListener = setUpEmbeddedAt(DEVICE_PAGE);
+
+      messageListener({
+        data: {
+          type: 'NAVIGATE',
+          url: '/devices/h1:d2?force_ready=search&is_embedded_mode=true',
+        },
+      });
+
+      expect(navigatedUrls).toEqual([
+        '/devices/h1:d2?force_ready=search&is_embedded_mode=true',
+      ]);
+    });
+
+    it('forwards a request for the device list even when it only drops host_name', () => {
+      const messageListener = setUpEmbeddedAt(
+        'http://localhost/labui/devices?is_embedded_mode=true&host_name=h1',
+      );
+
+      messageListener({
+        data: {type: 'NAVIGATE', url: '/devices?is_embedded_mode=true'},
+      });
+
+      expect(navigatedUrls).toEqual(['/devices?is_embedded_mode=true']);
+    });
+
+    it('ignores a request for the current page with its params in another order or encoding', () => {
+      const messageListener = setUpEmbeddedAt(
+        'http://localhost/labui/hosts/h1?is_embedded_mode=true&force_ready=search,foo',
+      );
+
+      messageListener({
+        data: {
+          type: 'NAVIGATE',
+          url: '/hosts/h1?force_ready=search%2Cfoo&is_embedded_mode=true',
+        },
+      });
+
+      expect(navigatedUrls).toEqual([]);
+    });
+
+    it('forwards a request for other params that only look the same once decoded', () => {
+      const messageListener = setUpEmbeddedAt(
+        'http://localhost/labui/devices?is_embedded_mode=true&f=a&gb=b',
+      );
+
+      messageListener({
+        data: {
+          type: 'NAVIGATE',
+          url: '/devices?is_embedded_mode=true&f=a%26gb%3Db',
+        },
+      });
+
+      expect(navigatedUrls).toEqual([
+        '/devices?is_embedded_mode=true&f=a%26gb%3Db',
+      ]);
+    });
+
+    it('forwards a request for the current list with other params, e.g. to reset its filters', () => {
+      const messageListener = setUpEmbeddedAt(
+        'http://localhost/labui/devices?is_embedded_mode=true&f=status:READY',
+      );
+
+      messageListener({
+        data: {type: 'NAVIGATE', url: '/devices?is_embedded_mode=true'},
+      });
+
+      expect(navigatedUrls).toEqual(['/devices?is_embedded_mode=true']);
+    });
+
+    it('forwards a request whose URL cannot be parsed', () => {
+      const messageListener = setUpEmbeddedAt(DEVICE_PAGE);
+
+      messageListener({data: {type: 'NAVIGATE', url: 'http://['}});
+
+      expect(navigatedUrls).toEqual(['http://[']);
     });
   });
 });

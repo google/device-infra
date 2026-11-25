@@ -214,7 +214,7 @@
                   <div class="separator"></div>
                 }
 
-                @if (dimConfig.enabled) {
+                @if (dimConfig.enabled && bulkConfig.isWifiConfigAvailable()) {
                   <button
                     mat-flat-button
                     class="action-button"
@@ -225,6 +225,8 @@
                     <mat-icon>wifi</mat-icon>
                     <span class="action-button-text">Configure Wi-Fi</span>
                   </button>
+                }
+                @if (dimConfig.enabled && bulkConfig.isDimensionConfigAvailable()) {
                   <button
                     mat-flat-button
                     class="action-button"

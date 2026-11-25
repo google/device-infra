@@ -133,9 +133,13 @@ describe('HostOverview Component', () => {
       }),
     );
     featureEnablementSpy = jasmine.createSpyObj('FeatureEnablementService', [
-      'isBulkConfigEnabled',
+      'isBulkWifiConfigEnabled',
+      'isBulkDimensionConfigEnabled',
+      'isDeviceConfigEnabled',
     ]);
-    featureEnablementSpy.isBulkConfigEnabled.and.returnValue(false);
+    featureEnablementSpy.isBulkWifiConfigEnabled.and.returnValue(false);
+    featureEnablementSpy.isBulkDimensionConfigEnabled.and.returnValue(false);
+    featureEnablementSpy.isDeviceConfigEnabled.and.returnValue(true);
 
     await TestBed.configureTestingModule({
       imports: [HostOverviewPage, NoopAnimationsModule],
@@ -673,6 +677,27 @@ describe('HostOverview Component', () => {
     });
   });
 
+  it('getAction should hide the device Configuration action when it is not enabled', () => {
+    const configuration = {
+      visible: true,
+      enabled: true,
+      isReady: true,
+      tooltip: 'Configuration',
+    };
+    const mockActions = {configuration} as unknown as DeviceActions;
+
+    expect(component.getAction(mockActions, 'configuration')).toEqual(
+      configuration,
+    );
+    expect(component.getVisibleDeviceActions(mockActions)).toEqual([
+      'configuration',
+    ]);
+
+    featureEnablementSpy.isDeviceConfigEnabled.and.returnValue(false);
+    expect(component.getAction(mockActions, 'configuration')).toBeUndefined();
+    expect(component.getVisibleDeviceActions(mockActions)).toEqual([]);
+  });
+
   it('onStop should trigger stop action', () => {
     spyOn(hostService, 'preflightLabServerLifecycle').and.returnValue(
       of({ready: {actualActivity: 'RUNNING'}}),
@@ -1020,7 +1045,8 @@ describe('HostOverview Component', () => {
     }
 
     it('hides bulk config actions and skips fetching dimensions when bulk config is disabled', async () => {
-      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(false);
+      featureEnablementSpy.isBulkWifiConfigEnabled.and.returnValue(false);
+      featureEnablementSpy.isBulkDimensionConfigEnabled.and.returnValue(false);
       initComponentWithDevices([mockDevice1]);
       component.selection.select(mockDevice1);
       fixture.detectChanges();
@@ -1044,7 +1070,8 @@ describe('HostOverview Component', () => {
     });
 
     it('fetches configurable dimensions on selection and opens Wi-Fi and dimension dialogs when enabled', async () => {
-      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(true);
+      featureEnablementSpy.isBulkWifiConfigEnabled.and.returnValue(true);
+      featureEnablementSpy.isBulkDimensionConfigEnabled.and.returnValue(true);
       initComponentWithDevices([mockDevice1, mockDevice2]);
       component.selection.select(mockDevice1, mockDevice2);
       fixture.detectChanges();
@@ -1117,7 +1144,8 @@ describe('HostOverview Component', () => {
     });
 
     it('hides bulk config actions on Partner OEM universes and supports retry on dimension fetch error', async () => {
-      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(true);
+      featureEnablementSpy.isBulkWifiConfigEnabled.and.returnValue(true);
+      featureEnablementSpy.isBulkDimensionConfigEnabled.and.returnValue(true);
       const envUniverseService = TestBed.inject(EnvUniverseService);
       spyOn(envUniverseService, 'isGoogleInternal').and.returnValue(true);
       const oemSpy = spyOn(envUniverseService, 'isGoogleOEM').and.returnValue(
@@ -1272,7 +1300,8 @@ describe('HostOverview Component', () => {
 
     it('keeps bulk config disabled when CONFIG_SERVICE is not provided', async () => {
       TestBed.resetTestingModule();
-      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(true);
+      featureEnablementSpy.isBulkWifiConfigEnabled.and.returnValue(true);
+      featureEnablementSpy.isBulkDimensionConfigEnabled.and.returnValue(true);
       await TestBed.configureTestingModule({
         imports: [HostOverviewPage, NoopAnimationsModule],
         providers: [
@@ -1325,7 +1354,8 @@ describe('HostOverview Component', () => {
     });
 
     it('hides the toolbar separator in OSS when bulk config returns enabled=false', async () => {
-      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(true);
+      featureEnablementSpy.isBulkWifiConfigEnabled.and.returnValue(true);
+      featureEnablementSpy.isBulkDimensionConfigEnabled.and.returnValue(true);
       configServiceSpy.getConfigurableDimensions.and.returnValue(
         of({
           enabled: false,
@@ -1360,7 +1390,8 @@ describe('HostOverview Component', () => {
         snapshot: {queryParamMap: queryParamMap$.value},
       };
       TestBed.resetTestingModule();
-      featureEnablementSpy.isBulkConfigEnabled.and.returnValue(true);
+      featureEnablementSpy.isBulkWifiConfigEnabled.and.returnValue(true);
+      featureEnablementSpy.isBulkDimensionConfigEnabled.and.returnValue(true);
       await TestBed.configureTestingModule({
         imports: [HostOverviewPage, NoopAnimationsModule],
         providers: [

@@ -151,9 +151,12 @@ describe('FleetSearchResultsComponent', () => {
     mockFeatureEnablementService =
       jasmine.createSpyObj<FeatureEnablementService>(
         'FeatureEnablementService',
-        ['isBulkConfigEnabled'],
+        ['isBulkWifiConfigEnabled', 'isBulkDimensionConfigEnabled'],
       );
-    mockFeatureEnablementService.isBulkConfigEnabled.and.returnValue(true);
+    mockFeatureEnablementService.isBulkWifiConfigEnabled.and.returnValue(true);
+    mockFeatureEnablementService.isBulkDimensionConfigEnabled.and.returnValue(
+      true,
+    );
     mockClipboardService = jasmine.createSpyObj<ClipboardService>(
       'ClipboardService',
       ['copyToClipboard'],
@@ -502,7 +505,10 @@ describe('FleetSearchResultsComponent', () => {
 
     it('hides Configure Wi-Fi and Configure Dimension buttons and skips fetching dimensions when bulk config is not enabled', async () => {
       // End-user view: the feature is not enabled for this session.
-      mockFeatureEnablementService.isBulkConfigEnabled.and.returnValue(false);
+      mockFeatureEnablementService.isBulkWifiConfigEnabled.and.returnValue(false);
+      mockFeatureEnablementService.isBulkDimensionConfigEnabled.and.returnValue(
+        false,
+      );
       fixture = TestBed.createComponent(FleetSearchResultsComponent);
       component = fixture.componentInstance;
 
@@ -533,6 +539,66 @@ describe('FleetSearchResultsComponent', () => {
       );
       component.bulkConfig.openWifiDialog();
       component.bulkConfig.openDimensionDialog('supported');
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it('shows only Configure Wi-Fi when only the bulk Wi-Fi configuration is enabled', async () => {
+      mockFeatureEnablementService.isBulkDimensionConfigEnabled.and.returnValue(
+        false,
+      );
+      fixture = TestBed.createComponent(FleetSearchResultsComponent);
+      component = fixture.componentInstance;
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      mockStore.entity.set('devices');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const buttonTexts = fixture.debugElement
+        .queryAll(By.css('.rt-toolbar button'))
+        .map((b) => b.nativeElement.textContent.trim());
+      expect(buttonTexts.some((t) => t.includes('Configure Wi-Fi'))).toBeTrue();
+      expect(
+        fixture.debugElement.query(
+          By.css('button[title="Configure device dimensions"]'),
+        ),
+      ).toBeNull();
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      );
+      component.bulkConfig.openDimensionDialog('supported');
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it('shows only the Configure dimension menu when only the bulk dimension configuration is enabled', async () => {
+      mockFeatureEnablementService.isBulkWifiConfigEnabled.and.returnValue(false);
+      fixture = TestBed.createComponent(FleetSearchResultsComponent);
+      component = fixture.componentInstance;
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      mockStore.entity.set('devices');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const buttonTexts = fixture.debugElement
+        .queryAll(By.css('.rt-toolbar button'))
+        .map((b) => b.nativeElement.textContent.trim());
+      expect(
+        buttonTexts.some((t) => t.includes('Configure Wi-Fi')),
+      ).toBeFalse();
+      expect(
+        fixture.debugElement.query(
+          By.css('button[title="Configure device dimensions"]'),
+        ),
+      ).not.toBeNull();
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      );
+      component.bulkConfig.openWifiDialog();
       expect(openSpy).not.toHaveBeenCalled();
     });
 

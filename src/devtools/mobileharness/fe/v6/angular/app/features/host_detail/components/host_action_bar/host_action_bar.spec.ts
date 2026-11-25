@@ -12,6 +12,7 @@ import {
   HostOverviewPageData,
 } from '../../../../core/models/host_overview';
 import {Environment} from '../../../../core/services/environment';
+import {FeatureEnablementService} from '../../../../core/services/feature_enablement_service';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {HostAdvancedOpsDialog} from '../host_advanced_ops_dialog/host_advanced_ops_dialog';
 import {HostConfig} from '../host_config/host_config';
@@ -65,6 +66,7 @@ describe('HostActionBar', () => {
   };
 
   let mockEnvironment: jasmine.SpyObj<Environment>;
+  let featureEnablementService: jasmine.SpyObj<FeatureEnablementService>;
 
   beforeEach(async () => {
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
@@ -76,6 +78,10 @@ describe('HostActionBar', () => {
 
     mockEnvironment = jasmine.createSpyObj('Environment', ['isGoogleInternal']);
     mockEnvironment.isGoogleInternal.and.returnValue(true);
+    featureEnablementService = jasmine.createSpyObj('FeatureEnablementService', [
+      'isHostConfigEnabled',
+    ]);
+    featureEnablementService.isHostConfigEnabled.and.returnValue(true);
 
     await TestBed.configureTestingModule({
       imports: [HostActionBar, MatTooltipModule, NoopAnimationsModule],
@@ -84,6 +90,10 @@ describe('HostActionBar', () => {
         {provide: ComingSoonService, useValue: comingSoonService},
         {provide: APP_DATA, useValue: {applicationId: 'test-app'}},
         {provide: Environment, useValue: mockEnvironment},
+        {
+          provide: FeatureEnablementService,
+          useValue: featureEnablementService,
+        },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -299,6 +309,33 @@ describe('HostActionBar', () => {
       visible: true,
       tooltip: 'Advanced operations tooltip',
       isReady: true,
+    });
+  });
+
+  describe('when the host configuration is not enabled', () => {
+    beforeEach(() => {
+      featureEnablementService.isHostConfigEnabled.and.returnValue(false);
+      fixture = TestBed.createComponent(HostActionBar);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('pageData', mockPageData);
+      fixture.detectChanges();
+    });
+
+    it('should hide the Configuration button but keep the other actions', () => {
+      expect(component.getAction('configuration')).toBeUndefined();
+      expect(
+        fixture.debugElement.query(
+          By.css('[data-testid="configuration-button-2xl"]'),
+        ),
+      ).toBeNull();
+      expect(
+        fixture.debugElement.query(By.css('[data-testid="debug-button-2xl"]')),
+      ).toBeTruthy();
+    });
+
+    it('should ignore onConfiguration, e.g. from the openHostConfig deep link', () => {
+      component.onConfiguration();
+      expect(dialog.open).not.toHaveBeenCalled();
     });
   });
 });

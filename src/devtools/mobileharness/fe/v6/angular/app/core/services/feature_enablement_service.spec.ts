@@ -36,72 +36,119 @@ describe('FeatureEnablementService', () => {
     return TestBed.inject(FeatureEnablementService);
   }
 
-  describe('isBulkConfigEnabled in the Google-internal build', () => {
-    it('should be enabled without any force flag', () => {
-      expect(
-        createService({}, {isGoogleInternal: true}).isBulkConfigEnabled(),
-      ).toBeTrue();
+  /** Returns the answers of all the feature functions of a service. */
+  function featuresOf(service: FeatureEnablementService) {
+    return {
+      bulkWifi: service.isBulkWifiConfigEnabled(),
+      bulkDimension: service.isBulkDimensionConfigEnabled(),
+      host: service.isHostConfigEnabled(),
+      device: service.isDeviceConfigEnabled(),
+    };
+  }
+
+  const ALL_ENABLED = {
+    bulkWifi: true,
+    bulkDimension: true,
+    host: true,
+    device: true,
+  };
+
+  describe('in the Google-internal build', () => {
+    it('should turn on every configuration feature without any force flag', () => {
+      expect(featuresOf(createService({}, {isGoogleInternal: true}))).toEqual(
+        ALL_ENABLED,
+      );
     });
 
-    it('should stay enabled when the force flags are false', () => {
+    it('should keep every configuration feature on with force_ready=config', () => {
       expect(
-        createService(
-          {'force_bulk_config_ready': 'false', 'force_all_ready': 'false'},
-          {isGoogleInternal: true},
-        ).isBulkConfigEnabled(),
-      ).toBeTrue();
+        featuresOf(
+          createService({'force_ready': 'config'}, {isGoogleInternal: true}),
+        ),
+      ).toEqual(ALL_ENABLED);
+    });
+
+    it('should keep every configuration feature on with the force_all_ready global switch', () => {
+      expect(
+        featuresOf(
+          createService({'force_all_ready': 'true'}, {isGoogleInternal: true}),
+        ),
+      ).toEqual(ALL_ENABLED);
     });
   });
 
-  describe('isBulkConfigEnabled in the OSS build', () => {
-    it('should be disabled for end users without any force flag', () => {
-      expect(createService({}).isBulkConfigEnabled()).toBeFalse();
-      expect(createService({'debug': 'true'}).isBulkConfigEnabled()).toBeFalse();
+  describe('in the OSS build', () => {
+    it('should keep every configuration feature off without any force flag', () => {
+      expect(featuresOf(createService({}))).toEqual({
+        bulkWifi: false,
+        bulkDimension: false,
+        host: false,
+        device: false,
+      });
+      expect(featuresOf(createService({'debug': 'true'}))).toEqual({
+        bulkWifi: false,
+        bulkDimension: false,
+        host: false,
+        device: false,
+      });
     });
 
-    it('should be enabled by force_bulk_config_ready', () => {
-      expect(
-        createService({'force_bulk_config_ready': 'true'}).isBulkConfigEnabled(),
-      ).toBeTrue();
+    it('should turn on every configuration feature with force_ready=config', () => {
+      expect(featuresOf(createService({'force_ready': 'config'}))).toEqual(
+        ALL_ENABLED,
+      );
     });
 
-    it('should be enabled by the force_all_ready master switch', () => {
+    it('should accept config among other names, ignoring surrounding whitespace and case', () => {
       expect(
-        createService({'force_all_ready': 'true'}).isBulkConfigEnabled(),
-      ).toBeTrue();
+        featuresOf(createService({'force_ready': 'search, Config '})),
+      ).toEqual(ALL_ENABLED);
     });
 
-    it('should let force_all_ready win over an explicit force_bulk_config_ready=false', () => {
+    it('should ignore the force_ready names it does not know', () => {
       expect(
-        createService({
-          'force_all_ready': 'true',
-          'force_bulk_config_ready': 'false',
-        }).isBulkConfigEnabled(),
-      ).toBeTrue();
+        featuresOf(createService({'force_ready': 'search,configs'})),
+      ).toEqual({
+        bulkWifi: false,
+        bulkDimension: false,
+        host: false,
+        device: false,
+      });
     });
 
-    it('should treat any value other than false as active, case-insensitively', () => {
-      expect(
-        createService({'force_bulk_config_ready': '1'}).isBulkConfigEnabled(),
-      ).toBeTrue();
-      expect(
-        createService({'force_bulk_config_ready': 'yes'}).isBulkConfigEnabled(),
-      ).toBeTrue();
-      expect(
-        createService({'force_all_ready': 'TRUE'}).isBulkConfigEnabled(),
-      ).toBeTrue();
+    it('should turn on every configuration feature with the force_all_ready global switch', () => {
+      expect(featuresOf(createService({'force_all_ready': 'true'}))).toEqual(
+        ALL_ENABLED,
+      );
     });
 
-    it('should treat false (case-insensitive) as inactive', () => {
+    it('should ignore the removed force_bulk_config_ready flag', () => {
       expect(
-        createService({'force_bulk_config_ready': 'false'}).isBulkConfigEnabled(),
-      ).toBeFalse();
-      expect(
-        createService({'force_bulk_config_ready': 'FALSE'}).isBulkConfigEnabled(),
-      ).toBeFalse();
-      expect(
-        createService({'force_all_ready': 'False'}).isBulkConfigEnabled(),
-      ).toBeFalse();
+        featuresOf(createService({'force_bulk_config_ready': 'true'})),
+      ).toEqual({
+        bulkWifi: false,
+        bulkDimension: false,
+        host: false,
+        device: false,
+      });
+    });
+  });
+
+  describe('force_all_ready', () => {
+    it('should treat any value other than empty, 0 or false as active, case-insensitively', () => {
+      for (const value of ['1', 'yes', 'TRUE']) {
+        expect(featuresOf(createService({'force_all_ready': value}))).toEqual(
+          ALL_ENABLED,
+        );
+      }
+    });
+
+    it('should treat empty, 0 and false (case-insensitive) as inactive', () => {
+      for (const value of ['', '0', 'false', 'FALSE', 'False']) {
+        expect(
+          createService({'force_all_ready': value}).isBulkWifiConfigEnabled(),
+        ).toBeFalse();
+      }
     });
   });
 });

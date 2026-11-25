@@ -221,4 +221,25 @@ describe('forceReadyInterceptor', () => {
     const req = httpMock.expectOne('/v6/devices/my-device/header-info');
     req.flush(mockResponse);
   });
+
+  it('should not force any button when force_all_ready is empty, 0 or false', () => {
+    const urlParamsGetSpy = spyOn(URLSearchParams.prototype, 'get');
+    urlParamsGetSpy.withArgs('force_host_ready').and.returnValue(null);
+    urlParamsGetSpy.withArgs('force_device_ready').and.returnValue(null);
+
+    for (const value of ['', '0', 'false', 'FALSE']) {
+      urlParamsGetSpy.withArgs('force_all_ready').and.returnValue(value);
+      const mockResponse = {actions: {debug: {isReady: false, visible: true}}};
+
+      httpClient
+        .get<{
+          actions: Record<string, {isReady: boolean}>;
+        }>('/v6/hosts/my-host/header-info')
+        .subscribe((response) => {
+          expect(response.actions['debug'].isReady).toBeFalse();
+        });
+
+      httpMock.expectOne('/v6/hosts/my-host/header-info').flush(mockResponse);
+    }
+  });
 });

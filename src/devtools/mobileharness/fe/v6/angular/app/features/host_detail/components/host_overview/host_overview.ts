@@ -413,7 +413,8 @@ export class HostOverviewPage {
 
   displayedColumns: string[] = [
     ...(this.isGoogleInternal ||
-    this.featureEnablementService.isBulkConfigEnabled()
+    this.featureEnablementService.isBulkWifiConfigEnabled() ||
+    this.featureEnablementService.isBulkDimensionConfigEnabled()
       ? ['select']
       : []),
     'expand',
@@ -994,6 +995,13 @@ export class HostOverviewPage {
   ): ActionButtonState | undefined {
     if (key === 'flash') {
       return elementActions.flash?.state;
+    }
+    // The device Configuration action is gated by FeatureEnablementService.
+    if (
+      key === 'configuration' &&
+      !this.featureEnablementService.isDeviceConfigEnabled()
+    ) {
+      return undefined;
     }
     return (
       elementActions as unknown as Record<string, ActionButtonState | undefined>

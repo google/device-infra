@@ -44,7 +44,7 @@ describe('CommonParamsService', () => {
 
   it('should capture all active common query parameters from initial URL', () => {
     mockWin.location.search =
-      '?debug=true&is_embedded_mode=true&force_host_ready=true&force_device_ready=restart&force_all_ready=true&force_bulk_config_ready=true&fleet=ats&f=status:READY';
+      '?debug=true&is_embedded_mode=true&force_host_ready=true&force_device_ready=restart&force_all_ready=true&fleet=ats&f=status:READY';
     TestBed.configureTestingModule({
       providers: [
         CommonParamsService,
@@ -59,7 +59,6 @@ describe('CommonParamsService', () => {
       'force_host_ready': 'true',
       'force_device_ready': 'restart',
       'force_all_ready': 'true',
-      'force_bulk_config_ready': 'true',
     });
     // commonParams signal holds the same immutable object
     expect(service.commonParams()).toEqual({
@@ -68,7 +67,6 @@ describe('CommonParamsService', () => {
       'force_host_ready': 'true',
       'force_device_ready': 'restart',
       'force_all_ready': 'true',
-      'force_bulk_config_ready': 'true',
     });
     // Non-common params like fleet and f should NOT be captured
     expect(service.getCommonParams()['fleet']).toBeUndefined();
@@ -104,6 +102,18 @@ describe('CommonParamsService', () => {
     });
     service = TestBed.inject(CommonParamsService);
     expect(service.isEmbeddedMode()).toBeTrue();
+  });
+
+  it('should capture force_ready with its comma-separated value as is', () => {
+    mockWin.location.search = '?force_ready=search,foo&f=status:READY';
+    TestBed.configureTestingModule({
+      providers: [
+        CommonParamsService,
+        {provide: DOCUMENT, useValue: mockDocument},
+      ],
+    });
+    service = TestBed.inject(CommonParamsService);
+    expect(service.getCommonParams()).toEqual({'force_ready': 'search,foo'});
   });
 
   it('should work gracefully when DOCUMENT has no defaultView', () => {

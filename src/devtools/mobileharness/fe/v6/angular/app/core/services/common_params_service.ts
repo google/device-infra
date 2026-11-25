@@ -4,6 +4,13 @@ import {Injectable, inject, signal} from '@angular/core';
 /**
  * Common query parameters supported across ALL pages in MHFE V6.
  * These parameters persist across the entire SPA lifecycle until full page reload.
+ *
+ * `force_ready` takes a comma-separated list of features to force on, e.g.
+ * `force_ready=config` for this app's configuration features (see
+ * FeatureEnablementService), or `force_ready=search` for the Lab Console search
+ * pages in ATS, whose page embeds this app in an iframe. Keeping it here keeps
+ * it on this app's own navigations, so that the iframe URLs match the ones the
+ * ATS page requests.
  */
 export const COMMON_QUERY_PARAMS = [
   'debug',
@@ -12,7 +19,7 @@ export const COMMON_QUERY_PARAMS = [
   'force_host_ready',
   'force_device_ready',
   'force_all_ready',
-  'force_bulk_config_ready',
+  'force_ready',
 ] as const;
 
 /** Key type for supported common query parameters. */

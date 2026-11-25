@@ -17,8 +17,10 @@ export const forceReadyInterceptor: HttpInterceptorFn = (req, next) => {
   const forceHostReady = urlParams.get('force_host_ready');
   const forceDeviceReady = urlParams.get('force_device_ready');
   const forceAllReady = urlParams.get('force_all_ready');
+  // '', '0' and 'false' (any case) mean off, as in FeatureEnablementService.
   const isForceAll =
-    forceAllReady !== null && forceAllReady.toLowerCase() !== 'false';
+    forceAllReady !== null &&
+    !['', '0', 'false'].includes(forceAllReady.toLowerCase());
 
   // do nothing if no force ready parameters are set
   if (!forceHostReady && !forceDeviceReady && !isForceAll) {
