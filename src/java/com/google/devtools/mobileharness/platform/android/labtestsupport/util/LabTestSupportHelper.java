@@ -81,7 +81,7 @@ public class LabTestSupportHelper {
           ImmutableMap.of());
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          AndroidErrorId.LAB_TEST_SUPPORT_DISABLE_SMART_LOCK_FOR_PASSWORDS_AND_FAST_PAIR_ERROR,
+          AndroidErrorId.LAB_TEST_SUPPORT_DISABLE_SMART_LOCK_AND_FAST_PAIR_ERROR,
           String.format(
               "Failed to disable the features of \"smart lock for passwords\" and \"fast pair with"
                   + " smartwatches/headphones\" on device %s",

@@ -135,7 +135,7 @@ public final class DynamicConfigResolverTest {
             MobileHarnessException.class,
             () -> resolver.fetchServerConfig("GTS", "1.0", "session_retry", TIMEOUT));
     assertThat(networkError.getErrorId())
-        .isEqualTo(AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARTNER_SERVER_ERROR);
+        .isEqualTo(AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_PARTNER_SERVER_ERROR);
     assertThat(networkError).hasCauseThat().isInstanceOf(IOException.class);
 
     Files.writeString(serverConfigFile.toPath(), "not json", UTF_8);
@@ -144,7 +144,7 @@ public final class DynamicConfigResolverTest {
             MobileHarnessException.class,
             () -> resolver.fetchServerConfig("GTS", "1.0", "session_retry", TIMEOUT));
     assertThat(parseError.getErrorId())
-        .isEqualTo(AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARTNER_SERVER_ERROR);
+        .isEqualTo(AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_PARTNER_SERVER_ERROR);
 
     Files.writeString(serverConfigFile.toPath(), configJson("ro.soc.model"), UTF_8);
     assertThat(resolver.fetchServerConfig("GTS", "1.0", "session_retry", TIMEOUT))

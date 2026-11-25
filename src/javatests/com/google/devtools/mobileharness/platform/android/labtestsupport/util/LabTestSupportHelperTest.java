@@ -101,8 +101,7 @@ public final class LabTestSupportHelperTest {
                         labTestSupportHelper.disableSmartLockForPasswordsAndFastPair(
                             DEVICE_ID, /* deviceSdkVersion= */ 34))
                 .getErrorId())
-        .isEqualTo(
-            AndroidErrorId.LAB_TEST_SUPPORT_DISABLE_SMART_LOCK_FOR_PASSWORDS_AND_FAST_PAIR_ERROR);
+        .isEqualTo(AndroidErrorId.LAB_TEST_SUPPORT_DISABLE_SMART_LOCK_AND_FAST_PAIR_ERROR);
   }
 
   @Test

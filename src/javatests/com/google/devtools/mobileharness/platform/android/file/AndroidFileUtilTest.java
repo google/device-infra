@@ -896,8 +896,7 @@ public final class AndroidFileUtilTest {
             MobileHarnessException.class,
             () -> androidFileUtil.makeDirectory(SERIAL, dirPathOnDevice));
     assertThat(e.getErrorId())
-        .isEqualTo(
-            AndroidErrorId.ANDROID_FILE_UTIL_NO_SPACE_TO_MAKE_DIRECTORY_ERROR_IN_SATELLITE_LAB);
+        .isEqualTo(AndroidErrorId.ANDROID_FILE_NO_SPACE_TO_MAKE_DIR_IN_SATELLITE_LAB);
   }
 
   @Test
@@ -954,8 +953,7 @@ public final class AndroidFileUtilTest {
                         androidFileUtil.makeFileExecutableReadableNonWritable(
                             SERIAL, filePathOnDevice))
                 .getErrorId())
-        .isEqualTo(
-            AndroidErrorId.ANDROID_FILE_UTIL_MAKE_FILE_EXECUTABLE_READABLE_NOT_WRITEABLE_ERROR);
+        .isEqualTo(AndroidErrorId.ANDROID_FILE_MAKE_EXECUTABLE_READABLE_NOT_WRITEABLE_ERROR);
   }
 
   @Test

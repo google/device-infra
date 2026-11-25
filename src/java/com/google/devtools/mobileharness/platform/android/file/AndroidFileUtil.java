@@ -757,9 +757,8 @@ public class AndroidFileUtil {
           || (exception != null && exception.getMessage().contains(OUTPUT_NO_SPACE))) {
         throw new MobileHarnessException(
             DeviceUtil.inSharedLab()
-                ? AndroidErrorId.ANDROID_FILE_UTIL_NO_SPACE_TO_MAKE_DIRECTORY_ERROR_IN_SHARED_LAB
-                : AndroidErrorId
-                    .ANDROID_FILE_UTIL_NO_SPACE_TO_MAKE_DIRECTORY_ERROR_IN_SATELLITE_LAB,
+                ? AndroidErrorId.ANDROID_FILE_NO_SPACE_TO_MAKE_DIR_IN_SHARED_LAB
+                : AndroidErrorId.ANDROID_FILE_NO_SPACE_TO_MAKE_DIR_IN_SATELLITE_LAB,
             String.format(
                 "Please clean the device to make space for directory %s on device %s : %s",
                 escapedDirectory, serial, (exception == null ? info : exception.getMessage())),
@@ -825,7 +824,7 @@ public class AndroidFileUtil {
           String.format(ADB_SHELL_MAKE_FILE_EXECUTABLE_READABLE_NON_WRITEABLE, binFilePath));
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_FILE_UTIL_MAKE_FILE_EXECUTABLE_READABLE_NOT_WRITEABLE_ERROR,
+          AndroidErrorId.ANDROID_FILE_MAKE_EXECUTABLE_READABLE_NOT_WRITEABLE_ERROR,
           String.format("Failed to change file %s mode to 555 in device %s", binFilePath, serial),
           e);
     }
@@ -1324,18 +1323,19 @@ public class AndroidFileUtil {
    */
   private static Optional<String> filterMatchTargetLineInListOutput(
       String lsOutput, String fileOrDirName, Pattern pattern, String fileOrDirGroupNameInPattern) {
-    Optional<String> matchTargetLine =
-        Splitters.LINE_SPLITTER.trimResults().omitEmptyStrings().splitToList(lsOutput).stream()
-            .filter(line -> {
-              Matcher matcher = pattern.matcher(line);
-              if (!matcher.find()) {
-                return false;
-              }
-              String fileOrDirNameGroup = matcher.group(fileOrDirGroupNameInPattern);
-              return fileOrDirName.equals(fileOrDirNameGroup);
-            })
-            .findFirst();
-    return matchTargetLine;
+    return Splitters.LINE_SPLITTER
+        .trimResults()
+        .omitEmptyStrings()
+        .splitToStream(lsOutput)
+        .filter(line -> {
+          Matcher matcher = pattern.matcher(line);
+          if (!matcher.find()) {
+            return false;
+          }
+          String fileOrDirNameGroup = matcher.group(fileOrDirGroupNameInPattern);
+          return fileOrDirName.equals(fileOrDirNameGroup);
+        })
+        .findFirst();
   }
 
   /**

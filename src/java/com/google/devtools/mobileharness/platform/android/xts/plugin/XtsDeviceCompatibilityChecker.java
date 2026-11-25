@@ -148,7 +148,7 @@ public final class XtsDeviceCompatibilityChecker {
                   prevSessionDeviceBuildFingerprint,
                   testInfo.locator().getName()),
               DesiredTestResult.SKIP,
-              AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
+              AndroidErrorId.XTS_DEVICE_COMPAT_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
         }
 
         if (!prevSessionDeviceVendorBuildFingerprint.isEmpty()) {
@@ -165,7 +165,7 @@ public final class XtsDeviceCompatibilityChecker {
                     prevSessionDeviceVendorBuildFingerprint,
                     testInfo.locator().getName()),
                 DesiredTestResult.SKIP,
-                AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
+                AndroidErrorId.XTS_DEVICE_COMPAT_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
           }
         }
       }
