@@ -183,8 +183,39 @@
           <div class="device-table-toolbar">
             @if(selection.isEmpty()) {
               <div class="device-toolbar-content">
+                @let healthCounts = deviceHealthCounts();
                 <h4 class="device-toolbar-header">
-                  Total Devices <span class="device-count">({{ deviceDataSource.data.length }})</span>
+                  <span>Total Devices</span>{{ ' ' }}
+                  <span class="device-count">({{ healthCounts.total }})</span>{{ ' ' }}
+                  <span class="device-health-breakdown" aria-label="Device health breakdown">
+                    <span class="breakdown-operator">=</span>{{ ' ' }}
+                    <span
+                      class="health-bucket health-bucket-green"
+                      [class.is-zero]="healthCounts.green === 0"
+                      matTooltip="In Service (Idle or Busy)"
+                    >
+                      <span class="health-dot" aria-hidden="true"></span>
+                      <span>{{ healthCounts.green }} Green</span>
+                    </span>{{ ' ' }}
+                    <span class="breakdown-operator">+</span>{{ ' ' }}
+                    <span
+                      class="health-bucket health-bucket-yellow"
+                      [class.is-zero]="healthCounts.yellow === 0"
+                      matTooltip="Out of Service (Recovering or Temp Maint) or Unknown"
+                    >
+                      <span class="health-dot" aria-hidden="true"></span>
+                      <span>{{ healthCounts.yellow }} Yellow</span>
+                    </span>{{ ' ' }}
+                    <span class="breakdown-operator">+</span>{{ ' ' }}
+                    <span
+                      class="health-bucket health-bucket-red"
+                      [class.is-zero]="healthCounts.red === 0"
+                      matTooltip="Out of Service (Needs Fixing) or Quarantined"
+                    >
+                      <span class="health-dot" aria-hidden="true"></span>
+                      <span>{{ healthCounts.red }} Red</span>
+                    </span>
+                  </span>
                 </h4>
                 <mat-form-field appearance="outline" class="device-filter-input" subscriptSizing="dynamic">
                   <mat-icon matPrefix>search</mat-icon>
