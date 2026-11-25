@@ -31,6 +31,7 @@ go_library(
     importpath = "github.com/google/device-infra/src/devtools/rbe/casdownloader/download",
     deps = [
         "//src/devtools/rbe/casdownloader/cache",
+        "//src/devtools/rbe/common/chunker",
         "//src/devtools/rbe/common/chunkerutil",
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//codes",
@@ -52,6 +53,7 @@ go_test(
         "copy_filters_test.go",
         "download_test.go",
         "enospc_test.go",
+        "integrity_test.go",
         "modes_test.go",
         "notes_test.go",
         "overwrite_test.go",
@@ -63,6 +65,7 @@ go_test(
     tags = ["deviceinfra_disable_in_kokoro"],
     deps = [
         "//src/devtools/rbe/casdownloader/cache",
+        "//src/devtools/rbe/common/chunker",
         "//src/devtools/rbe/common/chunkerutil",
         "@org_golang_google_grpc//:grpc",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",

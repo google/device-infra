@@ -3,6 +3,7 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
@@ -25,6 +26,48 @@ type CorruptBlobReporter interface {
 	// CorruptBlobsQuarantined returns how many hits this cache has found
 	// corrupt and turned into misses since it was created.
 	CorruptBlobsQuarantined() int64
+}
+
+// CorruptBlobEvictor is implemented by caches that can remove a blob that a
+// caller found corrupt after the cache served it, such as a chunk whose bytes
+// did not match its SHA-256 when casdownloader restored a file from it with
+// -verify-restored-chunks.
+//
+// Pull does not hash what it serves, because that would read every byte of
+// every hit; a caller that reads the bytes anyway can find the corruption
+// then. Without this, the bad blob would stay in the cache, and every later
+// run on the host would be served it and fail the same way.
+type CorruptBlobEvictor interface {
+	// EvictCorruptBlob removes the cached blob for dg, given that path, a
+	// file materialized from it, failed verification against dg. It reports
+	// whether it removed the blob.
+	//
+	// If path is a hard link to the cached blob, the blob is the corrupt
+	// file and is removed without being read. Otherwise path is a copy, which
+	// may have been corrupted on its own, so the cached blob is hashed and
+	// removed only if it does not match dg either.
+	EvictCorruptBlob(dg digest.Digest, path string) (removed bool, err error)
+}
+
+// cachedBlobIsCorrupt reports whether the cached blob open as blob is
+// corrupt, given that path, a file materialized from it, failed verification
+// against dg. blobInfo is the blob's stat, for the caller to remove it by.
+//
+// The blob is read only if path is not the blob itself. Reading it then is
+// affordable because it happens only after a verification failure.
+func cachedBlobIsCorrupt(blob *os.File, path string, dg digest.Digest) (corrupt bool, blobInfo os.FileInfo, err error) {
+	blobInfo, err = blob.Stat()
+	if err != nil {
+		return false, nil, err
+	}
+	if info, err := os.Lstat(path); err == nil && os.SameFile(info, blobInfo) {
+		return true, blobInfo, nil
+	}
+	got, err := digest.NewFromReader(blob)
+	if err != nil {
+		return false, blobInfo, fmt.Errorf("hashing cached blob %s: %w", dg.Hash, err)
+	}
+	return got != dg, blobInfo, nil
 }
 
 // ModeCopyStats counts the hits whose cached blob did not carry the canonical

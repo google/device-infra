@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,7 +56,7 @@ func TestChunkFile(t *testing.T) {
 
 		restoredPath := filepath.Join(targetDir, test.name+"_restored")
 		t.Logf("Restoring file %s from dir: %s\n", restoredPath, chunksDir)
-		if err := RestoreFile(restoredPath, chunksDir, chunks); err != nil {
+		if err := RestoreFile(restoredPath, chunksDir, chunks, false); err != nil {
 			t.Fatalf("Failed to restore file: %v", err)
 		}
 
@@ -95,7 +97,7 @@ func TestRestoreFile_ManyChunks(t *testing.T) {
 	}
 
 	restoredPath := filepath.Join(tempDir, "restored_large_file.bin")
-	if err := RestoreFile(restoredPath, chunksDir, chunks); err != nil {
+	if err := RestoreFile(restoredPath, chunksDir, chunks, false); err != nil {
 		t.Fatalf("RestoreFile failed: %v", err)
 	}
 
@@ -137,7 +139,7 @@ func writeChunks(t *testing.T, chunksDir string, contents ...string) []ChunkInfo
 func TestRestoreFile_ReplacesExistingWithoutWritingThroughIt(t *testing.T) {
 	tests := []struct {
 		name    string
-		restore func(string, string, []ChunkInfo) error
+		restore func(string, string, []ChunkInfo, bool) error
 		chunks  []string
 	}{
 		{"RestoreFile/single", RestoreFile, []string{"new content"}},
@@ -165,7 +167,7 @@ func TestRestoreFile_ReplacesExistingWithoutWritingThroughIt(t *testing.T) {
 				t.Fatalf("Failed to link blob: %v", err)
 			}
 
-			if err := tc.restore(restoredPath, filepath.Join(tempDir, "chunks"), chunks); err != nil {
+			if err := tc.restore(restoredPath, filepath.Join(tempDir, "chunks"), chunks, false); err != nil {
 				t.Fatalf("Restore failed: %v", err)
 			}
 
@@ -200,7 +202,7 @@ func TestRestoreFileCopy_SingleChunkDoesNotShareInode(t *testing.T) {
 	chunks := writeChunks(t, chunksDir, "only chunk")
 
 	restoredPath := filepath.Join(tempDir, "restored")
-	if err := RestoreFileCopy(restoredPath, chunksDir, chunks); err != nil {
+	if err := RestoreFileCopy(restoredPath, chunksDir, chunks, false); err != nil {
 		t.Fatalf("RestoreFileCopy failed: %v", err)
 	}
 
@@ -223,7 +225,7 @@ func TestRestoreFileCopy_SingleChunkDoesNotShareInode(t *testing.T) {
 func TestRestoreFile_MissingChunkLeavesExistingFile(t *testing.T) {
 	tests := []struct {
 		name    string
-		restore func(string, string, []ChunkInfo) error
+		restore func(string, string, []ChunkInfo, bool) error
 		chunks  []string
 	}{
 		{"RestoreFile/single", RestoreFile, []string{"only"}},
@@ -252,7 +254,7 @@ func TestRestoreFile_MissingChunkLeavesExistingFile(t *testing.T) {
 				t.Fatalf("Failed to write existing file: %v", err)
 			}
 
-			if err := tc.restore(restoredPath, chunksDir, chunks); err == nil {
+			if err := tc.restore(restoredPath, chunksDir, chunks, false); err == nil {
 				t.Fatal("Restore succeeded with a missing chunk, want an error")
 			}
 
@@ -288,7 +290,7 @@ func TestRestoreFile_RelinkSameChunk(t *testing.T) {
 
 	restoredPath := filepath.Join(tempDir, "out", "restored")
 	for i := 0; i < 2; i++ {
-		if err := RestoreFile(restoredPath, chunksDir, chunks); err != nil {
+		if err := RestoreFile(restoredPath, chunksDir, chunks, false); err != nil {
 			t.Fatalf("RestoreFile #%d failed: %v", i+1, err)
 		}
 		restoredInfo, err := os.Stat(restoredPath)
@@ -374,14 +376,18 @@ func randomBytes(size int, seed int64) []byte {
 	return data
 }
 
-// restoreFuncs lists the restore entry points, for tests that cover each.
+// restoreFuncs lists the restore entry points, each with chunk verification
+// off and on, for tests that cover each.
 var restoreFuncs = []struct {
 	name    string
 	restore func(string, string, []ChunkInfo) error
 }{
-	{"RestoreFile", RestoreFile},
-	{"RestoreFileCopy", RestoreFileCopy},
-	{"RestorePrivateFileCopy", RestorePrivateFileCopy},
+	{"RestoreFile", func(p, d string, c []ChunkInfo) error { return RestoreFile(p, d, c, false) }},
+	{"RestoreFile_verified", func(p, d string, c []ChunkInfo) error { return RestoreFile(p, d, c, true) }},
+	{"RestoreFileCopy", func(p, d string, c []ChunkInfo) error { return RestoreFileCopy(p, d, c, false) }},
+	{"RestoreFileCopy_verified", func(p, d string, c []ChunkInfo) error { return RestoreFileCopy(p, d, c, true) }},
+	{"RestorePrivateFileCopy", func(p, d string, c []ChunkInfo) error { return RestorePrivateFileCopy(p, d, c, false) }},
+	{"RestorePrivateFileCopy_verified", func(p, d string, c []ChunkInfo) error { return RestorePrivateFileCopy(p, d, c, true) }},
 }
 
 // TestChunkFile_RoundTrip chunks files around the 1 KiB average, 256 B
@@ -496,7 +502,7 @@ func TestChunkFile_DeduplicatesChunks(t *testing.T) {
 	}
 
 	restored := filepath.Join(tempDir, "restored")
-	if err := RestoreFile(restored, chunksDir, chunks); err != nil {
+	if err := RestoreFile(restored, chunksDir, chunks, false); err != nil {
 		t.Fatalf("RestoreFile failed: %v", err)
 	}
 	if matched, err := compareFilesByHash(src, restored); err != nil {
@@ -730,5 +736,250 @@ func TestRestoreFile_MissingChunkRemovesNewFile(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// corruptions are the ways a chunk file can stop matching its name: a single
+// flipped bit, as from a RAM or page cache error, and a length change, as from
+// a short write or an append through a hard link.
+var corruptions = []struct {
+	name    string
+	corrupt func(content []byte) []byte
+}{
+	{"bit_flip", func(c []byte) []byte {
+		b := bytes.Clone(c)
+		b[len(b)/2] ^= 0x08
+		return b
+	}},
+	{"truncated", func(c []byte) []byte { return c[:len(c)-1] }},
+	{"extra_byte", func(c []byte) []byte { return append(bytes.Clone(c), 'x') }},
+}
+
+// corruptChunkFile rewrites the chunk file at path in place with corrupt
+// applied to its content, keeping its inode, and returns the new content.
+func corruptChunkFile(t *testing.T, path string, corrupt func([]byte) []byte) []byte {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Failed to read chunk %s: %v", path, err)
+	}
+	bad := corrupt(content)
+	if err := os.WriteFile(path, bad, 0644); err != nil {
+		t.Fatalf("Failed to corrupt chunk %s: %v", path, err)
+	}
+	return bad
+}
+
+func sha256Hex(b []byte) string {
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
+
+// copyingRestores lists the restores that copy every chunk, and so, with
+// verify, verify every chunk: all three for a multi-chunk file, and the two
+// copy variants for a single chunk, which RestoreFile links instead.
+var copyingRestores = []struct {
+	name    string
+	restore func(string, string, []ChunkInfo, bool) error
+	chunks  []string
+}{
+	{"RestoreFile_multi", RestoreFile, []string{"first 1111 ", "second 1111"}},
+	{"RestoreFileCopy_single", RestoreFileCopy, []string{"only chunk 1111"}},
+	{"RestoreFileCopy_multi", RestoreFileCopy, []string{"first 1111 ", "second 1111"}},
+	{"RestorePrivateFileCopy_single", RestorePrivateFileCopy, []string{"only chunk 1111"}},
+	{"RestorePrivateFileCopy_multi", RestorePrivateFileCopy, []string{"first 1111 ", "second 1111"}},
+}
+
+// TestRestore_CorruptChunkFails corrupts the last chunk of a file in each way
+// a chunk can be corrupt and restores the file, with verify, over an existing
+// one. The restore must fail with a *ChunkMismatchError naming the chunk, its
+// expected hash and the hash of what was actually read, and must leave the
+// existing file alone with nothing written beside it.
+func TestRestore_CorruptChunkFails(t *testing.T) {
+	for _, r := range copyingRestores {
+		for _, c := range corruptions {
+			t.Run(r.name+"_"+c.name, func(t *testing.T) {
+				tempDir := t.TempDir()
+				chunksDir := filepath.Join(tempDir, "chunks")
+				chunks := writeChunks(t, chunksDir, r.chunks...)
+				last := chunks[len(chunks)-1]
+				lastPath := filepath.Join(chunksDir, last.SHA256)
+				bad := corruptChunkFile(t, lastPath, c.corrupt)
+
+				outDir := filepath.Join(tempDir, "out")
+				restored := filepath.Join(outDir, "restored")
+				const oldContent = "previous content"
+				if err := os.MkdirAll(outDir, 0755); err != nil {
+					t.Fatalf("Failed to create output dir: %v", err)
+				}
+				if err := os.WriteFile(restored, []byte(oldContent), 0644); err != nil {
+					t.Fatalf("Failed to write existing file: %v", err)
+				}
+
+				err := r.restore(restored, chunksDir, chunks, true)
+				var mismatch *ChunkMismatchError
+				if !errors.As(err, &mismatch) {
+					t.Fatalf("%s with a corrupt chunk = %v, want a *ChunkMismatchError", r.name, err)
+				}
+				want := ChunkMismatchError{Path: lastPath, Want: last.SHA256, Got: sha256Hex(bad), Size: int64(len(bad))}
+				if *mismatch != want {
+					t.Errorf("%s with a corrupt chunk returned %+v, want %+v", r.name, *mismatch, want)
+				}
+
+				got, err := os.ReadFile(restored)
+				if err != nil {
+					t.Fatalf("Failed to read existing file: %v", err)
+				}
+				if string(got) != oldContent {
+					t.Errorf("Existing file content = %q after a restore from a corrupt chunk, want it unchanged as %q", got, oldContent)
+				}
+				entries, err := os.ReadDir(outDir)
+				if err != nil {
+					t.Fatalf("Failed to read output dir: %v", err)
+				}
+				if len(entries) != 1 {
+					t.Errorf("Output dir has %d entries after a restore from a corrupt chunk, want 1 (partial file left behind?)", len(entries))
+				}
+			})
+		}
+	}
+}
+
+// TestRestore_CorruptChunkRemovesNewFile restores, with verify, a file that
+// does not exist yet from a corrupt chunk. RestorePrivateFileCopy writes such
+// a file in place rather than through a temporary sibling, so this is the case
+// where the corrupt bytes reach the target path itself: it must be removed.
+func TestRestore_CorruptChunkRemovesNewFile(t *testing.T) {
+	for _, r := range copyingRestores {
+		t.Run(r.name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			chunksDir := filepath.Join(tempDir, "chunks")
+			chunks := writeChunks(t, chunksDir, r.chunks...)
+			corruptChunkFile(t, filepath.Join(chunksDir, chunks[0].SHA256), corruptions[0].corrupt)
+
+			outDir := filepath.Join(tempDir, "out")
+			err := r.restore(filepath.Join(outDir, "restored"), chunksDir, chunks, true)
+			var mismatch *ChunkMismatchError
+			if !errors.As(err, &mismatch) {
+				t.Fatalf("%s with a corrupt chunk = %v, want a *ChunkMismatchError", r.name, err)
+			}
+			entries, err := os.ReadDir(outDir)
+			if err != nil {
+				t.Fatalf("Failed to read output dir: %v", err)
+			}
+			if len(entries) != 0 {
+				t.Errorf("Output dir has %d entries after a restore of a new file from a corrupt chunk, want 0", len(entries))
+			}
+		})
+	}
+}
+
+// TestRestore_UnverifiedCopiesCorruptChunk corrupts the last chunk of a file
+// in each way a chunk can be corrupt and restores the file without verify.
+// The restore copies the chunks as they are, without reading them to hash
+// them, so it must succeed and restore exactly the bytes in the chunk files,
+// the corrupt ones included.
+func TestRestore_UnverifiedCopiesCorruptChunk(t *testing.T) {
+	for _, r := range copyingRestores {
+		for _, c := range corruptions {
+			t.Run(r.name+"_"+c.name, func(t *testing.T) {
+				tempDir := t.TempDir()
+				chunksDir := filepath.Join(tempDir, "chunks")
+				chunks := writeChunks(t, chunksDir, r.chunks...)
+				bad := corruptChunkFile(t, filepath.Join(chunksDir, chunks[len(chunks)-1].SHA256), c.corrupt)
+				want := strings.Join(r.chunks[:len(r.chunks)-1], "") + string(bad)
+
+				restored := filepath.Join(tempDir, "out", "restored")
+				if err := r.restore(restored, chunksDir, chunks, false); err != nil {
+					t.Fatalf("%s without verify from a corrupt chunk = %v, want it to copy the chunk unchecked", r.name, err)
+				}
+				got, err := os.ReadFile(restored)
+				if err != nil {
+					t.Fatalf("Failed to read restored file: %v", err)
+				}
+				if string(got) != want {
+					t.Errorf("%s without verify restored %q, want the chunk files' bytes %q", r.name, got, want)
+				}
+			})
+		}
+	}
+}
+
+// TestRestore_VerifiesChunksLargerThanTheCopyBuffer restores, with verify, a
+// file whose chunks span several copy buffers, so the hash has to accumulate
+// across reads. An intact file restores byte for byte; a bit flipped in the
+// last buffer of the second chunk is caught.
+func TestRestore_VerifiesChunksLargerThanTheCopyBuffer(t *testing.T) {
+	first := randomBytes(copyBufferSize+17, 1)
+	second := randomBytes(2*copyBufferSize+5, 2)
+	restores := []struct {
+		name    string
+		restore func(string, string, []ChunkInfo, bool) error
+	}{
+		{"RestoreFile", RestoreFile},
+		{"RestoreFileCopy", RestoreFileCopy},
+		{"RestorePrivateFileCopy", RestorePrivateFileCopy},
+	}
+	for _, r := range restores {
+		t.Run(r.name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			chunksDir := filepath.Join(tempDir, "chunks")
+			chunks := writeChunks(t, chunksDir, string(first), string(second))
+
+			restored := filepath.Join(tempDir, "intact")
+			if err := r.restore(restored, chunksDir, chunks, true); err != nil {
+				t.Fatalf("%s from intact chunks failed: %v", r.name, err)
+			}
+			got, err := os.ReadFile(restored)
+			if err != nil {
+				t.Fatalf("Failed to read restored file: %v", err)
+			}
+			if want := append(bytes.Clone(first), second...); !bytes.Equal(got, want) {
+				t.Errorf("%s restored %d bytes that differ from the %d expected", r.name, len(got), len(want))
+			}
+
+			corruptChunkFile(t, filepath.Join(chunksDir, chunks[1].SHA256), func(c []byte) []byte {
+				b := bytes.Clone(c)
+				b[len(b)-2] ^= 0x01
+				return b
+			})
+			err = r.restore(filepath.Join(tempDir, "corrupt"), chunksDir, chunks, true)
+			var mismatch *ChunkMismatchError
+			if !errors.As(err, &mismatch) || mismatch.Want != chunks[1].SHA256 {
+				t.Errorf("%s with a bit flipped at the end of a multi-buffer chunk = %v, want a *ChunkMismatchError for chunk %s", r.name, err, chunks[1].SHA256)
+			}
+		})
+	}
+}
+
+// TestRestoreFile_SingleChunkLinkIsNotRead pins the one restore that does not
+// verify its chunk, even with verify: RestoreFile hard links a single-chunk
+// file in O(1) without reading it, and hashing would read the whole chunk.
+// Its callers that need the bytes verified use a copying restore.
+func TestRestoreFile_SingleChunkLinkIsNotRead(t *testing.T) {
+	for _, verify := range []bool{false, true} {
+		t.Run(fmt.Sprintf("verify=%v", verify), func(t *testing.T) {
+			tempDir := t.TempDir()
+			chunksDir := filepath.Join(tempDir, "chunks")
+			chunks := writeChunks(t, chunksDir, "only chunk 1111")
+			chunkPath := filepath.Join(chunksDir, chunks[0].SHA256)
+			corruptChunkFile(t, chunkPath, corruptions[0].corrupt)
+
+			restored := filepath.Join(tempDir, "restored")
+			if err := RestoreFile(restored, chunksDir, chunks, verify); err != nil {
+				t.Fatalf("RestoreFile(verify=%v) of a single linked chunk = %v, want it to link without reading the chunk", verify, err)
+			}
+			restoredInfo, err := os.Stat(restored)
+			if err != nil {
+				t.Fatalf("Failed to stat restored file: %v", err)
+			}
+			chunkInfo, err := os.Stat(chunkPath)
+			if err != nil {
+				t.Fatalf("Failed to stat chunk: %v", err)
+			}
+			if !os.SameFile(restoredInfo, chunkInfo) {
+				t.Errorf("RestoreFile(verify=%v) of a single chunk did not hard link it", verify)
+			}
+		})
 	}
 }

@@ -275,6 +275,69 @@ func (c *LocalCache) Close() error {
 	return c.closeCache()
 }
 
+var _ CorruptBlobEvictor = (*LocalCache)(nil)
+
+// EvictCorruptBlob removes the cached blob for dg, and its index entry, after
+// path, a file materialized from it, failed verification. See
+// CorruptBlobEvictor.
+//
+// It may be called after Close, as casdownloader does once it has restored
+// files from chunks it pulled. With the cache lock it takes the lock and
+// loads the index as Push and Pull do; without it, it writes the index again,
+// since Close has already written it.
+func (c *LocalCache) EvictCorruptBlob(dg digest.Digest, path string) (removed bool, err error) {
+	// The hash names the file to remove. Tree digests reach here unvalidated
+	// (FlattenTree does not check them), and one such as "../state.json"
+	// would name a file outside the cache.
+	if err := dg.Validate(); err != nil {
+		return false, fmt.Errorf("refusing to evict blob with invalid digest %v: %w", dg, err)
+	}
+	if c.cacheLock.lockPath != "" {
+		if err := c.lockAndInitCache(); err != nil {
+			return false, err
+		}
+		defer func() {
+			if unlockErr := c.unlockAndCloseCache(); err == nil {
+				err = unlockErr
+			}
+		}()
+	} else if c.cacheClient == nil {
+		return false, errors.New("local cache is not initialized")
+	}
+
+	// luci's cache keeps each blob flat in its directory, named by its hash.
+	blobPath := filepath.Join(c.cacheDir, dg.Hash)
+	blob, err := os.Open(blobPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("opening cached blob %s: %w", dg.Hash, err)
+	}
+	defer blob.Close()
+	corrupt, _, err := cachedBlobIsCorrupt(blob, path, dg)
+	if err != nil || !corrupt {
+		return false, err
+	}
+
+	// Evict drops the index entry and unlinks the blob, but does not say
+	// whether the unlink worked.
+	c.cacheClient.Evict(lucicache.HexDigest(dg.Hash))
+	_, statErr := os.Lstat(blobPath)
+	if statErr == nil {
+		return false, fmt.Errorf("corrupt cached blob %s is still at %s after eviction", dg.Hash, blobPath)
+	}
+	if !errors.Is(statErr, os.ErrNotExist) {
+		return false, fmt.Errorf("checking that corrupt cached blob %s was evicted: %w", dg.Hash, statErr)
+	}
+	if c.cacheLock.lockPath == "" {
+		if err := c.cacheClient.Close(); err != nil {
+			return true, fmt.Errorf("writing local cache index after evicting %s: %w", dg.Hash, err)
+		}
+	}
+	return true, nil
+}
+
 // NewLocalCache creates a new LocalCache instance.
 //
 // cacheMaxSize bounds the logical size of the cache, while cacheMinFreeSpace bounds the physical
