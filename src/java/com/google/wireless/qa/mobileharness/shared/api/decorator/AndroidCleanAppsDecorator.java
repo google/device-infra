@@ -316,7 +316,7 @@ public class AndroidCleanAppsDecorator extends SetupOnlyDecorator implements And
       throws MobileHarnessException, InterruptedException {
     if (!((AndroidDevice) getDevice()).isRooted()) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_CLEAN_APPS_DECORATOR_CANNOT_REMOVE_1P_APP_IN_NONROOT_DEVICE,
+          AndroidErrorId.ANDROID_CLEAN_APPS_CANNOT_REMOVE_1P_APP_IN_NONROOT_DEVICE,
           "Cannot remove system apps from an unrooted device. Consider adding \"rooted\": \"true\""
               + " to the device dimensions.");
     }

@@ -993,7 +993,7 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
     if (stopInterferingServices) {
       if (DeviceUtil.inSharedLab()) {
         throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_SETTING_NOT_SUPPORT_IN_SHARED_LAB,
+            AndroidErrorId.ANDROID_DEVICE_SETTINGS_NOT_SUPPORTED_IN_SHARED_LAB,
             "stop_interfering_services is not supported in shared lab.");
       }
       List<String> serviceToStop = ImmutableList.copyOf(PERFORMANCE_INTERFERING_SERVICES);
@@ -1010,7 +1010,7 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
     if (spec.hasEnforceCpuStatus() && spec.getEnforceCpuStatus()) {
       if (DeviceUtil.inSharedLab()) {
         throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_SETTING_NOT_SUPPORT_IN_SHARED_LAB,
+            AndroidErrorId.ANDROID_DEVICE_SETTINGS_NOT_SUPPORTED_IN_SHARED_LAB,
             "enforce_cpu_status is not supported in shared lab.");
       }
       int numCpus = getNumberOfCpus();
@@ -1024,7 +1024,7 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
     if (spec.hasLockGpuSpeedToMax() && spec.getLockGpuSpeedToMax()) {
       if (DeviceUtil.inSharedLab()) {
         throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_SETTING_NOT_SUPPORT_IN_SHARED_LAB,
+            AndroidErrorId.ANDROID_DEVICE_SETTINGS_NOT_SUPPORTED_IN_SHARED_LAB,
             "lock_gpu_speed_to_max is not supported in shared lab. ");
       }
       addCommandsForGpuSettings(testInfo);
@@ -1113,8 +1113,7 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
           androidFileUtil.isFileOrDirExisted(deviceId, GPU_CLOCK_SPEED_CONFIG_FILE_ON_DEVICE);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_CHECK_DIR_OR_FILE_ON_DEVICE_ERROR,
-          e.getMessage());
+          AndroidErrorId.ANDROID_DEVICE_SETTINGS_CHECK_DIR_OR_FILE_ERROR, e.getMessage());
     }
     if (gpuClockConfigFileExist) {
       setNeedRebootAfterTest(testInfo, "Device needs reboot after test to restore GPU settings");
@@ -1490,12 +1489,12 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
           .warnings()
           .addAndLog(
               new MobileHarnessException(
-                  AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_DEVICE_INIT_AFTER_REBOOT_ERROR,
+                  AndroidErrorId.ANDROID_DEVICE_SETTINGS_INIT_AFTER_REBOOT_ERROR,
                   String.format(
                       "Reboot not finished successfully: %s %s",
                       e.getMessage(), Arrays.toString(e.getStackTrace()))));
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_DEVICE_INIT_AFTER_REBOOT_ERROR,
+          AndroidErrorId.ANDROID_DEVICE_SETTINGS_INIT_AFTER_REBOOT_ERROR,
           "Exception during reboot: " + e.getMessage(),
           e);
     }
