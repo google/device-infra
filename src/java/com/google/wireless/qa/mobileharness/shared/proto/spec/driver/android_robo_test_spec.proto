@@ -113,5 +113,15 @@ message AndroidRoboTestSpec {
     (field_detail) = { help: "Project name to override for internal users." }
   ];
 
+  optional bytes inline_robo_config = 27 [(field_detail) = {
+    help: "Inline serialized RoboConfig binary proto. "
+          "Mutually exclusive with robo_config_proto."
+  }];
+
+  optional string inline_robo_script = 28 [(field_detail) = {
+    help: "Inline Robo script content to be used with crawl. "
+          "Mutually exclusive with robo_script."
+  }];
+
   reserved 1, 10, 15;
 }

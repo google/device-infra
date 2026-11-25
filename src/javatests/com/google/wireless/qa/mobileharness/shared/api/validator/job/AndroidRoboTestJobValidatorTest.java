@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.protobuf.ByteString;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job;
@@ -126,6 +127,76 @@ public class AndroidRoboTestJobValidatorTest {
     jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
 
     assertThat(validator.validate(jobInfo)).isNotEmpty();
+  }
+
+  @Test
+  public void validate_inlineRoboConfigAndRoboScript_hasNoErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setCrawlerApk("crawlerPath")
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
+            .setInlineRoboConfig(ByteString.copyFromUtf8("config"))
+            .setInlineRoboScript("[]")
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).isEmpty();
+  }
+
+  @Test
+  public void validate_bothFileAndInlineRoboConfig_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setCrawlerApk("crawlerPath")
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
+            .setRoboConfigProto("/path/to/robo_config.pb")
+            .setInlineRoboConfig(ByteString.copyFromUtf8("config"))
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo))
+        .containsExactly("Cannot specify both robo_config_proto and inline_robo_config.");
+  }
+
+  @Test
+  public void validate_roboConfigFileWithEmptyInlineConfig_hasNoErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setCrawlerApk("crawlerPath")
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
+            .setRoboConfigProto("/path/to/robo_config.pb")
+            .setInlineRoboConfig(ByteString.EMPTY)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).isEmpty();
+  }
+
+  @Test
+  public void validate_bothFileAndInlineRoboScript_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setCrawlerApk("crawlerPath")
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
+            .setRoboScript("/path/to/robo.script")
+            .setInlineRoboScript("[]")
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo))
+        .containsExactly("Cannot specify both robo_script and inline_robo_script.");
   }
 
   private JobInfo setUpJobInfo() {

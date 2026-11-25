@@ -61,6 +61,7 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+        "@protobuf//:protobuf_java",
         "@protobuf//:protobuf_java_util",
     ],
 )

@@ -67,6 +67,12 @@ public class AndroidRoboTestJobValidator
     if (spec.getCrawlTimeoutSecs() <= 0) {
       errorsBuilder.add("Crawl timeout seconds should be greater than zero.");
     }
+    if (!spec.getRoboConfigProto().isEmpty() && !spec.getInlineRoboConfig().isEmpty()) {
+      errorsBuilder.add("Cannot specify both robo_config_proto and inline_robo_config.");
+    }
+    if (!spec.getRoboScript().isEmpty() && !spec.getInlineRoboScript().isEmpty()) {
+      errorsBuilder.add("Cannot specify both robo_script and inline_robo_script.");
+    }
     return errorsBuilder.build();
   }
 }
