@@ -22,11 +22,11 @@ import com.google.common.collect.ImmutableList;
 public final class DeviceConstants {
 
   /**
-   * Output of a devices's serial in "fastboot devices" and "adb devices" if the device uses the
-   * default serial.
+   * Output of a device's serial in "fastboot devices" and "adb devices" if the device or USB
+   * host-to-host bridge cable uses a default placeholder serial.
    */
   public static final ImmutableList<String> OUTPUT_DEVICE_DEFAULT_SERIALS =
-      ImmutableList.of("0123456789ABCDEF", "0123456789ABCDEF000");
+      ImmutableList.of("0123456789ABCDEF", "0123456789ABCDEF000", "GOOGLE000000000");
 
   private DeviceConstants() {}
 }
