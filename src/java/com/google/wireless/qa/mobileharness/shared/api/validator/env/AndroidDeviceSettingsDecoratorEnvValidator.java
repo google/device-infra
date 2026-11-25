@@ -47,7 +47,7 @@ public class AndroidDeviceSettingsDecoratorEnvValidator implements EnvValidator 
   public void validate(Device device) throws MobileHarnessException, InterruptedException {
     if (!(device instanceof AndroidDevice)) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_ENV_VALIDATOR_DEVICE_NOT_SUPPORTED,
+          AndroidErrorId.ANDROID_DEVICE_SETTINGS_DEVICE_NOT_SUPPORTED,
           "Only support android devices.");
     }
 
@@ -59,7 +59,7 @@ public class AndroidDeviceSettingsDecoratorEnvValidator implements EnvValidator 
         androidSystemSettingUtilSupplier.get().getDeviceSdkVersion(device.getDeviceId());
     if (sdkVersion < AndroidVersion.LOLLIPOP.getEndSdkVersion()) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_ENV_VALIDATOR_DEVICE_NOT_SUPPORTED,
+          AndroidErrorId.ANDROID_DEVICE_SETTINGS_DEVICE_NOT_SUPPORTED,
           "Only support device with API 22+.");
     }
   }

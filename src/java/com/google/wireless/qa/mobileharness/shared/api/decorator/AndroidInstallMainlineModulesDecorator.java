@@ -212,7 +212,7 @@ public class AndroidInstallMainlineModulesDecorator extends SetupOnlyDecorator
                 packageName, versionCode, apkFile);
       } catch (MobileHarnessException e) {
         throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_DECORATOR_PACKAGE_INFO_PARSING_ERROR,
+            AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_PACKAGE_INFO_PARSING_ERROR,
             String.format(
                 "Failed to parse package info from apk file: %s. Error: %s",
                 apkFile, e.getMessage()));
@@ -247,7 +247,7 @@ public class AndroidInstallMainlineModulesDecorator extends SetupOnlyDecorator
 
     if (!installationFailureModuleDetails.isEmpty()) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_DECORATOR_MODULE_INSTALLATION_FAILURE,
+          AndroidErrorId.ANDROID_INSTALL_MAINLINE_MODULES_INSTALLATION_FAILURE,
           String.format(
               "Failed to install mainline modules: %s", installationFailureModuleDetails));
     }
