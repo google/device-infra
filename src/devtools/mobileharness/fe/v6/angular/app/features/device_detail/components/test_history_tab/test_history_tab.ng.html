@@ -14,7 +14,18 @@
       <table mat-table [dataSource]="rows()" class="test-history-table">
         @for (col of columns(); track col.key; let i = $index) {
           <ng-container [matColumnDef]="col.key ?? ''">
-            <th mat-header-cell *matHeaderCellDef>{{ col.displayName }}</th>
+            <th
+              mat-header-cell
+              *matHeaderCellDef
+              [attr.title]="col.description || null"
+            >
+              {{ col.displayName }}
+              @if (col.key === sortedColumnKey) {
+                <mat-icon class="sort-icon" aria-label="Sorted descending"
+                  >arrow_downward</mat-icon
+                >
+              }
+            </th>
             <td mat-cell *matCellDef="let row">
               @let cell = cellAt(row, i);
               @if (cell?.link) {

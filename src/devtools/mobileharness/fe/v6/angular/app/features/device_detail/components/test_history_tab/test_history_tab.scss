@@ -60,6 +60,16 @@
     font-weight: 500;
     font-size: 12px;
     white-space: nowrap;
+
+    // Static indicator on the column the rows are ordered by (not clickable:
+    // the backend order is fixed).
+    .sort-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      margin-left: 4px;
+      vertical-align: text-bottom;
+    }
   }
 
   td.mat-mdc-cell {

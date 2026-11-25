@@ -12,6 +12,8 @@
 export declare interface TableColumn {
   key?: string;
   displayName?: string;
+  /** What the column's value means; shown as a tooltip on the header. */
+  description?: string;
 }
 
 /** Navigation identity for a test. */

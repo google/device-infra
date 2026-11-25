@@ -10,10 +10,18 @@ import {
 } from '../../../../core/services/device/device_service';
 import {TestHistoryTab} from './test_history_tab';
 
+const CREATE_TIME_DESCRIPTION =
+  'When the test was created. Tests are listed by create time, newest first.';
+
 const FIRST_PAGE: DeviceTestHistoryResponse = {
   columns: [
     {key: 'test_id', displayName: 'Test ID'},
     {key: 'status', displayName: 'Status'},
+    {
+      key: 'create_time',
+      displayName: 'Create time',
+      description: CREATE_TIME_DESCRIPTION,
+    },
     {key: 'start_time', displayName: 'Start time'},
     {key: 'duration', displayName: 'Duration'},
   ],
@@ -23,6 +31,7 @@ const FIRST_PAGE: DeviceTestHistoryResponse = {
       cells: [
         {link: {text: 't1', target: {test: {testId: 't1', jobId: 'j1'}}}},
         {status: {text: 'Pass', indicator: 'INDICATOR_OK'}},
+        {text: {value: '1699999000000'}},
         {text: {value: '1700000000000'}},
         {text: {value: '125000'}},
       ],
@@ -107,6 +116,7 @@ describe('TestHistoryTab Component', () => {
             cells: [
               {link: {text: 't-missing-job', target: {test: {testId: 't1'}}}},
               {status: {text: 'Pass', indicator: 'INDICATOR_OK'}},
+              {text: {value: '1699999000000'}},
               {text: {value: '1700000000000'}},
               {text: {value: '125000'}},
             ],
@@ -170,7 +180,36 @@ describe('TestHistoryTab Component', () => {
     ).toBeNull();
   });
 
-  it('formats duration and start time text cells', () => {
+  it('shows the column description as the header tooltip', () => {
+    const hostElement = fixture.nativeElement as HTMLElement;
+    const headers = Array.from(
+      hostElement.querySelectorAll<HTMLTableCellElement>('th'),
+    );
+    const createTimeHeader = headers.find((header) =>
+      header.textContent?.includes('Create time'),
+    );
+    expect(createTimeHeader).toBeDefined();
+    expect(createTimeHeader!.getAttribute('title')).toBe(
+      CREATE_TIME_DESCRIPTION,
+    );
+    // Columns without a description get no (empty) tooltip.
+    const statusHeader = headers.find((header) =>
+      header.textContent?.includes('Status'),
+    );
+    expect(statusHeader!.hasAttribute('title')).toBeFalse();
+  });
+
+  it('marks only the create time header as sorted descending', () => {
+    const hostElement = fixture.nativeElement as HTMLElement;
+    const sortIcons = Array.from(
+      hostElement.querySelectorAll<HTMLElement>('th .sort-icon'),
+    );
+    expect(sortIcons.length).toBe(1);
+    expect(sortIcons[0].textContent?.trim()).toBe('arrow_downward');
+    expect(sortIcons[0].closest('th')?.textContent).toContain('Create time');
+  });
+
+  it('formats duration, create time and start time text cells', () => {
     expect(component.formatText('duration', '125000')).toBe('2m 5s');
     expect(component.formatText('duration', '2m 5s')).toBe('2m 5s');
     expect(component.formatText('duration', '')).toBe('-');
@@ -181,6 +220,10 @@ describe('TestHistoryTab Component', () => {
     expect(component.formatText('start_time', String(timestampMs))).toBe(
       new Date(timestampMs).toLocaleString(),
     );
+    expect(component.formatText('create_time', String(timestampMs))).toBe(
+      new Date(timestampMs).toLocaleString(),
+    );
+    expect(component.formatText('create_time', '')).toBe('-');
     expect(component.formatText('user', 'dafeng')).toBe('dafeng');
   });
 

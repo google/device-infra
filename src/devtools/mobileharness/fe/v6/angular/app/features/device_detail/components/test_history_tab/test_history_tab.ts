@@ -79,6 +79,13 @@ export class TestHistoryTab implements OnInit {
     this.columns().map((column) => column.key ?? ''),
   );
 
+  /**
+   * The column the rows are ordered by, newest first. GetDeviceTestHistory
+   * always returns tests by create time descending (a MOSS constraint), so the
+   * header shows a static descending indicator instead of a sortable header.
+   */
+  readonly sortedColumnKey = 'create_time';
+
   private currentToken = '';
   private nextToken = '';
   private readonly prevTokens: string[] = [];
@@ -234,7 +241,7 @@ export class TestHistoryTab implements OnInit {
     if (value === undefined || value === '') {
       return '-';
     }
-    if (columnKey === 'start_time') {
+    if (columnKey === 'create_time' || columnKey === 'start_time') {
       const ms = Number(value);
       return Number.isNaN(ms) ? value : new Date(ms).toLocaleString();
     }

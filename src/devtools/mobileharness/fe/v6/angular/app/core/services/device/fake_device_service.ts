@@ -581,6 +581,12 @@ export class FakeDeviceService extends DeviceService {
       {key: 'actual_user', displayName: 'Actual user'},
       {key: 'status', displayName: 'Status'},
       {key: 'result', displayName: 'Result'},
+      {
+        key: 'create_time',
+        displayName: 'Create time',
+        description:
+          'When the test was created. Tests are listed by create time, newest first.',
+      },
       {key: 'start_time', displayName: 'Start time'},
       {key: 'duration', displayName: 'Duration'},
       {key: 'host_name', displayName: 'Lab (host)'},
@@ -642,6 +648,7 @@ export class FakeDeviceService extends DeviceService {
                   : ('INDICATOR_NEUTRAL' as const),
             },
           },
+          {text: {value: String(now - (i + 1) * 3600_000 - 600_000)}},
           {text: {value: String(now - (i + 1) * 3600_000)}},
           {text: {value: i % 2 === 0 ? '125000' : ''}},
           {text: {value: 'lab-host-01'}},
