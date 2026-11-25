@@ -1736,6 +1736,57 @@ public final class ConsoleJobCreatorTest {
     assertThat(jobInfos.get(0).params().get("disable_tf_result_log")).isEqualTo("true");
   }
 
+  @Test
+  public void createXtsSetupJob_moduleShardingWithSkipDeviceInfo_setsSkipDeviceInfoInSpec()
+      throws Exception {
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
+
+    File toolsDir = folder.newFolder("android-cts", "tools");
+    File jarFile = new File(toolsDir, "cts-tradefed.jar");
+    try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(jarFile))) {
+      zos.putNextEntry(new ZipEntry("cts-preconditions.configv2"));
+      String xml =
+          "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+              + "<configuration description=\"CTS precondition v2 configs\">\n"
+              + "    <target_preparer"
+              + " class=\"com.google.wireless.qa.mobileharness.shared.api.decorator.DeviceInfoCollectorDecorator\">\n"
+              + "        <option name=\"apk\" value=\"CtsDeviceInfo.apk\"/>\n"
+              + "        <option name=\"package_name\""
+              + " value=\"com.android.compatibility.common.deviceinfo\"/>\n"
+              + "    </target_preparer>\n"
+              + "</configuration>";
+      zos.write(xml.getBytes(UTF_8));
+      zos.closeEntry();
+    }
+    when(localFileUtil.isFileExist(eq(jarFile.toPath()))).thenReturn(true);
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts --sharding-mode MODULE -d")
+                .setXtsType("cts")
+                .setXtsRootDir(folder.getRoot().getAbsolutePath())
+                .setShardingMode(ShardingMode.MODULE)
+                .setSkipDeviceInfo(true));
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+
+    assertThat(setupJobOpt).isPresent();
+    DeviceInfoCollectorDecoratorSpec spec =
+        setupJobOpt
+            .get()
+            .subDeviceSpecs()
+            .getAllSubDevices()
+            .get(0)
+            .scopedSpecs()
+            .get("DeviceInfoCollectorDecoratorSpec")
+            .asMessage(DeviceInfoCollectorDecoratorSpec.class);
+    assertThat(spec).isNotNull();
+    assertThat(spec.getSkipDeviceInfo()).isTrue();
+  }
+
   private static Duration min(Duration d1, Duration d2) {
     return d1.compareTo(d2) <= 0 ? d1 : d2;
   }

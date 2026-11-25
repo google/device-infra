@@ -143,6 +143,7 @@ java_library(
     name = "module_sharding_args_generator",
     srcs = ["ModuleShardingArgsGenerator.java"],
     deps = [
+        ":tradefed_command_args_builder",
         "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:shard_constants",

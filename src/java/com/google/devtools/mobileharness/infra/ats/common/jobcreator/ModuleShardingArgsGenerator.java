@@ -117,7 +117,6 @@ class ModuleShardingArgsGenerator {
       ImmutableList<SuiteTestFilter> originalExcludeFilters,
       int shardCount) {
     ImmutableSet.Builder<String> shardingArgs = ImmutableSet.builder();
-    ImmutableList<String> extraArgs = ImmutableList.copyOf(sessionRequestInfo.getExtraArgsList());
 
     ImmutableList<SuiteTestFilter> matchedIncludeFilters =
         findMatchedFilters(module, originalIncludeFilters);
@@ -133,15 +132,20 @@ class ModuleShardingArgsGenerator {
       for (int index = 0; index < shardCount; index++) {
         String sessionRequestInfoArgs =
             createSessionRequestInfoArgs(
-                matchedIncludeFilters, matchedExcludeFilters, extraArgs, module, shardCount, index);
+                sessionRequestInfo,
+                matchedIncludeFilters,
+                matchedExcludeFilters,
+                module,
+                shardCount,
+                index);
         shardingArgs.add(sessionRequestInfoArgs);
       }
     } else {
       String sessionRequestInfoArgs =
           createSessionRequestInfoArgs(
+              sessionRequestInfo,
               matchedIncludeFilters,
               matchedExcludeFilters,
-              extraArgs,
               module,
               /* shardCount= */ 1,
               /* shardIndex= */ 0);
@@ -197,9 +201,9 @@ class ModuleShardingArgsGenerator {
   }
 
   private static String createSessionRequestInfoArgs(
+      SessionRequestInfo sessionRequestInfo,
       ImmutableList<SuiteTestFilter> includeFilters,
       ImmutableList<SuiteTestFilter> excludeFilters,
-      ImmutableList<String> extraArgs,
       String moduleName,
       int shardCount,
       int shardIndex) {
@@ -221,11 +225,12 @@ class ModuleShardingArgsGenerator {
                             Stream.of(String.format("--shard-count %s", shardCount)),
                             Stream.of(String.format("--shard-index %s", shardIndex)))
                         : Stream.empty(),
-                    extraArgs.contains("--skip-preconditions")
+                    sessionRequestInfo.getExtraArgsList().contains("--skip-preconditions")
                         ? Stream.empty()
                         : Stream.of("--skip-preconditions"),
-                    extraArgs.stream()
-                        .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
+                    TradefedCommandArgsBuilder.builder()
+                        .setSessionRequestInfo(sessionRequestInfo)
+                        .buildCommonArgs())
                 .collect(toImmutableList()));
   }
 }

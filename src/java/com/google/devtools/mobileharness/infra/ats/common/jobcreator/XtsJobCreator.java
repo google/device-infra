@@ -901,6 +901,11 @@ public abstract class XtsJobCreator {
                   Path.of(sessionRequestInfo.getXtsRootDir()), sessionRequestInfo.getXtsType())
               .toString());
     }
+    if (decoratorName.equals("DeviceInfoCollectorDecorator")
+        && specJson != null
+        && sessionRequestInfo.hasSkipDeviceInfo()) {
+      specJson.addProperty("skip_device_info", sessionRequestInfo.getSkipDeviceInfo());
+    }
     if (decoratorName.equals("AndroidAtsDynamicConfigPusherDecorator") && specJson != null) {
       specJson.addProperty(
           "xts_suite_info",
