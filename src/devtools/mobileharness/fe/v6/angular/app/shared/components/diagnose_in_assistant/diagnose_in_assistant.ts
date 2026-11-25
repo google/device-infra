@@ -41,6 +41,29 @@ export const IS_ASSISTANT_ENABLED = new InjectionToken<
   (queryParamMap?: ParamMap | null) => boolean
 >('IS_ASSISTANT_ENABLED');
 
+/**
+ * Returns the query parameters of an `/assistant` link that asks `prompt`:
+ * the page's common parameters, minus embedded mode because the Assistant
+ * opens as a full page, with the Assistant turned on. A non-empty `page`, the
+ * path and query of the console page the question is about, goes in `from`.
+ */
+export function assistantLinkQueryParams(
+  commonParams: Readonly<Record<string, string>>,
+  prompt: string,
+  page = '',
+): Record<string, string> {
+  const params: Record<string, string> = {
+    ...commonParams,
+    'enable_assistant': 'true',
+    'q': prompt,
+  };
+  if (page) {
+    params['from'] = page;
+  }
+  delete params['is_embedded_mode'];
+  return params;
+}
+
 /** Returns whether a device is actively serving (healthy idle or busy). */
 export function isDeviceInService(health: HealthAndActivityInfo): boolean {
   if (health.uiState && health.uiState !== 'UI_STATE_UNSPECIFIED') {
@@ -159,15 +182,12 @@ export class DiagnoseInAssistant {
       (this.isAssistantEnabledFn?.(this.queryParamMap()) ?? false),
   );
 
-  readonly assistantQueryParams = computed(() => {
-    const params: Record<string, string> = {
-      ...this.commonParamsService.getCommonParams(),
-      'enable_assistant': 'true',
-      'q': this.trimmedPrompt(),
-    };
-    delete params['is_embedded_mode'];
-    return params;
-  });
+  readonly assistantQueryParams = computed(() =>
+    assistantLinkQueryParams(
+      this.commonParamsService.getCommonParams(),
+      this.trimmedPrompt(),
+    ),
+  );
 
   onChipClick(event: MouseEvent): void {
     // Collapsible card headers listen for clicks on the header row; opening

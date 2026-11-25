@@ -17,6 +17,7 @@ import {
 import type {DeviceOverview} from '../../../core/models/device_overview';
 import {CommonParamsService} from '../../../core/services/common_params_service';
 import {
+  assistantLinkQueryParams,
   deviceDiagnosePrompt,
   DiagnoseInAssistant,
   executionDiagnosePrompt,
@@ -201,6 +202,29 @@ describe('diagnose_in_assistant helpers', () => {
         TestResult.TEST_RESULT_PASS,
       ),
     ).toBe('');
+  });
+
+  it('builds Assistant link parameters, with the page only when one is given', () => {
+    const common = {'fake_data': 'true', 'is_embedded_mode': 'true'};
+
+    expect(assistantLinkQueryParams(common, 'Why?')).toEqual({
+      'fake_data': 'true',
+      'enable_assistant': 'true',
+      'q': 'Why?',
+    });
+    expect(
+      assistantLinkQueryParams(
+        common,
+        'Why?',
+        '/devices?f=device_field::status~IDLE',
+      ),
+    ).toEqual({
+      'fake_data': 'true',
+      'enable_assistant': 'true',
+      'q': 'Why?',
+      'from': '/devices?f=device_field::status~IDLE',
+    });
+    expect(common).toEqual({'fake_data': 'true', 'is_embedded_mode': 'true'});
   });
 });
 

@@ -9,6 +9,7 @@ import {
   computed,
   inject,
   input,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -75,6 +76,29 @@ export class SearchInput {
 
   /** Active highlighted index during keyboard navigation over auto-complete suggestions (-1 when unselected). */
   readonly activeSuggestionIndex = signal<number>(-1);
+
+  /**
+   * Whether keyboard navigation highlights the Ask Assistant row, the only
+   * option under No matches. Resets automatically whenever the row hides or
+   * the typed query changes.
+   */
+  readonly askAssistantActive = linkedSignal<string, boolean>({
+    source: () =>
+      this.isAskAssistantRowShown() ? this.store.searchQuery() : '',
+    computation: () => false,
+  });
+
+  /** ID of the highlighted dropdown option for `aria-activedescendant`. */
+  readonly activeDescendantId = computed<string | null>(() => {
+    if (this.askAssistantActive() && this.isAskAssistantRowShown()) {
+      return 'search-ask-assistant';
+    }
+    const idx = this.activeSuggestionIndex();
+    return idx >= 0 ? `suggestion-item-${idx}` : null;
+  });
+
+  /** The suggestions popover, rendered while it is open. */
+  private readonly suggestionsPanel = viewChild(SearchSuggestions);
 
   /** Group of chips to highlight in the suggestions popover when a summary chip is clicked. */
   readonly highlightedGroup = signal<'filters' | 'groupby' | null>(null);
@@ -321,6 +345,15 @@ export class SearchInput {
     const suggestions = this.store.suggestions();
     const isShowing = this.store.showSuggestions() && suggestions.length > 0;
 
+    if (
+      (key === 'ArrowDown' || key === 'ArrowUp') &&
+      this.isAskAssistantRowShown()
+    ) {
+      event.preventDefault();
+      this.askAssistantActive.set(true);
+      return;
+    }
+
     switch (key) {
       case 'ArrowDown':
         if (!isShowing) return;
@@ -364,11 +397,26 @@ export class SearchInput {
       return;
     }
 
+    if (this.askAssistantActive() && this.isAskAssistantRowShown()) {
+      event.preventDefault();
+      this.askAssistantActive.set(false);
+      this.suggestionsPanel()?.openAskAssistant();
+      return;
+    }
+
     if (this.store.searchQuery().trim()) {
       event.preventDefault();
       this.store.showSuggestions.set(false);
       this.store.executeSearch();
     }
+  }
+
+  /** Whether the open popover shows the Ask Assistant row under No matches. */
+  private isAskAssistantRowShown(): boolean {
+    return (
+      this.store.showSuggestions() &&
+      Boolean(this.suggestionsPanel()?.showAskAssistantRow())
+    );
   }
 
   /** Closes suggestions popover or value picker overlay when Escape is pressed. */

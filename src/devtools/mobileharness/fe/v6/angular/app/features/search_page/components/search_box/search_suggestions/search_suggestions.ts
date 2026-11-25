@@ -14,12 +14,20 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
+import {toSignal} from '@angular/core/rxjs-interop';
 import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {of} from 'rxjs';
 
 import {Filter} from '../../../../../core/models/search';
+import {CommonParamsService} from '../../../../../core/services/common_params_service';
+import {
+  IS_ASSISTANT_ENABLED,
+  assistantLinkQueryParams,
+} from '../../../../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {
   FilterChip,
@@ -45,6 +53,13 @@ import {
 } from '../../../utils';
 import {KeyPickerComponent} from '../key_picker/key_picker';
 
+/**
+ * Search-page query parameters that describe the applied search state
+ * (matching `buildOutgoingUrlQueryParams`), forwarded in the Assistant link's
+ * `from` page path.
+ */
+const PAGE_CONTEXT_QUERY_PARAMS = ['f', 'gb', 'fleet'] as const;
+
 /** Standalone popover component rendering active filter/group-by chips and typeahead search suggestions. */
 @Component({
   selector: 'app-search-suggestions',
@@ -56,12 +71,22 @@ import {KeyPickerComponent} from '../key_picker/key_picker';
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
+    RouterLink,
     TooltipIfTruncatedDirective,
   ],
 })
 export class SearchSuggestions {
   readonly store = inject(SearchPageStore);
   private readonly dialog = inject(MatDialog, {optional: true});
+  private readonly commonParamsService = inject(CommonParamsService);
+  private readonly isAssistantEnabledFn = inject(IS_ASSISTANT_ENABLED, {
+    optional: true,
+  });
+  private readonly queryParamMap = toSignal(
+    inject(ActivatedRoute, {optional: true})?.queryParamMap ?? of(null),
+    {requireSync: true},
+  );
+  private readonly router = inject(Router);
   readonly getChipKey = getChipKey;
   readonly trackChip = trackChip;
 
@@ -78,6 +103,10 @@ export class SearchSuggestions {
   /** References to rendered suggestion items for auto-scroll. */
   readonly suggestionItems = viewChildren('suggestionItem', {read: ElementRef});
 
+  /** The Ask Assistant link under No matches, opened from the keyboard. */
+  private readonly askAssistantLink =
+    viewChild<ElementRef<HTMLAnchorElement>>('askAssistantLink');
+
   /** Currently highlighted keyboard navigation index. */
   readonly activeIndex = input<number>(-1);
 
@@ -93,6 +122,9 @@ export class SearchSuggestions {
 
   /** Group of chips to highlight with a ring when a summary chip is clicked ('filters' | 'groupby' | null). */
   readonly highlightedGroup = input<'filters' | 'groupby' | null>(null);
+
+  /** Whether keyboard navigation highlights the Ask Assistant row. */
+  readonly askAssistantActive = input<boolean>(false);
 
   /** Event emitted when a suggestion is selected. */
   readonly selectSuggestion = output<{item: SearchBoxSuggestion}>();
@@ -245,6 +277,65 @@ export class SearchSuggestions {
     }
     return 'Type one condition at a time.';
   });
+
+  /**
+   * Whether the no-matches item offers to ask the OmniLab Assistant: on device
+   * and host search, when the Assistant is enabled. OSS builds do not provide
+   * `IS_ASSISTANT_ENABLED`, so they never offer it.
+   */
+  readonly showAskAssistant = computed<boolean>(
+    () =>
+      !this.store.isTjs() &&
+      (this.isAssistantEnabledFn?.(this.queryParamMap()) ?? false),
+  );
+
+  /** Whether the Ask Assistant row is rendered under No matches. */
+  readonly showAskAssistantRow = computed<boolean>(
+    () => this.hasNoMatches() && this.showAskAssistant(),
+  );
+
+  /** Label of the Ask Assistant link, quoting the typed text. */
+  readonly askAssistantLabel = computed<string>(
+    () => `Ask Assistant about “${this.noMatchesQueryText()}”`,
+  );
+
+  /**
+   * This search page's path and query, such as
+   * `/devices?f=device_field::status~IDLE&gb=dimension::model`, which the
+   * Assistant link passes as the page the question came from so the Assistant
+   * knows what filters and group-by were applied. Only the search-state
+   * parameters (`f`, `gb`, and `fleet`) are kept.
+   */
+  readonly askAssistantPage = computed<string>(() => {
+    const params = this.queryParamMap();
+    const queryParams: Record<string, string[]> = {};
+    for (const key of PAGE_CONTEXT_QUERY_PARAMS) {
+      const values = params?.getAll(key) ?? [];
+      if (values.length > 0) {
+        queryParams[key] = values;
+      }
+    }
+    return this.router.serializeUrl(
+      this.router.createUrlTree(['/', this.store.entity()], {queryParams}),
+    );
+  });
+
+  /**
+   * Query parameters of the `/assistant` link, which asks the typed text as
+   * the user wrote it, about this search page.
+   */
+  readonly askAssistantQueryParams = computed<Record<string, string>>(() =>
+    assistantLinkQueryParams(
+      this.commonParamsService.getCommonParams(),
+      this.noMatchesQueryText(),
+      this.askAssistantPage(),
+    ),
+  );
+
+  /** Opens the Ask Assistant link in a new tab, as clicking it does. */
+  openAskAssistant(): void {
+    this.askAssistantLink()?.nativeElement.click();
+  }
 
   /** Whether the 'Auto-collapse after applying' checkbox is checked (defaults to true if not in storage). */
   readonly isAutoCollapseChecked = this.store.autoCollapseAfterApply;

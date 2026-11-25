@@ -1,7 +1,9 @@
 import {computed, signal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {provideNoopAnimations} from '@angular/platform-browser/animations';
+import {provideRouter} from '@angular/router';
 
+import {IS_ASSISTANT_ENABLED} from '../../../../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {HeaderSearchDockService} from '../../../../../shared/services/header_search_dock_service';
 import {
   FilterChip,
@@ -882,12 +884,14 @@ describe('SearchInput', () => {
 
     // Initial index is -1
     expect(component.activeSuggestionIndex()).toBe(-1);
+    expect(component.activeDescendantId()).toBeNull();
 
     // ArrowDown -> 0
     input.dispatchEvent(
       new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}),
     );
     expect(component.activeSuggestionIndex()).toBe(0);
+    expect(component.activeDescendantId()).toBe('suggestion-item-0');
 
     // ArrowDown -> 1
     input.dispatchEvent(
@@ -1112,5 +1116,164 @@ describe('SearchInput', () => {
       new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}),
     );
     expect(mockStore.executeSearch).not.toHaveBeenCalled();
+  });
+});
+
+describe('SearchInput with the Ask Assistant row under No matches', () => {
+  let fixture: ComponentFixture<SearchInput>;
+  let component: SearchInput;
+  let mockStore: FakeSearchPageStore;
+
+  beforeEach(async () => {
+    mockStore = new FakeSearchPageStore();
+    mockStore.showSuggestions.set(true);
+    mockStore.searchQuery.set('satellite lab pixel 10');
+
+    await TestBed.configureTestingModule({
+      imports: [SearchInput],
+      providers: [
+        provideNoopAnimations(),
+        provideRouter([]),
+        {provide: SearchPageStore, useValue: mockStore},
+        {provide: IS_ASSISTANT_ENABLED, useValue: () => true},
+        HeaderSearchDockService,
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SearchInput);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  function searchInputEl(): HTMLInputElement {
+    return fixture.nativeElement.querySelector('input.search-input');
+  }
+
+  function askLink(): HTMLAnchorElement {
+    return fixture.nativeElement.querySelector('a.sp-ask-assistant');
+  }
+
+  function pressKey(key: string): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', {
+      key,
+      bubbles: true,
+      cancelable: true,
+    });
+    searchInputEl().dispatchEvent(event);
+    fixture.detectChanges();
+    return event;
+  }
+
+  it('highlights the row with ArrowDown or ArrowUp', () => {
+    expect(askLink()).not.toBeNull();
+    expect(component.askAssistantActive()).toBeFalse();
+
+    expect(pressKey('ArrowDown').defaultPrevented).toBeTrue();
+    expect(component.askAssistantActive()).toBeTrue();
+    expect(askLink().classList).toContain('active');
+    expect(searchInputEl().getAttribute('aria-activedescendant')).toBe(
+      'search-ask-assistant',
+    );
+
+    component.askAssistantActive.set(false);
+    pressKey('ArrowUp');
+    expect(component.askAssistantActive()).toBeTrue();
+  });
+
+  it('opens the highlighted row on Enter instead of searching', () => {
+    const click = spyOn(askLink(), 'click');
+    pressKey('ArrowDown');
+
+    expect(pressKey('Enter').defaultPrevented).toBeTrue();
+
+    expect(click).toHaveBeenCalled();
+    expect(mockStore.executeSearch).not.toHaveBeenCalled();
+    expect(component.askAssistantActive()).toBeFalse();
+  });
+
+  it('reruns the search on Enter while the row is not highlighted', () => {
+    const click = spyOn(askLink(), 'click');
+
+    pressKey('Enter');
+
+    expect(click).not.toHaveBeenCalled();
+    expect(mockStore.executeSearch).toHaveBeenCalled();
+  });
+
+  it('drops the highlight when the text changes, input clears, or panel closes', () => {
+    pressKey('ArrowDown');
+    const input = searchInputEl();
+    input.value = 'satellite lab pixel 10 pro';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(component.askAssistantActive()).toBeFalse();
+
+    pressKey('ArrowDown');
+    component.onClearInput();
+    fixture.detectChanges();
+    expect(component.askAssistantActive()).toBeFalse();
+
+    mockStore.searchQuery.set('satellite lab pixel 10');
+    fixture.detectChanges();
+    pressKey('ArrowDown');
+    component.onCollapsePanel();
+    fixture.detectChanges();
+    expect(component.askAssistantActive()).toBeFalse();
+    expect(component.activeDescendantId()).toBeNull();
+
+    mockStore.showSuggestions.set(true);
+    fixture.detectChanges();
+    pressKey('ArrowDown');
+    pressKey('Escape');
+    expect(component.askAssistantActive()).toBeFalse();
+    expect(mockStore.showSuggestions()).toBeFalse();
+  });
+
+  it('resets the highlight on blur, outside click, and when suggestions appear', () => {
+    const outsideEl = document.createElement('div');
+    document.body.appendChild(outsideEl);
+    try {
+      pressKey('ArrowDown');
+      expect(component.activeDescendantId()).toBe('search-ask-assistant');
+
+      searchInputEl().dispatchEvent(
+        new FocusEvent('blur', {relatedTarget: outsideEl}),
+      );
+      fixture.detectChanges();
+      expect(component.askAssistantActive()).toBeFalse();
+      expect(component.activeDescendantId()).toBeNull();
+
+      mockStore.showSuggestions.set(true);
+      fixture.detectChanges();
+      pressKey('ArrowDown');
+      outsideEl.dispatchEvent(new MouseEvent('mousedown', {bubbles: true}));
+      fixture.detectChanges();
+      expect(component.askAssistantActive()).toBeFalse();
+      expect(component.activeDescendantId()).toBeNull();
+
+      // Refocusing after an outside click reruns search on Enter instead of opening Assistant.
+      mockStore.showSuggestions.set(true);
+      fixture.detectChanges();
+      const click = spyOn(askLink(), 'click');
+      pressKey('Enter');
+      expect(click).not.toHaveBeenCalled();
+      expect(mockStore.executeSearch).toHaveBeenCalled();
+
+      // If regular suggestions become non-empty while Ask Assistant was highlighted,
+      // activeDescendantId stops pointing at the hidden row and arrow keys clear it.
+      mockStore.showSuggestions.set(true);
+      fixture.detectChanges();
+      pressKey('ArrowDown');
+      mockStore.suggestions.set([
+        {label: 'Filter', mainText: [{text: 'Model is Pixel 10'}]},
+      ]);
+      fixture.detectChanges();
+      expect(component.activeDescendantId()).toBeNull();
+      pressKey('ArrowDown');
+      expect(component.askAssistantActive()).toBeFalse();
+      expect(component.activeDescendantId()).toBe('suggestion-item-0');
+    } finally {
+      document.body.removeChild(outsideEl);
+    }
   });
 });

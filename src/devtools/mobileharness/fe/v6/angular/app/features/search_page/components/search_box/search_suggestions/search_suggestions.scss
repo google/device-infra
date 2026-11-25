@@ -306,6 +306,64 @@
   color: #444746;
 }
 
+// Opens the OmniLab Assistant in a new tab with the typed text: the
+// `smart_toy` robot in primary blue, as on the Diagnose in Assistant chip, and
+// an `open_in_new` trailing icon for the new tab. The icon lines up with the
+// no-matches text above it, and keyboard highlight matches the suggestion
+// rows.
+.sp-ask-assistant {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 8px 0;
+  padding: 8px;
+  border-radius: 8px;
+  color: #1f1f1f;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover,
+  &.active {
+    background-color: rgba(11, 87, 208, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #0b57d0;
+    outline-offset: -2px;
+  }
+
+  .sp-ask-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    color: #0b57d0;
+    font-size: 20px;
+    line-height: 20px;
+  }
+
+  .sp-ask-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: #0b57d0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 20px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sp-ask-trail {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    color: #444746;
+    font-size: 16px;
+    line-height: 16px;
+  }
+}
+
 .suggestion-item {
   display: flex;
   align-items: center;

@@ -154,7 +154,7 @@
           aria-haspopup="listbox"
           aria-controls="search-suggestions-listbox"
           [attr.aria-expanded]="isPanelOpen()"
-          [attr.aria-activedescendant]="activeSuggestionIndex() >= 0 ? 'suggestion-item-' + activeSuggestionIndex() : null"
+          [attr.aria-activedescendant]="activeDescendantId()"
           [attr.aria-label]="effectivePlaceholder() || 'Search'"
           [placeholder]="effectivePlaceholder()"
           [value]="store.searchQuery()"
@@ -186,6 +186,7 @@
     @if (isPanelOpen() || store.pendingFilterOpenRequest()) {
       <app-search-suggestions
         [activeIndex]="activeSuggestionIndex()"
+        [askAssistantActive]="askAssistantActive()"
         [highlightedGroup]="highlightedGroup()"
         (selectSuggestion)="onSelectSuggestion($event)"
         (editChip)="onEditChipFromSuggestions($event)"

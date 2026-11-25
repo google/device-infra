@@ -190,6 +190,27 @@
           <div class="sp-empty-head">No matches for “{{ noMatchesQueryText() }}”</div>
           <div class="sp-empty-support">{{ noMatchesSupportText() }}</div>
         </div>
+        @if (showAskAssistant()) {
+          <div role="listbox" id="search-suggestions-listbox" aria-label="Search suggestions">
+            <a
+              #askAssistantLink
+              id="search-ask-assistant"
+              class="sp-ask-assistant"
+              role="option"
+              [attr.aria-selected]="askAssistantActive()"
+              [class.active]="askAssistantActive()"
+              [routerLink]="['/assistant']"
+              [queryParams]="askAssistantQueryParams()"
+              target="_blank"
+              rel="noopener"
+              title="Opens the Assistant in a new tab"
+            >
+              <span class="material-symbols-outlined sp-ask-icon" aria-hidden="true">smart_toy</span>
+              <span class="sp-ask-label">{{ askAssistantLabel() }}</span>
+              <span class="material-symbols-outlined sp-ask-trail" aria-hidden="true">open_in_new</span>
+            </a>
+          </div>
+        }
       </div>
     }
 
