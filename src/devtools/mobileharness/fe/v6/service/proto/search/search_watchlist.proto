@@ -1,0 +1,138 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.search;
+
+import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_fleet.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_summary.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
+option java_multiple_files = true;
+option java_outer_classname = "SearchWatchlistProto";
+
+// =============================================================================
+// Watchlist.
+//
+// Per-user saved device and host searches displayed on the Home "My Watchlist"
+// card, the standalone Watchlist page, and the Device/Host Search toolbar.
+// Each watchlist entry stores a FleetSearchTarget and is evaluated in a single
+// RPC against the server's in-memory FleetIndex.
+// =============================================================================
+
+// One saved device or host search in the caller's watchlist, enriched with
+// server-resolved filter chips and live fleet metrics.
+message Watchlist {
+  // Stable unique identifier within the caller's watchlist (for example,
+  // seeded default IDs, backfilled legacy IDs, or a server-generated ID for
+  // user-created lists).
+  string id = 1;
+
+  // User-facing display name (trimmed, 1 to 80 characters).
+  string name = 2;
+
+  // Saved search definition (entity, fleet, and non-empty filters). Clicking
+  // the list navigates to Fleet Search with this target.
+  FleetSearchTarget target = 3;
+
+  // Server-resolved filter chips parallel to `target.filters`, carrying pill
+  // display text and metadata (or an invalid reason when a saved filter key is
+  // no longer valid).
+  repeated FleetResolvedFilterChip filter_chips = 4;
+
+  // Live number of matching devices or hosts in the current fleet snapshot.
+  int64 total_count = 5;
+
+  // Live device utilization breakdown (busy, idle, others) with clickable
+  // drill-down targets. Populated only for device watchlists
+  // (`SEARCH_ENTITY_DEVICE`); unset for host watchlists
+  // (`SEARCH_ENTITY_HOST`).
+  DeviceUtilization utilization = 6;
+
+  // Display order within the caller's watchlist (ascending).
+  int32 display_order = 7;
+
+  // When this watchlist entry was created.
+  google.protobuf.Timestamp create_time = 8;
+
+  // When this watchlist entry was last updated (for example, renamed).
+  google.protobuf.Timestamp update_time = 9;
+}
+
+// Request to list and evaluate all watchlist entries for the authenticated
+// caller. Named rather than google.protobuf.Empty so fields can be added later
+// without breaking the RPC signature.
+message ListWatchlistsRequest {}
+
+// Response containing all of the caller's watchlist entries evaluated against
+// the current fleet snapshot.
+message ListWatchlistsResponse {
+  // Caller's saved watchlist entries, ordered by `display_order` ascending.
+  // Empty when the caller has removed all lists (including seeded defaults).
+  repeated Watchlist watchlists = 1;
+}
+
+// Request to add a saved search to the authenticated caller's watchlist.
+message CreateWatchlistRequest {
+  // User-facing display name. The server trims leading and trailing whitespace
+  // and rejects blank names or names longer than 80 characters with
+  // INVALID_ARGUMENT.
+  string name = 1;
+
+  // Fleet search target to save. `entity` must be `SEARCH_ENTITY_DEVICE` or
+  // `SEARCH_ENTITY_HOST`, `fleet` defaults to `FLEET_SELF` when unspecified,
+  // and `filters` must be non-empty; otherwise the server rejects the request
+  // with INVALID_ARGUMENT. Duplicate normalized `(entity, fleet, filters)`
+  // targets within the caller's watchlist are rejected with ALREADY_EXISTS.
+  FleetSearchTarget target = 2;
+}
+
+// Response containing the newly created watchlist entry.
+message CreateWatchlistResponse {
+  // The created watchlist entry, enriched with server-resolved filter chips,
+  // live `total_count`, and `utilization` (for device watchlists).
+  Watchlist watchlist = 1;
+}
+
+// Request to update an existing watchlist entry owned by the authenticated
+// caller.
+message UpdateWatchlistRequest {
+  // Identifier of the watchlist entry to update. Bound from the URL path.
+  string watchlist_id = 1;
+
+  // Updated display name. The server trims leading and trailing whitespace and
+  // rejects blank names or names longer than 80 characters with
+  // INVALID_ARGUMENT.
+  string name = 2;
+}
+
+// Response containing the updated watchlist entry.
+message UpdateWatchlistResponse {
+  // The updated watchlist entry, enriched with server-resolved filter chips,
+  // live `total_count`, and `utilization` (for device watchlists).
+  Watchlist watchlist = 1;
+}
+
+// Request to remove a watchlist entry owned by the authenticated caller.
+message DeleteWatchlistRequest {
+  // Identifier of the watchlist entry to delete. Bound from the URL path.
+  string watchlist_id = 1;
+}
+
+// Response acknowledging watchlist deletion.
+message DeleteWatchlistResponse {}

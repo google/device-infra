@@ -110,6 +110,23 @@ java_proto_library(
     deps = [":search_legacy_v5_proto"],
 )
 
+# --- Watchlist types ---
+
+proto_library(
+    name = "search_watchlist_proto",
+    srcs = ["search_watchlist.proto"],
+    deps = [
+        ":search_fleet_proto",
+        ":search_summary_proto",
+        "@protobuf//:timestamp_proto",
+    ],
+)
+
+java_proto_library(
+    name = "search_watchlist_java_proto",
+    deps = [":search_watchlist_proto"],
+)
+
 # --- SearchService definition ---
 
 proto_library(
