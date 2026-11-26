@@ -167,6 +167,9 @@ public class AndroidInstallMainlineModulesDecorator extends SetupOnlyDecorator
                     DEFAULT_INSTALL_MULTI_PACKAGE_TIMEOUT.toMinutes())));
 
     // TODO: Auto detect whether the reboot is needed.
+    // TODO: b/589639029 - SystemStateManager.reboot() currently checks Device.canReboot()
+    // (--disable_device_reboot), which conflates framework lifecycle reboots with test-required
+    // reboots and silently skips rebooting instead of activating staged APEX modules.
     if (testInfo
         .jobInfo()
         .params()

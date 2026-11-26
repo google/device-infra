@@ -194,6 +194,12 @@ public class SystemStateManager {
       @Nullable Duration deviceReadyTimeout)
       throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
+    // TODO: b/589639029 - Device.canReboot() (controlled by --disable_device_reboot on
+    // AndroidRealDevice) was intended for framework-managed lifecycle reboots (e.g., test timeouts
+    // or checkDevice() failures in LocalDeviceRunner), not explicit test- or decorator-required
+    // reboots (such as activating staged APEX modules in AndroidInstallMainlineModulesDecorator).
+    // Decouple framework lifecycle reboot policy from test-required reboots instead of silently
+    // skipping the reboot here.
     if (!device.canReboot()) {
       SharedLogUtil.logMsg(
           logger, log, "Skip rebooting device %s as it doesn't support reboot", deviceId);

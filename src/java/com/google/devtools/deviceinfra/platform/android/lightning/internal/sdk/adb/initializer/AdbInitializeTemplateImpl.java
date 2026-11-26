@@ -24,6 +24,8 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import java.nio.file.Path;
+import java.util.Optional;
 
 /** Implementation for {@link AdbInitializeTemplate}. */
 public class AdbInitializeTemplateImpl extends AdbInitializeTemplate {
@@ -82,10 +84,14 @@ public class AdbInitializeTemplateImpl extends AdbInitializeTemplate {
           DEFAULT_STOCK_ADB_PATH);
       adbPath = DEFAULT_STOCK_ADB_PATH;
     }
-    if (!localFileUtil.isFileExistInPath(adbPath)) {
-      logger.atWarning().log(
-          "Invalid ADB path [%s] (file doesn't exist or isn't in PATH dirs)", adbPath);
+    Optional<Path> resolvedAdbPath = localFileUtil.resolveFileInPath(adbPath);
+    if (resolvedAdbPath.isPresent()) {
+      String resolvedPath = resolvedAdbPath.get().toString();
+      logger.atInfo().log("Resolved ADB path [%s] to [%s]", adbPath, resolvedPath);
+      return resolvedPath;
     }
+    logger.atWarning().log(
+        "Invalid ADB path [%s] (file doesn't exist or isn't in PATH dirs)", adbPath);
     return adbPath;
   }
 

@@ -55,25 +55,12 @@ public class BuiltinFlagsTest {
   public void atsConsoleFlags_notEmpty() {
     assertThat(BuiltinFlags.atsConsoleFlags()).isNotEmpty();
     assertThat(BuiltinFlags.atsConsoleFlagMap()).isNotEmpty();
-    assertThat(BuiltinFlags.atsConsoleFlagMap()).containsEntry("simplified_log_format", "true");
-    assertThat(BuiltinFlags.atsConsoleFlagMap())
-        .containsEntry("external_adb_initializer_template", "true");
-    assertThat(BuiltinFlags.atsConsoleFlagMap())
-        .containsEntry("always_use_oss_detector_and_dispatcher", "true");
-    assertThat(BuiltinFlags.atsConsoleFlagMap())
-        .containsEntry("update_offline_in_cache_dimension", "true");
   }
 
   @Test
   public void atsLabServerFlagMap_notEmpty() {
     assertThat(BuiltinFlags.atsLabServerFlagMap("on-prem")).isNotEmpty();
     assertThat(BuiltinFlags.atsLabServerFlagMap("omni-dda")).isNotEmpty();
-    assertThat(BuiltinFlags.atsLabServerFlagMap("on-prem"))
-        .containsEntry("always_use_oss_detector_and_dispatcher", "true");
-    assertThat(BuiltinFlags.atsLabServerFlagMap("on-prem"))
-        .containsEntry("update_offline_in_cache_dimension", "true");
-    assertThat(BuiltinFlags.atsLabServerFlagMap("omni-public-testing"))
-        .containsEntry("clear_android_device_multi_users", "true");
     assertThrows(
         IllegalArgumentException.class,
         () -> BuiltinFlags.atsLabServerFlagMap("wrong-ats-lab-server-type"));

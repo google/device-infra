@@ -175,7 +175,7 @@ public final class BuiltinFlags {
                   .put("android_factory_reset_wait_time", "3m")
                   .put("check_android_device_sim_card_type", "true")
                   .put("clear_android_device_multi_users", "false")
-                  .put("disable_device_reboot", "true")
+                  .put("disable_device_reboot", "false")
                   .put("disable_wifi_util_func", "false")
                   .put("enable_android_device_ready_check", "true")
                   .put("enable_caching_reserved_device", "true")
