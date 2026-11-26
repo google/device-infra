@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.shared.util.comm.dualconduit.tests.helloworld;
 
+option optimize_for = CODE_SIZE;
 option go_package = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/helloworldpb;helloworldpb";
 
 message HelloRequest {

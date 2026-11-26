@@ -20,6 +20,7 @@ package mobileharness.shared.util.comm.dualconduit.tests.helloworld;
 
 import "src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/helloworld.proto";
 
+option optimize_for = CODE_SIZE;
 option go_package = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/helloworldsvcpb;helloworldsvcpb";
 
 service Greeter {

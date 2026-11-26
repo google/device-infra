@@ -20,6 +20,7 @@ package mobileharness.infra.ats.gateway;
 
 import "src/devtools/mobileharness/api/gateway/proto/setting.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.ats.gateway.proto";
 option java_outer_classname = "SessionPluginProto";
 

@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.infra.ats.common;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.ats.common.proto";
 option java_outer_classname = "XtsCommonProto";
 

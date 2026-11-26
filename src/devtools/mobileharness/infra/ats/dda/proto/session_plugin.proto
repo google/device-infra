@@ -23,6 +23,7 @@ import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/api/query/proto/lab_query.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.ats.dda.proto";
 option java_outer_classname = "SessionPluginProto";
 

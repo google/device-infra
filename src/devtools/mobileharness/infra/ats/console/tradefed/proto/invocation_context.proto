@@ -21,6 +21,7 @@ package tradefed.invoker;
 import public "src/devtools/mobileharness/infra/ats/console/tradefed/proto/build_info.proto";
 import public "src/devtools/mobileharness/infra/ats/console/tradefed/proto/configuration_description.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.android.tradefed.invoker.proto";
 option java_outer_classname = "InvocationContext";
 

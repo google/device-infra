@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.shared.subprocess;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.shared.subprocess.proto";
 option java_outer_classname = "AgentConfigProto";
 

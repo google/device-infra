@@ -20,6 +20,7 @@ package mobileharness.shared.util.event;
 
 import "google/protobuf/timestamp.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.shared.util.event.proto";
 option java_outer_classname = "EventBusProto";
 

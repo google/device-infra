@@ -18,6 +18,7 @@ syntax = "proto2";
 
 package mobileharness.shared;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
 
 // Type of a job, including the device type, driver and decorator information.

@@ -20,6 +20,7 @@ package devtools.mobileharness.fe.v6.service.proto.common;
 
 import "google/protobuf/timestamp.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.common";
 option java_multiple_files = true;
 option java_outer_classname = "CommonResourcesProto";

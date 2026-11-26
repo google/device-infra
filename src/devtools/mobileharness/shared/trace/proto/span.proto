@@ -20,6 +20,7 @@ package mobileharness.shared.trace;
 
 import "google/protobuf/timestamp.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.shared.trace.proto";
 option java_outer_classname = "SpanProto";
 

@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.shared.util.base;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.shared.util.base";
 option java_outer_classname = "TestDataProto";
 

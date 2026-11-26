@@ -21,6 +21,7 @@ package mobileharness.infra.client.longrunningservice;
 import "src/devtools/mobileharness/infra/client/longrunningservice/proto/log.proto";
 import "src/devtools/mobileharness/infra/client/longrunningservice/proto/session.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.client.longrunningservice.proto";
 option java_outer_classname = "ControlServiceProto";
 

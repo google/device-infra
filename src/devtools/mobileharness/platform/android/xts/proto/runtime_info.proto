@@ -20,6 +20,7 @@ package xts.runtime;
 
 import "google/protobuf/timestamp.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.platform.android.xts.runtime.proto";
 option java_outer_classname = "RuntimeInfoProto";
 

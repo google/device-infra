@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.api.deviceconfig;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
 option java_outer_classname = "ConditionedDeviceConfigProto";
 

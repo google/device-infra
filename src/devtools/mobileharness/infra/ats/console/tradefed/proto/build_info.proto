@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package tradefed.build;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.android.tradefed.build.proto";
 option java_outer_classname = "BuildInformation";
 

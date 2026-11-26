@@ -21,6 +21,7 @@ package mobileharness.shared.util.comm.relay;
 import "src/devtools/mobileharness/api/model/proto/lab.proto";
 import "src/devtools/mobileharness/infra/container/proto/test_engine.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.shared.util.comm.relay.proto";
 option java_outer_classname = "DestinationProto";
 

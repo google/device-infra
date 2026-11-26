@@ -23,6 +23,7 @@ import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/infra/master/central/proto/quota.proto";
 import "src/devtools/mobileharness/infra/master/central/proto/test.proto";
 
+option optimize_for = CODE_SIZE;
 option features.field_presence = IMPLICIT;
 option java_package = "com.google.devtools.mobileharness.infra.master.central.proto";
 option java_outer_classname = "Job";

@@ -20,6 +20,7 @@ package stability.rpc;
 
 import "src/devtools/common/metrics/stability/rpc/proto/rpc_error.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.common.metrics.stability.rpc.proto";
 option java_outer_classname = "RpcErrorPayloadProto";
 
