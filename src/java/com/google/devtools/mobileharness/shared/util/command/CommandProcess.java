@@ -16,7 +16,11 @@
 
 package com.google.devtools.mobileharness.shared.util.command;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.Beta;
+import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback.Response;
@@ -43,6 +47,8 @@ import javax.annotation.Nullable;
  * @see CommandExecutor#start(Command)
  */
 public class CommandProcess {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final CommandExecutor EXECUTOR = new CommandExecutor();
 
@@ -199,6 +205,54 @@ public class CommandProcess {
   }
 
   /**
+   * {@linkplain #kill() Kills} the command together with all of its descendant processes.
+   *
+   * <p>Snapshots the command's recursive descendants before calling {@link #kill()}, waits up to
+   * {@code killDescendantsDelay} for the command to exit on its own, forcibly kills the snapshotted
+   * descendants if the command is still alive, waits up to {@code killForciblyDelay} for the
+   * command to exit, and finally {@linkplain #killForcibly() forcibly kills} the command if it is
+   * still alive. Any snapshotted descendants still alive when this method finishes are also
+   * forcibly killed.
+   *
+   * <p>Killing a process that has already exited has no effect.
+   */
+  public void killWithDescendantsAndThenKillForcibly(
+      Duration killDescendantsDelay, Duration killForciblyDelay) throws InterruptedException {
+    // Snapshots all descendants before killing the process since they are re-parented once their
+    // parents exit. Use the startup-bound ProcessHandle and check OS-level aliveness on it rather
+    // than backendProcess.isAlive() (which stays true while stdout/stderr pumps drain after
+    // waitFor() reaps the process) to avoid PID reuse.
+    ImmutableList<ProcessHandle> descendants =
+        backendProcess
+            .processHandle()
+            .filter(ProcessHandle::isAlive)
+            .map(process -> process.descendants().collect(toImmutableList()))
+            .orElse(ImmutableList.of());
+    kill();
+    try {
+      // Lets the process stop its descendants and exit by itself first.
+      if (!awaitExit(killDescendantsDelay)) {
+        if (!descendants.isEmpty()) {
+          logger.atInfo().log(
+              "Command process (pid=%d) is still alive %s after being killed, killing its %d"
+                  + " descendant(s)",
+              getPid(), killDescendantsDelay, descendants.size());
+          descendants.forEach(ProcessHandle::destroyForcibly);
+        }
+        if (!awaitExit(killForciblyDelay)) {
+          killForcibly();
+        }
+      }
+    } catch (InterruptedException | RuntimeException | Error e) {
+      killForcibly();
+      throw e;
+    } finally {
+      // Also kills any descendants left behind after the process has exited.
+      descendants.forEach(ProcessHandle::destroyForcibly);
+    }
+  }
+
+  /**
    * Kills the command with the given signal.
    *
    * <p><b>*WARNING*</b>: This feature is experimental, and it is only supported on UNIX. Please use
@@ -288,6 +342,18 @@ public class CommandProcess {
 
   void setSuccessfulStart(boolean successfulStart) {
     successfulStartFuture.set(successfulStart);
+  }
+
+  /** Waits for the process to exit and returns whether it exits within the timeout. */
+  private boolean awaitExit(Duration timeout) throws InterruptedException {
+    try {
+      CommandResult ignored = await(timeout);
+      return true;
+    } catch (CommandExecutionException e) {
+      return true;
+    } catch (TimeoutException e) {
+      return false;
+    }
   }
 
   private String waitForCollector(LineCollector collector, @Nullable Duration timeout)

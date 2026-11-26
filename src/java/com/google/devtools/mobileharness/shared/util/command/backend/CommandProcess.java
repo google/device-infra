@@ -356,6 +356,14 @@ public abstract class CommandProcess {
     return processIdHook();
   }
 
+  /**
+   * Returns a {@link ProcessHandle} bound to this process at startup, or empty if the backend does
+   * not expose a native process handle.
+   */
+  public final Optional<ProcessHandle> processHandle() {
+    return processHandleHook();
+  }
+
   @Override
   public final int hashCode() {
     // All implementations must use reference equality.
@@ -431,6 +439,14 @@ public abstract class CommandProcess {
    * @throws UnsupportedOperationException if the platform does not support retrieving the pid.
    */
   protected abstract long processIdHook();
+
+  /**
+   * Returns a {@link ProcessHandle} bound to this process at startup, or empty if the backend does
+   * not expose a native process handle.
+   */
+  protected Optional<ProcessHandle> processHandleHook() {
+    return Optional.empty();
+  }
 
   /** Returns an output stream that writes to the standard input of the process. */
   protected abstract OutputStream stdinStreamHook();

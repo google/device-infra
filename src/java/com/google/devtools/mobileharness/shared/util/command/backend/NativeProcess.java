@@ -83,6 +83,7 @@ final class NativeProcess extends CommandProcess {
   }
 
   private final Process process;
+  private final ProcessHandle processHandle;
   private volatile boolean killed = false;
   private final Optional<AsyncCopier> stdinPump;
   private final Optional<AsyncCopier> stdoutPump;
@@ -112,6 +113,8 @@ final class NativeProcess extends CommandProcess {
 
     // Start the process and I/O pumps
     process = processBuilder.start();
+    // Capture the start-time-bound handle immediately before the process can exit and be reaped.
+    processHandle = process.toHandle();
     stdinPump =
         maybeStartAsyncCopy(
             processBuilder.redirectInput().type().equals(Redirect.Type.PIPE)
@@ -159,6 +162,11 @@ final class NativeProcess extends CommandProcess {
       throw new UnsupportedOperationException("Process ID not available on this platform");
     }
     return pid;
+  }
+
+  @Override
+  protected Optional<ProcessHandle> processHandleHook() {
+    return Optional.of(processHandle);
   }
 
   private long fetchPid() {
