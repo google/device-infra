@@ -35,6 +35,17 @@ java_library(
 )
 
 java_test(
+    name = "LocalFileUtilTest",
+    srcs = ["LocalFileUtilTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:junit_junit",
+    ],
+)
+
+java_test(
     name = "UnzipFileNameTest",
     srcs = ["UnzipFileNameTest.java"],
     deps = [

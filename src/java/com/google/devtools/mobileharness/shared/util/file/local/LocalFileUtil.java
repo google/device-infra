@@ -25,8 +25,10 @@ import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Arrays.stream;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.escape.CharEscaperBuilder;
@@ -65,6 +67,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
@@ -85,8 +88,10 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
@@ -151,13 +156,21 @@ public class LocalFileUtil {
   /** System command executor. */
   private final CommandExecutor cmdExecutor;
 
+  private final Supplier<String> pathEnvSupplier;
+
   public LocalFileUtil() {
     this(new CommandExecutor());
   }
 
   @Inject
   public LocalFileUtil(CommandExecutor cmdExecutor) {
+    this(cmdExecutor, () -> Strings.nullToEmpty(System.getenv("PATH")));
+  }
+
+  @VisibleForTesting
+  LocalFileUtil(CommandExecutor cmdExecutor, Supplier<String> pathEnvSupplier) {
     this.cmdExecutor = cmdExecutor;
+    this.pathEnvSupplier = pathEnvSupplier;
   }
 
   /**
@@ -953,15 +966,7 @@ public class LocalFileUtil {
    * PATH.
    */
   public boolean isFileExistInPath(String filePath) {
-    if (isFileExist(filePath)) {
-      return true;
-    }
-    if (filePath.contains(File.separator)) {
-      return false;
-    }
-    return stream(System.getenv("PATH").split(Pattern.quote(File.pathSeparator)))
-        .map(Path::of)
-        .anyMatch(path -> isFileExist(path.resolve(filePath)));
+    return resolveFileInPath(filePath).isPresent();
   }
 
   /** Returns true only if the file/dir is local. */
@@ -1928,6 +1933,39 @@ public class LocalFileUtil {
   }
 
   /**
+   * Resolves {@code filePath} to an existing file's absolute {@link Path}.
+   *
+   * <p>When {@code filePath} is a bare file name without {@link File#separator}, searches {@code
+   * PATH} directories in order (not including subdirectories) and falls back to resolving {@code
+   * filePath} relative to the current working directory if no {@code PATH} entry matches.
+   *
+   * <p>Returns {@link Optional#empty()} if the file does not exist directly or in any {@code PATH}
+   * directory.
+   */
+  public Optional<Path> resolveFileInPath(String filePath) {
+    if (filePath.isEmpty()) {
+      return Optional.empty();
+    }
+    if (filePath.contains(File.separator)) {
+      return resolveDirectFile(filePath);
+    }
+    for (String dirPath :
+        Splitter.on(File.pathSeparatorChar)
+            .omitEmptyStrings()
+            .split(Strings.nullToEmpty(pathEnvSupplier.get()))) {
+      try {
+        Path candidate = Path.of(dirPath).resolve(filePath);
+        if (isFileExist(candidate)) {
+          return Optional.of(candidate.toAbsolutePath());
+        }
+      } catch (InvalidPathException e) {
+        // Ignore malformed PATH entries and continue searching remaining directories.
+      }
+    }
+    return resolveDirectFile(filePath);
+  }
+
+  /**
    * Updates the last updated timestamp of the given file/dir. If the file/dir does not exist, it
    * can create an empty file if the {@code ifCreateNewFile} is set to {@code true}. When it creates
    * a new file, it will automatically prepare its parent dirs.
@@ -2504,5 +2542,17 @@ public class LocalFileUtil {
       logger.atWarning().withCause(e).log("Failed to get file permission for path %s", path);
       return false;
     }
+  }
+
+  private Optional<Path> resolveDirectFile(String filePath) {
+    try {
+      Path candidate = Path.of(filePath);
+      if (isFileExist(candidate)) {
+        return Optional.of(candidate.toAbsolutePath());
+      }
+    } catch (InvalidPathException e) {
+      // Return empty for malformed file paths.
+    }
+    return Optional.empty();
   }
 }
