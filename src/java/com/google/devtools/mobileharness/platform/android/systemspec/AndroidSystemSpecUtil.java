@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.platform.android.shared.emulator.Androi
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.AndroidDeviceSpec.Abi;
 import com.google.wireless.qa.mobileharness.shared.util.LuhnUtil;
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -229,6 +230,12 @@ public class AndroidSystemSpecUtil {
 
   /** ADB shell command to get storage lifetime. This does not work in old android builds. */
   @VisibleForTesting static final String ADB_SHELL_GET_STORAGE_LIFETIME = "tradeinmode getstatus";
+
+  /**
+   * Timeout of {@link #ADB_SHELL_GET_STORAGE_LIFETIME}. The command queries Telephony and can hang
+   * if the phone process is stuck, so keep it short to not block the device setup (b/587720808).
+   */
+  @VisibleForTesting static final Duration GET_STORAGE_LIFETIME_TIMEOUT = Duration.ofSeconds(5);
 
   /** Linux shell command to get kernel release number. */
   @VisibleForTesting static final String LINUX_SHELL_GET_KERNEL_RELEASE = "uname -r";
@@ -924,7 +931,8 @@ public class AndroidSystemSpecUtil {
    */
   public int getStorageLifetime(String serial) throws InterruptedException {
     try {
-      String out = adb.runShell(serial, ADB_SHELL_GET_STORAGE_LIFETIME);
+      String out =
+          adb.runShell(serial, ADB_SHELL_GET_STORAGE_LIFETIME, GET_STORAGE_LIFETIME_TIMEOUT);
       Matcher matcher = PATTERN_STORAGE_LIFETIME.matcher(out);
       if (matcher.find()) {
         return Integer.parseInt(matcher.group(1));
