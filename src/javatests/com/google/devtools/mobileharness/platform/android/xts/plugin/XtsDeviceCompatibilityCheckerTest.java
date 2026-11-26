@@ -19,19 +19,24 @@ package com.google.devtools.mobileharness.platform.android.xts.plugin;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.DeviceBuildInfo;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
+import com.google.testing.junit.testparameterinjector.TestParameter;
+import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartedEvent;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -46,12 +51,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-@RunWith(JUnit4.class)
+@RunWith(TestParameterInjector.class)
 public final class XtsDeviceCompatibilityCheckerTest {
 
   private static final String DEVICE_ID_1 = "DEVICE_ID_1";
@@ -99,6 +103,8 @@ public final class XtsDeviceCompatibilityCheckerTest {
         .thenReturn("36");
     when(androidAdbUtil.getProperty(DEVICE_ID_2, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
         .thenReturn("36");
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, AndroidProperty.CODENAME)).thenReturn("REL");
+    when(androidAdbUtil.getProperty(DEVICE_ID_2, AndroidProperty.CODENAME)).thenReturn("REL");
 
     xtsDeviceCompatibilityChecker =
         new XtsDeviceCompatibilityChecker(
@@ -360,5 +366,42 @@ public final class XtsDeviceCompatibilityCheckerTest {
     xtsDeviceCompatibilityChecker.onTestStarted(event);
 
     assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isFalse();
+  }
+
+  @Test
+  public void deviceToolCompatibility_nonRelCodename_skipChecking(
+      @TestParameter({"DEV", "CANARY", "CinnamonBun", ""}) String codename) throws Exception {
+    properties.add(Job.XTS_SUITE_VERSION, "18_r1");
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("37.2");
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, AndroidProperty.CODENAME)).thenReturn(codename);
+
+    xtsDeviceCompatibilityChecker.onTestStarted(event);
+
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isFalse();
+  }
+
+  @Test
+  public void deviceToolCompatibility_adbFailureOnFirstDeviceCodename_fallsBackToSecondDevice()
+      throws Exception {
+    properties.add(Job.XTS_SUITE_VERSION, "18_r1");
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("38");
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, AndroidProperty.CODENAME))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_UTIL_GET_DEVICE_PROPERTY_ERROR, "adb error"));
+    when(androidAdbUtil.getProperty(DEVICE_ID_2, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("37.2");
+    when(androidAdbUtil.getProperty(DEVICE_ID_2, AndroidProperty.CODENAME)).thenReturn("REL");
+
+    assertThat(
+            assertThrows(
+                    SkipTestException.class,
+                    () -> xtsDeviceCompatibilityChecker.onTestStarted(event))
+                .errorId())
+        .isEqualTo(AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_AND_TOOL_INCOMPATIBLE);
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isTrue();
+    verify(androidAdbUtil).getProperty(DEVICE_ID_2, AndroidProperty.CODENAME);
   }
 }

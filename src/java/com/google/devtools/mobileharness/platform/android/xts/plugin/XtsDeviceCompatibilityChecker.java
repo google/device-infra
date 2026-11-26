@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.plugin;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.base.Ascii;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
@@ -29,6 +30,7 @@ import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.DeviceBuildInfo;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
@@ -49,6 +51,8 @@ import javax.inject.Inject;
 public final class XtsDeviceCompatibilityChecker {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final String RELEASE_CODENAME = "REL";
 
   private final AndroidAdbUtil androidAdbUtil;
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
@@ -282,24 +286,32 @@ public final class XtsDeviceCompatibilityChecker {
         .trim();
   }
 
-  private Optional<String> getAnyDeviceSdkVersion(
+  private Optional<DeviceSdkInfo> fetchAnyDeviceSdkInfo(
       ImmutableList<String> deviceSerials, TestInfo testInfo) throws InterruptedException {
     for (String serial : deviceSerials) {
       try {
         String sdkVersion =
-            androidAdbUtil.getProperty(serial, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames());
+            Strings.nullToEmpty(
+                    androidAdbUtil.getProperty(
+                        serial, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+                .trim();
+        String codename =
+            Strings.nullToEmpty(androidAdbUtil.getProperty(serial, AndroidProperty.CODENAME))
+                .trim();
         testInfo
             .log()
             .atInfo()
             .alsoTo(logger)
-            .log("Device %s SDK version: %s for compatibility check", serial, sdkVersion);
-        return Optional.of(sdkVersion);
+            .log(
+                "Device %s SDK version: %s, codename: %s for compatibility check",
+                serial, sdkVersion, codename);
+        return Optional.of(new DeviceSdkInfo(serial, sdkVersion, codename));
       } catch (MobileHarnessException e) {
         testInfo
             .log()
             .atWarning()
             .alsoTo(logger)
-            .log("Failed to get or parse device SDK version for %s: %s", serial, e.getMessage());
+            .log("Failed to get device SDK info for %s: %s", serial, e.getMessage());
       }
     }
     return Optional.empty();
@@ -309,25 +321,51 @@ public final class XtsDeviceCompatibilityChecker {
       ImmutableList<String> deviceSerials, TestInfo testInfo)
       throws SkipTestException, InterruptedException {
     JobInfo jobInfo = testInfo.jobInfo();
-    Optional<String> toolVersionStr = jobInfo.properties().getOptional(Job.XTS_SUITE_VERSION);
-    Optional<String> sdkVersionStr = getAnyDeviceSdkVersion(deviceSerials, testInfo);
-    if (toolVersionStr.isEmpty() || sdkVersionStr.isEmpty()) {
+    String toolVersionStr =
+        jobInfo.properties().getOptional(Job.XTS_SUITE_VERSION).map(String::trim).orElse("");
+    if (toolVersionStr.isEmpty()) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .log("Unknown tool version, skipping compatibility check.");
+      return;
+    }
+
+    Optional<DeviceSdkInfo> deviceSdkInfo = fetchAnyDeviceSdkInfo(deviceSerials, testInfo);
+    if (deviceSdkInfo.isEmpty()) {
       testInfo
           .log()
           .atWarning()
           .alsoTo(logger)
           .log(
-              "Unknown tool version [%s] or device SDK version [%s], skipping compatibility check.",
-              toolVersionStr.orElse("unknown"), sdkVersionStr.orElse("unknown"));
-      return; // Cannot check if tool or device SDK version is unknown
+              "Unknown device SDK version for tool version [%s], skipping compatibility check.",
+              toolVersionStr);
+      return;
+    }
+
+    DeviceSdkInfo sdkInfo = deviceSdkInfo.get();
+    // Only enforce compatibility on finalized REL builds; pre-finalization builds (e.g. DEV,
+    // CANARY, or dessert codenames) have not yet finalized their numeric SDK level to match the
+    // next-release xTS suite.
+    if (!Ascii.equalsIgnoreCase(sdkInfo.codename(), RELEASE_CODENAME)) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .log(
+              "Device %s has non-%s codename [%s] (SDK version [%s]), skipping compatibility"
+                  + " check.",
+              sdkInfo.serial(), RELEASE_CODENAME, sdkInfo.codename(), sdkInfo.sdkVersion());
+      return;
     }
 
     TestSuiteVersion toolVersion;
     TestSuiteVersion deviceSdkVersion;
     try {
-      toolVersion = TestSuiteVersionUtil.parse(toolVersionStr.get());
+      toolVersion = TestSuiteVersionUtil.parse(toolVersionStr);
       // Full SDK version is "major(.minor)" format, e.g. "35", "36", "36.1", etc.
-      deviceSdkVersion = TestSuiteVersionUtil.parse(sdkVersionStr.get());
+      deviceSdkVersion = TestSuiteVersionUtil.parse(sdkInfo.sdkVersion());
     } catch (IllegalArgumentException e) {
       testInfo
           .log()
@@ -336,7 +374,7 @@ public final class XtsDeviceCompatibilityChecker {
           .log(
               "Failed to parse tool version [%s] or SDK version [%s], skipping compatibility check:"
                   + " %s",
-              toolVersionStr.get(), sdkVersionStr.get(), e.getMessage());
+              toolVersionStr, sdkInfo.sdkVersion(), e.getMessage());
       return;
     }
 
@@ -346,7 +384,7 @@ public final class XtsDeviceCompatibilityChecker {
           String.format(
               "Device SDK version [%s] is incompatible with tools version"
                   + " [%s]. Skipping test.",
-              sdkVersionStr.get(), toolVersionStr.get()),
+              sdkInfo.sdkVersion(), toolVersionStr),
           DesiredTestResult.SKIP,
           AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_AND_TOOL_INCOMPATIBLE);
     }
@@ -363,4 +401,6 @@ public final class XtsDeviceCompatibilityChecker {
     return toolVersion.getMajor() == (deviceSdkVersion.getMajor() - 20)
         && toolVersion.getMinor() == deviceSdkVersion.getMinor();
   }
+
+  private record DeviceSdkInfo(String serial, String sdkVersion, String codename) {}
 }
