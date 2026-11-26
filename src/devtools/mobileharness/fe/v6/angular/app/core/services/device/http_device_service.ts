@@ -13,6 +13,7 @@ import {
 } from '../../models/device_action';
 import {
   DeviceOverviewPageData,
+  GetDeviceErrorsResponse,
   GetDeviceOverviewRequest,
   TestbedConfig,
 } from '../../models/device_overview';
@@ -282,6 +283,23 @@ export class HttpDeviceService extends DeviceService {
     const options = {params};
     return this.http.get<DeviceTestHistoryResponse>(
       `${this.apiUrl}/${id}/test-history`,
+      options,
+    );
+  }
+
+  /**
+   * Gets the errors of a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host running the device.
+   * @return An Observable emitting the device errors response.
+   */
+  override getDeviceErrors(
+    id: string,
+    hostName: string,
+  ): Observable<GetDeviceErrorsResponse> {
+    const options = {params: {'host_name': hostName}};
+    return this.http.get<GetDeviceErrorsResponse>(
+      `${this.apiUrl}/${id}/errors`,
       options,
     );
   }

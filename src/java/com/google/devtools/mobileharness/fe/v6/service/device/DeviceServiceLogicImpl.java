@@ -20,6 +20,7 @@ import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDeviceErrorsHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDeviceHeaderInfoHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDeviceOverviewHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetLogcatHandler;
@@ -32,6 +33,8 @@ import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceTes
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceErrorsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceErrorsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
@@ -74,6 +77,7 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   private final UnquarantineDeviceHandler unquarantineDeviceHandler;
   private final PrepareDeviceHandler prepareDeviceHandler;
   private final DeviceTestHistoryProvider deviceTestHistoryProvider;
+  private final GetDeviceErrorsHandler getDeviceErrorsHandler;
 
   @Inject
   DeviceServiceLogicImpl(
@@ -86,7 +90,8 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
       TakeScreenshotHandler takeScreenshotHandler,
       UnquarantineDeviceHandler unquarantineDeviceHandler,
       PrepareDeviceHandler prepareDeviceHandler,
-      DeviceTestHistoryProvider deviceTestHistoryProvider) {
+      DeviceTestHistoryProvider deviceTestHistoryProvider,
+      GetDeviceErrorsHandler getDeviceErrorsHandler) {
     this.getDeviceHeaderInfoHandler = getDeviceHeaderInfoHandler;
     this.getDeviceOverviewHandler = getDeviceOverviewHandler;
     this.getTestbedConfigHandler = getTestbedConfigHandler;
@@ -97,6 +102,7 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
     this.unquarantineDeviceHandler = unquarantineDeviceHandler;
     this.prepareDeviceHandler = prepareDeviceHandler;
     this.deviceTestHistoryProvider = deviceTestHistoryProvider;
+    this.getDeviceErrorsHandler = getDeviceErrorsHandler;
   }
 
   @Override
@@ -236,5 +242,16 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
       return immediateFailedFuture(FeServiceException.invalidArgument(e.getMessage()));
     }
     return prepareDeviceHandler.prepareDevice(request, universe, username);
+  }
+
+  @Override
+  public ListenableFuture<GetDeviceErrorsResponse> getDeviceErrors(GetDeviceErrorsRequest request) {
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(FeServiceException.invalidArgument(e.getMessage()));
+    }
+    return getDeviceErrorsHandler.getDeviceErrors(request, universe);
   }
 }

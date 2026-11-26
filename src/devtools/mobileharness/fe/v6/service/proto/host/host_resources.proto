@@ -339,6 +339,8 @@ message DeviceSummary {
   repeated device.SubDeviceInfo sub_devices = 9;
   // State of action buttons for this device.
   device.DeviceActions actions = 10;
+  // Whether the device has any errors reported by the lab server.
+  bool has_device_error = 11;
 }
 
 // Types of proxy supported by devices.

@@ -824,6 +824,19 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   @Test
+  public void healthAndActivity_hasDeviceError() throws Exception {
+    DeviceInfo device =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceCondition(
+                DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder().setHasDeviceError(true))
+            .build();
+    mockDeviceInfo(device);
+    HealthAndActivityInfo info = getHealthAndActivity();
+
+    assertThat(info.getHasDeviceError()).isTrue();
+  }
+
+  @Test
   public void getDeviceOverview_androidSpecificLogic() throws Exception {
     DeviceInfo androidDevice =
         DEFAULT_DEVICE_INFO.toBuilder()

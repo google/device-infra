@@ -1,0 +1,282 @@
+<div class="device-error-dialog">
+  <!-- Header -->
+  <div class="device-error-dialog__header">
+    <div class="device-error-dialog__title-section">
+      <h2 class="device-error-dialog__title">Device Error Diagnostics</h2>
+      <div class="device-error-dialog__subtitle">
+        Errors from
+        <span class="device-error-dialog__device-id">{{ data.deviceId }}</span> on <span class="device-error-dialog__host-name">{{ data.hostName }}</span>.
+        @if (snapshotTimestamp()) {
+          Snapshot from <app-datetime-trigger [timestamp]="snapshotTimestamp()!"></app-datetime-trigger>.
+        }
+      </div>
+    </div>
+    <button
+      mat-icon-button
+      class="device-error-dialog__close-btn"
+      (click)="onClose()"
+      aria-label="Close"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="device-error-dialog__body">
+    <!-- Loading Overlay: Shown while fetching device errors -->
+    @if (isLoading()) {
+      <div class="device-error-dialog__loading-overlay">
+        <div class="common-spinner"></div>
+        <p class="device-error-dialog__loading-text">Loading device errors...</p>
+      </div>
+    }
+
+    @if (!isLoading() && (hasLoaded() || hasLoadError())) {
+      <div
+        #dialogLayout
+        class="device-error-dialog__layout"
+        [class.device-error-dialog__layout--resizing]="sidebar.isResizing()"
+      >
+        @if (hasMultipleErrors()) {
+          <!-- Left Sidebar: Chronological timestamps (Full Mode) or 56px Icon Rail (Compact Mode) -->
+          <aside
+            #sidebarEl
+            class="device-error-dialog__sidebar"
+            [class.device-error-dialog__sidebar--compact]="sidebar.isCompact()"
+            [style.width.px]="sidebar.width()"
+          >
+            @if (sidebar.isCompact()) {
+              <div class="device-error-dialog__rail-header">
+                <button
+                  type="button"
+                  class="device-error-dialog__rail-icon-btn device-error-dialog__rail-icon-btn--secondary"
+                  (click)="sidebar.expand()"
+                  matTooltip="Expand sidebar"
+                  matTooltipPosition="right"
+                  aria-label="Expand sidebar"
+                >
+                  <mat-icon>last_page</mat-icon>
+                </button>
+                <button
+                  type="button"
+                  class="device-error-dialog__rail-icon-btn"
+                  (click)="toggleExpandAll()"
+                  [matTooltip]="(allExpanded() ? 'Collapse All' : 'Expand All') + ' (' + normalizedErrors().length + ')'"
+                  matTooltipPosition="right"
+                  [attr.aria-label]="allExpanded() ? 'Collapse All' : 'Expand All'"
+                >
+                  <mat-icon>{{ allExpanded() ? 'unfold_less' : 'unfold_more' }}</mat-icon>
+                </button>
+              </div>
+
+              <nav class="device-error-dialog__rail-nav">
+                @for (err of normalizedErrors(); track err.id) {
+                  <button
+                    type="button"
+                    class="device-error-dialog__rail-item-btn"
+                    [class.device-error-dialog__rail-item-btn--active]="activeErrorId() === err.id"
+                    (click)="navigateToError(err.id)"
+                    [matTooltip]="err.heading + (err.shortLabel ? ' · ' + err.shortLabel : '')"
+                    matTooltipPosition="right"
+                    [attr.aria-label]="'Jump to error #' + err.index"
+                  >
+                    <mat-icon class="device-error-dialog__rail-item-icon">error_outline</mat-icon>
+                    <span class="device-error-dialog__rail-item-badge">{{ err.index }}</span>
+                  </button>
+                }
+              </nav>
+            } @else {
+              <div class="device-error-dialog__sidebar-header">
+                <span class="device-error-dialog__sidebar-title">
+                  Errors ({{ normalizedErrors().length }})
+                </span>
+                <div class="device-error-dialog__sidebar-actions">
+                  <button
+                    mat-button
+                    class="device-error-dialog__action-btn"
+                    (click)="toggleExpandAll()"
+                  >
+                    {{ allExpanded() ? 'Collapse All' : 'Expand All' }}
+                  </button>
+                </div>
+              </div>
+
+              <nav class="device-error-dialog__sidebar-nav">
+                @for (err of normalizedErrors(); track err.id) {
+                  <div
+                    class="device-error-dialog__sidebar-item"
+                    [class.device-error-dialog__sidebar-item--active]="activeErrorId() === err.id"
+                    (click)="navigateToError(err.id)"
+                    (keydown.enter)="navigateToError(err.id)"
+                    (keydown.space)="$event.preventDefault(); navigateToError(err.id)"
+                    role="button"
+                    tabindex="0"
+                  >
+                    <mat-icon class="device-error-dialog__sidebar-error-icon">error_outline</mat-icon>
+                    <div class="device-error-dialog__sidebar-meta">
+                      <span
+                        class="device-error-dialog__sidebar-timestamp"
+                        [matTooltip]="err.heading"
+                        matTooltipPosition="right"
+                        matTooltipPositionAtOrigin="true"
+                        matTooltipShowDelay="500"
+                        tooltipIfTruncated
+                      >{{ err.heading }}</span>
+                      @if (err.shortLabel) {
+                        <span
+                          class="device-error-dialog__sidebar-sub"
+                          [matTooltip]="err.shortLabel"
+                          matTooltipPosition="right"
+                          matTooltipPositionAtOrigin="true"
+                          matTooltipShowDelay="500"
+                          tooltipIfTruncated
+                        >{{ err.shortLabel }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </nav>
+            }
+          </aside>
+
+          <!-- Drag Handle for Resizing Left Sidebar -->
+          <div
+            class="device-error-dialog__resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize sidebar"
+            [class.device-error-dialog__resizer--active]="sidebar.isResizing()"
+            (mousedown)="sidebar.startResize($event)"
+          ></div>
+        }
+
+        <!-- Main Content: Expandable error sections -->
+        <main
+          #mainContent
+          class="device-error-dialog__main"
+          (scroll)="onMainScroll()"
+        >
+          @if (hasLoadError() && !hasLoaded()) {
+            <div class="device-error-dialog__empty-state device-error-dialog__empty-state--error">
+              Failed to load device errors. Click Refresh to try again.
+            </div>
+          } @else if (normalizedErrors().length === 0) {
+            <div class="device-error-dialog__empty-state">
+              No errors reported for this device.
+            </div>
+          } @else {
+            <mat-accordion multi class="device-error-dialog__accordion-group">
+              @for (err of normalizedErrors(); track err.id) {
+                <mat-expansion-panel
+                  #errorPanel
+                  [expanded]="expandedErrors()[err.id]"
+                  (opened)="setExpandedState(err.id, true)"
+                  (closed)="setExpandedState(err.id, false)"
+                  [attr.id]="err.id"
+                  class="device-error-dialog__panel"
+                  hideToggle
+                >
+                  <mat-expansion-panel-header class="device-error-dialog__panel-header">
+                    <div class="device-error-dialog__accordion-title">
+                      <mat-icon class="device-error-dialog__accordion-error-icon">error_outline</mat-icon>
+                      <span
+                        class="device-error-dialog__accordion-ts-text"
+                        [title]="err.heading"
+                      >{{ err.heading }}</span>
+                      @if (err.errorId?.name) {
+                        <span class="device-error-dialog__chip device-error-dialog__chip--name">
+                          {{ err.errorId?.name }}
+                        </span>
+                      }
+                      @if (err.errorId?.code !== undefined) {
+                        <span class="device-error-dialog__chip device-error-dialog__chip--code">
+                          {{ err.errorId?.code }}
+                        </span>
+                      }
+                      @if (err.errorId?.type) {
+                        <span class="device-error-dialog__chip device-error-dialog__chip--type">
+                          {{ err.errorId?.type }}
+                        </span>
+                      }
+                      @if (err.errorId?.namespace) {
+                        <span class="device-error-dialog__chip device-error-dialog__chip--namespace">
+                          {{ err.errorId?.namespace }}
+                        </span>
+                      }
+                      @let headerCopied = clipboard.isCopied('header:' + err.id);
+                      <button
+                        mat-icon-button
+                        class="device-error-dialog__copy-header-btn"
+                        [class.device-error-dialog__copy-header-btn--copied]="headerCopied"
+                        (click)="$event.stopPropagation(); clipboard.copy(err.headerCopyText, 'Error summary copied', 'header:' + err.id)"
+                        [matTooltip]="headerCopied ? 'Copied!' : 'Copy error summary'"
+                      >
+                        <mat-icon>{{ headerCopied ? 'check' : 'content_copy' }}</mat-icon>
+                      </button>
+                    </div>
+                    <div class="device-error-dialog__accordion-actions">
+                      <mat-icon class="device-error-dialog__expand-icon">
+                        {{ expandedErrors()[err.id] ? 'expand_less' : 'expand_more' }}
+                      </mat-icon>
+                    </div>
+                  </mat-expansion-panel-header>
+
+                  <!-- Rendered lazily on first expand and kept afterwards, so collapsing still animates. -->
+                  <ng-template matExpansionPanelContent>
+                    <div class="device-error-dialog__accordion-content">
+                      <div class="device-error-dialog__output device-error-dialog__terminal-theme">
+                        <pre class="device-error-dialog__output-content">{{ err.displayContent }}</pre>
+                        <div class="device-error-dialog__copy-track">
+                          @let contentCopied = clipboard.isCopied('content:' + err.id);
+                          <button
+                            mat-icon-button
+                            class="device-error-dialog__copy-btn"
+                            [class.device-error-dialog__copy-btn--copied]="contentCopied"
+                            (click)="clipboard.copy(err.displayContent, 'Error content copied', 'content:' + err.id)"
+                            [matTooltip]="contentCopied ? 'Copied!' : 'Copy error content'"
+                          >
+                            <mat-icon>{{ contentCopied ? 'check' : 'content_copy' }}</mat-icon>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </ng-template>
+                </mat-expansion-panel>
+              }
+            </mat-accordion>
+          }
+        </main>
+      </div>
+    }
+  </div>
+
+  <!-- Footer -->
+  <div class="device-error-dialog__footer">
+    <div class="device-error-dialog__footer-left">
+      <button
+        class="device-error-dialog__footer-btn device-error-dialog__footer-btn--outlined"
+        (click)="fetchDeviceErrors(true)"
+        [disabled]="isLoading()"
+      >
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button
+        class="device-error-dialog__footer-btn device-error-dialog__footer-btn--outlined"
+        (click)="copyAll()"
+        [disabled]="isLoading() || normalizedErrors().length === 0"
+      >
+        <mat-icon>copy_all</mat-icon>
+        Copy All
+      </button>
+    </div>
+    <div class="device-error-dialog__footer-right">
+      <button
+        class="device-error-dialog__footer-btn device-error-dialog__footer-btn--filled"
+        (click)="onClose()"
+      >
+        Done
+      </button>
+    </div>
+  </div>
+</div>

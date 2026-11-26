@@ -25,6 +25,8 @@ import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetDeviceErrorsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import java.util.Optional;
@@ -123,6 +125,17 @@ public final class LabInfoProviderImplTest {
         .thenReturn(immediateFuture(expectedResponse));
 
     assertThat(labInfoProvider.getAllDeviceDimensionsAsync(request, routedUniverse).get())
+        .isEqualTo(expectedResponse);
+  }
+
+  @Test
+  public void getDeviceErrorsAsync_selfUniverse_success() throws Exception {
+    GetDeviceErrorsRequest request = GetDeviceErrorsRequest.getDefaultInstance();
+    GetDeviceErrorsResponse expectedResponse = GetDeviceErrorsResponse.getDefaultInstance();
+    when(defaultLabInfoStub.getDeviceErrorsAsync(request))
+        .thenReturn(immediateFuture(expectedResponse));
+
+    assertThat(labInfoProvider.getDeviceErrorsAsync(request, SELF_UNIVERSE).get())
         .isEqualTo(expectedResponse);
   }
 }

@@ -192,6 +192,9 @@ message HealthAndActivityInfo {
   // Presentation intent that tells the frontend how to render the card
   // (icon/color/spin). The semantic health category is conveyed via `title`.
   UiState ui_state = 9;
+
+  // Whether the device has any errors reported by the lab server.
+  bool has_device_error = 10;
 }
 
 // Basic hardware, software, and real-time information about the device.

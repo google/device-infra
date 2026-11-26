@@ -59,6 +59,7 @@ proto_library(
     deps = [
         ":device_resources_proto",
         ":device_stats_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_proto",
         "@googleapis//google/api:annotations_proto",

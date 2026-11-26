@@ -519,6 +519,17 @@
     width: 1rem;
   }
 
+  // styles for status column extensions
+  .status-cell-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .device-error-button {
+    @include overview.device-error-button;
+  }
+
   // styles for type/status column
   .type-chip-wrapper {
     display: flex;

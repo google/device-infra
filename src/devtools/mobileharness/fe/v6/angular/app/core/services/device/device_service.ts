@@ -10,6 +10,7 @@ import {
 } from '../../models/device_action';
 import {
   DeviceOverviewPageData,
+  GetDeviceErrorsResponse,
   GetDeviceOverviewRequest,
   TestbedConfig,
 } from '../../models/device_overview';
@@ -167,4 +168,15 @@ export abstract class DeviceService {
     hostName: string,
     pageToken?: string,
   ): Observable<DeviceTestHistoryResponse>;
+
+  /**
+   * Retrieves the error list for a specific device.
+   * @param id The device ID.
+   * @param hostName The host name.
+   * @return An Observable emitting the device errors response.
+   */
+  abstract getDeviceErrors(
+    id: string,
+    hostName: string,
+  ): Observable<GetDeviceErrorsResponse>;
 }

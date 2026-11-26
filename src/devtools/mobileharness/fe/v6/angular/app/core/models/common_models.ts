@@ -116,3 +116,80 @@ export declare interface FileExplorer {
   cnsPath?: string;
   files?: FileInfo[];
 }
+
+/**
+ * A Java stack frame. Mirrors `stability.model.StackTraceElement`. Fields are
+ * optional because proto3 JSON may omit default values.
+ */
+export declare interface StackTraceElement {
+  className?: string;
+  methodName?: string;
+  fileName?: string;
+  lineNumber?: number;
+}
+
+/** Mirrors `stability.model.StackTrace`. */
+export declare interface StackTrace {
+  element?: StackTraceElement[];
+}
+
+/** Class of an exception. Mirrors `stability.model.ExceptionClassType`. */
+export declare interface ExceptionClassType {
+  /** Fully qualified class name. */
+  className?: string;
+}
+
+/** Identifies an error. Mirrors `stability.model.ErrorId`. */
+export declare interface ErrorId {
+  code?: number;
+  name?: string;
+  /** ErrorType enum name, e.g. INFRA_ISSUE. Defaults to UNCLASSIFIED. */
+  type?: string;
+  /** Namespace enum name, e.g. MH. Defaults to UNKNOWN. */
+  namespace?: string;
+}
+
+/** Key-value metadata of an exception. */
+export declare interface ExceptionMetadataEntry {
+  key?: string;
+  value?: string;
+}
+
+/**
+ * An exception without its causes. Mirrors
+ * `stability.model.ExceptionSummary`.
+ */
+export declare interface ExceptionSummary {
+  errorId?: ErrorId;
+  message?: string;
+  classType?: ExceptionClassType;
+  stackTrace?: StackTrace;
+  metadata?: ExceptionMetadataEntry[];
+}
+
+/**
+ * An exception with its flattened cause chain. Mirrors
+ * `stability.model.FlattenedExceptionDetail`.
+ */
+export declare interface FlattenedExceptionDetail {
+  summary?: ExceptionSummary;
+  cause?: ExceptionSummary[];
+  criticalErrorId?: ErrorId;
+  userFacingCriticalErrorId?: ErrorId;
+  /** Serialized stack trace including causes and suppressed exceptions. */
+  completeStackTrace?: string;
+  /** Error names of the cause chain joined with '|'. */
+  errorNameStackTrace?: string;
+  /** Error codes of the cause chain joined with '|'. */
+  errorCodeStackTrace?: string;
+}
+
+/**
+ * An error reported for a device. Mirrors
+ * `mobileharness.api.model.DeviceError`.
+ */
+export declare interface DeviceError {
+  /** Epoch milliseconds. An int64, so JSON may encode it as a string. */
+  timestampMs?: number | string;
+  error?: FlattenedExceptionDetail;
+}

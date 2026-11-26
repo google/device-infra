@@ -177,6 +177,8 @@ export declare interface DeviceSummary {
   readonly model?: string;
   readonly version?: string;
   readonly subDevices?: SubDeviceInfo[];
+  /** Whether the lab server reported any errors for the device. */
+  readonly hasDeviceError?: boolean;
 }
 
 /**

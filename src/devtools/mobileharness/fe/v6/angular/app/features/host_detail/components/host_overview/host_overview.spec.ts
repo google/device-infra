@@ -37,6 +37,7 @@ import {FeatureEnablementService} from '../../../../core/services/feature_enable
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
+import {DeviceErrorDialog} from '../../../../shared/components/device_error_dialog/device_error_dialog';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {DeviceActionService} from '../../../../shared/services/device_action_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
@@ -1457,5 +1458,21 @@ describe('HostOverview Component', () => {
         1,
       );
     });
+  });
+
+  it('openDeviceErrorDialog opens DeviceErrorDialog immediately with deviceId and hostName', () => {
+    const mockDevice = {id: 'device-err-1'} as unknown as DeviceSummary;
+    component.openDeviceErrorDialog(mockDevice);
+
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      DeviceErrorDialog,
+      jasmine.objectContaining({
+        data: {
+          deviceId: 'device-err-1',
+          hostName: mockHost.hostName,
+        },
+        autoFocus: false,
+      }),
+    );
   });
 });

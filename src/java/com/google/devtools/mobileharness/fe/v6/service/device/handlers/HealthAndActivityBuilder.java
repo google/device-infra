@@ -180,6 +180,8 @@ public final class HealthAndActivityBuilder {
       builder.setCurrentTask(currentTask);
     }
 
+    builder.setHasDeviceError(deviceInfo.getDeviceCondition().getHasDeviceError());
+
     return builder.build();
   }
 
