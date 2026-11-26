@@ -447,7 +447,7 @@ public final class AndroidInstallMainlineModulesDecoratorTest {
 
     when(androidPackageManagerUtil.getApkPackageName("/usr/local/test/gen/module1.apks/base1.apk"))
         .thenThrow(
-            new MobileHarnessException(AndroidErrorId.ANDROID_AAPT_GET_APK_PACKAGE_NAME_ERROR, ""));
+            new MobileHarnessException(AndroidErrorId.ANDROID_GET_APK_PACKAGE_NAME_ERROR, ""));
 
     MobileHarnessException exception =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
