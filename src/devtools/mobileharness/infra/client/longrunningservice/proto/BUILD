@@ -66,6 +66,7 @@ proto_library(
     srcs = ["session.proto"],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
+        "//src/devtools/mobileharness/api/model/proto:job_proto",
         "@protobuf//:any_proto",
         "@protobuf//:timestamp_proto",
     ],
