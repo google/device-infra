@@ -82,6 +82,107 @@ func New(cfg Config) (*Agent, error) {
 	return &Agent{cfg: cfg, group: group, member: member}, nil
 }
 
+// status returns the status of the node. It returns an error also when the
+// node reports a revision that a member cannot record.
+func (a *Agent) status(ctx context.Context) (Status, error) {
+	st, err := a.cfg.Node.Status(ctx)
+	if err != nil {
+		return Status{}, fmt.Errorf("reading the status of the node: %w", err)
+	}
+	if !st.Active.IsZero() && st.Active.Build == "" {
+		// Written as it is, the member would no longer parse, for this agent
+		// or for the job, which then writes nothing for the whole group.
+		return Status{}, fmt.Errorf("the node reports a revision without a build: %+v", st.Active)
+	}
+	return st, nil
+}
+
+// heartbeat writes into m what a heartbeat at now says of a node with status
+// st.
+//
+// A busy node is ACTIVE whatever its core service does: an upgrade stops the
+// service on the way. While the upgrade swaps the service the node reports
+// no revision, and the member keeps the one it has.
+func heartbeat(m *record.Member, st Status, now time.Time) {
+	m.Status = record.MemberActive
+	if !st.Running && !st.Busy {
+		m.Status = record.MemberDown
+	}
+	m.HeartbeatAt = now
+	if !st.Busy || !st.Active.IsZero() {
+		m.RunningRevision = st.Active
+	}
+}
+
+// Enable enrolls the agent: it writes the member as a heartbeat at now
+// would, creating it if the agent has none. From then on the polls of the
+// agent write heartbeats, and the agent takes part in rollouts.
+//
+// It returns an error if the group does not exist: a group is made when its
+// pool is set up, so a missing one is a wrong name or a pool that is not
+// set up, and a member of it would never get a rollout.
+func (a *Agent) Enable(ctx context.Context, now time.Time) error {
+	s := a.cfg.Store
+	if _, _, err := s.Get(ctx, a.group); errors.Is(err, store.ErrNotFound) {
+		return fmt.Errorf("group %q does not exist", a.group)
+	} else if err != nil {
+		return fmt.Errorf("reading the group: %w", err)
+	}
+	st, err := a.status(ctx)
+	if err != nil {
+		return err
+	}
+	rec, version, err := s.Get(ctx, a.member)
+	if errors.Is(err, store.ErrNotFound) {
+		var m record.Member
+		heartbeat(&m, st, now)
+		if _, err := s.Create(ctx, a.member, m.Record()); err != nil {
+			return fmt.Errorf("creating the member: %w", err)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("reading the member: %w", err)
+	}
+	m, err := record.ParseMember(rec)
+	if err != nil {
+		return fmt.Errorf("member %q: %w", a.member, err)
+	}
+	heartbeat(&m, st, now)
+	if _, err := s.Update(ctx, a.member, m.Record(), version); err != nil {
+		return fmt.Errorf("writing the member: %w", err)
+	}
+	return nil
+}
+
+// Disable opts the agent out: it writes the member as OPTED_OUT, so that the
+// agent takes part in no further rollout. An agent that has no member is
+// left without one.
+//
+// A poll that writes its heartbeat between the read and the write of Disable
+// makes Disable fail, with nothing written: stop the polls first, or call it
+// again. A poll that comes after it finds the member opted out and does
+// nothing.
+func (a *Agent) Disable(ctx context.Context, now time.Time) error {
+	s := a.cfg.Store
+	rec, version, err := s.Get(ctx, a.member)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("reading the member: %w", err)
+	}
+	m, err := record.ParseMember(rec)
+	if err != nil {
+		return fmt.Errorf("member %q: %w", a.member, err)
+	}
+	m.Status, m.HeartbeatAt = record.MemberOptedOut, now
+	if _, err := s.Update(ctx, a.member, m.Record(), version); err != nil {
+		return fmt.Errorf("writing the member: %w", err)
+	}
+	return nil
+}
+
 // Poll does one poll, and returns what it did in a few words, for the caller
 // to log. now is the time of every timestamp it writes.
 //
@@ -111,28 +212,11 @@ func (a *Agent) Poll(ctx context.Context, now time.Time) (did string, err error)
 		return "nothing: the agent is opted out", nil
 	}
 
-	st, err := a.cfg.Node.Status(ctx)
+	st, err := a.status(ctx)
 	if err != nil {
-		return "", fmt.Errorf("reading the status of the node: %w", err)
+		return "", err
 	}
-	if !st.Active.IsZero() && st.Active.Build == "" {
-		// Written as it is, the member would no longer parse, for this agent
-		// or for the job, which then writes nothing for the whole group.
-		return "", fmt.Errorf("the node reports a revision without a build: %+v", st.Active)
-	}
-
-	// The heartbeat. A busy node is ACTIVE whatever its core service does:
-	// an upgrade stops the service on the way. While the upgrade swaps the
-	// service the node reports no revision, and the member keeps the one it
-	// has.
-	m.Status = record.MemberActive
-	if !st.Running && !st.Busy {
-		m.Status = record.MemberDown
-	}
-	m.HeartbeatAt = now
-	if !st.Busy || !st.Active.IsZero() {
-		m.RunningRevision = st.Active
-	}
+	heartbeat(&m, st, now)
 	if _, err := s.Update(ctx, a.member, m.Record(), version); err != nil {
 		return "", fmt.Errorf("writing the heartbeat: %w", err)
 	}

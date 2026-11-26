@@ -22,7 +22,10 @@ package(
 
 go_library(
     name = "agent",
-    srcs = ["agent.go"],
+    srcs = [
+        "agent.go",
+        "mttnode.go",
+    ],
     importpath = "github.com/google/device-infra/src/devtools/mobileharness/infra/ats/rollout/agent",
     deps = [
         "//src/devtools/mobileharness/infra/ats/rollout/imageref",
@@ -33,7 +36,10 @@ go_library(
 
 go_test(
     name = "agent_test",
-    srcs = ["agent_test.go"],
+    srcs = [
+        "agent_test.go",
+        "mttnode_test.go",
+    ],
     embed = [":agent"],
     deps = [
         "//src/devtools/mobileharness/infra/ats/rollout/imageref",

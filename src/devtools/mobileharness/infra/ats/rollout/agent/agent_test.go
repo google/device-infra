@@ -761,3 +761,98 @@ func TestPoll_WithTheJob_ControllerRolloutSucceeds(t *testing.T) {
 		t.Errorf("upgrades started = %v, want one", node.upgrades)
 	}
 }
+
+// putGroup stores the group of the agent, which Enable looks for.
+func putGroup(t *testing.T, s store.Store) {
+	t.Helper()
+	put(t, s, groupKey, record.Group{
+		Image:  "asia-docker.pkg.dev/p/r/img",
+		Tag:    "latest",
+		Policy: record.Policy{Waves: []record.Wave{{Value: 100, Percent: true}}},
+	}.Record())
+}
+
+func TestEnable(t *testing.T) {
+	tests := []struct {
+		name   string
+		member *record.Member // nil: the agent has no member
+		status Status
+		want   *record.Member
+	}{
+		{
+			name:   "creates_the_member",
+			status: running(revNew),
+			want:   beat(record.MemberActive, revNew),
+		},
+		{
+			name:   "creates_the_member_as_down_when_the_core_is_down",
+			status: Status{},
+			want:   beat(record.MemberDown, record.Revision{}),
+		},
+		{
+			name:   "opts_in_again",
+			member: member(record.MemberOptedOut),
+			status: running(revNew),
+			want:   beat(record.MemberActive, revNew),
+		},
+		{
+			name:   "offline_becomes_active",
+			member: member(record.MemberOffline),
+			status: running(revOld),
+			want:   beat(record.MemberActive, revOld),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newStore(t, tc.member, nil, nil)
+			putGroup(t, s)
+
+			if err := newAgent(t, s, &fakeNode{status: tc.status}, 0).Enable(context.Background(), now); err != nil {
+				t.Fatalf("Enable failed: %v", err)
+			}
+
+			checkMember(t, s, tc.want)
+		})
+	}
+}
+
+func TestEnable_NoGroup_WritesNothing(t *testing.T) {
+	s := newStore(t, nil, nil, nil)
+
+	if err := newAgent(t, s, &fakeNode{status: running(revOld)}, 0).Enable(context.Background(), now); err == nil {
+		t.Error("Enable succeeded, want an error")
+	}
+
+	checkMember(t, s, nil)
+}
+
+func TestEnable_StatusFails_WritesNothing(t *testing.T) {
+	s := newStore(t, nil, nil, nil)
+	putGroup(t, s)
+
+	err := newAgent(t, s, &fakeNode{statusErr: errNode}, 0).Enable(context.Background(), now)
+
+	checkFailed(t, err, errNode)
+	checkMember(t, s, nil)
+}
+
+func TestDisable(t *testing.T) {
+	s := newStore(t, member(record.MemberActive), nil, nil)
+
+	if err := newAgent(t, s, &fakeNode{}, 0).Disable(context.Background(), now); err != nil {
+		t.Fatalf("Disable failed: %v", err)
+	}
+
+	// The member keeps the revision it last reported.
+	checkMember(t, s, beat(record.MemberOptedOut, revOld))
+}
+
+func TestDisable_NoMember_WritesNothing(t *testing.T) {
+	s := newStore(t, nil, nil, nil)
+
+	if err := newAgent(t, s, &fakeNode{}, 0).Disable(context.Background(), now); err != nil {
+		t.Fatalf("Disable failed: %v", err)
+	}
+
+	checkMember(t, s, nil)
+}
