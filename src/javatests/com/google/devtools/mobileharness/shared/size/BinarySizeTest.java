@@ -54,21 +54,21 @@ public class BinarySizeTest {
   private static final ImmutableMap<String, Long> BINARIES_MAX_SIZE_BYTE =
       ImmutableMap.of(
           "base_olc_server",
-          32_650_000L,
+          1_050_000L,
           "ats_olc_server",
-          41_150_000L,
+          1_050_000L,
           "ats_olc_server_local_mode",
-          46_250_000L,
+          1_050_000L,
           "lab_server",
-          47_350_000L,
+          1_050_000L,
           "ats_console",
-          22_550_000L,
+          1_050_000L,
           "persistent_cache_manager",
-          9_450_000L,
+          1_050_000L,
           "xts_tradefed_agent",
-          4_950_000L,
+          1_050_000L,
           "device_config_server",
-          23_750_000L);
+          1_050_000L);
 
   private static final long MAX_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 
