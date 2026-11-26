@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.infra.client.api;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.client.api.proto";
 option java_outer_classname = "ServerLocatorProto";
 

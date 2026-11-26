@@ -20,6 +20,7 @@ package mobileharness.lab;
 
 import "src/java/com/google/wireless/qa/mobileharness/lab/proto/stat.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.wireless.qa.mobileharness.lab.proto";
 
 message GetLabStatRequest {

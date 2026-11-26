@@ -24,6 +24,7 @@ import "src/devtools/deviceinfra/api/deviceinfo/proto/device_requirement.proto";
 import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/devtools/mobileharness/api/query/proto/device_query.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.master.rpc.proto";
 option java_outer_classname = "DeviceAllocationServiceProto";
 

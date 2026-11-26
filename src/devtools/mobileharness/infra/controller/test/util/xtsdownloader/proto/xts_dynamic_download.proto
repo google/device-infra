@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.infra.controller.test.util.xtsdownloader;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader";
 option java_multiple_files = true;
 option java_outer_classname = "XtsDynamicDownloadProto";

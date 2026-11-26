@@ -29,6 +29,7 @@ import "src/devtools/mobileharness/infra/container/proto/test_engine.proto";
 import "src/devtools/mobileharness/shared/trace/proto/span.proto";
 import "src/devtools/mobileharness/shared/version/proto/version.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.lab.proto";
 option java_outer_classname = "PrepareTestServiceProto";
 

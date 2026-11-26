@@ -20,6 +20,7 @@ package mobileharness.api.model;
 
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.api.model.proto";
 option java_outer_classname = "Diagnostic";
 

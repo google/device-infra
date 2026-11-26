@@ -29,6 +29,7 @@ import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto"
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/job_spec.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.wireless.qa.mobileharness.lab.proto";
 
 // Note that whenever it changes, please also modify MH lab TestInfoCreator.

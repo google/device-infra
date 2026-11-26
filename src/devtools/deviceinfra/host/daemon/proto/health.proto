@@ -20,6 +20,7 @@ package deviceinfra.daemon.health;
 
 import "google/protobuf/duration.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.deviceinfra.host.daemon.health.proto";
 option java_outer_classname = "HealthProto";
 

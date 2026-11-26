@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package deviceinfra.api.deviceinfo;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.deviceinfra.api.deviceinfo.proto";
 option java_outer_classname = "DeviceRequirementProto";
 

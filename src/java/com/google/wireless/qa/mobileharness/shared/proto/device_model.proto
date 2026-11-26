@@ -20,6 +20,7 @@ package mobileharness.shared;
 
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
 option java_outer_classname = "Device";
 

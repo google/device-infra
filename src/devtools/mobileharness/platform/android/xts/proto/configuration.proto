@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package xts.config;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.platform.android.xts.config.proto";
 option java_outer_classname = "ConfigurationProto";
 

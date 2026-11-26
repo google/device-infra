@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.infra.ats.console.controller;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.ats.console.controller.proto";
 option java_outer_classname = "DeviceDescriptorProto";
 

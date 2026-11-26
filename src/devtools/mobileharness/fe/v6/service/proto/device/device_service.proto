@@ -26,6 +26,7 @@ import "src/devtools/mobileharness/fe/v6/service/proto/device/device_resources.p
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_stats.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/search/search_common.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.device";
 option java_multiple_files = true;
 option java_outer_classname = "DeviceServiceProto";

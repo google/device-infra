@@ -22,6 +22,7 @@ import "google/protobuf/descriptor.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
 option java_multiple_files = true;
 

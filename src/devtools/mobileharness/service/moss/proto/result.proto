@@ -26,6 +26,7 @@ import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.service.moss.proto";
 option java_outer_classname = "Result";
 

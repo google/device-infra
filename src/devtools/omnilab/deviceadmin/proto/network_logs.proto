@@ -20,6 +20,7 @@ package devtools.omnilab.deviceadmin.proto;
 
 import "google/protobuf/timestamp.proto";
 
+option optimize_for = CODE_SIZE;
 option features.field_presence = IMPLICIT;
 option java_package = 'com.google.devtools.omnilab.deviceadmin.proto';
 option java_outer_classname = 'NetworkLogsProto';

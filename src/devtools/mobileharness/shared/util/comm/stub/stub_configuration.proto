@@ -20,6 +20,7 @@ package mobileharness.shared.util.comm.stub;
 
 import "src/devtools/mobileharness/shared/util/comm/relay/proto/destination.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.shared.util.comm.stub";
 option java_outer_classname = "StubConfigurationProto";
 

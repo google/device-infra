@@ -23,6 +23,7 @@ import "src/devtools/deviceinfra/api/deviceinfo/proto/device_config.proto";
 import "src/devtools/deviceinfra/api/deviceinfo/proto/device_dimension.proto";
 import "src/devtools/deviceinfra/api/deviceinfo/proto/device_info.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.deviceinfra.api.deviceinfo.proto";
 option java_outer_classname = "DeviceDescriptorProto";
 

@@ -20,6 +20,7 @@ package mobileharness.infra.ats.console.result;
 
 import "src/devtools/mobileharness/api/model/proto/test.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.ats.console.result.proto";
 option java_outer_classname = "ResultProto";
 

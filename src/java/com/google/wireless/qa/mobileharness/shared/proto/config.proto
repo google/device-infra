@@ -21,6 +21,7 @@ package mobileharness.shared;
 import "src/devtools/mobileharness/api/model/proto/device.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
 
 // Configuration of the shared API lib. All of the fields are optional or

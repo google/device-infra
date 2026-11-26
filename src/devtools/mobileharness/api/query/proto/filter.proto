@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.api.query;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.api.query.proto";
 option java_outer_classname = "FilterProto";
 

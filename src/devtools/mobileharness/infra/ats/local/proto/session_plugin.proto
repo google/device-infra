@@ -20,6 +20,7 @@ package mobileharness.infra.ats.local;
 
 import "src/devtools/mobileharness/api/model/proto/test.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.ats.local.proto";
 option java_outer_classname = "AtsLocalSessionPluginProto";
 

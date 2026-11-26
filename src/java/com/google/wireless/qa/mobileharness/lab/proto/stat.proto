@@ -25,6 +25,7 @@ import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.wireless.qa.mobileharness.lab.proto";
 
 // Counter of a specific status of a device.

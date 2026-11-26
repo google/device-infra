@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.admin;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.admin";
 option java_multiple_files = true;
 option java_outer_classname = "AdminResourcesProto";

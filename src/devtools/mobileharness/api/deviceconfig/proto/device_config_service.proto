@@ -23,6 +23,7 @@ import "src/devtools/mobileharness/api/deviceconfig/proto/device.proto";
 import "src/devtools/mobileharness/api/deviceconfig/proto/global.proto";
 import "src/devtools/mobileharness/api/deviceconfig/proto/lab.proto";
 
+option optimize_for = CODE_SIZE;
 option features.field_presence = IMPLICIT;
 option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
 option java_outer_classname = "DeviceConfigServiceProto";

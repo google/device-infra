@@ -21,6 +21,7 @@ package mobileharness.shared.util.cache.persistent;
 import "google/protobuf/timestamp.proto";
 import "src/devtools/mobileharness/shared/util/file/checksum/proto/checksum.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.shared.util.cache.persistent.proto";
 option java_outer_classname = "MetadataProto";
 

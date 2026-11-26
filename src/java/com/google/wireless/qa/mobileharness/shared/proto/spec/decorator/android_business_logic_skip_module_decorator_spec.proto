@@ -20,6 +20,7 @@ package mobileharness.shared.spec;
 
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
 option java_multiple_files = true;
 option java_outer_classname = "AndroidBusinessLogicSkipModuleDecoratorSpecProto";

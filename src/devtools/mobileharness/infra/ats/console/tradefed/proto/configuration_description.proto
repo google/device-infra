@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package tradefed.config;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.android.tradefed.config.proto";
 option java_outer_classname = "ConfigurationDescription";
 

@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.infra.master.rpc;
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.infra.master.rpc.proto";
 option java_outer_classname = "DebugServiceProto";
 

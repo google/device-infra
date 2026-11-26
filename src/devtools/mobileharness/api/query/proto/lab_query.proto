@@ -24,6 +24,7 @@ import "src/devtools/mobileharness/api/model/proto/device.proto";
 import "src/devtools/mobileharness/api/model/proto/lab.proto";
 import "src/devtools/mobileharness/api/query/proto/filter.proto";
 
+option optimize_for = CODE_SIZE;
 option java_package = "com.google.devtools.mobileharness.api.query.proto";
 option java_outer_classname = "LabQueryProto";
 
