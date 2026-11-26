@@ -655,6 +655,13 @@ public class Flags {
   public static final Flag<Boolean> disableDeviceRebootForRoProperties = Flag.value(false);
 
   @FlagSpec(
+      name = "disable_lab_plugin_from_job",
+      help =
+          "Whether to disallow loading job-supplied lab_plugin_jar and lab plugin parameters on"
+              + " lab server. Default is false.")
+  public static final Flag<Boolean> disableLabPluginFromJob = Flag.value(false);
+
+  @FlagSpec(
       name = "disable_wait_for_device",
       help = "Whether to disable 'adb wait-for-device'. Default is false.")
   public static final Flag<Boolean> disableWaitForDevice = Flag.value(false);

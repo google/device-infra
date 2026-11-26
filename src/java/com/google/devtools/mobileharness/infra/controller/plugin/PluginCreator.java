@@ -28,6 +28,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheStats;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
@@ -437,12 +438,18 @@ public class PluginCreator implements AutoCloseable {
       }
       return scanned;
     } catch (Exception e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       close();
       Throwable cause =
           (e instanceof ExecutionException || e instanceof UncheckedExecutionException)
                   && e.getCause() != null
               ? e.getCause()
               : e;
+      if (cause instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw new MobileHarnessException(
           BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
           String.format("Error scanning class graph in plugin jar [%s]", jarUrls),
@@ -605,7 +612,12 @@ public class PluginCreator implements AutoCloseable {
       } else {
         logInfo("Searching plugin module classes in all jars by names %s", moduleClassNames);
         PluginModuleClassProvider moduleClassProvider =
-            new NamedPluginModuleClassProvider(moduleClassNames, classLoader);
+            new NamedPluginModuleClassProvider(
+                moduleClassNames,
+                classLoader,
+                pluginType == PluginType.LAB
+                    ? ImmutableSet.of(PluginType.LAB, PluginType.UNSPECIFIED)
+                    : ImmutableSet.of());
         try {
           moduleClasses = moduleClassProvider.getPluginModuleClasses();
         } catch (MobileHarnessException e) {
@@ -666,7 +678,13 @@ public class PluginCreator implements AutoCloseable {
         }
       } else {
         logInfo("Searching plugin classes in all jars by names %s", classNames);
-        PluginClassProvider classProvider = new NamedPluginClassProvider(classNames, classLoader);
+        PluginClassProvider classProvider =
+            new NamedPluginClassProvider(
+                classNames,
+                classLoader,
+                pluginType == PluginType.LAB
+                    ? ImmutableSet.of(PluginType.LAB, PluginType.UNSPECIFIED)
+                    : ImmutableSet.of());
         try {
           classes = classProvider.getPluginClasses();
         } catch (MobileHarnessException e) {

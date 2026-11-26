@@ -26,12 +26,14 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Files.FileInfo;
 import com.google.devtools.mobileharness.api.model.job.util.AddFileHandler;
+import com.google.devtools.mobileharness.infra.lab.common.env.UtrsEnvironments;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobFileUnit;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit.JobOrTestCase;
 import com.google.devtools.mobileharness.infra.lab.proto.File.TestFileUnit;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.TextFormat;
@@ -93,7 +95,9 @@ public class LabFileNotifier {
           .alsoTo(logger)
           .log(
               "Start to handling cached job/test files, cache=%s",
-              fileCache.stream().map(TextFormat::shortDebugString).collect(toImmutableList()));
+              fileCache.stream()
+                  .map(TextFormat.printer().emittingSingleLine(true)::printToString)
+                  .collect(toImmutableList()));
       isTestStarted = true;
       this.testInfo = testInfo;
       this.allocation = allocation;
@@ -195,9 +199,30 @@ public class LabFileNotifier {
                 testFileUnit.getChecksum().isEmpty() ? null : testFileUnit.getChecksum()));
   }
 
+  protected boolean isRunInDm() {
+    return UtrsEnvironments.isRunInDM();
+  }
+
   @GuardedBy("fileCache")
   private void addJobFile(JobFileUnit jobFileUnit) throws MobileHarnessException {
     JobInfo jobInfo = testInfo.jobInfo();
+    if (jobFileUnit.getTag().equals(JobInfo.TAG_LAB_PLUGIN) && !isRunInDm()) {
+      if (Flags.disableLabPluginFromJob.getNonNull()) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log(
+                "Rejecting job file with tag [%s] (%s) because --disable_lab_plugin_from_job is"
+                    + " enabled.",
+                jobFileUnit.getTag(), jobFileUnit.getLocalPath());
+        return;
+      }
+      logger.atWarning().log(
+          "Shadow audit: accepting job file with tag [%s] (%s); will be rejected when"
+              + " --disable_lab_plugin_from_job is enabled.",
+          jobFileUnit.getTag(), jobFileUnit.getLocalPath());
+    }
     if (!jobFileUnit.getTag().startsWith(JobSpecHelper.FILE_TAG_PREFIX)
         && !jobFileUnit.getTag().startsWith(ScopedSpecs.FILE_TAG_PREFIX)) {
       jobInfo
@@ -221,6 +246,11 @@ public class LabFileNotifier {
   @VisibleForTesting
   protected void handleJobFile(JobFileUnit jobFileUnit)
       throws MobileHarnessException, InterruptedException {
+    if (jobFileUnit.getTag().equals(JobInfo.TAG_LAB_PLUGIN)
+        && !isRunInDm()
+        && Flags.disableLabPluginFromJob.getNonNull()) {
+      return;
+    }
     JobInfo jobInfo = testInfo.jobInfo();
     // TODO: Deprecate AddFileHandler Interface as it is not needed.
     AddFileHandler extraFileHandler = AddFileHandler.EMPTY;

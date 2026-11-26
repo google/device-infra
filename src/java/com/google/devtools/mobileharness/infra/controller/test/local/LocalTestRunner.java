@@ -40,6 +40,8 @@ import com.google.devtools.mobileharness.infra.controller.test.exception.TestRun
 import com.google.devtools.mobileharness.infra.controller.test.local.annotation.DoNotSubscribeTestEvent;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
+import com.google.devtools.mobileharness.infra.lab.common.env.UtrsEnvironments;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.Decorator;
@@ -47,6 +49,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
@@ -118,12 +121,47 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
     return "local";
   }
 
+  protected boolean isRunInDm() {
+    return UtrsEnvironments.isRunInDM();
+  }
+
+  private boolean shouldLoadJobLabPlugins(TestInfo testInfo) {
+    if (!getComponentName().equals("lab") || isRunInDm()) {
+      return true;
+    }
+    boolean hasJobLabPlugins =
+        !testInfo.jobInfo().inputFiles().get(JobInfo.TAG_LAB_PLUGIN).isEmpty()
+            || testInfo.jobInfo().params().has(JobInfo.PARAM_LAB_PLUGIN)
+            || testInfo.jobInfo().params().has(JobInfo.PARAM_CLIENT_PLUGIN_MODULES);
+    if (Flags.disableLabPluginFromJob.getNonNull()) {
+      if (hasJobLabPlugins) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log(
+                "Skipping job-supplied lab plugins for test %s because"
+                    + " --disable_lab_plugin_from_job is enabled.",
+                testInfo.locator().getId());
+      }
+      return false;
+    }
+    if (hasJobLabPlugins) {
+      logger.atWarning().log(
+          "Shadow audit: loading job-supplied lab plugins on lab runner for test %s; will be"
+              + " blocked when --disable_lab_plugin_from_job is enabled.",
+          testInfo.locator().getId());
+    }
+    return true;
+  }
+
   /**
    * Loads plugins.
    *
    * <p>{@inheritDoc}
    */
   @Override
+  @SuppressWarnings("deprecation")
   protected void initialize(TestInfo testInfo, Allocation allocation)
       throws MobileHarnessException {
     try {
@@ -131,7 +169,9 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
       pluginItems.addAll(this.initialPluginItems);
       pluginItems.addAll(builtinPlugins.loadBuiltInPlugin(testInfo, this));
 
-      pluginItems.addAll(testFlow.loadPlugin(testInfo, this));
+      if (shouldLoadJobLabPlugins(testInfo)) {
+        pluginItems.addAll(testFlow.loadPlugin(testInfo, this));
+      }
       PluginLoadingResult pluginLoadingResult = PluginLoadingResult.create(pluginItems);
       this.pluginLoadingResultFuture.set(pluginLoadingResult);
     } catch (MobileHarnessException | RuntimeException e) {

@@ -16,12 +16,15 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.service.util;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Dirs;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.KickOffTestRequest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -31,13 +34,23 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Utility for creating {@link TestInfo} from {@link KickOffTestRequest} in MH test engine or lab
  * server.
  */
 public class TestInfoCreator {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final ImmutableSet<String> LAB_PLUGIN_JOB_PARAMS =
+      ImmutableSet.of(
+          JobInfo.PARAM_LAB_PLUGIN,
+          JobInfo.PARAM_CLIENT_PLUGIN_MODULES,
+          JobInfo.PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX);
 
   private final JobDirFactory jobDirsFactory;
   private final LocalFileUtil localFileUtil;
@@ -48,6 +61,8 @@ public class TestInfoCreator {
   }
 
   /**
+   * Creates a {@link TestInfo} from a {@link KickOffTestRequest}.
+   *
    * @param req whose client_version should be greater than 4.29.0
    */
   public TestInfo create(KickOffTestRequest req)
@@ -102,7 +117,23 @@ public class TestInfoCreator {
           "Failed to set job scoped specs: " + req.getJob().getJobScopedSpecsJson(),
           e);
     }
-    jobInfo.params().addAll(StrPairUtil.convertCollectionToMap(req.getJob().getJobParamList()));
+    Map<String, String> jobParams =
+        new HashMap<>(StrPairUtil.convertCollectionToMap(req.getJob().getJobParamList()));
+    if (LAB_PLUGIN_JOB_PARAMS.stream().anyMatch(jobParams::containsKey)) {
+      if (Flags.disableLabPluginFromJob.getNonNull()) {
+        logger.atWarning().log(
+            "Stripping lab plugin job params from KickOffTestRequest for job %s because"
+                + " --disable_lab_plugin_from_job is enabled.",
+            req.getJob().getJobId());
+        jobParams.keySet().removeAll(LAB_PLUGIN_JOB_PARAMS);
+      } else {
+        logger.atWarning().log(
+            "Shadow audit: KickOffTestRequest for job %s contains lab plugin job params; will be"
+                + " stripped when --disable_lab_plugin_from_job is enabled.",
+            req.getJob().getJobId());
+      }
+    }
+    jobInfo.params().addAll(jobParams);
     jobInfo
         .properties()
         .addAll(StrPairUtil.convertCollectionToMap(req.getJob().getJobPropertyList()));

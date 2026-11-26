@@ -42,6 +42,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/annotation",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:test_flow_converter",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/common/env",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:class_util",
