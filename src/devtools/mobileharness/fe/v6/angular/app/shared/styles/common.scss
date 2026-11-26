@@ -94,14 +94,19 @@
   display: inline-block;
 }
 
-/// Standard layout mixin for top-level page component hosts.
-@mixin page-host($padding: 1rem) {
+/// Standard layout mixin for top-level page component hosts. The padding
+/// narrows to `$narrow-padding` in windows narrower than 768px, where the
+/// navigation drawer slides over the page instead of sitting beside it.
+@mixin page-host($padding: 1rem, $narrow-padding: 10px) {
   display: block;
   min-height: 100%;
   box-sizing: border-box;
 
   @if $padding != null {
     padding: $padding;
+
+    @media (width < 768px) {
+      padding: $narrow-padding;
+    }
   }
 }
-

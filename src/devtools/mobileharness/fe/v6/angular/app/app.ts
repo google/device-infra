@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import {BreakpointObserver} from '@angular/cdk/layout';
 import {PortalModule} from '@angular/cdk/portal';
 import {CommonModule, DOCUMENT} from '@angular/common';
 import {
@@ -25,13 +26,15 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
 } from '@angular/core';
+import {toSignal} from '@angular/core/rxjs-interop';
 import {MatButtonModule, MatIconButton} from '@angular/material/button';
 import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
 import {MatListModule} from '@angular/material/list';
 import {MatMenuModule} from '@angular/material/menu';
-import {MatSidenavModule} from '@angular/material/sidenav';
+import {type MatDrawerMode, MatSidenavModule} from '@angular/material/sidenav';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {
@@ -53,13 +56,16 @@ import {
 } from '@deviceinfra/app/core/models/app_data';
 import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
-import {ENTITY_SEARCH_PATHS, isHeaderJumpBarVisibleOnRoute} from '@deviceinfra/app/features/all_site_search/all_site_search_scope';
+import {
+  ENTITY_SEARCH_PATHS,
+  isHeaderJumpBarVisibleOnRoute,
+} from '@deviceinfra/app/features/all_site_search/all_site_search_scope';
 import {HeaderJumpBar} from '@deviceinfra/app/features/all_site_search/components/header_jump_bar/header_jump_bar';
 import {EmbeddedBackdropService} from '@deviceinfra/app/shared/services/embedded_backdrop_service';
 import {HeaderSearchDockService} from '@deviceinfra/app/shared/services/header_search_dock_service';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
-import {filter, takeUntil} from 'rxjs/operators';
+import {filter, map, takeUntil} from 'rxjs/operators';
 function isAssistantEnabled(
   queryParamMap?: unknown,
   appData?: unknown,
@@ -78,6 +84,37 @@ export const EMBEDDED_HEADER_BAND_CLASS = 'with-embedded-header-band';
 /** CSS custom property on <body> carrying the band height for that offset. */
 export const EMBEDDED_HEADER_BAND_HEIGHT_PROPERTY =
   '--embedded-header-band-height';
+
+/**
+ * How the standalone shell shows its main navigation, by window width:
+ *
+ * - `drawer` (1280px and wider): the 256px drawer beside the page, open by
+ *   default; the menu button hides and shows it.
+ * - `rail` (768px to 1279px): the 72px icon rail; the menu button expands it
+ *   into the 256px drawer and back.
+ * - `overlay` (below 768px): the drawer slides over the page with a backdrop,
+ *   closed by default, so the page keeps the full width.
+ */
+type NavMode = 'drawer' | 'rail' | 'overlay';
+
+/** Matches windows wide enough for the drawer beside the page. */
+const NAV_DRAWER_MEDIA_QUERY = '(min-width: 1280px)';
+/** Matches windows wide enough for the icon rail. */
+const NAV_RAIL_MEDIA_QUERY = '(min-width: 768px)';
+/**
+ * Element of the overlay drawer that takes the focus when the drawer opens:
+ * the list container, not the first link, which would look selected next to
+ * the link of the current page.
+ */
+const NAV_OVERLAY_FOCUS_TARGET = '.sidenav-container';
+
+/** Returns the navigation mode for the window width media query matches. */
+function getNavMode(breakpoints: Readonly<Record<string, boolean>>): NavMode {
+  if (breakpoints[NAV_DRAWER_MEDIA_QUERY]) {
+    return 'drawer';
+  }
+  return breakpoints[NAV_RAIL_MEDIA_QUERY] ? 'rail' : 'overlay';
+}
 
 /** Homepage */
 @Component({
@@ -105,7 +142,44 @@ export const EMBEDDED_HEADER_BAND_HEIGHT_PROPERTY =
   ],
 })
 export class App implements OnDestroy {
-  sideNavExpanded = true;
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  /** How the main navigation shows at the current window width. */
+  private readonly navMode = toSignal(
+    this.breakpointObserver
+      .observe([NAV_DRAWER_MEDIA_QUERY, NAV_RAIL_MEDIA_QUERY])
+      .pipe(map(({breakpoints}) => getNavMode(breakpoints))),
+    {requireSync: true},
+  );
+  /**
+   * Whether the main navigation is expanded in the current mode: the drawer
+   * is shown (`drawer`), the rail is expanded into the drawer (`rail`), or the
+   * overlay drawer is open (`overlay`). Starts over from the default of the
+   * mode (expanded only in `drawer`) whenever the window crosses a breakpoint.
+   */
+  protected readonly navExpanded = linkedSignal(
+    () => this.navMode() === 'drawer',
+  );
+  /** Whether the navigation shows as the collapsed icon rail. */
+  protected readonly isNavRail = computed(
+    () => this.navMode() === 'rail' && !this.navExpanded(),
+  );
+  /** Whether the drawer is open; the icon rail is an open drawer too. */
+  protected readonly isNavOpened = computed(
+    () => this.navMode() === 'rail' || this.navExpanded(),
+  );
+  /** Drawer mode: in the overlay mode the drawer floats over the page. */
+  protected readonly sidenavMode = computed<MatDrawerMode>(() =>
+    this.navMode() === 'overlay' ? 'over' : 'side',
+  );
+  /**
+   * Where the drawer moves the focus when it opens. The overlay drawer focuses
+   * its list container, so that Tab reaches the links, Escape closes it, and
+   * the focus returns to the menu button on close; side drawers leave the
+   * focus where it is (`'dialog'`, the Material default for them).
+   */
+  protected readonly navAutoFocus = computed(() =>
+    this.navMode() === 'overlay' ? NAV_OVERLAY_FOCUS_TARGET : 'dialog',
+  );
   private readonly destroy = new ReplaySubject<void>();
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
@@ -206,6 +280,21 @@ export class App implements OnDestroy {
     }
   }
 
+  /** Expands or collapses the main navigation in the current mode. */
+  protected toggleNav(): void {
+    this.navExpanded.update((expanded) => !expanded);
+  }
+
+  /**
+   * Closes the overlay drawer after a navigation, and keeps the state in sync
+   * when the drawer closes itself on a backdrop click or the Escape key.
+   */
+  protected closeOverlayNav(): void {
+    if (this.navMode() === 'overlay') {
+      this.navExpanded.set(false);
+    }
+  }
+
   /**
    * Returns the preserved query parameters from the common params service.
    */
@@ -256,6 +345,7 @@ export class App implements OnDestroy {
       )
       .subscribe(() => {
         this.updateShowContent();
+        this.closeOverlayNav();
       });
 
     this.urlService.navigate$.pipe(takeUntil(this.destroy)).subscribe((url) => {

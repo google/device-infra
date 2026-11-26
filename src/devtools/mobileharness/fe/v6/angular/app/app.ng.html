@@ -19,9 +19,11 @@
       <button
         class="toggleSidenavButton toolbar-button"
         mat-icon-button
-        (click)="sideNavExpanded = !sideNavExpanded"
+        (click)="toggleNav()"
         matTooltip="Main menu"
         aria-label="Toggle sidenav menu"
+        aria-controls="app-main-nav"
+        [attr.aria-expanded]="navExpanded()"
       >
         <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
       </button>
@@ -49,9 +51,21 @@
       }
     </mat-toolbar>
 
-    <mat-sidenav-container autosize class="app-sidenav-container">
-      <!--Sidenav menu-->
-      <mat-sidenav mode="side" [opened]="sideNavExpanded" role="navigation">
+    <mat-sidenav-container
+      autosize
+      class="app-sidenav-container"
+      [class.nav-rail]="isNavRail()"
+    >
+      <!--Sidenav menu: drawer, icon rail, or overlay drawer by window width (see NavMode).-->
+      <mat-sidenav
+        id="app-main-nav"
+        role="navigation"
+        [mode]="sidenavMode()"
+        [opened]="isNavOpened()"
+        [disableClose]="sidenavMode() === 'side'"
+        [autoFocus]="navAutoFocus()"
+        (closedStart)="closeOverlayNav()"
+      >
         <div class="sidenav-container">
           <mat-nav-list>
             <a

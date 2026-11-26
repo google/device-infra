@@ -518,7 +518,6 @@ app-root {
   .app-sidenav-container {
     background-color: $labconsole-bg;
     height: calc(100% - 64px);
-    container-type: inline-size;
 
     mat-sidenav {
       margin-top: 1rem;
@@ -527,6 +526,12 @@ app-root {
 
       .sidenav-container {
         @include common.shared-scrollbar-style();
+
+        // Programmatic focus lands here when the overlay drawer opens so Tab
+        // moves into the nav links without painting a focus ring on the box.
+        &:focus {
+          outline: none;
+        }
       }
 
       mat-nav-list {
@@ -570,6 +575,13 @@ app-root {
       }
     }
 
+    // Below 768px the drawer slides over the page (`mode="over"`), so it runs
+    // from the top bar down to the bottom of the window.
+    mat-sidenav.mat-drawer-over {
+      margin-top: 0;
+      padding-top: 1rem;
+    }
+
     mat-sidenav-content {
       display: flex;
       flex-direction: column;
@@ -599,15 +611,21 @@ app-root {
       }
     }
 
+    // The shadow and the backdrop (scrim) only show on the overlay drawer
+    // below 768px; side drawers have no shadow.
     @include mat.sidenav-overrides(
       (
         container-background-color: $labconsole-bg,
         content-background-color: $labconsole-bg,
         container-width: $sidenav-expanded-width,
+        container-elevation-shadow: 0 8px 24px rgba(15, 23, 42, 0.18),
+        scrim-color: rgba(15, 23, 42, 0.32),
       )
     );
 
-    @media (max-width: 1100px) {
+    // From 768px to 1279px (see NavMode in app.ts), until the menu button
+    // expands it into the full drawer.
+    &.nav-rail {
       @include sidenav-icon-only-rail();
     }
   }

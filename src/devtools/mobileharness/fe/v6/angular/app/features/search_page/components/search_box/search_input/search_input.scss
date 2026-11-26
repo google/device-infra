@@ -404,7 +404,10 @@
   --search-control-height: clamp(42px, 4.5vh, 48px);
   --sp-radius: 24px;
 
+  // Keep the docked toolbar search on one row even below 768px, so it never
+  // wraps out of the 64px top bar onto the page content below it.
   .query-top-row {
+    flex-wrap: nowrap;
     margin-bottom: 0;
     max-width: none;
     align-items: center;
@@ -412,6 +415,21 @@
 
     > *:not(.search-wrap) {
       margin-top: 0;
+    }
+
+    .scope-switcher,
+    .query-refresh-btn,
+    .search-wrap {
+      order: 0;
+    }
+
+    .query-refresh-btn {
+      margin-left: 0;
+    }
+
+    .search-wrap {
+      flex: 1 1 auto;
+      width: auto;
     }
   }
 

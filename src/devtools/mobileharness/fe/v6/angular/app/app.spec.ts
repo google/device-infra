@@ -1,5 +1,11 @@
+import {ESCAPE} from '@angular/cdk/keycodes';
+import {BreakpointObserver, type BreakpointState} from '@angular/cdk/layout';
+import {TestbedHarnessEnvironment} from '@angular/cdk/testing/testbed';
 import {signal, type WritableSignal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {MatSidenav} from '@angular/material/sidenav';
+import {MatSidenavHarness} from '@angular/material/sidenav/testing';
+import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {
   ActivatedRoute,
@@ -7,7 +13,14 @@ import {
   provideRouter,
   Router,
 } from '@angular/router';
-import {of, Subject} from 'rxjs';
+import {
+  BehaviorSubject,
+  firstValueFrom,
+  type Observable,
+  of,
+  Subject,
+} from 'rxjs';
+import {filter, map} from 'rxjs/operators';
 
 import {
   App,
@@ -18,6 +31,50 @@ import {APP_DATA, type AppData} from './core/models/app_data';
 import {CommonParamsService} from './core/services/common_params_service';
 import {type EmbeddedHeaderSlot, UrlService} from './core/services/url_service';
 import {EmbeddedBackdropService} from './shared/services/embedded_backdrop_service';
+
+/**
+ * Stands in for BreakpointObserver: resolves `(min-width: Npx)` queries against
+ * a window width set by the test (other queries never match), and reports
+ * width changes at once.
+ */
+class FakeBreakpointObserver {
+  private readonly width = new BehaviorSubject(1440);
+
+  setWidth(width: number) {
+    this.width.next(width);
+  }
+
+  isMatched(value: string | readonly string[]): boolean {
+    return toQueryList(value).some((query) =>
+      matchesWidth(query, this.width.value),
+    );
+  }
+
+  observe(value: string | readonly string[]): Observable<BreakpointState> {
+    const queries = toQueryList(value);
+    return this.width.pipe(
+      map((width) => {
+        const breakpoints = Object.fromEntries(
+          queries.map((query) => [query, matchesWidth(query, width)]),
+        );
+        return {
+          matches: Object.values(breakpoints).some((matches) => matches),
+          breakpoints,
+        };
+      }),
+    );
+  }
+}
+
+function toQueryList(value: string | readonly string[]): readonly string[] {
+  return typeof value === 'string' ? [value] : value;
+}
+
+/** Returns whether a window of the given width matches a `(min-width: Npx)` query. */
+function matchesWidth(query: string, width: number): boolean {
+  const minWidth = /^\(min-width: (\d+)px\)$/.exec(query);
+  return minWidth !== null && width >= Number(minWidth[1]);
+}
 
 describe('App Component', () => {
   let component: App;
@@ -108,8 +165,8 @@ describe('App Component', () => {
     });
   });
 
-  it('should have sideNavExpanded true by default', () => {
-    expect(component.sideNavExpanded).toBeTrue();
+  it('should not render the sidenav in embedded mode', () => {
+    expect(fixture.nativeElement.querySelector('mat-sidenav')).toBeNull();
   });
 
   describe('Standalone mode', () => {
@@ -141,26 +198,11 @@ describe('App Component', () => {
       standaloneFixture.detectChanges();
     });
 
-    it('should be in standalone mode with expanded sideNav by default', () => {
+    it('should be in standalone mode with the sidenav', () => {
       expect(standaloneComponent.isStandaloneMode).toBeTrue();
-      expect(standaloneComponent.sideNavExpanded).toBeTrue();
       const sidenav =
         standaloneFixture.nativeElement.querySelector('mat-sidenav');
       expect(sidenav).toBeTruthy();
-    });
-
-    it('should toggle sideNavExpanded when menu button is clicked', () => {
-      const toggleButton: HTMLButtonElement =
-        standaloneFixture.nativeElement.querySelector('.toggleSidenavButton');
-      expect(toggleButton).toBeTruthy();
-
-      toggleButton.click();
-      standaloneFixture.detectChanges();
-      expect(standaloneComponent.sideNavExpanded).toBeFalse();
-
-      toggleButton.click();
-      standaloneFixture.detectChanges();
-      expect(standaloneComponent.sideNavExpanded).toBeTrue();
     });
 
     it('should expose and render User Guide and FAQs URLs', () => {
@@ -206,6 +248,256 @@ describe('App Component', () => {
       expect(
         footer.querySelector('.copy-right-info')?.textContent?.trim(),
       ).toBe(`© ${new Date().getFullYear()} Google`);
+    });
+  });
+
+  describe('main navigation', () => {
+    let breakpointObserver: FakeBreakpointObserver;
+    let navFixture: ComponentFixture<App>;
+
+    beforeEach(async () => {
+      breakpointObserver = new FakeBreakpointObserver();
+      const standaloneMockActivatedRoute = {
+        snapshot: {
+          queryParams: {},
+          queryParamMap: convertToParamMap({'is_embedded_mode': 'false'}),
+        } as unknown as ActivatedRoute['snapshot'],
+        queryParamMap: of(convertToParamMap({'is_embedded_mode': 'false'})),
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [NoopAnimationsModule, App],
+        providers: [
+          // A page to navigate to that keeps the shell shown.
+          provideRouter([{path: 'devices', children: []}]),
+          {provide: APP_DATA, useValue: appData},
+          {provide: UrlService, useValue: mockUrlService},
+          {provide: ActivatedRoute, useValue: standaloneMockActivatedRoute},
+          {provide: BreakpointObserver, useValue: breakpointObserver},
+        ],
+      }).compileComponents();
+    });
+
+    /** Creates the standalone app in a window of the given width. */
+    async function createApp(width: number): Promise<MatSidenavHarness> {
+      breakpointObserver.setWidth(width);
+      navFixture = TestBed.createComponent(App);
+      navFixture.detectChanges();
+      return TestbedHarnessEnvironment.loader(navFixture).getHarness(
+        MatSidenavHarness,
+      );
+    }
+
+    function resizeWindow(width: number) {
+      breakpointObserver.setWidth(width);
+      navFixture.detectChanges();
+    }
+
+    function getMenuButton(): HTMLButtonElement {
+      return navFixture.nativeElement.querySelector('.toggleSidenavButton');
+    }
+
+    function clickMenuButton() {
+      getMenuButton().click();
+      navFixture.detectChanges();
+    }
+
+    /** Opens the menu with the menu button focused, as a click on it does. */
+    function focusAndClickMenuButton() {
+      getMenuButton().focus();
+      clickMenuButton();
+    }
+
+    function pressEscape(target: Element) {
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Escape',
+          keyCode: ESCAPE,
+          bubbles: true,
+        }),
+      );
+    }
+
+    function getDrawerElement(): HTMLElement {
+      return navFixture.nativeElement.querySelector('mat-sidenav');
+    }
+
+    function isRail(): boolean {
+      return navFixture.nativeElement
+        .querySelector('.app-sidenav-container')
+        .classList.contains('nav-rail');
+    }
+
+    function getDrawer(): MatSidenav {
+      return navFixture.debugElement
+        .query(By.directive(MatSidenav))
+        .injector.get(MatSidenav);
+    }
+
+    /**
+     * Resolves when the drawer has opened, which Material reports in a timeout
+     * (after its animation); the drawer moves the focus at that point.
+     */
+    async function whenDrawerOpens(): Promise<void> {
+      await firstValueFrom(getDrawer().openedChange.pipe(filter(Boolean)));
+    }
+
+    /**
+     * Resolves when the drawer starts to close by itself, which Material
+     * reports in a timeout after a backdrop click or the Escape key.
+     */
+    function whenDrawerCloses(): Promise<void> {
+      return firstValueFrom(getDrawer().closedStart);
+    }
+
+    it('shows the drawer beside the page, open, at 1280px', async () => {
+      const sidenav = await createApp(1280);
+
+      expect(await sidenav.getMode()).toBe('side');
+      expect(await sidenav.isOpen()).toBeTrue();
+      expect(isRail()).toBeFalse();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('hides and shows the drawer with the menu button at 1280px and wider', async () => {
+      const sidenav = await createApp(1440);
+
+      clickMenuButton();
+      expect(await sidenav.isOpen()).toBeFalse();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('false');
+
+      clickMenuButton();
+      expect(await sidenav.isOpen()).toBeTrue();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('keeps the drawer beside the page open on Escape', async () => {
+      const sidenav = await createApp(1440);
+
+      pressEscape(getDrawerElement());
+
+      expect(await sidenav.isOpen()).toBeTrue();
+    });
+
+    it('shows the icon rail at 1279px', async () => {
+      const sidenav = await createApp(1279);
+
+      expect(await sidenav.getMode()).toBe('side');
+      expect(await sidenav.isOpen()).toBeTrue();
+      expect(isRail()).toBeTrue();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('shows the icon rail at 768px', async () => {
+      const sidenav = await createApp(768);
+
+      expect(await sidenav.getMode()).toBe('side');
+      expect(await sidenav.isOpen()).toBeTrue();
+      expect(isRail()).toBeTrue();
+    });
+
+    it('expands the icon rail into the full drawer with the menu button', async () => {
+      const sidenav = await createApp(1024);
+
+      clickMenuButton();
+      expect(isRail()).toBeFalse();
+      expect(await sidenav.getMode()).toBe('side');
+      expect(await sidenav.isOpen()).toBeTrue();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('true');
+
+      clickMenuButton();
+      expect(isRail()).toBeTrue();
+      expect(await sidenav.isOpen()).toBeTrue();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('shows a closed drawer over the page at 767px', async () => {
+      const sidenav = await createApp(767);
+
+      expect(await sidenav.getMode()).toBe('over');
+      expect(await sidenav.isOpen()).toBeFalse();
+      expect(isRail()).toBeFalse();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('opens the overlay drawer with the menu button and closes it after a navigation', async () => {
+      const sidenav = await createApp(640);
+
+      clickMenuButton();
+      expect(await sidenav.isOpen()).toBeTrue();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('true');
+
+      await TestBed.inject(Router).navigateByUrl('/devices');
+      navFixture.detectChanges();
+
+      expect(await sidenav.isOpen()).toBeFalse();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('focuses the overlay drawer, not its first link, when it opens', async () => {
+      await createApp(640);
+      const drawerOpens = whenDrawerOpens();
+
+      focusAndClickMenuButton();
+      await drawerOpens;
+
+      expect(document.activeElement).toBe(
+        getDrawerElement().querySelector('.sidenav-container'),
+      );
+    });
+
+    it('closes the overlay drawer on a backdrop click and focuses the menu button', async () => {
+      const sidenav = await createApp(640);
+      const drawerOpens = whenDrawerOpens();
+      focusAndClickMenuButton();
+      await drawerOpens;
+      const drawerCloses = whenDrawerCloses();
+
+      navFixture.nativeElement.querySelector('.mat-drawer-backdrop').click();
+      await drawerCloses;
+      navFixture.detectChanges();
+
+      expect(await sidenav.isOpen()).toBeFalse();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(getMenuButton());
+      // The state stays in sync: one click on the menu button opens it again.
+      clickMenuButton();
+      expect(await sidenav.isOpen()).toBeTrue();
+    });
+
+    it('closes the overlay drawer on Escape and focuses the menu button', async () => {
+      const sidenav = await createApp(640);
+      const drawerOpens = whenDrawerOpens();
+      focusAndClickMenuButton();
+      await drawerOpens;
+      const drawerCloses = whenDrawerCloses();
+
+      pressEscape(document.activeElement!);
+      await drawerCloses;
+      navFixture.detectChanges();
+
+      expect(await sidenav.isOpen()).toBeFalse();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(getMenuButton());
+    });
+
+    it('starts each mode from its default when the window crosses a breakpoint', async () => {
+      const sidenav = await createApp(1440);
+      clickMenuButton();
+
+      resizeWindow(1024);
+      expect(isRail()).toBeTrue();
+      expect(await sidenav.isOpen()).toBeTrue();
+
+      resizeWindow(640);
+      expect(await sidenav.getMode()).toBe('over');
+      expect(await sidenav.isOpen()).toBeFalse();
+
+      resizeWindow(1440);
+      expect(await sidenav.getMode()).toBe('side');
+      expect(await sidenav.isOpen()).toBeTrue();
+      expect(getMenuButton().getAttribute('aria-expanded')).toBe('true');
     });
   });
 
@@ -371,9 +663,8 @@ describe('App Component', () => {
 
     beforeEach(() => {
       routeSpy = spyOn(component, 'getCurrentRoutePath');
-      slot = mockUrlService.embeddedHeaderSlot as WritableSignal<
-        EmbeddedHeaderSlot | null
-      >;
+      slot =
+        mockUrlService.embeddedHeaderSlot as WritableSignal<EmbeddedHeaderSlot | null>;
       // Embedded in the ATS host (OSS build) unless a test says otherwise.
       mockUrlService.isInAtsEmbeddedMode.and.returnValue(true);
     });
@@ -404,7 +695,12 @@ describe('App Component', () => {
       component.isEmbeddedMode = true;
       routeSpy.and.returnValue('devices');
       component.updateShowContent();
-      slot.set({left: 240, width: 800, height: 56, borderColor: 'rgb(1, 2, 3)'});
+      slot.set({
+        left: 240,
+        width: 800,
+        height: 56,
+        borderColor: 'rgb(1, 2, 3)',
+      });
       fixture.detectChanges();
 
       const band = fixture.nativeElement.querySelector(
@@ -476,9 +772,7 @@ describe('App Component', () => {
       // No band (e.g. a detail page): no offset.
       routeSpy.and.returnValue('devices/:id');
       component.updateShowContent();
-      expect(container.classList).not.toContain(
-        EMBEDDED_HEADER_BAND_CLASS,
-      );
+      expect(container.classList).not.toContain(EMBEDDED_HEADER_BAND_CLASS);
       expect(
         container.style.getPropertyValue(EMBEDDED_HEADER_BAND_HEIGHT_PROPERTY),
       ).toBe('');
