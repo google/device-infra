@@ -185,6 +185,11 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
   }
 
   @Override
+  protected boolean ifEnableDeviceFlashGkiDecorator() {
+    return getFlagEnableAndroidFlashGkiDecorator();
+  }
+
+  @Override
   protected void addExtraRealDeviceBasicSupportedDriversDecorators() throws InterruptedException {
     // Do nothing by default
   }

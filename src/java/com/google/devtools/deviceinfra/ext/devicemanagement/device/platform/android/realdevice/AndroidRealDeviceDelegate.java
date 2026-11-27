@@ -680,12 +680,55 @@ public abstract class AndroidRealDeviceDelegate {
 
   private void addRealDeviceBasicSupportedDriversDecorators()
       throws MobileHarnessException, InterruptedException {
+    // The flash decorators are added before checkOnlineModeDevice() to avoid becoming FailedDevice
+    // without being able to recover with flashing.
+    boolean enableFlashAndReset = ifEnableDeviceFlashAndResetDecorators();
+    boolean enableFlashGki = ifEnableDeviceFlashGkiDecorator();
+    if (enableFlashAndReset || enableFlashGki) {
+      Set<String> features = systemSpecUtil.getSystemFeatures(deviceId);
+      // FlashDevice decorator is only meaningful with google device, sw system or watch.
+      List<String> characteristics =
+          device.getDimension(Ascii.toLowerCase(AndroidProperty.CHARACTERISTICS.name()));
+      String allCharacteristics = Joiner.on(' ').join(characteristics);
+      List<String> brandNames =
+          device.getDimension(Ascii.toLowerCase(AndroidProperty.BRAND.name()));
+      boolean isFlashableDevice =
+          brandNames.contains("google")
+              || brandNames.contains("alps")
+              || brandNames.contains("android")
+              || brandNames.contains("androidxr")
+              || brandNames.contains("qti")
+              || brandNames.contains("exynos")
+              || brandNames.contains("jio")
+              || brandNames.contains("oneplus")
+              || brandNames.contains("xiaomi")
+              || brandNames.contains("itel")
+              || brandNames.contains("tecno")
+              || brandNames.contains("infinix")
+              || brandNames.contains("samsung")
+              || allCharacteristics.contains("watch")
+              || features.contains(AndroidRealDeviceConstants.FEATURE_IOT)
+              || features.contains(AndroidRealDeviceConstants.FEATURE_EMBEDDED)
+              || features.contains(AndroidRealDeviceConstants.FEATURE_DAYDREAM_STANDALONE)
+              || features.contains(AndroidRealDeviceConstants.FEATURE_LEANBACK);
+      if (isFlashableDevice) {
+        boolean addFlashGkiDecorator = enableFlashGki;
+        if (addFlashGkiDecorator) {
+          device.addSupportedDecorator("AndroidFlashGkiDecorator");
+        }
+      }
+    }
     // HD Video decorator is supported by real device only.
     device.addSupportedDecorator("AndroidHdVideoDecorator");
   }
 
   /** Returns {@code true} if need to enable device flash and reset decorators. */
   protected abstract boolean ifEnableDeviceFlashAndResetDecorators();
+
+  /** Returns {@code true} if {@code AndroidFlashGkiDecorator} should be registered. */
+  protected boolean ifEnableDeviceFlashGkiDecorator() {
+    return ifEnableDeviceFlashAndResetDecorators();
+  }
 
   /** Adds extra supported drivers and decorators to the device. */
   protected abstract void addExtraRealDeviceBasicSupportedDriversDecorators()
@@ -2960,6 +3003,10 @@ public abstract class AndroidRealDeviceDelegate {
 
   protected boolean getFlagClearAndroidDeviceMultiUsers() {
     return Flags.clearAndroidDeviceMultiUsers.getNonNull();
+  }
+
+  protected boolean getFlagEnableAndroidFlashGkiDecorator() {
+    return Flags.enableAndroidFlashGkiDecorator.getNonNull();
   }
 
   protected boolean getFlagSkipCheckDeviceInternet() {

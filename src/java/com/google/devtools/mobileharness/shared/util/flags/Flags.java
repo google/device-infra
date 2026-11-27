@@ -683,6 +683,13 @@ public class Flags {
   public static final Flag<Boolean> enableAndroidDeviceReadyCheck = Flag.value(true);
 
   @FlagSpec(
+      name = "enable_android_flash_gki_decorator",
+      help =
+          "Whether to register AndroidFlashGkiDecorator on allowlisted real Android devices."
+              + " Default is false.")
+  public static final Flag<Boolean> enableAndroidFlashGkiDecorator = Flag.value(false);
+
+  @FlagSpec(
       name = "enable_ate_dual_stack",
       help = "Whether to enable ATE dual stack mode, which runs tests from both MH and TFC.")
   public static final Flag<Boolean> enableAteDualStack = Flag.value(false);
