@@ -81,6 +81,7 @@ public final class HealthAndActivityBuilder {
     String status = deviceInfo.getDeviceStatus().toString();
     List<String> types = deviceInfo.getDeviceFeature().getTypeList();
     Timestamp lastInServiceTime = deviceInfo.getDeviceCondition().getLastHealthyTime();
+    Timestamp statusModifyTime = deviceInfo.getDeviceCondition().getStatusModifyTime();
 
     ImmutableList<DeviceType> feDeviceTypes =
         types.stream()
@@ -162,11 +163,15 @@ public final class HealthAndActivityBuilder {
               .setState(HealthState.UNKNOWN);
     }
 
-    builder.setDeviceStatus(
+    HealthAndActivityInfo.DeviceStatus.Builder deviceStatusBuilder =
         HealthAndActivityInfo.DeviceStatus.newBuilder()
             .setStatus(status)
             .setIsCritical(
-                builder.getUiState() == UiState.ERROR || builder.getUiState() == UiState.BLOCKED));
+                builder.getUiState() == UiState.ERROR || builder.getUiState() == UiState.BLOCKED);
+    if (Timestamps.isValid(statusModifyTime) && statusModifyTime.getSeconds() > 0) {
+      deviceStatusBuilder.setModifyTime(statusModifyTime);
+    }
+    builder.setDeviceStatus(deviceStatusBuilder);
 
     if (Timestamps.isValid(lastInServiceTime) && lastInServiceTime.getSeconds() > 0) {
       builder.setLastInServiceTime(lastInServiceTime);
@@ -180,9 +185,7 @@ public final class HealthAndActivityBuilder {
       builder.setCurrentTask(currentTask);
     }
 
-    builder.setHasDeviceError(deviceInfo.getDeviceCondition().getHasDeviceError());
-
-    return builder.build();
+    return builder.setHasDeviceError(deviceInfo.getDeviceCondition().getHasDeviceError()).build();
   }
 
   private static String transitionSubtitle(String status) {
