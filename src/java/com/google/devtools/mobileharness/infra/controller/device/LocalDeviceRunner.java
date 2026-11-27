@@ -980,11 +980,17 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
             String.valueOf(now.toEpochMilli()));
   }
 
-  /** Prepares the device after test if needed. */
+  /**
+   * Prepares the device after test if needed.
+   *
+   * <p>Does nothing if the runner is about to leave the main loop, e.g., it is no longer alive
+   * because it has been cancelled to force a reboot after test. Such a runner posts the "dying"
+   * event when it exits, and the next runner prepares the device anyway.
+   */
   @VisibleForTesting
   void mayPrepareDeviceAfterTest(boolean needReboot)
       throws MobileHarnessException, InterruptedException {
-    if (!needReboot) {
+    if (!needReboot && isReady()) {
       if (prepareDeviceAfterTest()) {
         logger.atWarning().log("Prepare the device after test.");
         initialized = false;
