@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.file.remote;
 
+import static com.google.common.collect.Comparators.max;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
@@ -32,6 +34,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams.Scope;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -87,6 +90,21 @@ public class GcsFileManager {
   }
 
   /**
+   * Whether a transfer queries GCS for a fresh destination object when it acquires the transfer
+   * lock without waiting for another thread.
+   */
+  public enum FreshnessCheck {
+    /** Checks the in-process freshness cache, then queries GCS on a miss. */
+    ALWAYS,
+    /**
+     * Checks the in-process freshness cache, and skips the remote GCS query when freshness caching
+     * is enabled and no other thread held the transfer lock. Callers should pass this only right
+     * after {@link #fileExistAndFresh} returned false for the same object.
+     */
+    RECHECK_IF_CONTENDED,
+  }
+
+  /**
    * Thread pool for removing the home directories that new instances replace. Shared and bounded,
    * since callers create an instance per file transfer client and nobody waits on the removal.
    */
@@ -109,6 +127,8 @@ public class GcsFileManager {
 
   /** Size of shard for downloading GCS file in parellel. */
   private final Optional<Long> downloadShardSize;
+
+  private final CloudFreshnessCache freshnessCache;
 
   /** Caches of local file. */
   @VisibleForTesting final Cache<String, Path> localCache;
@@ -161,7 +181,7 @@ public class GcsFileManager {
       Duration localCacheTtl,
       Optional<Long> uploadShardSize,
       Optional<Long> downloadShardSize,
-      Ticker localCacheTicker)
+      Ticker ticker)
       throws MobileHarnessException, InterruptedException {
     this(
         homeDir,
@@ -171,7 +191,7 @@ public class GcsFileManager {
         localCacheTtl,
         uploadShardSize,
         downloadShardSize,
-        localCacheTicker,
+        ticker,
         cleanupThreadPool);
   }
 
@@ -184,7 +204,7 @@ public class GcsFileManager {
       Duration localCacheTtl,
       Optional<Long> uploadShardSize,
       Optional<Long> downloadShardSize,
-      Ticker localCacheTicker,
+      Ticker ticker,
       Executor cleanupExecutor)
       throws MobileHarnessException, InterruptedException {
     this.homeDir = homeDir;
@@ -193,6 +213,9 @@ public class GcsFileManager {
     this.cloudCacheTtl = cloudCacheTtl;
     this.uploadShardSize = uploadShardSize;
     this.downloadShardSize = downloadShardSize;
+    this.freshnessCache =
+        CloudFreshnessCache.create(
+            cloudCacheTtl, Flags.fileTransferCloudFreshCacheTtl.getNonNull(), ticker);
 
     if (localFileUtil.isDirExist(homeDir)) {
       Path tmpDirToDelete =
@@ -221,7 +244,7 @@ public class GcsFileManager {
     this.localCache =
         CacheBuilder.newBuilder()
             .expireAfterAccess(localCacheTtl)
-            .ticker(localCacheTicker)
+            .ticker(ticker)
             .removalListener(this::onLocalCacheRemoval)
             .build();
   }
@@ -325,9 +348,13 @@ public class GcsFileManager {
   private CacheInfo downloadGcsFileIfNonExisting(GcsApiObject gcsFile)
       throws MobileHarnessException, InterruptedException {
     // Only one downloading thread is allowed for each gcsFile.
-    CountDownLatch latch = acquireTransferLock(gcsFile.path());
+    TransferLock lock = acquireTransferLock(gcsFile.path());
     try {
+      CloudFreshnessCache.ReadStamp readStamp = freshnessCache.beginRead();
       Optional<String> checksum = gcsUtil.getCrc32c(gcsFile);
+      if (checksum.isEmpty() && gcsFile.generationNumber().isEmpty()) {
+        freshnessCache.invalidate(gcsFile.path(), readStamp);
+      }
       MobileHarnessExceptions.check(
           checksum.isPresent(),
           BasicErrorId.GCS_DOWNLOAD_FILE_ERROR,
@@ -340,7 +367,7 @@ public class GcsFileManager {
       return loadCacheIfNonExisting(
           decodedChecksum, localCache -> downloadGcsFile(gcsFile, localCache));
     } finally {
-      releaseTransferLock(gcsFile.path(), latch);
+      releaseTransferLock(gcsFile.path(), lock);
     }
   }
 
@@ -443,6 +470,24 @@ public class GcsFileManager {
       Optional<Duration> zipTimeout,
       Optional<String> checksum)
       throws MobileHarnessException, InterruptedException {
+    return upload(fileOrDir, zipStoreOnly, zipTimeout, checksum, FreshnessCheck.ALWAYS);
+  }
+
+  /**
+   * Same as {@link #upload(Path, boolean, Optional, Optional)}, controlling whether GCS is queried
+   * again for a provided {@code checksum} when no other thread held the transfer lock.
+   *
+   * <p>When {@code checksum} is empty (the object name is computed during upload) or {@code
+   * fileOrDir} is a directory (compressed before upload), GCS is always checked.
+   */
+  public ExecutionInfo upload(
+      Path fileOrDir,
+      boolean zipStoreOnly,
+      Optional<Duration> zipTimeout,
+      Optional<String> checksum,
+      FreshnessCheck freshnessCheck)
+      throws MobileHarnessException, InterruptedException {
+    FreshnessCheck effectiveCheck = checksum.isPresent() ? freshnessCheck : FreshnessCheck.ALWAYS;
     AtomicBoolean isCached = new AtomicBoolean(true);
     Callable<ExecutionInfo> finalizedLoader =
         () -> {
@@ -454,7 +499,11 @@ public class GcsFileManager {
               String decodedChecksum = zipInfo.decodedChecksum();
               return ExecutionInfo.create(
                   fileSize,
-                  !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum), "application/zip"),
+                  !uploadFile(
+                      zipInfo.zipFilePath(),
+                      Path.of(decodedChecksum),
+                      "application/zip",
+                      FreshnessCheck.ALWAYS),
                   decodedChecksum);
             } finally {
               // Each upload owns its temporary zip so cleanup cannot race with concurrent uploads.
@@ -466,7 +515,7 @@ public class GcsFileManager {
             long fileSize = gcsUtil.getFileSize(fileOrDir);
             return ExecutionInfo.create(
                 fileSize,
-                !uploadFile(fileOrDir, Path.of(decodedChecksum), FILE_CONTENT_TYPE),
+                !uploadFile(fileOrDir, Path.of(decodedChecksum), FILE_CONTENT_TYPE, effectiveCheck),
                 decodedChecksum);
           }
           throw new MobileHarnessException(
@@ -499,7 +548,7 @@ public class GcsFileManager {
   @CanIgnoreReturnValue
   public boolean uploadFile(Path localFile, Path gcsFilePath)
       throws MobileHarnessException, InterruptedException {
-    return uploadFile(localFile, gcsFilePath, FILE_CONTENT_TYPE);
+    return uploadFile(localFile, gcsFilePath, FILE_CONTENT_TYPE, FreshnessCheck.ALWAYS);
   }
 
   /**
@@ -510,74 +559,94 @@ public class GcsFileManager {
   @CanIgnoreReturnValue
   public boolean uploadFile(Path localFile, Path gcsFilePath, String contentType)
       throws MobileHarnessException, InterruptedException {
+    return uploadFile(localFile, gcsFilePath, contentType, FreshnessCheck.ALWAYS);
+  }
+
+  /**
+   * Same as {@link #uploadFile(Path, Path, String)}, controlling whether GCS is queried again for
+   * {@code gcsFilePath} when no other thread held the transfer lock.
+   *
+   * @return true if file is uploaded; false if it is already fresh in GCS
+   */
+  @CanIgnoreReturnValue
+  @VisibleForTesting
+  boolean uploadFile(
+      Path localFile, Path gcsFilePath, String contentType, FreshnessCheck freshnessCheck)
+      throws MobileHarnessException, InterruptedException {
     // Only one uploading thread is allowed for each gcsFile.
-    CountDownLatch latch = acquireTransferLock(gcsFilePath);
+    TransferLock lock = acquireTransferLock(gcsFilePath);
     try {
-      if (cloudCacheTtl.isPresent()) {
-        if (uploadShardSize.isPresent()) {
-          return gcsUtil.copyFileToCloudInParallelIfNonExistingOrDead(
-              localFile, gcsFilePath, cloudCacheTtl.get(), uploadShardSize.get(), contentType);
-        } else {
-          return gcsUtil.copyFileToCloudIfNonExistingOrDead(
-              localFile, gcsFilePath, cloudCacheTtl.get(), contentType);
-        }
-      } else {
-        if (uploadShardSize.isPresent()) {
-          gcsUtil.copyFileToCloudInParallel(
-              localFile, gcsFilePath, uploadShardSize.get(), contentType);
-        } else {
-          gcsUtil.copyFileToCloud(localFile, gcsFilePath, contentType);
-        }
-        return true;
+      if (cloudCacheTtl.isPresent()
+          && isFreshUnderTransferLock(gcsFilePath, lock, freshnessCheck)) {
+        logger.atInfo().log(
+            "Skip copying file %s to Google Cloud Storage %s, because the gcs file is fresh"
+                + " within ttl [%s]",
+            localFile, gcsFilePath, cloudCacheTtl.get());
+        return false;
       }
+      if (uploadShardSize.isPresent()) {
+        gcsUtil.copyFileToCloudInParallel(
+            localFile, gcsFilePath, uploadShardSize.get(), contentType);
+      } else {
+        gcsUtil.copyFileToCloud(localFile, gcsFilePath, contentType);
+      }
+      freshnessCache.recordFresh(gcsFilePath);
+      return true;
     } finally {
-      releaseTransferLock(gcsFilePath, latch);
+      releaseTransferLock(gcsFilePath, lock);
     }
   }
 
   /**
    * Has GCS copy {@code source} to {@code gcsFile} as the kind of object {@link #upload} makes of a
    * file, so the bytes do not pass through this process. Skips the copy if {@code gcsFile} is fresh
-   * once the transfers of it by other threads are over.
+   * once the transfers of it by other threads are over, using {@code freshnessCheck} to control
+   * whether GCS is queried again when no other thread held the transfer lock.
    *
    * @param localCopy a local file whose bytes the object is to hold, in which case the source is
    *     copied only if its size and CRC32C match
    */
-  public ServerCopyOutcome copyFromGcs(GcsUri source, Path gcsFile, Optional<Path> localCopy)
+  public ServerCopyOutcome copyFromGcs(
+      GcsUri source, Path gcsFile, Optional<Path> localCopy, FreshnessCheck freshnessCheck)
       throws MobileHarnessException, InterruptedException {
     // The lock uploadFile takes, so an upload and a copy of one object do not run at once.
-    CountDownLatch latch = acquireTransferLock(gcsFile);
+    TransferLock lock = acquireTransferLock(gcsFile);
     try {
-      if (fileExistAndFresh(gcsFile)) {
+      if (isFreshUnderTransferLock(gcsFile, lock, freshnessCheck)) {
         return ServerCopyOutcome.REUSED;
       }
       GcsUtil.ServerCopyResult result =
           gcsUtil.copyFromGcs(source, gcsFile, FILE_CONTENT_TYPE, localCopy);
       if (result == GcsUtil.ServerCopyResult.COPIED) {
+        freshnessCache.recordFresh(gcsFile);
         return ServerCopyOutcome.COPIED;
       }
       logger.atInfo().log("Did not copy %s to %s on the server: %s", source, gcsFile, result);
       return ServerCopyOutcome.NOT_COPIED;
     } finally {
-      releaseTransferLock(gcsFile, latch);
+      releaseTransferLock(gcsFile, lock);
     }
   }
 
-  private static CountDownLatch acquireTransferLock(Path gcsFilePath) throws InterruptedException {
+  private record TransferLock(CountDownLatch latch, boolean waited) {}
+
+  private static TransferLock acquireTransferLock(Path gcsFilePath) throws InterruptedException {
     CountDownLatch latch = new CountDownLatch(1);
+    boolean waited = false;
     while (true) {
       CountDownLatch running = transferringLocks.putIfAbsent(gcsFilePath, latch);
       if (running == null) {
-        return latch;
+        return new TransferLock(latch, waited);
       }
+      waited = true;
       running.await();
     }
   }
 
-  private static void releaseTransferLock(Path gcsFilePath, CountDownLatch latch) {
+  private static void releaseTransferLock(Path gcsFilePath, TransferLock lock) {
     // Remove the entry before counting down so waiters acquire cleanly.
     transferringLocks.remove(gcsFilePath);
-    latch.countDown();
+    lock.latch().countDown();
   }
 
   /**
@@ -682,23 +751,34 @@ public class GcsFileManager {
   /** Returns whether the path {@code gcsFile} exists. */
   public boolean fileExist(GcsApiObject gcsFile)
       throws MobileHarnessException, InterruptedException {
-    return gcsUtil.fileExist(gcsFile);
+    CloudFreshnessCache.ReadStamp readStamp = freshnessCache.beginRead();
+    boolean exists = gcsUtil.fileExist(gcsFile);
+    if (!exists && gcsFile.generationNumber().isEmpty()) {
+      freshnessCache.invalidate(gcsFile.path(), readStamp);
+    }
+    return exists;
   }
 
   /** Returns whether the path {@code gcsFile} exists and also fresh. */
   public boolean fileExistAndFresh(Path gcsFile)
       throws MobileHarnessException, InterruptedException {
-    if (cloudCacheTtl.isPresent()) {
-      Optional<Duration> age = gcsUtil.getAge(gcsFile);
-      return age.isPresent() && age.get().compareTo(cloudCacheTtl.get()) < 0;
-    } else {
-      return gcsUtil.fileExist(gcsFile);
+    if (freshnessCache.isFresh(gcsFile)) {
+      return true;
     }
+    return checkFileExistAndFreshInGcs(gcsFile);
   }
 
   /** Returns the file size of the path {@code gcsFile}. */
   public long getGcsFileSize(Path gcsFile) throws MobileHarnessException, InterruptedException {
-    return gcsUtil.getGcsFileSize(gcsFile);
+    CloudFreshnessCache.ReadStamp readStamp = freshnessCache.beginRead();
+    try {
+      return gcsUtil.getGcsFileSize(gcsFile);
+    } catch (MobileHarnessException e) {
+      if (e.getErrorId() == BasicErrorId.GCS_NO_METADATA) {
+        freshnessCache.invalidate(gcsFile, readStamp);
+      }
+      throw e;
+    }
   }
 
   /** Returns whether the path {@code gcsFile} is compressed. */
@@ -709,6 +789,45 @@ public class GcsFileManager {
   /** See {@link GcsUtil#renewIfOlderThan}. */
   public GcsUtil.RenewResult renewIfOlderThan(Path gcsFile, Duration threshold)
       throws MobileHarnessException, InterruptedException {
-    return gcsUtil.renewIfOlderThan(gcsFile, threshold);
+    CloudFreshnessCache.ReadStamp readStamp = freshnessCache.beginRead();
+    GcsUtil.RenewResult result = gcsUtil.renewIfOlderThan(gcsFile, threshold);
+    switch (result) {
+      case RENEWED -> freshnessCache.recordFresh(gcsFile);
+      // A non-zero generation precondition also fails if the object was deleted meanwhile, so
+      // LOST_RACE cannot assume the object is fresh.
+      case LOST_RACE, MISSING -> freshnessCache.invalidate(gcsFile, readStamp);
+      case FRESH -> {}
+    }
+    return result;
+  }
+
+  private boolean isFreshUnderTransferLock(
+      Path gcsFile, TransferLock lock, FreshnessCheck freshnessCheck)
+      throws MobileHarnessException, InterruptedException {
+    if (freshnessCache.isFresh(gcsFile)) {
+      return true;
+    }
+    if (freshnessCheck == FreshnessCheck.RECHECK_IF_CONTENDED
+        && freshnessCache.isEnabled()
+        && !lock.waited()) {
+      return false;
+    }
+    return checkFileExistAndFreshInGcs(gcsFile);
+  }
+
+  private boolean checkFileExistAndFreshInGcs(Path gcsFile)
+      throws MobileHarnessException, InterruptedException {
+    if (cloudCacheTtl.isEmpty()) {
+      return gcsUtil.fileExist(gcsFile);
+    }
+    CloudFreshnessCache.ReadStamp readStamp = freshnessCache.beginRead();
+    Optional<Duration> age = gcsUtil.getAge(gcsFile);
+    if (age.isPresent() && age.get().compareTo(cloudCacheTtl.get()) < 0) {
+      Duration effectiveAge = max(age.get(), Duration.ZERO);
+      freshnessCache.recordFresh(gcsFile, cloudCacheTtl.get().minus(effectiveAge), readStamp);
+      return true;
+    }
+    freshnessCache.invalidate(gcsFile, readStamp);
+    return false;
   }
 }

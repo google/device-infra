@@ -1056,6 +1056,14 @@ public class Flags {
   public static final Flag<Duration> fileTransferCloudCacheTtl = DurationFlag.hours(12);
 
   @FlagSpec(
+      name = "file_transfer_cloud_fresh_cache_ttl",
+      help =
+          "In-process cache TTL for GCS objects confirmed to exist and be fresh under"
+              + " --file_transfer_cloud_cache_ttl. Non-positive disables the cache and uncontended"
+              + " freshness recheck bypass. Default is 0s (disabled).")
+  public static final Flag<Duration> fileTransferCloudFreshCacheTtl = DurationFlag.zero();
+
+  @FlagSpec(
       name = "file_transfer_cred_file",
       help = "The credential file path for the service account to use file transfer.")
   public static final Flag<String> fileTransferCredFile = Flag.nullString();

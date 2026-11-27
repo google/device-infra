@@ -1041,49 +1041,6 @@ public abstract class GcsUtil {
   }
 
   /**
-   * Copies file {@code localFile} to Google Cloud Storage as {@code gcsFile} if {@code gcsFile}
-   * doesn't exist or is dying (age >= ttl).
-   *
-   * @return whether copy is executed
-   */
-  @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
-  public boolean copyFileToCloudIfNonExistingOrDead(
-      Path localFile, Path gcsFile, Duration ttl, String contentType)
-      throws MobileHarnessException, InterruptedException {
-    Optional<Duration> age = getAge(gcsFile);
-    if (age.isPresent() && age.get().compareTo(ttl) < 0) {
-      logger.atInfo().log(
-          "Skip copying file %s to Google Cloud Storage %s, because the gcs file "
-              + "age [%s] is shorter than ttl [%s]",
-          localFile, gcsFile, age.get(), ttl);
-      return false;
-    }
-    copyFileToCloud(localFile, gcsFile, contentType);
-    return true;
-  }
-
-  /**
-   * Copies file {@code localFile} to Google Cloud Storage as {@code gcsFile} if {@code gcsFile}
-   * doesn't exist or is dying (age >= ttl).
-   *
-   * @return whether copy is executed
-   */
-  public boolean copyFileToCloudInParallelIfNonExistingOrDead(
-      Path localFile, Path gcsFile, Duration ttl, long shardSize, String contentType)
-      throws MobileHarnessException, InterruptedException {
-    Optional<Duration> age = getAge(gcsFile);
-    if (age.isPresent() && age.get().compareTo(ttl) < 0) {
-      logger.atInfo().log(
-          "Skip copying file %s to Google Cloud Storage %s, because the gcs file "
-              + "age [%s] is shorter than ttl [%s]",
-          localFile, gcsFile, age.get(), ttl);
-      return false;
-    }
-    copyFileToCloudInParallel(localFile, gcsFile, shardSize, contentType);
-    return true;
-  }
-
-  /**
    * Gets ages of {@code gcsFile}.
    *
    * @return age of file {@code file}; or empty if {@code file} doesn't exist
