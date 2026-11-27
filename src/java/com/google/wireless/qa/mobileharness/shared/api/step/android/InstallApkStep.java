@@ -21,7 +21,10 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.MultimapBuilder;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
@@ -37,7 +40,9 @@ import com.google.devtools.mobileharness.platform.android.lightning.bundletool.B
 import com.google.devtools.mobileharness.platform.android.lightning.bundletool.JavaSystemProperties;
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
+import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
+import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AppOperationMode;
@@ -93,6 +98,8 @@ public class InstallApkStep implements InstallApkStepConstants {
 
   private final ChecksumUtil checksumUtil;
 
+  private final AndroidPackageManagerUtil androidPackageManagerUtil;
+
   @Inject
   InstallApkStep(
       LocalFileUtil localFileUtil,
@@ -102,7 +109,8 @@ public class InstallApkStep implements InstallApkStepConstants {
       AndroidUserUtil androidUserUtil,
       AndroidSystemSettingUtil systemSettingUtil,
       SystemStateManager systemStateManager,
-      ChecksumUtil checksumUtil) {
+      ChecksumUtil checksumUtil,
+      AndroidPackageManagerUtil androidPackageManagerUtil) {
     this.localFileUtil = localFileUtil;
     this.testMessageUtil = testMessageUtil;
     this.apkInstaller = apkInstaller;
@@ -111,6 +119,7 @@ public class InstallApkStep implements InstallApkStepConstants {
     this.systemSettingUtil = systemSettingUtil;
     this.systemStateManager = systemStateManager;
     this.checksumUtil = checksumUtil;
+    this.androidPackageManagerUtil = androidPackageManagerUtil;
   }
 
   /**
@@ -205,17 +214,35 @@ public class InstallApkStep implements InstallApkStepConstants {
             : Optional.empty();
     int deviceSdkVersion = systemSettingManager.getDeviceSdkVersion(device);
 
-    for (PackageToInstall pkg : coordinator.getAllPackages()) {
-      installPackage(
-          device,
-          deviceSdkVersion,
-          pkg,
+    // A preinstalled package that installs apks on its own, such as Play Store, can replace an apk
+    // installed below while this step is running.
+    ListMultimap<String, Integer> disabledPackageUsers =
+        MultimapBuilder.linkedHashKeys().arrayListValues().build();
+    Throwable primaryException = null;
+    try {
+      disablePackages(
           testInfo,
-          spec,
-          installTimeout,
-          pkg.packageName.equals(PackageConstants.PACKAGE_NAME_GMS)
-              ? sleepAfterInstallGms
-              : Optional.empty());
+          deviceId,
+          deviceSdkVersion,
+          spec.getPackagesToDisableBeforeInstallList(),
+          disabledPackageUsers);
+      for (PackageToInstall pkg : coordinator.getAllPackages()) {
+        installPackage(
+            device,
+            deviceSdkVersion,
+            pkg,
+            testInfo,
+            spec,
+            installTimeout,
+            pkg.packageName.equals(PackageConstants.PACKAGE_NAME_GMS)
+                ? sleepAfterInstallGms
+                : Optional.empty());
+      }
+    } catch (Throwable t) {
+      primaryException = t;
+      throw t;
+    } finally {
+      enablePackages(testInfo, deviceId, disabledPackageUsers, primaryException);
     }
 
     if (spec.getRebootAfterAllBuildApksInstallation()) {
@@ -225,6 +252,110 @@ public class InstallApkStep implements InstallApkStepConstants {
     return coordinator.getAllPackages().stream()
         .map(pkg -> pkg.packageName)
         .collect(toImmutableList());
+  }
+
+  /**
+   * Disables each of the given packages for every user that has it enabled, and adds the package
+   * and the user to {@code disabledPackageUsers} as soon as the package is disabled for the user.
+   */
+  private void disablePackages(
+      TestInfo testInfo,
+      String deviceId,
+      int deviceSdkVersion,
+      List<String> packageNames,
+      ListMultimap<String, Integer> disabledPackageUsers)
+      throws MobileHarnessException, InterruptedException {
+    if (packageNames.isEmpty()) {
+      return;
+    }
+    List<Integer> userIds = androidUserUtil.listUsers(deviceId, deviceSdkVersion);
+    for (String packageName : packageNames) {
+      for (int userId : userIds) {
+        UtilArgs utilArgs =
+            UtilArgs.builder().setSerial(deviceId).setUserId(String.valueOf(userId)).build();
+        if (!androidPackageManagerUtil.isPackageEnabled(utilArgs, packageName)) {
+          continue;
+        }
+        androidPackageManagerUtil.userDisablePackage(utilArgs, packageName);
+        disabledPackageUsers.put(packageName, userId);
+      }
+    }
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log(
+            "Disabled packages %s for the listed users while installing apks, Device ID = %s",
+            disabledPackageUsers, deviceId);
+  }
+
+  /**
+   * Enables the given packages for the given users, attempting every package and user even if
+   * enabling an earlier one fails. If {@code primaryException} is non-null, any failure is attached
+   * to it as a suppressed exception instead of being thrown so the primary exception is not masked.
+   */
+  private void enablePackages(
+      TestInfo testInfo,
+      String deviceId,
+      ListMultimap<String, Integer> packageUsers,
+      @Nullable Throwable primaryException)
+      throws MobileHarnessException, InterruptedException {
+    if (packageUsers.isEmpty()) {
+      return;
+    }
+    ListMultimap<String, Integer> enabledPackageUsers =
+        MultimapBuilder.linkedHashKeys().arrayListValues().build();
+    MobileHarnessException enableException = null;
+    for (Map.Entry<String, Integer> packageUser : packageUsers.entries()) {
+      String packageName = packageUser.getKey();
+      int userId = packageUser.getValue();
+      try {
+        androidPackageManagerUtil.enablePackage(
+            UtilArgs.builder().setSerial(deviceId).setUserId(String.valueOf(userId)).build(),
+            packageName);
+        enabledPackageUsers.put(packageName, userId);
+      } catch (MobileHarnessException e) {
+        testInfo
+            .log()
+            .atWarning()
+            .withCause(e)
+            .alsoTo(logger)
+            .log(
+                "Failed to enable %s for user %d after installing apks, Device ID = %s",
+                packageName, userId, deviceId);
+        if (enableException == null) {
+          enableException = e;
+        } else {
+          enableException.addSuppressed(e);
+        }
+      } catch (InterruptedException e) {
+        if (primaryException != null) {
+          Thread.currentThread().interrupt();
+          primaryException.addSuppressed(e);
+          break;
+        }
+        if (enableException != null) {
+          e.addSuppressed(enableException);
+        }
+        throw e;
+      }
+    }
+    if (!enabledPackageUsers.isEmpty()) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Enabled packages %s for the listed users after installing apks, Device ID = %s",
+              enabledPackageUsers, deviceId);
+    }
+    if (enableException != null) {
+      if (primaryException != null) {
+        primaryException.addSuppressed(enableException);
+      } else {
+        throw enableException;
+      }
+    }
   }
 
   private void installPackage(
@@ -437,6 +568,8 @@ public class InstallApkStep implements InstallApkStepConstants {
                 jobInfo.params().getBool(PARAM_REBOOT_AFTER_ALL_BUILD_APKS_INSTALLATION, false))
             .setBypassLowTargetSdkBlock(
                 jobInfo.params().getBool(PARAM_BYPASS_LOW_TARGET_SDK_BLOCK, false));
+    spec.addAllPackagesToDisableBeforeInstall(
+        jobInfo.params().getList(PARAM_PACKAGES_TO_DISABLE_BEFORE_INSTALL, ImmutableList.of()));
     if (jobInfo.params().has(PARAM_INSTALL_APK_TIMEOUT_SEC)) {
       spec.setInstallApkTimeoutSec(jobInfo.params().getLong(PARAM_INSTALL_APK_TIMEOUT_SEC));
     }
