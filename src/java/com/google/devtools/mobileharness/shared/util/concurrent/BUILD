@@ -75,6 +75,10 @@ java_library(
 java_library(
     name = "lazy_closeable",
     srcs = ["LazyCloseable.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "@maven//:com_google_code_findbugs_jsr305",
