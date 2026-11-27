@@ -73,6 +73,16 @@ java_library(
 )
 
 java_library(
+    name = "lazy_closeable",
+    srcs = ["LazyCloseable.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "mobile_harness_callable",
     srcs = ["MobileHarnessCallable.java"],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],

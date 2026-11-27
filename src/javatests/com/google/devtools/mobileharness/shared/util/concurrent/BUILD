@@ -28,6 +28,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:external_service_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:lazy_closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:mobile_harness_runnable",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
