@@ -160,4 +160,16 @@ message DeviceCondition {
   // TODO: b/585438621 - Update this comment once ATS mode and local mode
   // populate it.
   bool has_device_error = 4;
+
+  // Optional. The timestamp when Master's summarized lab-side device status
+  // (from allocation, dirty state, and lab-reported status) was last modified.
+  //
+  // This tracks Master's lab-side status timestamp (ignoring Device Master
+  // overrides merged into DeviceInfo.device_status and retaining the dirty
+  // timestamp if a dirty device expires to MISSING), because Master does not
+  // record a separate Device Master status modify timestamp.
+  //
+  // Currently only populated by Master. ATS mode and local mode do not populate
+  // it yet, so it is unset there.
+  google.protobuf.Timestamp status_modify_time = 5;
 }
