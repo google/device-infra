@@ -136,7 +136,10 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   private volatile boolean tearingDown = false;
 
   /** The end time for the latest allocation, or null if the device is not allocated. */
-  private volatile Instant allocationEndTime = null;
+  @Nullable private volatile Instant allocationEndTime = null;
+
+  /** Whether the device needs to be rebooted when tearing down. */
+  private volatile boolean needReboot = false;
 
   /**
    * Whether the device is under checking ({@code checkDevice} or {@code preAllocationCheckDevice}).
@@ -247,8 +250,6 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
 
     MobileHarnessLogTag.addTag(MobileHarnessLogTag.DEVICE_ID, device.getDeviceId());
 
-    boolean needReboot = false;
-
     runnerCount.incrementAndGet();
     DeviceReservation deviceReservation = null;
     try {
@@ -358,7 +359,9 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         }
         extendExpireTime();
         synchronized (this) {
-          wait(WAIT_INTERVAL_MS);
+          if (isReady()) {
+            wait(WAIT_INTERVAL_MS);
+          }
         }
       }
     } catch (InterruptedException e) {
@@ -708,17 +711,41 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   /**
    * Sets the end time of the current allocation.
    *
-   * <p>A time in the future will reserve the device. Set to {@link Instant#MIN} to immediately
+   * <p>A time in the future will reserve the device. Set to {@link Instant#EPOCH} to immediately
    * deallocate.
    */
   public void reserve(Instant allocationEndTime)
       throws InterruptedException, MobileHarnessException {
-    this.allocationEndTime = allocationEndTime;
     if (allocationEndTime.equals(Instant.EPOCH)) {
-      // It's deallocated, do nothing.
+      synchronized (this) {
+        if (this.allocationEndTime != null) {
+          deviceStat.addNewTest();
+          deviceStat.addFinishedTest(TestResult.PASS);
+          DeviceCacheManager.getInstance()
+              .invalidateGeneralAndContainerCaches(device.getDeviceControlId());
+          boolean needRebootAfterAllocation =
+              deviceRebootUtil.needRebootUponTestResults(
+                  getDevice(),
+                  deviceStat,
+                  apiConfig,
+                  TestExecutionResult.create(TestResult.PASS, PostTestDeviceOp.NONE));
+          if (forceDeviceRebootAfterTest()
+              || (needRebootAfterAllocation
+                  && Flags.shouldManageDevices.getNonNull()
+                  && !disableDeviceReboot())) {
+            needReboot = true;
+            cancel();
+            notifyAll();
+          } else {
+            recordBecomeIdleTime();
+          }
+          this.allocationEndTime = null;
+        }
+      }
       postDeviceChangeEvent("Deallocated.");
       return;
     }
+    this.allocationEndTime = allocationEndTime;
     if (checking.compareAndSet(false, true)) {
       try {
         logger.atInfo().log("Start preAllocationCheck");
