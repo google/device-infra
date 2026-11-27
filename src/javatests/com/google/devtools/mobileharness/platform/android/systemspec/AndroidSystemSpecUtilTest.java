@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.systemspec;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
@@ -988,6 +989,71 @@ public class AndroidSystemSpecUtilTest {
         .thenReturn(VALID_SIM_ADB_OUTPUT + INVALID_SIM_ADB_OUTPUT);
 
     assertThat(systemSpecUtil.getIccids(SERIAL)).containsExactly("89010005475451640413");
+  }
+
+  @Test
+  public void getSimPhoneNumbers_noSims_returnsEmptyList() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO))
+        .thenReturn("No result.");
+
+    assertThat(systemSpecUtil.getSimPhoneNumbers(SERIAL)).isEmpty();
+  }
+
+  @Test
+  public void getSimPhoneNumbers_nullPhoneNumbers_returnsEmptyList() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO))
+        .thenReturn(VALID_SIM_ADB_OUTPUT);
+
+    assertThat(systemSpecUtil.getSimPhoneNumbers(SERIAL)).isEmpty();
+  }
+
+  @Test
+  public void getSimPhoneNumbers_sourcePriorityCarrierThenSimThenIms_returnsExpectedNumbers()
+      throws Exception {
+    String simWithCarrierNumber =
+        "Row: 0 _id=1, icc_id=89010005475451640413, sim_id=0, is_embedded=0, subscription_type=0,"
+            + " profile_class=2, number=+16505550111, phone_number_source_carrier=+16505550100,"
+            + " phone_number_source_ims=+16505550122\n";
+    String simWithSimNumber =
+        "Row: 1 _id=2, icc_id=89010005475451640414, sim_id=1, is_embedded=1, subscription_type=0,"
+            + " profile_class=2, number=+16505550101, phone_number_source_carrier=NULL,"
+            + " phone_number_source_ims=+16505550133\n";
+    String simWithImsNumber =
+        "Row: 2 _id=3, icc_id=89010005475451640415, sim_id=-1, is_embedded=1, subscription_type=0,"
+            + " profile_class=2, number=NULL, phone_number_source_carrier=NULL,"
+            + " phone_number_source_ims=+16505550102\n";
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO))
+        .thenReturn(simWithCarrierNumber + simWithSimNumber + simWithImsNumber);
+
+    assertThat(systemSpecUtil.getSimPhoneNumbers(SERIAL))
+        .containsExactly("+16505550100", "+16505550101", "+16505550102")
+        .inOrder();
+  }
+
+  @Test
+  public void getSimIdentifiers_excludesProvisioningAndNtnPhoneNumbersAndQueriesAdbOnce()
+      throws Exception {
+    String validSim =
+        "Row: 0 _id=1, icc_id=89010005475451640413, sim_id=0, is_embedded=0, subscription_type=0,"
+            + " profile_class=2, number=+16505550100, phone_number_source_carrier=NULL,"
+            + " phone_number_source_ims=NULL\n";
+    String provisioningSim =
+        "Row: 1 _id=2, icc_id=89010005475451640414, sim_id=-1, is_embedded=1, subscription_type=0,"
+            + " profile_class=1, number=+16505550198, phone_number_source_carrier=NULL,"
+            + " phone_number_source_ims=NULL\n";
+    String ntnOnlySim =
+        "Row: 2 _id=3, icc_id=89010005475451640415, sim_id=-1, is_embedded=1, subscription_type=0,"
+            + " profile_class=2, is_only_ntn=1, number=+16505550199,"
+            + " phone_number_source_carrier=NULL, phone_number_source_ims=NULL\n";
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO))
+        .thenReturn(validSim + provisioningSim + ntnOnlySim);
+
+    AndroidSystemSpecUtil.SimIdentifiers simIdentifiers = systemSpecUtil.getSimIdentifiers(SERIAL);
+
+    assertThat(simIdentifiers.iccids())
+        .containsExactly("89010005475451640413", "89010005475451640414", "89010005475451640415");
+    assertThat(simIdentifiers.phoneNumbers()).containsExactly("+16505550100");
+    verify(adb).runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO);
   }
 
   @Test
