@@ -1406,9 +1406,8 @@ public abstract class AndroidRealDeviceDelegate {
         || androidAdbInternalUtil
             .getDeviceSerialsByState(DeviceState.RECOVERY)
             .contains(deviceId)) {
-      switch (DeviceState.valueOf(
-          device.getProperty(AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE))) {
-        case DEVICE:
+      switch (getRebootToState()) {
+        case DEVICE -> {
           if (shouldFactoryResetViaTestHarness()) {
             logger.atInfo().log("Factory reset device %s via Test Harness Mode.", deviceId);
             androidFrpUtil.factoryResetViaTestHarnessWithFrpClear(
@@ -1419,21 +1418,20 @@ public abstract class AndroidRealDeviceDelegate {
             logger.atInfo().log("Device %s reboot to normal mode", deviceId);
             systemStateUtil.reboot(deviceId);
           }
-          break;
-        default:
+        }
+        default -> {
           logger.atInfo().log("Device %s reboot to fastboot mode", deviceId);
           systemStateUtil.reboot(deviceId, RebootMode.BOOTLOADER);
-          break;
+        }
       }
     } else if (Flags.enableFastbootInAndroidRealDevice.getNonNull()
         && fastboot.getDeviceSerials().contains(deviceId)) {
-      switch (DeviceState.valueOf(
-          device.getProperty(AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE))) {
-        case FASTBOOT:
+      switch (getRebootToState()) {
+        case FASTBOOT -> {
           logger.atInfo().log("Device %s reboot to fastboot mode", deviceId);
           String unused = fastboot.rebootBootloader(deviceId);
-          break;
-        default:
+        }
+        default -> {
           if (isAllowedToRebootFastbootDeviceToRecover()) {
             logger.atInfo().log(
                 "Device %s has dimension %s with value true, reboot to normal mode",
@@ -1443,9 +1441,18 @@ public abstract class AndroidRealDeviceDelegate {
             // Skip rebooting fastboot mode device, because its data may be destroyed.
             logger.atInfo().log("Device %s is in the fastboot mode skip rebooting", deviceId);
           }
-          break;
+        }
       }
     }
+  }
+
+  /**
+   * Returns the state to reboot the device to, which defaults to {@link DeviceState#DEVICE} if the
+   * reboot_to_state property is missing (e.g., after the device properties are cleared).
+   */
+  private DeviceState getRebootToState() {
+    String rebootToState = AndroidDeviceDelegateHelper.getRebootToStateProperty(device);
+    return rebootToState == null ? DeviceState.DEVICE : DeviceState.valueOf(rebootToState);
   }
 
   /** Takes device screenshot and returns the screenshot local path in the host machine. */
