@@ -1,3 +1,4 @@
+import {ChangeDetectionStrategy, Component, signal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatDialog} from '@angular/material/dialog';
 import {MatTooltipModule} from '@angular/material/tooltip';
@@ -22,6 +23,24 @@ import {HostWizard} from '../host_config/host_wizard/host_wizard';
 import {HostDebugDialog} from '../host_debug_dialog/host_debug_dialog';
 import {HostDecommissionDialog} from '../host_decommission_dialog/host_decommission_dialog';
 import {HostActionBar} from './host_action_bar';
+
+@Component({
+  standalone: true,
+  imports: [HostActionBar],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div
+      style="container: detail-sheet / inline-size;"
+      [style.width.px]="containerWidth()"
+    >
+      <app-host-action-bar [pageData]="pageData()"></app-host-action-bar>
+    </div>
+  `,
+})
+class HostActionBarContainerHostComponent {
+  readonly containerWidth = signal(600);
+  readonly pageData = signal<HostOverviewPageData>({} as HostOverviewPageData);
+}
 
 describe('HostActionBar', () => {
   let component: HostActionBar;
@@ -78,9 +97,10 @@ describe('HostActionBar', () => {
 
     mockEnvironment = jasmine.createSpyObj('Environment', ['isGoogleInternal']);
     mockEnvironment.isGoogleInternal.and.returnValue(true);
-    featureEnablementService = jasmine.createSpyObj('FeatureEnablementService', [
-      'isHostConfigEnabled',
-    ]);
+    featureEnablementService = jasmine.createSpyObj(
+      'FeatureEnablementService',
+      ['isHostConfigEnabled'],
+    );
     featureEnablementService.isHostConfigEnabled.and.returnValue(true);
 
     await TestBed.configureTestingModule({
@@ -337,5 +357,33 @@ describe('HostActionBar', () => {
       component.onConfiguration();
       expect(dialog.open).not.toHaveBeenCalled();
     });
+  });
+
+  it('folds secondary actions based on detail-sheet container width', () => {
+    const hostFixture = TestBed.createComponent(
+      HostActionBarContainerHostComponent,
+    );
+    hostFixture.componentInstance.pageData.set(mockPageData);
+    hostFixture.detectChanges();
+    const compiled = hostFixture.nativeElement as HTMLElement;
+    const smEl = compiled.querySelector<HTMLElement>('.header-actions-sm')!;
+    const xlEl = compiled.querySelector<HTMLElement>('.header-actions-xl')!;
+    const twoXlEl = compiled.querySelector<HTMLElement>('.header-actions-2xl')!;
+
+    expect(getComputedStyle(smEl).display).toBe('flex');
+    expect(getComputedStyle(xlEl).display).toBe('none');
+    expect(getComputedStyle(twoXlEl).display).toBe('none');
+
+    hostFixture.componentInstance.containerWidth.set(780);
+    hostFixture.detectChanges();
+    expect(getComputedStyle(smEl).display).toBe('none');
+    expect(getComputedStyle(xlEl).display).toBe('flex');
+    expect(getComputedStyle(twoXlEl).display).toBe('none');
+
+    hostFixture.componentInstance.containerWidth.set(920);
+    hostFixture.detectChanges();
+    expect(getComputedStyle(smEl).display).toBe('none');
+    expect(getComputedStyle(xlEl).display).toBe('none');
+    expect(getComputedStyle(twoXlEl).display).toBe('flex');
   });
 });

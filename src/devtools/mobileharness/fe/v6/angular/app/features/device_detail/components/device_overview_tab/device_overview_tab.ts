@@ -1,4 +1,3 @@
-import {BreakpointObserver} from '@angular/cdk/layout';
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -56,7 +55,6 @@ interface HealthStateUI {
   icon: string;
   iconColorClass: string;
   iconBgColorClass: string;
-  borderColorClass: string;
   isSpinning: boolean;
 }
 
@@ -94,7 +92,6 @@ interface DimensionItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
-  private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly dialog = inject(MatDialog);
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly environment = inject(Environment);
@@ -137,7 +134,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   filteredDrivers = signal<string[]>([]);
   filteredDecorators = signal<string[]>([]);
 
-  isSubDeviceCollapsible = signal(true);
   testbedConfig = signal<TestbedConfig | undefined>(undefined);
 
   // Sub-device filtering
@@ -153,10 +149,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
       this.initFlatDimensions();
       this.filteredDimensions.set(
         this.filterDimensions(this.dimensionsSearchTerm),
-      );
-
-      this.updateCollapsibleBasedOnScreenWidth(
-        this.breakpointObserver.isMatched('(min-width: 1440px)'),
       );
 
       if (this.device.subDevices && this.device.subDevices.length > 0) {
@@ -186,25 +178,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
       .subscribe((searchTerm) => {
         this.filterDecorators(searchTerm);
       });
-
-    this.breakpointObserver
-      .observe('(min-width: 1440px)')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((result) => {
-        this.updateCollapsibleBasedOnScreenWidth(result.matches);
-      });
-  }
-
-  updateCollapsibleBasedOnScreenWidth(isWide: boolean): void {
-    if (
-      this.device?.subDevices &&
-      this.device.subDevices.length > 0 &&
-      this.device.subDevices.length % 2 === 0
-    ) {
-      this.isSubDeviceCollapsible.set(!isWide);
-    } else {
-      this.isSubDeviceCollapsible.set(true);
-    }
   }
 
   /** Opens the dialog listing the errors reported for this device. */
@@ -267,7 +240,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'check_circle',
           iconColorClass: 'text-green-600',
           iconBgColorClass: 'bg-green-100',
-          borderColorClass: 'border-l-green-500',
           isSpinning: false,
         };
       case 'IN_SERVICE_BUSY':
@@ -275,7 +247,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'sync',
           iconColorClass: 'text-blue-600',
           iconBgColorClass: 'bg-blue-100',
-          borderColorClass: 'border-l-blue-500',
           isSpinning: true,
         };
       case 'OUT_OF_SERVICE_RECOVERING':
@@ -283,7 +254,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'autorenew',
           iconColorClass: 'text-amber-600',
           iconBgColorClass: 'bg-amber-100',
-          borderColorClass: 'border-l-amber-500',
           isSpinning: true,
         };
       case 'OUT_OF_SERVICE_TEMP_MAINT':
@@ -291,7 +261,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'warning',
           iconColorClass: 'text-amber-600',
           iconBgColorClass: 'bg-amber-100',
-          borderColorClass: 'border-l-amber-500',
           isSpinning: false,
         };
       case 'IDLE_BUT_QUARANTINED':
@@ -299,7 +268,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'block',
           iconColorClass: 'text-red-600',
           iconBgColorClass: 'bg-red-100',
-          borderColorClass: 'border-l-red-500',
           isSpinning: false,
         };
       case 'OUT_OF_SERVICE_NEEDS_FIXING':
@@ -308,7 +276,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'error',
           iconColorClass: 'text-red-600',
           iconBgColorClass: 'bg-red-100',
-          borderColorClass: 'border-l-red-500',
           isSpinning: false,
         };
     }
@@ -351,7 +318,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'check_circle',
           iconColorClass: 'text-green-600',
           iconBgColorClass: 'bg-green-100',
-          borderColorClass: 'border-l-green-500',
           isSpinning: false,
         };
       case 'BUSY':
@@ -359,7 +325,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'sync',
           iconColorClass: 'text-blue-600',
           iconBgColorClass: 'bg-blue-100',
-          borderColorClass: 'border-l-blue-500',
           isSpinning: true,
         };
       case 'TRANSITIONING':
@@ -367,7 +332,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'warning',
           iconColorClass: 'text-amber-600',
           iconBgColorClass: 'bg-amber-100',
-          borderColorClass: 'border-l-amber-500',
           isSpinning: false,
         };
       case 'RECOVERING':
@@ -375,7 +339,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'autorenew',
           iconColorClass: 'text-amber-600',
           iconBgColorClass: 'bg-amber-100',
-          borderColorClass: 'border-l-amber-500',
           isSpinning: true,
         };
       case 'BLOCKED':
@@ -383,7 +346,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'block',
           iconColorClass: 'text-red-600',
           iconBgColorClass: 'bg-red-100',
-          borderColorClass: 'border-l-red-500',
           isSpinning: false,
         };
       case 'ERROR':
@@ -393,7 +355,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           icon: 'error',
           iconColorClass: 'text-red-600',
           iconBgColorClass: 'bg-red-100',
-          borderColorClass: 'border-l-red-500',
           isSpinning: false,
         };
     }

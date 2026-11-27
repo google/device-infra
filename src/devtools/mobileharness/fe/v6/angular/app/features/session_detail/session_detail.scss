@@ -3,7 +3,7 @@
 @use '../../shared/styles/gm3';
 
 :host {
-  @include common.page-host();
+  @include common.page-host($padding: null);
   height: 100%;
   min-height: 0;
   overflow-y: auto;
@@ -11,6 +11,7 @@
 }
 
 .session-detail-container {
+  @include common.page-host();
   margin: 0 auto;
 }
 

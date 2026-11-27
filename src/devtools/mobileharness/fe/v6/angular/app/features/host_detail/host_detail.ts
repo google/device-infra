@@ -37,6 +37,7 @@ import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {HostOverviewPageData} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
 import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
+import {NavLink} from '../../shared/components/nav_link/nav_link';
 import {OpenInNewTabButton} from '../../shared/components/open_in_new_tab_button/open_in_new_tab_button';
 import {formatPageTitle} from '../../shared/composables/page_title';
 import {ClipboardService} from '../../shared/services/clipboard_service';
@@ -69,6 +70,7 @@ interface HostPageData {
     MatMenuModule,
     RouterModule,
     LegacyConsoleBanner,
+    NavLink,
     OpenInNewTabButton,
   ],
   host: {

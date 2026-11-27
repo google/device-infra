@@ -27,9 +27,9 @@
               {{ healthUI.icon }}
             </mat-icon>
           </div>
-          <div [class]="'health-details ' + healthUI.borderColorClass">
+          <div class="health-details">
             <div class="health-title-row">
-              <h3 [class]="'health-title ' + healthUI.iconColorClass">
+              <h3 class="health-title">
                 {{ device.healthAndActivity.title }}
               </h3>
               @if (!isInService(device.healthAndActivity)) {
@@ -274,9 +274,12 @@
           </a>
         </div>
         <div class="info-card-content no-padding">
-          <div class="sub-device-cards-wrapper">
+          <div
+            class="sub-device-cards-wrapper"
+            [class.even-sub-devices]="device.subDevices.length % 2 === 0"
+          >
             @for (sub of device.subDevices; track sub.id) {
-              <app-info-card [cardTitle]="sub.id" [collapsible]="isSubDeviceCollapsible()" class="sub-device-card">
+              <app-info-card [cardTitle]="sub.id" class="sub-device-card">
                 <div class="overview-card-content">
                   <dl class="sub-device-details-grid">
                     <dt>Types</dt>

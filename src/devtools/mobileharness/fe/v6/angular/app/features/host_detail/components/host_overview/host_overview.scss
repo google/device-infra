@@ -28,7 +28,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem 1.5rem;
 
-  @media (min-width: 1024px) {
+  @container detail-sheet (min-width: 760px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -53,6 +53,7 @@
   }
 
   dd {
+    margin: 0;
     min-width: 0;
     display: flex;
     align-items: center;
@@ -123,18 +124,6 @@
   color: #9aa0a6;
 }
 
-.monospace-block {
-  width: fit-content;
-  max-width: 100%;
-  font-size: 0.8125rem;
-  background-color: #e9ecef;
-  padding: 2px 10px;
-  border-radius: 4px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  border: 1px solid #dee2e6;
-}
-
 .device-loading-bar {
   @include mat.progress-bar-overrides(
     (
@@ -200,29 +189,108 @@
   }
 }
 
-.edit-flags-button {
-  width: 1rem;
-  height: 1rem;
+// The label, the first flag line, and Edit share one text baseline, although
+// the flags use a smaller monospace font.
+.grid-tight dt.pass-through-flags-dt {
+  align-self: baseline;
+}
+
+.grid-tight dd.pass-through-flags-dd {
   display: flex;
+  align-self: baseline;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.pass-through-flags-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.flags-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78125rem;
+  line-height: 1.5;
+  color: #1f1f1f;
+}
+
+.flag-line {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.flag-name {
+  white-space: nowrap;
+  color: #1f1f1f;
+}
+
+.flag-value {
+  color: #444746;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.flags-toggle-button {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  color: #6b7280;
-  transition: all 0.2s;
-  flex-shrink: 0;
-  border: 0;
-  background: none;
+  margin-top: 6px;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  color: #0b57d0;
+  font-family: overview.$labconsole-font;
+  font-size: 0.75rem;
+  font-weight: 500;
   cursor: pointer;
 
   &:hover {
-    background-color: #e5e7eb;
-    color: #1d4ed8;
+    text-decoration: underline;
   }
 
-  mat-icon {
-    font-size: 1.25rem;
-    height: 1.25rem;
-    width: 1.25rem;
+  &:focus-visible {
+    outline: 2px solid #0b57d0;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+.edit-flags-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: #0b57d0;
+  font-family: overview.$labconsole-font;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(11, 87, 208, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #0b57d0;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    color: rgba(31, 31, 31, 0.38);
+    cursor: not-allowed;
   }
 }
 
@@ -408,8 +476,8 @@
           letter-spacing: normal;
         }
 
-        @media (max-width: 1200px) {
-          // hide text on small screens.
+        @container detail-sheet (max-width: 960px) {
+          // hide text on narrow containers.
           .action-button-text {
             display: none;
           }
@@ -810,3 +878,40 @@
 }
 
 @include bulk_config_menu.configure-dropdown-menu();
+
+#lab-server .operation-button {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@container detail-sheet (max-width: 640px) {
+  .grid-tight {
+    grid-template-columns: minmax(140px, 156px) minmax(0, 1fr);
+    gap: 0.75rem 1rem;
+  }
+
+  #lab-server ::ng-deep .panel-header {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+  }
+
+  #lab-server .operation-button {
+    gap: 0.375rem;
+  }
+
+  .device-table-toolbar {
+    height: auto;
+    min-height: 3rem;
+
+    .device-toolbar-content {
+      position: static;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .device-filter-input {
+      max-width: 100%;
+      min-width: 0;
+    }
+  }
+}

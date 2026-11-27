@@ -243,4 +243,28 @@ describe('FlagsDialog', () => {
     component.appendPreset(preset);
     expect(component.currentFlagsArray()).not.toContain('--flag3');
   });
+
+  it('keeps space separated and quoted values with their flag in list mode', () => {
+    component.isListMode.set(false);
+    component.rawTextFlags.set('--foo bar --msg="hello --world" --baz');
+
+    component.toggleMode(true);
+
+    expect(component.currentFlagsArray()).toEqual([
+      '--foo bar',
+      '--msg="hello --world"',
+      '--baz',
+    ]);
+  });
+
+  it('shows the preset description for a flag with a space separated value', () => {
+    component.presets.set([
+      {name: 'Foo', cmd: '--foo', description: 'Foo description'},
+    ]);
+    component.currentFlagsArray.set(['--foo bar']);
+
+    expect(component.displayedFlags()).toEqual([
+      {name: '--foo bar', description: 'Foo description'},
+    ]);
+  });
 });

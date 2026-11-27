@@ -31,6 +31,10 @@ import {
 import {HOST_SERVICE} from '../../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
 import {Dialog} from '../../../../../shared/components/dialog/dialog';
+import {
+  parsePassThroughFlag,
+  splitPassThroughFlags,
+} from '../pass_through_flags_utils';
 import {SaveFlagsConfirmContent} from './save_flags_confirm_content/save_flags_confirm_content';
 
 /**
@@ -84,7 +88,7 @@ export class FlagsDialog implements OnInit {
     const currentFlags = this.isListMode()
       ? this.currentFlagsArray().join(' ')
       : this.rawTextFlags();
-    const normalizedCurrentStr = this.splitFlags(currentFlags).join(' ');
+    const normalizedCurrentStr = splitPassThroughFlags(currentFlags).join(' ');
     const normalizedInitialStr = this.initialFlagsArray().join(' ');
     return normalizedCurrentStr !== normalizedInitialStr;
   });
@@ -100,17 +104,9 @@ export class FlagsDialog implements OnInit {
     );
   });
 
-  private splitFlags(input: string): string[] {
-    if (!input) return [];
-    return input
-      .trim()
-      .split(/\s+(?=--)/)
-      .filter(Boolean);
-  }
-
   readonly flagDescriptions = computed(() => {
     const entries = this.presets().flatMap((p) => {
-      const flags = this.splitFlags(p.cmd);
+      const flags = splitPassThroughFlags(p.cmd);
       const desc = flags.length === 1 ? p.description : `Part of: ${p.name}`;
       return flags.map((f) => [f, desc] as [string, string]);
     });
@@ -122,7 +118,7 @@ export class FlagsDialog implements OnInit {
     return this.currentFlagsArray().map((flag) => {
       let description = map.get(flag) || '';
       if (!description) {
-        const baseFlag = flag.split('=')[0];
+        const baseFlag = parsePassThroughFlag(flag).name;
         description = map.get(baseFlag) || '';
       }
       return {name: flag, description};
@@ -132,10 +128,10 @@ export class FlagsDialog implements OnInit {
   readonly displayedPresets = computed(() => {
     const activeFlags = this.isListMode()
       ? this.currentFlagsArray()
-      : this.splitFlags(this.rawTextFlags());
+      : splitPassThroughFlags(this.rawTextFlags());
     const currentSet = new Set(activeFlags);
     return this.filteredPresets().map((p) => {
-      const presetFlags = this.splitFlags(p.cmd);
+      const presetFlags = splitPassThroughFlags(p.cmd);
       const isAdded =
         presetFlags.length > 0 && presetFlags.every((f) => currentSet.has(f));
       return {...p, isAdded};
@@ -149,7 +145,7 @@ export class FlagsDialog implements OnInit {
 
   parseInitialFlags() {
     const flags = this.data.currentFlags
-      ? this.splitFlags(this.data.currentFlags)
+      ? splitPassThroughFlags(this.data.currentFlags)
       : [];
     this.rawTextFlags.set(this.data.currentFlags);
     this.currentFlagsArray.set([...flags]);
@@ -183,7 +179,7 @@ export class FlagsDialog implements OnInit {
     } else if (!this.isListMode() && isList) {
       // Switching from Text to List: Parse rawTextFlags into currentFlagsArray
       const flags = this.rawTextFlags()
-        ? this.splitFlags(this.rawTextFlags())
+        ? splitPassThroughFlags(this.rawTextFlags())
         : [];
       this.currentFlagsArray.set(flags);
     }
@@ -194,7 +190,7 @@ export class FlagsDialog implements OnInit {
     if (!this.hasPermission()) return;
     const val = this.addInput().trim();
     if (val) {
-      const newFlags = this.splitFlags(val);
+      const newFlags = splitPassThroughFlags(val);
       this.currentFlagsArray.update((flags) => [...flags, ...newFlags]);
       this.addInput.set('');
     }
@@ -209,7 +205,7 @@ export class FlagsDialog implements OnInit {
 
   appendPreset(preset: PopularFlag) {
     if (!this.hasPermission()) return;
-    const newFlags = this.splitFlags(preset.cmd);
+    const newFlags = splitPassThroughFlags(preset.cmd);
     if (this.isListMode()) {
       this.currentFlagsArray.update((flags) => {
         const currentSet = new Set(flags);
@@ -218,7 +214,7 @@ export class FlagsDialog implements OnInit {
       });
     } else {
       this.rawTextFlags.update((text) => {
-        const currentFlags = this.splitFlags(text);
+        const currentFlags = splitPassThroughFlags(text);
         const currentSet = new Set(currentFlags);
         const flagsToAppend = newFlags.filter((f) => !currentSet.has(f));
         if (flagsToAppend.length === 0) return text;
@@ -249,7 +245,7 @@ export class FlagsDialog implements OnInit {
 
     // If in text mode, re-parse to ensure currentFlagsArray is in sync
     if (!this.isListMode()) {
-      const flags = finalString ? this.splitFlags(finalString) : [];
+      const flags = finalString ? splitPassThroughFlags(finalString) : [];
       this.currentFlagsArray.set(flags);
     }
 

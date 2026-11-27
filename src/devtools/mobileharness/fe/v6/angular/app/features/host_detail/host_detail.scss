@@ -20,11 +20,15 @@
 }
 
 .main-card {
-  background-color: white;
-  border-radius: 1rem; // rounded-2xl
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05); // shadow-lg
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  container: detail-sheet / inline-size;
+  overflow-x: clip;
+  background-color: #fff;
+  border: 1px solid #dde3ea;
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .card-header {
@@ -63,100 +67,16 @@
       text-overflow: ellipsis;
       margin-right: 0.5rem;
     }
-  }
 
-  .header-actions {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.5rem;
+    .hosts-link {
+      color: #0b57d0;
+      text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
 
-    .header-actions-2xl,
-    .header-actions-xl,
-    .header-actions-sm {
-      display: none;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    // sm: up to 1024px
-    .header-actions-sm {
-      display: flex;
-    }
-    // xl: 1024px to 1300px
-    @media (min-width: 1024px) {
-      .header-actions-sm {
-        display: none;
-      }
-      .header-actions-xl {
-        display: flex;
-      }
-    }
-    // 2xl: 1300px and up
-    @media (min-width: 1300px) {
-      .header-actions-xl {
-        display: none;
-      }
-      .header-actions-2xl {
-        display: flex;
-      }
-    }
-  }
-
-  .m3-action-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 12px 0 8px;
-    height: 36px;
-    border-radius: 18px;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    transition:
-      background-color 0.2s,
-      color 0.2s,
-      box-shadow 0.2s;
-    border: 1px solid transparent;
-    white-space: nowrap;
-    cursor: pointer;
-
-    mat-icon {
-      font-size: 16px;
-      height: 16px;
-      width: 16px;
-      margin-right: 6px;
-    }
-
-    &.filled {
-      background-color: #e8f0fe; // lighter blue
-      color: #1967d2; // darker blue
       &:hover {
-        background-color: #d2e3fc;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        text-decoration: underline;
       }
-    }
-
-    &.transparent {
-      background-color: transparent;
-      color: #00458f;
-      &:hover {
-        background-color: rgba(0, 69, 143, 0.08);
-      }
-    }
-
-    &.dropdown-trigger {
-      padding: 0 8px 0 12px;
-      mat-icon {
-        margin-right: 0px;
-        margin-left: 6px;
-      }
-    }
-
-    &:disabled {
-      background-color: #f1f3f4;
-      color: #bdc1c6;
-      cursor: not-allowed;
-      pointer-events: none;
     }
   }
 }
@@ -219,6 +139,40 @@
     .host-text {
       font-weight: 500;
       color: #1f2937;
+    }
+  }
+}
+
+@container detail-sheet (max-width: 640px) {
+  .card-header {
+    flex-wrap: wrap;
+    gap: 0.625rem 0.75rem;
+    padding: 0.75rem 1rem;
+    min-height: 0;
+
+    .header-host-id {
+      flex: 1 1 100%;
+      max-width: 100%;
+      font-size: 0.9375rem;
+    }
+  }
+
+  .card-body {
+    padding: 0.875rem 1rem;
+
+    .title-icon-wrapper {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+
+    .host-title-row {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .host-title {
+      font-size: 1.25rem;
+      line-height: 1.75rem;
     }
   }
 }

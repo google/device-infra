@@ -24,10 +24,19 @@ import {DeviceOverviewTab} from './device_overview_tab';
   standalone: true,
   imports: [DeviceOverviewTab],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<app-device-overview-tab [device]="device"></app-device-overview-tab>`,
+  template: `
+    <div
+      class="detail-sheet-host"
+      [style.width.px]="containerWidth"
+      style="container: detail-sheet / inline-size;"
+    >
+      <app-device-overview-tab [device]="device"></app-device-overview-tab>
+    </div>
+  `,
 })
 class TestHostComponent {
   device!: DeviceOverview;
+  containerWidth = 800;
 }
 
 describe('DeviceOverviewTab Component', () => {
@@ -265,7 +274,6 @@ describe('DeviceOverviewTab Component', () => {
       icon: 'sync',
       iconColorClass: 'text-blue-600',
       iconBgColorClass: 'bg-blue-100',
-      borderColorClass: 'border-l-blue-500',
       isSpinning: true,
     });
   });
@@ -284,7 +292,6 @@ describe('DeviceOverviewTab Component', () => {
       icon: 'warning',
       iconColorClass: 'text-amber-600',
       iconBgColorClass: 'bg-amber-100',
-      borderColorClass: 'border-l-amber-500',
       isSpinning: false,
     });
   });
@@ -300,7 +307,6 @@ describe('DeviceOverviewTab Component', () => {
       icon: 'check_circle',
       iconColorClass: 'text-green-600',
       iconBgColorClass: 'bg-green-100',
-      borderColorClass: 'border-l-green-500',
       isSpinning: false,
     });
   });
@@ -328,7 +334,6 @@ describe('DeviceOverviewTab Component', () => {
       icon: 'autorenew',
       iconColorClass: 'text-amber-600',
       iconBgColorClass: 'bg-amber-100',
-      borderColorClass: 'border-l-amber-500',
       isSpinning: true,
     });
   });
@@ -357,7 +362,6 @@ describe('DeviceOverviewTab Component', () => {
       icon: 'warning',
       iconColorClass: 'text-amber-600',
       iconBgColorClass: 'bg-amber-100',
-      borderColorClass: 'border-l-amber-500',
       isSpinning: false,
     });
   });
@@ -385,7 +389,6 @@ describe('DeviceOverviewTab Component', () => {
       icon: 'error',
       iconColorClass: 'text-red-600',
       iconBgColorClass: 'bg-red-100',
-      borderColorClass: 'border-l-red-500',
       isSpinning: false,
     });
   });
@@ -601,5 +604,102 @@ describe('DeviceOverviewTab Component', () => {
         autoFocus: false,
       }),
     );
+  });
+
+  it('renders error health state without a colored left border', () => {
+    fixture.componentInstance.device = {
+      ...mockDevice,
+      healthAndActivity: {
+        ...mockDevice.healthAndActivity,
+        state: 'OUT_OF_SERVICE_NEEDS_FIXING',
+        uiState: 'ERROR',
+        title: 'Needs Manual Repair',
+        subtitle: 'Device needs fixing.',
+        deviceStatus: {status: 'NEEDS_REPAIR', isCritical: true},
+      },
+    };
+    const cdr = fixture.debugElement.injector.get(ChangeDetectorRef);
+    cdr.markForCheck();
+    fixture.detectChanges();
+
+    const detailsEl = fixture.nativeElement.querySelector(
+      '.health-details',
+    ) as HTMLElement;
+    expect(detailsEl).not.toBeNull();
+    expect(getComputedStyle(detailsEl).borderLeftWidth).toBe('0px');
+    expect(
+      fixture.nativeElement.querySelector('.summary-icon-bg.bg-red-100'),
+    ).not.toBeNull();
+  });
+
+  it('disables even sub-device collapsing via CSS container query at 1080px and wider', () => {
+    const cdr = fixture.debugElement.injector.get(ChangeDetectorRef);
+    const wrapper = fixture.nativeElement.querySelector(
+      '.sub-device-cards-wrapper',
+    ) as HTMLElement;
+    const header = fixture.nativeElement.querySelector(
+      '.sub-device-card .panel-header',
+    ) as HTMLElement;
+    const expandIcon = fixture.nativeElement.querySelector(
+      '.sub-device-card .expand-icon',
+    ) as HTMLElement;
+    const panelContent = fixture.nativeElement.querySelector(
+      '.sub-device-card .panel-content',
+    ) as HTMLElement;
+    const content = fixture.nativeElement.querySelector(
+      '.sub-device-card .panel-content .content',
+    ) as HTMLElement;
+    // Disable transition delays so computed visibility and grid rows reflect
+    // the settled CSS state synchronously.
+    panelContent.style.transitionDuration = '0s';
+    content.style.transitionDuration = '0s';
+
+    // Narrow detail-sheet (< 1080px): even sub-devices remain collapsible.
+    expect(wrapper.classList.contains('even-sub-devices')).toBeTrue();
+    expect(getComputedStyle(expandIcon).display).not.toBe('none');
+    expect(getComputedStyle(header).pointerEvents).not.toBe('none');
+    expect(getComputedStyle(header).cursor).toBe('pointer');
+
+    header.click();
+    fixture.detectChanges();
+    expect(panelContent.classList.contains('expanded')).toBeFalse();
+    expect(getComputedStyle(header).borderBottomWidth).toBe('0px');
+    expect(getComputedStyle(panelContent).gridTemplateRows).toBe('0px');
+
+    // Wide detail-sheet (>= 1080px): even sub-devices stay expanded and
+    // non-collapsible purely through CSS without ResizeObserver plumbing.
+    fixture.componentInstance.containerWidth = 1100;
+    cdr.markForCheck();
+    fixture.detectChanges();
+
+    expect(panelContent.classList.contains('expanded')).toBeFalse();
+    expect(getComputedStyle(expandIcon).display).toBe('none');
+    expect(getComputedStyle(header).pointerEvents).toBe('none');
+    expect(getComputedStyle(header).cursor).toBe('default');
+    expect(getComputedStyle(header).borderBottomWidth).toBe('1px');
+    expect(getComputedStyle(content).visibility).toBe('visible');
+    expect(getComputedStyle(panelContent).gridTemplateRows).not.toBe('0px');
+
+    // Odd sub-device counts stay collapsible even at >= 1080px.
+    fixture.componentInstance.device = {
+      ...mockDevice,
+      subDevices: [mockDevice.subDevices![0]],
+    };
+    cdr.markForCheck();
+    fixture.detectChanges();
+
+    const oddWrapper = fixture.nativeElement.querySelector(
+      '.sub-device-cards-wrapper',
+    ) as HTMLElement;
+    const oddHeader = fixture.nativeElement.querySelector(
+      '.sub-device-card .panel-header',
+    ) as HTMLElement;
+    const oddExpandIcon = fixture.nativeElement.querySelector(
+      '.sub-device-card .expand-icon',
+    ) as HTMLElement;
+    expect(oddWrapper.classList.contains('even-sub-devices')).toBeFalse();
+    expect(getComputedStyle(oddExpandIcon).display).not.toBe('none');
+    expect(getComputedStyle(oddHeader).pointerEvents).not.toBe('none');
+    expect(getComputedStyle(oddHeader).cursor).toBe('pointer');
   });
 });

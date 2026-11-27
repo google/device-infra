@@ -82,23 +82,8 @@
 }
 
 .health-details {
-  border-left: 4px solid transparent;
-  padding-left: 0.75rem;
   flex-grow: 1;
-
-  // Border colors applied dynamically
-  &.border-l-green-500 {
-    border-left-color: #22c55e;
-  }
-  &.border-l-blue-500 {
-    border-left-color: #3b82f6;
-  }
-  &.border-l-amber-500 {
-    border-left-color: #f59e0b;
-  }
-  &.border-l-red-500 {
-    border-left-color: #ef4444;
-  }
+  min-width: 0;
 }
 
 .health-title-row {
@@ -109,13 +94,14 @@
 }
 
 .health-title {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #1f1f1f;
   margin: 0;
 }
 
 .health-subtitle {
-  color: #6b7280;
+  color: #444746;
   font-size: 0.875rem;
   margin-top: 0.25rem;
   margin-bottom: 0;
@@ -309,14 +295,14 @@
 // Basic Information Card
 .basic-info-responsive-grid {
   display: grid;
-  grid-template-columns: 120px 1fr;
+  grid-template-columns: 120px minmax(0, 1fr);
   gap: 0.75rem 1.5rem;
   align-items: flex-start;
   font-size: 0.875rem;
   margin: 0;
 
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(2, 120px 1fr);
+  @container detail-sheet (min-width: 760px) {
+    grid-template-columns: repeat(2, 120px minmax(0, 1fr));
   }
 
   dt {
@@ -397,10 +383,34 @@
   }
 
   &.sub-device-grid {
-    @media screen and (min-width: 1440px) {
+    @container detail-sheet (min-width: 1080px) {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 1rem;
+    }
+  }
+
+  &.even-sub-devices {
+    @container detail-sheet (min-width: 1080px) {
+      .sub-device-card ::ng-deep {
+        .panel-header {
+          cursor: default;
+          pointer-events: none;
+          border-bottom: 1px solid #e0e0e0;
+
+          .expand-icon {
+            display: none;
+          }
+        }
+
+        .panel-content {
+          grid-template-rows: 1fr;
+
+          .content {
+            visibility: visible;
+          }
+        }
+      }
     }
   }
 }
@@ -526,7 +536,7 @@
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
   gap: 0.5rem 1rem;
 }
 
@@ -645,4 +655,26 @@
 
 .device-error-button {
   @include overview.device-error-button;
+}
+
+@container detail-sheet (max-width: 640px) {
+  .detail-list-grid {
+    grid-template-columns: minmax(84px, 100px) minmax(0, 1fr);
+    gap: 0.75rem 1rem;
+  }
+
+  .basic-info-responsive-grid {
+    grid-template-columns: minmax(96px, 120px) minmax(0, 1fr);
+    gap: 0.625rem 1rem;
+  }
+
+  .sub-device-details-grid {
+    grid-template-columns: minmax(84px, 100px) minmax(0, 1fr);
+    gap: 0.625rem 1rem;
+    padding: 0.5rem 1rem 1rem;
+  }
+
+  .capabilities-content {
+    padding: 1rem;
+  }
 }

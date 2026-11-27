@@ -1079,9 +1079,9 @@ describe('HostOverview Component', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(
-        configServiceSpy.getConfigurableDimensions,
-      ).toHaveBeenCalledTimes(1);
+      expect(configServiceSpy.getConfigurableDimensions).toHaveBeenCalledTimes(
+        1,
+      );
       expect(component.bulkConfig.dimensionConfig().enabled).toBeTrue();
 
       const compiled = fixture.nativeElement as HTMLElement;
@@ -1266,9 +1266,10 @@ describe('HostOverview Component', () => {
         data: {onConfirm: () => Observable<void>};
       };
       singleDialogConfig.data.onConfirm().subscribe();
-      expect(decommissionSpy).toHaveBeenCalledWith('host-a-1.prod.example.com', [
-        'missing-1',
-      ]);
+      expect(decommissionSpy).toHaveBeenCalledWith(
+        'host-a-1.prod.example.com',
+        ['missing-1'],
+      );
       expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
         '1 device removed successfully.\nIt may take a few minutes to take effect on the UI side.',
       );
@@ -1290,10 +1291,10 @@ describe('HostOverview Component', () => {
         data: {onConfirm: () => Observable<void>};
       };
       multiDialogConfig.data.onConfirm().subscribe();
-      expect(decommissionSpy).toHaveBeenCalledWith('host-a-1.prod.example.com', [
-        'missing-1',
-        'missing-2',
-      ]);
+      expect(decommissionSpy).toHaveBeenCalledWith(
+        'host-a-1.prod.example.com',
+        ['missing-1', 'missing-2'],
+      );
       expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
         '2 devices removed successfully.\nIt may take a few minutes to take effect on the UI side.',
       );
@@ -1474,5 +1475,108 @@ describe('HostOverview Component', () => {
         autoFocus: false,
       }),
     );
+  });
+
+  describe('pass through flags', () => {
+    function recreateGoogle1pWithFlags(passThroughFlags: string): void {
+      spyOn(TestBed.inject(EnvUniverseService), 'isGoogle1P').and.returnValue(
+        true,
+      );
+      fixture = TestBed.createComponent(HostOverviewPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('host', {
+        ...mockHost,
+        showPassThroughFlags: true,
+        labServer: {
+          ...mockHost.labServer,
+          passThroughFlags,
+        },
+      });
+      fixture.detectChanges();
+    }
+
+    it('renders one flag per line with name and value spans and an Edit text button', () => {
+      recreateGoogle1pWithFlags(
+        '--alpha=1 --beta="hello world" --enable_gamma',
+      );
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const lines = Array.from(compiled.querySelectorAll('.flag-line'));
+      expect(lines.length).toBe(3);
+      expect(lines[0].querySelector('.flag-name')?.textContent).toBe('--alpha');
+      expect(lines[0].querySelector('.flag-value')?.textContent).toBe('=1');
+      expect(lines[1].querySelector('.flag-name')?.textContent).toBe('--beta');
+      expect(lines[1].querySelector('.flag-value')?.textContent).toBe(
+        '="hello world"',
+      );
+      expect(lines[2].querySelector('.flag-name')?.textContent).toBe(
+        '--enable_gamma',
+      );
+      expect(lines[2].querySelector('.flag-value')).toBeNull();
+      expect(compiled.querySelector('.flags-toggle-button')).toBeNull();
+
+      const editButton =
+        compiled.querySelector<HTMLButtonElement>('.edit-flags-button');
+      expect(editButton).not.toBeNull();
+      expect(editButton?.textContent?.trim()).toBe('Edit');
+      expect(editButton?.querySelector('mat-icon')).toBeNull();
+    });
+
+    it('keeps a space separated value on its flag line, like the flags dialog', () => {
+      recreateGoogle1pWithFlags('--foo bar --baz');
+
+      const lines = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.flag-line'),
+      );
+      expect(lines.map((line) => line.textContent?.trim())).toEqual([
+        '--foo bar',
+        '--baz',
+      ]);
+    });
+
+    it('shows the first 4 flags by default and toggles between Show all N flags and Show less', () => {
+      recreateGoogle1pWithFlags(
+        '--flag_1=a --flag_2=b --flag_3=c --flag_4=d --flag_5=e --flag_6=f',
+      );
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelectorAll('.flag-line').length).toBe(4);
+
+      const toggleButton = compiled.querySelector<HTMLButtonElement>(
+        '.flags-toggle-button',
+      )!;
+      expect(toggleButton).not.toBeNull();
+      expect(toggleButton.textContent?.trim()).toBe('Show all 6 flags');
+      expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
+
+      toggleButton.click();
+      fixture.detectChanges();
+      expect(compiled.querySelectorAll('.flag-line').length).toBe(6);
+      expect(toggleButton.textContent?.trim()).toBe('Show less');
+      expect(toggleButton.getAttribute('aria-expanded')).toBe('true');
+
+      toggleButton.click();
+      fixture.detectChanges();
+      expect(compiled.querySelectorAll('.flag-line').length).toBe(4);
+      expect(toggleButton.textContent?.trim()).toBe('Show all 6 flags');
+
+      // Resets expanded state when switching hosts.
+      toggleButton.click();
+      fixture.detectChanges();
+      expect(component.flagsExpanded()).toBeTrue();
+      fixture.componentRef.setInput('host', {
+        ...mockHost,
+        hostName: 'host-b-2.prod.example.com',
+        showPassThroughFlags: true,
+        labServer: {
+          ...mockHost.labServer,
+          passThroughFlags:
+            '--flag_1=a --flag_2=b --flag_3=c --flag_4=d --flag_5=e',
+        },
+      });
+      fixture.detectChanges();
+      expect(component.flagsExpanded()).toBeFalse();
+      expect(compiled.querySelectorAll('.flag-line').length).toBe(4);
+    });
   });
 });

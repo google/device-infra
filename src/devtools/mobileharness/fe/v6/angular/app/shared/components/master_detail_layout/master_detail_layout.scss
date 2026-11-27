@@ -1,71 +1,149 @@
-$labconsole-font: Roboto, sans-serif;
+@use '../../styles/gm3';
 
-.master-detail-layout-container {
-  display: flex;
-  flex-direction: column;
-  padding: 0 0 1rem 0;
-  gap: 1.5rem;
+$labconsole-font: 'Google Sans Text', 'Google Sans', Roboto, sans-serif;
 
-  @media (min-width: 992px) {
-    flex-direction: row;
+// Drives the right-edge fade of overflowing section pills: 1 while more pills
+// hide past the right edge and 0 at the end of the strip. When nothing
+// overflows, the scroll timeline is inactive and the initial value applies.
+@property --master-detail-pill-fade {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes master-detail-pill-fade-out {
+  from {
+    --master-detail-pill-fade: 1;
+  }
+
+  to {
+    --master-detail-pill-fade: 0;
   }
 }
 
-// Left Sticky Navigation
-.master-detail-layout-nav-container {
-  width: 100%;
-  flex-shrink: 0;
-  align-self: flex-start;
-  max-height: calc(100vh - 4rem);
-  overflow-y: auto;
+:host {
+  display: block;
+  min-width: 0;
+}
 
-  @media (min-width: 992px) {
-    width: 16rem; // w-64
-    position: sticky;
-    top: 2rem; // Adjust as needed
+.master-detail-layout-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 1rem 0;
+  gap: 1rem;
+  min-width: 0;
+}
+
+// Sticky horizontal section pill strip. As a scroll-state container, it lets
+// its surface query whether it is stuck, without a sentinel or an observer.
+.master-detail-layout-nav-container {
+  position: sticky;
+  top: 0;
+  // Keep the sticky pill strip (240) above mat-table sticky headers/columns
+  // (100/101) and session row hover (200), while staying below .app-toolbar /
+  // .embedded-header-band (250) and .cdk-overlay-container (1000).
+  z-index: 240;
+  // stylelint-disable-next-line scss/declaration-property-value-no-unknown -- scroll-state containers (CSS Conditional Rules 5) postdate the linter's CSS data.
+  container-type: scroll-state;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: -4px;
+}
+
+// The same padding at rest and while stuck keeps the strip 48px tall, so it
+// does not jump when it sticks.
+.master-detail-layout-nav-surface {
+  padding: 4px 0 2px;
+  background-color: transparent;
+  transition:
+    background-color 0.16s ease,
+    box-shadow 0.16s ease;
+
+  @container scroll-state(stuck: top) {
+    background-color: gm3.$surface-container-low;
+    box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.08);
   }
 }
 
 .master-detail-layout-nav {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem; // space-y-1
-  background-color: #f9fafb;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  border: 1px solid #e5e7eb;
+  flex-flow: row nowrap;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  // The 4px padding keeps pill focus rings inside the scrollport, and the
+  // negative inline margin lines the first and last pills up with the cards.
+  margin-inline: -4px;
+  padding: 4px;
 
-  @media (min-width: 992px) {
-    background-color: transparent;
-    padding: 0;
-    border: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  // Fade the right 28px while pills overflow, and fade the fade itself out
+  // over the last 28px of horizontal scroll.
+  @supports (animation-timeline: scroll()) {
+    animation: master-detail-pill-fade-out linear both;
+    animation-timeline: scroll(self inline);
+    animation-range: calc(100% - 28px) 100%;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 28px * var(--master-detail-pill-fade)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 28px * var(--master-detail-pill-fade)),
+      transparent 100%
+    );
   }
 }
 
 .master-detail-layout-nav-link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  height: 1.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  border: 1px solid gm3.$surface-container-highest;
+  background-color: gm3.$surface;
+  font-family: $labconsole-font;
+  font-size: 0.8125rem;
   font-weight: 500;
-  color: #3c4043; // text-gray-700
+  line-height: 1.25rem;
+  color: gm3.$on-surface-variant;
   text-decoration: none;
+  white-space: nowrap;
   transition:
-    background-color 0.2s,
-    color 0.2s;
-  border-left: 3px solid transparent;
-  font-size: 16px;
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 
+  // Material 3 hover state layer: 8% of on-surface-variant over the surface.
   &:hover {
-    background-color: #f3f4f6; // hover:bg-gray-100
+    background-color: color-mix(
+      in srgb,
+      gm3.$on-surface-variant 8%,
+      gm3.$surface
+    );
+    color: gm3.$on-surface;
+  }
+
+  &:focus-visible {
+    outline: 2px solid gm3.$primary;
+    outline-offset: 2px;
   }
 
   &.active {
-    color: #1967d2; // text-blue-700
-    font-weight: 700;
-    background-color: #e8f0fe; // bg-blue-50
-    border-left-color: #1967d2; // border-blue-700
+    background-color: gm3.$primary-container;
+    border-color: transparent;
+    color: gm3.$on-primary-container;
+    font-weight: 500;
   }
 }
 
@@ -76,8 +154,12 @@ $labconsole-font: Roboto, sans-serif;
   flex-direction: column;
   gap: 1.5rem;
 
+  ::ng-deep > * {
+    scroll-margin-top: 60px;
+  }
+
   ::ng-deep .info-card {
-    background-color: #f0f4f9;
+    background-color: gm3.$surface-container;
     border-radius: 0.75rem;
     border: 1px solid #e5e7eb;
   }
