@@ -19,7 +19,6 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_api_users",
-        "//:omnilab_fusion",
     ],
 )
 
@@ -58,7 +57,7 @@ java_library(
         "DrainService.java",
         "DrainServiceModule.java",
     ],
-    visibility = ["//:omnilab_fusion"],
+    visibility = ["//visibility:private"],
     deps = [
         ":health_status_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
