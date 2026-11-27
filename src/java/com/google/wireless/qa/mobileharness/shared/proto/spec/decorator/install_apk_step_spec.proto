@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link InstallApkStep}.
-// Next tag: 17
+// Next tag: 18
 message InstallApkStepSpec {
   extend DecoratorSpec {
     optional InstallApkStepSpec ext = 241344121;
@@ -135,5 +135,14 @@ message InstallApkStepSpec {
     help: "Comma-separated device groups to pass to bundletool install-apks "
           "via --device-groups (e.g., 'group1,group2'). Only applicable when "
           "installing .apks archives."
+  }];
+
+  repeated string packages_to_disable_before_install = 17 [(field_detail) = {
+    help: "Packages to keep disabled while the apks are installed, e.g. "
+          "com.android.vending, so that a preinstalled Play Store cannot "
+          "self-update over a Play Store apk installed by this step. Each "
+          "package is disabled for every user that has it enabled before the "
+          "first apk is installed, and enabled again for those users after "
+          "the last one."
   }];
 }

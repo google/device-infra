@@ -116,4 +116,13 @@ public interface InstallApkStepConstants {
           "Comma-separated device groups to pass to bundletool install-apks via --device-groups "
               + "(e.g., 'group1,group2'). Only applicable when installing .apks archives.")
   String PARAM_APK_SET_DEVICE_GROUPS = "apk_set_device_groups";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Comma-separated packages to keep disabled while the apks are installed, e.g."
+              + " com.android.vending, so that a preinstalled Play Store cannot self-update over a"
+              + " Play Store apk installed by this step. Each package is disabled before the first"
+              + " apk is installed and enabled again after the last one.")
+  String PARAM_PACKAGES_TO_DISABLE_BEFORE_INSTALL = "packages_to_disable_before_install";
 }
