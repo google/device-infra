@@ -152,6 +152,15 @@ public class XtsConstants {
   public static final String INCREMENTAL_INVOCATION_FILE_NAME = "invocation.pb";
 
   /**
+   * Name of the completion marker file in a per-job incremental result store dir (written by AOSP
+   * Tradefed's {@code IncrementalProtoResultReporter}).
+   */
+  public static final String INCREMENTAL_COMPLETE_FILE_NAME = "complete.pb";
+
+  /** Name of the retry baseline report file in a session incremental result store dir. */
+  public static final String INCREMENTAL_BASELINE_FILE_NAME = "baseline.pb";
+
+  /**
    * Invocation context attribute key for the planned modules and unit counts.
    *
    * <p>Keep in sync with AOSP Tradefed's {@code

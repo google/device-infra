@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportUtil.TestCounts;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
@@ -267,6 +268,48 @@ public final class CompatibilityReportUtilTest {
             CompatibilityReportUtil.isModuleCountedInSummary(
                 Module.newBuilder().setName("PostModuleChecker_CtsDone").setDone(true).build()))
         .isFalse();
+  }
+
+  @Test
+  public void buildSummaryFromModules_excludesSkippedAndModuleCheckers() {
+    Module doneMod =
+        Module.newBuilder()
+            .setName("CtsDone")
+            .setDone(true)
+            .setPassed(4)
+            .setFailedTests(1)
+            .setWarningTests(2)
+            .build();
+    Module incompleteMod =
+        Module.newBuilder()
+            .setName("CtsIncomplete")
+            .setDone(false)
+            .setPassed(1)
+            .setFailedTests(3)
+            .build();
+    Module skippedMod =
+        Module.newBuilder()
+            .setName("CtsSkipped")
+            .setDone(true)
+            .setSkipped(true)
+            .setPassed(99)
+            .build();
+    Module checkerMod =
+        Module.newBuilder().setName("PreModuleChecker_CtsDone").setDone(true).setPassed(50).build();
+
+    Summary summary =
+        CompatibilityReportUtil.buildSummaryFromModules(
+            ImmutableList.of(doneMod, incompleteMod, skippedMod, checkerMod));
+
+    assertThat(summary)
+        .isEqualTo(
+            Summary.newBuilder()
+                .setPassed(5)
+                .setFailed(4)
+                .setWarning(2)
+                .setModulesDone(1)
+                .setModulesTotal(2)
+                .build());
   }
 
   @Test

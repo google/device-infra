@@ -22,6 +22,7 @@ java_library(
     srcs = ["CompatibilityReportUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     deps = [
@@ -41,6 +42,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
     ],
@@ -99,6 +101,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/module:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     deps = ["@maven//:com_google_inject_guice"],
@@ -114,6 +117,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     runtime_deps = [
@@ -208,6 +212,7 @@ java_library(
     name = "certification_suite_info",
     srcs = ["CertificationSuiteInfo.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform:__subpackages__",
@@ -221,6 +226,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",

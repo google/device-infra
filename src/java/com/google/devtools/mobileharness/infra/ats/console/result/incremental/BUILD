@@ -19,16 +19,27 @@ package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "incremental_result_converter",
-    srcs = ["IncrementalResultConverter.java"],
+    srcs = [
+        "IncrementalResultConverter.java",
+        "ModuleAccumulator.java",
+    ],
     visibility = [
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/incremental:__pkg__",
     ],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/tradefed:test_record_proto_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",

@@ -45,6 +45,10 @@ public final class CompatibilityReportUtil {
   /** Maximum UTF-16 code unit length of a stack trace or failure message saved in a report. */
   public static final int STACK_TRACE_MAX_SIZE = 1024 * 1024;
 
+  /** Default {@code <Reason>} message for an incomplete {@code <Module>} lacking error details. */
+  public static final String INCOMPLETE_MODULE_DEFAULT_REASON =
+      "Run was incomplete. Some tests might not have finished.";
+
   private static final String BUILD_ATTR_PREFIX = "build_";
   private static final String CSR_ATTR_PREFIX = "csr_";
   private static final String VERIFIED_BOOT_HASH_SUFFIX = ".root_of_trust.verified_boot_hash";
@@ -219,6 +223,34 @@ public final class CompatibilityReportUtil {
    */
   public static boolean isModuleCountedInSummary(Module module) {
     return !module.getSkipped() && !SuiteCommonUtil.isModuleChecker(module);
+  }
+
+  /** Builds a {@link Summary} directly from a list of {@link Module} records. */
+  public static Summary buildSummaryFromModules(List<Module> modules) {
+    long totalPassed = 0L;
+    long totalFailed = 0L;
+    long totalWarning = 0L;
+    int modulesDone = 0;
+    int modulesTotal = 0;
+    for (Module module : modules) {
+      if (!isModuleCountedInSummary(module)) {
+        continue;
+      }
+      totalPassed += module.getPassed();
+      totalFailed += module.getFailedTests();
+      totalWarning += module.getWarningTests();
+      modulesTotal++;
+      if (module.getDone()) {
+        modulesDone++;
+      }
+    }
+    return Summary.newBuilder()
+        .setPassed(totalPassed)
+        .setFailed(totalFailed)
+        .setWarning(totalWarning)
+        .setModulesDone(modulesDone)
+        .setModulesTotal(modulesTotal)
+        .build();
   }
 
   /** Formats the compatibility reason message for a module skipped by a module controller. */
