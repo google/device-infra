@@ -84,6 +84,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.platform.android.systemsetting.BatteryState;
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSettingDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
+import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil.SimIdentifiers;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.GsiTool;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserInfo;
@@ -791,12 +792,16 @@ public abstract class AndroidRealDeviceDelegate {
           "Failed to get device %s ICCID: %s", deviceId, MoreThrowables.shortDebugString(e));
     }
 
-    // Add a comma-delimited list of ICCIDS to device dimensions.
+    // Add SIM ICCIDs and phone numbers to device dimensions from a single siminfo query.
     try {
-      device.addDimension(Dimension.Name.ICCIDS, getCommaSeparatedIccids());
+      SimIdentifiers simIdentifiers = fetchSimIdentifiers();
+      device.addDimension(Dimension.Name.ICCIDS, COMMA_JOINER.join(simIdentifiers.iccids()));
+      for (String phoneNumber : simIdentifiers.phoneNumbers()) {
+        device.addDimension(Dimension.Name.PHONE_NUMBER, phoneNumber);
+      }
     } catch (MobileHarnessException e) {
       logger.atInfo().log(
-          "Failed to get list of SIM ICCIDS for device %s: %s",
+          "Failed to get SIM identifiers (ICCIDs and phone numbers) for device %s: %s",
           deviceId, MoreThrowables.shortDebugString(e));
     }
   }
@@ -2246,22 +2251,35 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   /**
-   * Checks the list of ICCIDs of SIMs on the device.
+   * Checks the list of ICCIDs and phone numbers of SIMs on the device from a single {@code
+   * content://telephony/siminfo} query.
    *
    * @return whether there is any dimension changed
    */
   private boolean checkIccids() throws InterruptedException {
     String iccids = "";
-    logger.atInfo().log("Fetching device %s's ICCIDs...", deviceId);
+    ImmutableList<String> phoneNumbers = ImmutableList.of();
+    logger.atInfo().log("Fetching device %s's SIM ICCIDs and phone numbers...", deviceId);
     try {
-      iccids = getCommaSeparatedIccids();
-      logger.atInfo().log("ICCIDs of SIMS on device %s: %s", deviceId, iccids);
+      SimIdentifiers simIdentifiers = fetchSimIdentifiers();
+      iccids = COMMA_JOINER.join(simIdentifiers.iccids());
+      phoneNumbers = simIdentifiers.phoneNumbers();
+      logger.atInfo().log(
+          "SIM identifiers on device %s - ICCIDs: %s, phone numbers: %s",
+          deviceId, iccids, phoneNumbers);
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
-          "Failed to fetch device %s's ICCIDs: %s", deviceId, MoreThrowables.shortDebugString(e));
+          "Failed to fetch device %s's SIM identifiers: %s",
+          deviceId, MoreThrowables.shortDebugString(e));
     }
 
-    return device.updateDimension(Dimension.Name.ICCIDS, iccids);
+    boolean iccidsChanged = device.updateDimension(Dimension.Name.ICCIDS, iccids);
+    boolean phoneNumbersChanged =
+        phoneNumbers.isEmpty()
+            ? device.removeDimension(Dimension.Name.PHONE_NUMBER)
+            : device.updateDimension(
+                Dimension.Name.PHONE_NUMBER, phoneNumbers.toArray(new String[0]));
+    return iccidsChanged || phoneNumbersChanged;
   }
 
   /** */
@@ -2310,10 +2328,17 @@ public abstract class AndroidRealDeviceDelegate {
     return device.removeDimension(Dimension.Name.HINGE_ANGLE);
   }
 
-  /** Returns a comma-separated string of the ICCIDs of the SIMs on the device. */
-  private String getCommaSeparatedIccids() throws MobileHarnessException, InterruptedException {
+  /**
+   * Returns SIM identifiers (ICCIDs and phone numbers) on the device, falling back to {@link
+   * AndroidSystemSpecUtil#getIccids} if {@code getSimIdentifiers} is unstubbed in mocked tests.
+   */
+  private SimIdentifiers fetchSimIdentifiers() throws MobileHarnessException, InterruptedException {
+    SimIdentifiers simIdentifiers = systemSpecUtil.getSimIdentifiers(deviceId);
+    if (simIdentifiers != null) {
+      return simIdentifiers;
+    }
     ImmutableList<String> iccids = systemSpecUtil.getIccids(deviceId);
-    return iccids == null ? "" : COMMA_JOINER.join(iccids);
+    return new SimIdentifiers(iccids == null ? ImmutableList.of() : iccids, ImmutableList.of());
   }
 
   private static final Joiner COMMA_JOINER = Joiner.on(",");

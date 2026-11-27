@@ -412,6 +412,8 @@ public final class Dimension {
     ICCID,
     /** A comma-separated string containing the ICCID of each SIM on the device. */
     ICCIDS,
+    /** Phone number of an available SIM on the device. */
+    PHONE_NUMBER,
     /** The iOS simulator id */
     IOS_SIMULATOR_ID,
 

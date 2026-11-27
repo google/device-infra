@@ -181,6 +181,23 @@ public class AndroidSystemSpecUtil {
   private static final Pattern PATTERN_SIM_INFO_SUB_TYPE =
       Pattern.compile("\\bsubscription_type=\\d+");
 
+  /**
+   * Patterns to find phone numbers from queried SIM info, ordered by priority (carrier, SIM, IMS).
+   */
+  private static final ImmutableList<Pattern> SIM_INFO_PHONE_NUMBER_PATTERNS =
+      ImmutableList.of(
+          Pattern.compile("\\bphone_number_source_carrier=([^,]+)"),
+          Pattern.compile("\\bnumber=([^,]+)"),
+          Pattern.compile("\\bphone_number_source_ims=([^,]+)"));
+
+  /**
+   * Pattern matching non-user SIM profiles to exclude when extracting phone numbers (pre-loaded
+   * provisioning profile {@code profile_class=1} or non-terrestrial-network-only profile {@code
+   * is_only_ntn=1}).
+   */
+  private static final Pattern PATTERN_INVALID_SIM_FOR_PHONE_NUMBER =
+      Pattern.compile("\\bprofile_class=1\\b|\\bis_only_ntn=1\\b");
+
   /** Pattern to find the Unsolicited Result Code (URC) from an AT command. */
   private static final Pattern PATTERN_AT_COMMAND_URC = Pattern.compile("\\+(.+)");
 
@@ -801,6 +818,36 @@ public class AndroidSystemSpecUtil {
         String.format("Failed to get hinge angle for device [%s]: %s", serial, output));
   }
 
+  /** Identifiers (ICCIDs and phone numbers) extracted from available SIMs on the device. */
+  public static record SimIdentifiers(
+      ImmutableList<String> iccids, ImmutableList<String> phoneNumbers) {
+    public SimIdentifiers {
+      iccids = ImmutableList.copyOf(iccids);
+      phoneNumbers = ImmutableList.copyOf(phoneNumbers);
+    }
+  }
+
+  /**
+   * Queries {@code content://telephony/siminfo} once and returns both ICCIDs and phone numbers of
+   * each available SIM on the device.
+   */
+  public SimIdentifiers getSimIdentifiers(String serial)
+      throws MobileHarnessException, InterruptedException {
+    ImmutableList<String> availableSims =
+        getAvailableSimInfoStream(serial).collect(toImmutableList());
+    ImmutableList<String> iccids =
+        availableSims.stream()
+            .map(AndroidSystemSpecUtil::iccidFromSimInfo)
+            .filter(iccid -> !isNullOrEmpty(iccid))
+            .collect(toImmutableList());
+    ImmutableList<String> phoneNumbers =
+        availableSims.stream()
+            .map(AndroidSystemSpecUtil::phoneNumberFromSimInfo)
+            .flatMap(Optional::stream)
+            .collect(toImmutableList());
+    return new SimIdentifiers(iccids, phoneNumbers);
+  }
+
   /**
    * Returns a list containing the ICCIDs of each valid SIM on the device.
    *
@@ -810,10 +857,16 @@ public class AndroidSystemSpecUtil {
    */
   public ImmutableList<String> getIccids(String serial)
       throws MobileHarnessException, InterruptedException {
-    return getAvailableSimInfoStream(serial)
-        .map(AndroidSystemSpecUtil::iccidFromSimInfo)
-        .filter(iccid -> !isNullOrEmpty(iccid))
-        .collect(toImmutableList());
+    return getSimIdentifiers(serial).iccids();
+  }
+
+  /**
+   * Returns a list containing the phone numbers of each available SIM on the device, excluding SIMs
+   * without a phone number, provisioning profiles, and non-terrestrial-network-only profiles.
+   */
+  public ImmutableList<String> getSimPhoneNumbers(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return getSimIdentifiers(serial).phoneNumbers();
   }
 
   /** Returns a list of carrier IDs of each available SIM on the device. */
@@ -875,6 +928,23 @@ public class AndroidSystemSpecUtil {
       return "";
     }
     return matcher.group(1);
+  }
+
+  /** Parses the {@code simInfo} string and returns the SIM's phone number if present and valid. */
+  private static Optional<String> phoneNumberFromSimInfo(String simInfo) {
+    if (PATTERN_INVALID_SIM_FOR_PHONE_NUMBER.matcher(simInfo).find()) {
+      return Optional.empty();
+    }
+    for (Pattern pattern : SIM_INFO_PHONE_NUMBER_PATTERNS) {
+      Matcher matcher = pattern.matcher(simInfo);
+      if (matcher.find()) {
+        String number = matcher.group(1).trim();
+        if (!number.isEmpty() && !Ascii.equalsIgnoreCase(number, "null")) {
+          return Optional.of(number);
+        }
+      }
+    }
+    return Optional.empty();
   }
 
   /** Parses the {@code simInfo} string and returns the SIM's carrier ID. */
