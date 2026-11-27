@@ -122,8 +122,8 @@ public class IncrementalResultConverter {
   /**
    * Converts an incremental result store directory (either a session store containing per-job
    * subdirectories or a single-job store directory) into a compatibility {@link Result}, requiring
-   * non-empty {@code planned-modules} metadata on every non-empty job store and device build
-   * fingerprint metadata in {@link BuildInfo}.
+   * non-empty, well-formed {@code planned-modules} metadata on every non-empty job store and device
+   * build fingerprint metadata in {@link BuildInfo}.
    */
   public Optional<Result> convert(Path storeDir) throws MobileHarnessException {
     return convert(storeDir, /* skipDeviceInfo= */ false);
@@ -132,7 +132,7 @@ public class IncrementalResultConverter {
   /**
    * Converts an incremental result store directory (either a session store containing per-job
    * subdirectories or a single-job store directory) into a compatibility {@link Result}, requiring
-   * non-empty {@code planned-modules} metadata on every non-empty job store.
+   * non-empty, well-formed {@code planned-modules} metadata on every non-empty job store.
    *
    * @param skipDeviceInfo if {@code false}, returns {@link Optional#empty()} when no device build
    *     fingerprint could be recovered into {@link BuildInfo}
@@ -178,7 +178,9 @@ public class IncrementalResultConverter {
 
   /**
    * Parses {@code invocation.pb} from a single Tradefed job's incremental store directory, if
-   * present and readable.
+   * present and readable. Unlike {@link #convert}, this method is best-effort: malformed {@code
+   * planned-modules} entries are skipped and unreadable or unexpected {@code Context} descriptions
+   * yield a default {@link Context}.
    */
   public Optional<InvocationPlan> parseInvocation(Path jobStoreDir) {
     Path invocationFile = jobStoreDir.resolve(XtsConstants.INCREMENTAL_INVOCATION_FILE_NAME);
@@ -190,9 +192,9 @@ public class IncrementalResultConverter {
     if (recordOpt.isEmpty()) {
       return Optional.empty();
     }
-    Context context = unpackContext(recordOpt.get(), invocationFile);
+    Context context = unpackContext(recordOpt.get(), invocationFile).context();
     ImmutableMap<String, Integer> plannedCountsByModule =
-        parsePlannedModules(context, invocationFile);
+        parsePlannedModules(context, invocationFile).countsByModule();
     return Optional.of(new InvocationPlan(context, plannedCountsByModule));
   }
 
@@ -234,46 +236,67 @@ public class IncrementalResultConverter {
       return JobStoreStatus.INVALID;
     }
     TestRecord invocationRecord = invocationRecordOpt.get();
-    Context invocationContext = unpackContext(invocationRecord, files.invocationFile());
-    ImmutableMap<String, Integer> plannedCountsByModule =
-        parsePlannedModules(invocationContext, files.invocationFile());
-    if (plannedCountsByModule.isEmpty()) {
+    UnpackedContext unpackedInvocation = unpackContext(invocationRecord, files.invocationFile());
+    if (unpackedInvocation.corrupted()) {
       logger.atWarning().log(
-          "Rejecting incremental job store [%s]: missing or empty %s in [%s]",
+          "Rejecting incremental job store [%s]: unreadable or unexpected Context description in"
+              + " [%s]",
+          jobStoreDir, files.invocationFile());
+      return JobStoreStatus.INVALID;
+    }
+    Context invocationContext = unpackedInvocation.context();
+    ParsedPlannedModules parsedPlan =
+        parsePlannedModules(invocationContext, files.invocationFile());
+    if (parsedPlan.countsByModule().isEmpty() || parsedPlan.hasMalformedEntry()) {
+      logger.atWarning().log(
+          "Rejecting incremental job store [%s]: missing, empty, or malformed %s in [%s]",
           jobStoreDir, XtsConstants.PLANNED_MODULES_ATTR, files.invocationFile());
       return JobStoreStatus.INVALID;
     }
+    ImmutableMap<String, Integer> plannedCountsByModule = parsedPlan.countsByModule();
     session.observeInvocation(invocationRecord, invocationContext);
 
     Map<String, ModuleAccumulator> jobModules = new LinkedHashMap<>();
+    boolean hasUnreadableModuleRecord = false;
     for (Path moduleFile : files.moduleFiles()) {
       Optional<TestRecord> moduleRecordOpt = tryReadTestRecord(moduleFile);
       if (moduleRecordOpt.isEmpty()) {
+        hasUnreadableModuleRecord = true;
         continue;
       }
       TestRecord moduleRecord = moduleRecordOpt.get();
-      Context moduleContext = unpackContext(moduleRecord, moduleFile);
+      UnpackedContext unpackedModule = unpackContext(moduleRecord, moduleFile);
+      if (unpackedModule.corrupted()) {
+        hasUnreadableModuleRecord = true;
+      }
+      Context moduleContext = unpackedModule.context();
       String moduleId = ModuleAccumulator.resolveModuleId(moduleRecord, moduleContext);
       if (moduleId.isEmpty()) {
         logger.atWarning().log("Skipping module record with empty ID in [%s]", moduleFile);
+        hasUnreadableModuleRecord = true;
         continue;
       }
       session.observeModule(moduleRecord, moduleContext);
       jobModules
           .computeIfAbsent(moduleId, ModuleAccumulator::new)
-          .foldModuleRecord(moduleRecord, moduleContext);
+          .foldModuleRecord(moduleRecord, moduleContext, moduleFile);
     }
 
+    boolean cleanlyClosed = false;
     if (files.completeFile() != null) {
       Optional<TestRecord> completeRecordOpt = tryReadTestRecord(files.completeFile());
       if (completeRecordOpt.isPresent()) {
         TestRecord completeRecord = completeRecordOpt.get();
-        Context completeContext = unpackContext(completeRecord, files.completeFile());
-        session.observeComplete(completeRecord, completeContext);
+        UnpackedContext unpackedComplete = unpackContext(completeRecord, files.completeFile());
+        session.observeComplete(completeRecord, unpackedComplete.context());
+        cleanlyClosed =
+            !hasUnreadableModuleRecord
+                && !unpackedComplete.corrupted()
+                && !completeRecord.hasDebugInfo();
       }
     }
 
-    session.foldJobModules(plannedCountsByModule, jobModules);
+    session.foldJobModules(plannedCountsByModule, jobModules, cleanlyClosed);
     return JobStoreStatus.VALID;
   }
 
@@ -508,23 +531,25 @@ public class IncrementalResultConverter {
     }
   }
 
-  private static Context unpackContext(TestRecord record, Path protoFile) {
+  private record UnpackedContext(Context context, boolean corrupted) {}
+
+  private static UnpackedContext unpackContext(TestRecord record, Path protoFile) {
     if (!record.hasDescription()) {
-      return Context.getDefaultInstance();
+      return new UnpackedContext(Context.getDefaultInstance(), /* corrupted= */ false);
     }
     Any description = record.getDescription();
     if (!description.is(Context.class)) {
       logger.atWarning().log(
           "Ignoring unexpected description type URL [%s] in proto file [%s]; expected [%s]",
           description.getTypeUrl(), protoFile, Context.getDescriptor().getFullName());
-      return Context.getDefaultInstance();
+      return new UnpackedContext(Context.getDefaultInstance(), /* corrupted= */ true);
     }
     try {
-      return description.unpack(Context.class);
+      return new UnpackedContext(description.unpack(Context.class), /* corrupted= */ false);
     } catch (InvalidProtocolBufferException e) {
       logger.atWarning().withCause(e).log(
           "Ignoring unreadable Context description in proto file [%s]", protoFile);
-      return Context.getDefaultInstance();
+      return new UnpackedContext(Context.getDefaultInstance(), /* corrupted= */ true);
     }
   }
 
@@ -533,15 +558,21 @@ public class IncrementalResultConverter {
         || !buildInfo.getBuildFingerprintUnaltered().isEmpty();
   }
 
-  private static ImmutableMap<String, Integer> parsePlannedModules(
-      Context context, Path invocationFile) {
+  private record ParsedPlannedModules(
+      ImmutableMap<String, Integer> countsByModule, boolean hasMalformedEntry) {}
+
+  private static ParsedPlannedModules parsePlannedModules(Context context, Path invocationFile) {
     Map<String, Integer> plannedCountsByModule = new LinkedHashMap<>();
+    boolean hasMalformedEntry = false;
     for (Metadata metadata : context.getMetadataList()) {
       if (!metadata.getKey().equals(XtsConstants.PLANNED_MODULES_ATTR)) {
         continue;
       }
       for (String entry : metadata.getValueList()) {
         if (entry.isEmpty()) {
+          logger.atWarning().log(
+              "Skipping empty %s entry in [%s]", XtsConstants.PLANNED_MODULES_ATTR, invocationFile);
+          hasMalformedEntry = true;
           continue;
         }
         int idx = entry.lastIndexOf(':');
@@ -549,6 +580,7 @@ public class IncrementalResultConverter {
           logger.atWarning().log(
               "Skipping malformed %s entry [%s] in [%s]",
               XtsConstants.PLANNED_MODULES_ATTR, entry, invocationFile);
+          hasMalformedEntry = true;
           continue;
         }
         String moduleId = entry.substring(0, idx);
@@ -556,6 +588,7 @@ public class IncrementalResultConverter {
           logger.atWarning().log(
               "Skipping %s entry with blank module ID [%s] in [%s]",
               XtsConstants.PLANNED_MODULES_ATTR, entry, invocationFile);
+          hasMalformedEntry = true;
           continue;
         }
         int count;
@@ -565,18 +598,28 @@ public class IncrementalResultConverter {
           logger.atWarning().log(
               "Skipping %s entry with invalid count [%s] in [%s]",
               XtsConstants.PLANNED_MODULES_ATTR, entry, invocationFile);
+          hasMalformedEntry = true;
           continue;
         }
         if (count <= 0) {
           logger.atWarning().log(
               "Skipping %s entry with non-positive count [%s] in [%s]",
               XtsConstants.PLANNED_MODULES_ATTR, entry, invocationFile);
+          hasMalformedEntry = true;
           continue;
         }
-        plannedCountsByModule.merge(moduleId, count, Integer::sum);
+        Integer existing = plannedCountsByModule.get(moduleId);
+        if (existing != null && existing > Integer.MAX_VALUE - count) {
+          logger.atWarning().log(
+              "Skipping %s entry causing count overflow [%s] in [%s]",
+              XtsConstants.PLANNED_MODULES_ATTR, entry, invocationFile);
+          hasMalformedEntry = true;
+          continue;
+        }
+        plannedCountsByModule.put(moduleId, existing == null ? count : existing + count);
       }
     }
-    return ImmutableMap.copyOf(plannedCountsByModule);
+    return new ParsedPlannedModules(ImmutableMap.copyOf(plannedCountsByModule), hasMalformedEntry);
   }
 
   private static String formatDisplayTime(long epochMillis, ZoneId zoneId) {
@@ -619,7 +662,7 @@ public class IncrementalResultConverter {
   }
 
   private static final class SessionAccumulator {
-    private final Set<String> plannedModuleOrder = new LinkedHashSet<>();
+    private final Map<String, Boolean> planSatisfiedByModule = new LinkedHashMap<>();
     private final Map<String, ModuleAccumulator> moduleAccumulatorsById = new LinkedHashMap<>();
     private final Map<String, String> buildInfoAttrs = new LinkedHashMap<>();
     private final Map<String, ImmutableList<String>> invocationMetadata = new LinkedHashMap<>();
@@ -650,13 +693,28 @@ public class IncrementalResultConverter {
       mergeMetadataFromContext(completeContext, invocationMetadata, /* skipModuleAttrs= */ false);
     }
 
+    // Merge across jobs (e.g. STATIC_XTS and MCTS) with logicalAnd so any incomplete job keeps a
+    // shared module done=false rather than letting partial unit counts sum across crashed jobs.
     void foldJobModules(
         ImmutableMap<String, Integer> plannedCountsByModule,
-        Map<String, ModuleAccumulator> jobModules) {
-      plannedModuleOrder.addAll(plannedCountsByModule.keySet());
+        Map<String, ModuleAccumulator> jobModules,
+        boolean cleanlyClosed) {
+      for (Map.Entry<String, Integer> entry : plannedCountsByModule.entrySet()) {
+        String moduleId = entry.getKey();
+        ModuleAccumulator jobAccumulator = jobModules.get(moduleId);
+        boolean jobPlanSatisfied =
+            jobAccumulator != null
+                && jobAccumulator.isJobPlanSatisfied(entry.getValue(), cleanlyClosed);
+        planSatisfiedByModule.merge(moduleId, jobPlanSatisfied, Boolean::logicalAnd);
+      }
       for (Map.Entry<String, ModuleAccumulator> entry : jobModules.entrySet()) {
+        String moduleId = entry.getKey();
+        if (!plannedCountsByModule.containsKey(moduleId)) {
+          boolean unplannedSatisfied = entry.getValue().isUnplannedJobSatisfied(cleanlyClosed);
+          planSatisfiedByModule.merge(moduleId, unplannedSatisfied, Boolean::logicalAnd);
+        }
         moduleAccumulatorsById
-            .computeIfAbsent(entry.getKey(), ModuleAccumulator::new)
+            .computeIfAbsent(moduleId, ModuleAccumulator::new)
             .mergeFrom(entry.getValue());
       }
     }
@@ -674,15 +732,13 @@ public class IncrementalResultConverter {
       }
 
       List<Module> modules = new ArrayList<>();
-      for (String plannedModuleId : plannedModuleOrder) {
-        ModuleAccumulator accumulator = moduleAccumulatorsById.get(plannedModuleId);
+      for (Map.Entry<String, Boolean> plannedEntry : planSatisfiedByModule.entrySet()) {
+        String moduleId = plannedEntry.getKey();
+        ModuleAccumulator accumulator = moduleAccumulatorsById.get(moduleId);
         if (accumulator != null) {
-          modules.add(accumulator.toModule());
-        }
-      }
-      for (Map.Entry<String, ModuleAccumulator> entry : moduleAccumulatorsById.entrySet()) {
-        if (!plannedModuleOrder.contains(entry.getKey())) {
-          modules.add(entry.getValue().toModule());
+          modules.add(accumulator.toModule(/* planSatisfied= */ plannedEntry.getValue()));
+        } else {
+          modules.add(ModuleAccumulator.createUnexecutedModule(moduleId));
         }
       }
 

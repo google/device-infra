@@ -38,6 +38,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",

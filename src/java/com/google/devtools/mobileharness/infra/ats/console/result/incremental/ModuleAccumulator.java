@@ -26,6 +26,7 @@ import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
 import com.android.tradefed.result.proto.TestRecordProto.ChildReference;
 import com.android.tradefed.result.proto.TestRecordProto.DebugInfo;
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
+import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.xml.XmlEscapers;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto;
@@ -38,17 +39,22 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordProtoUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommonUtil;
 import com.google.protobuf.Timestamp;
+import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import javax.annotation.Nullable;
 
 /**
- * Accumulates per-shard Tradefed {@link TestRecord} entries for a single compatibility module ID
- * and materializes the merged {@link Module} proto.
+ * Accumulates per-shard Tradefed {@link TestRecord} entries for a single compatibility module ID,
+ * evaluates per-module unit-count completion, and materializes the merged {@link Module} proto.
  */
 final class ModuleAccumulator {
 
@@ -58,6 +64,7 @@ final class ModuleAccumulator {
   private static final String MODULE_ID_ATTR = "module-id";
   private static final String MODULE_ABI_ATTR = "module-abi";
   private static final String MODULE_NAME_ATTR = "module-name";
+  private static final String MODULE_SKIPPED_ATTR = "module-skipped";
 
   private static final String PASS_STATUS =
       TestStatus.convertToTestStatusCompatibilityString(TestStatus.PASSED);
@@ -76,6 +83,13 @@ final class ModuleAccumulator {
     return findFirstMetadataValue(moduleContext, MODULE_ID_ATTR).orElse("");
   }
 
+  static Module createUnexecutedModule(String moduleId) {
+    Module.Builder moduleBuilder = Module.newBuilder().setDone(false);
+    populateModuleAbiAndName(moduleBuilder, moduleId, /* contextAbi= */ "", /* contextName= */ "");
+    CompatibilityReportUtil.populateModuleTestCounts(moduleBuilder);
+    return moduleBuilder.build();
+  }
+
   static long toEpochMillis(Timestamp timestamp) {
     return Instant.ofEpochSecond(timestamp.getSeconds(), timestamp.getNanos()).toEpochMilli();
   }
@@ -83,19 +97,33 @@ final class ModuleAccumulator {
   private final String moduleId;
   private String contextAbi = "";
   private String contextName = "";
+  private int moduleRecordCount;
+  private long completedUnits;
+  private boolean allRecordsHaveUnitsRun = true;
+  private boolean hasModuleSkippedAttr;
+  private boolean hasUninlinedChildRecord;
+  private int totalTestRunCount;
   private long runtimeMillis;
   private long prepTimeMillis;
   private boolean hasPrepTime;
   private long teardownTimeMillis;
   private boolean hasTeardownTime;
   @Nullable private DebugInfo firstUnresolvedDebugInfo;
+  @Nullable private DebugInfo fallbackDebugInfo;
   private final Map<String, Map<String, Test>> testMethodsByClass = new LinkedHashMap<>();
 
   ModuleAccumulator(String moduleId) {
     this.moduleId = moduleId;
   }
 
-  void foldModuleRecord(TestRecord moduleRecord, Context moduleContext) {
+  void foldModuleRecord(TestRecord moduleRecord, Context moduleContext, Path moduleFile) {
+    moduleRecordCount++;
+    OptionalLong unitsRun = parseModuleUnitsRun(moduleContext, moduleFile);
+    if (unitsRun.isPresent()) {
+      completedUnits += unitsRun.getAsLong();
+    } else {
+      allRecordsHaveUnitsRun = false;
+    }
     if (contextAbi.isEmpty()) {
       contextAbi =
           findFirstMetadataValue(moduleContext, MODULE_ABI_ATTR).map(String::trim).orElse("");
@@ -103,6 +131,12 @@ final class ModuleAccumulator {
     if (contextName.isEmpty()) {
       contextName =
           findFirstMetadataValue(moduleContext, MODULE_NAME_ATTR).map(String::trim).orElse("");
+    }
+    if (!findFirstMetadataValue(moduleContext, MODULE_SKIPPED_ATTR)
+        .map(String::trim)
+        .orElse("")
+        .isEmpty()) {
+      hasModuleSkippedAttr = true;
     }
     if (firstUnresolvedDebugInfo == null && moduleRecord.hasDebugInfo()) {
       firstUnresolvedDebugInfo = moduleRecord.getDebugInfo();
@@ -120,18 +154,32 @@ final class ModuleAccumulator {
     boolean recordHasRunTimestamps = false;
     OptionalLong recordPrepMillis = OptionalLong.empty();
     OptionalLong recordTeardownMillis = OptionalLong.empty();
-    Map<String, Map<Long, Optional<DebugInfo>>> runAttemptsByRunId = new LinkedHashMap<>();
+    Map<String, List<RunAttemptGroup>> runGroupsByRunId = new LinkedHashMap<>();
     for (ChildReference runRef : moduleRecord.getChildrenList()) {
       if (!runRef.hasInlineTestRecord()) {
+        logger.atWarning().log(
+            "Marking module [%s] incomplete due to non-inline child run reference [%s] in [%s]",
+            moduleId, runRef.getTestRecordId(), moduleFile);
+        hasUninlinedChildRecord = true;
         continue;
       }
       TestRecord runRecord = runRef.getInlineTestRecord();
-      runAttemptsByRunId
-          .computeIfAbsent(runRecord.getTestRecordId(), k -> new LinkedHashMap<>())
-          .merge(
-              runRecord.getAttemptId(),
-              runRecord.hasDebugInfo() ? Optional.of(runRecord.getDebugInfo()) : Optional.empty(),
-              (existing, incoming) -> existing.or(() -> incoming));
+      if (!runRecord.getTestRecordId().equals(moduleId)
+          && SuiteCommonUtil.isModuleChecker(runRecord.getTestRecordId())) {
+        continue;
+      }
+      totalTestRunCount++;
+      List<RunAttemptGroup> groups =
+          runGroupsByRunId.computeIfAbsent(runRecord.getTestRecordId(), k -> new ArrayList<>());
+      DebugInfo runDebugInfo = runRecord.hasDebugInfo() ? runRecord.getDebugInfo() : null;
+      long attemptId = runRecord.getAttemptId();
+      // Tradefed auto-retries increment attempt_id monotonically; a non-increasing attempt_id
+      // (such as a synthetic attempt_id=0 teardown failure) starts an independent run sequence.
+      if (groups.isEmpty() || attemptId <= Iterables.getLast(groups).lastAttemptId) {
+        groups.add(new RunAttemptGroup(attemptId, runDebugInfo));
+      } else {
+        Iterables.getLast(groups).recordNextAttempt(attemptId, runDebugInfo);
+      }
       if (runRecord.hasStartTime() && runRecord.hasEndTime()) {
         recordHasRunTimestamps = true;
         recordRunRuntimeMillis +=
@@ -153,16 +201,24 @@ final class ModuleAccumulator {
 
       for (ChildReference testRef : runRecord.getChildrenList()) {
         if (!testRef.hasInlineTestRecord()) {
+          logger.atWarning().log(
+              "Marking module [%s] incomplete due to non-inline child test reference [%s] in [%s]",
+              moduleId, testRef.getTestRecordId(), moduleFile);
+          hasUninlinedChildRecord = true;
           continue;
         }
         convertAndMergeTestRecord(testRef.getInlineTestRecord(), moduleId, testMethodsByClass);
       }
     }
 
-    for (Map<Long, Optional<DebugInfo>> attemptsById : runAttemptsByRunId.values()) {
-      if (!attemptsById.isEmpty() && attemptsById.values().stream().allMatch(Optional::isPresent)) {
-        if (firstUnresolvedDebugInfo == null) {
-          firstUnresolvedDebugInfo = attemptsById.values().iterator().next().get();
+    for (List<RunAttemptGroup> groups : runGroupsByRunId.values()) {
+      for (RunAttemptGroup group : groups) {
+        if (group.allHaveDebugInfo) {
+          if (firstUnresolvedDebugInfo == null) {
+            firstUnresolvedDebugInfo = group.firstDebugInfo;
+          }
+        } else if (fallbackDebugInfo == null) {
+          fallbackDebugInfo = group.lastDebugInfo;
         }
       }
     }
@@ -184,6 +240,12 @@ final class ModuleAccumulator {
     if (contextName.isEmpty() && !other.contextName.isEmpty()) {
       contextName = other.contextName;
     }
+    moduleRecordCount += other.moduleRecordCount;
+    completedUnits += other.completedUnits;
+    allRecordsHaveUnitsRun &= other.allRecordsHaveUnitsRun;
+    hasModuleSkippedAttr |= other.hasModuleSkippedAttr;
+    hasUninlinedChildRecord |= other.hasUninlinedChildRecord;
+    totalTestRunCount += other.totalTestRunCount;
     runtimeMillis += other.runtimeMillis;
     if (other.hasPrepTime) {
       hasPrepTime = true;
@@ -195,6 +257,9 @@ final class ModuleAccumulator {
     }
     if (firstUnresolvedDebugInfo == null && other.firstUnresolvedDebugInfo != null) {
       firstUnresolvedDebugInfo = other.firstUnresolvedDebugInfo;
+    }
+    if (fallbackDebugInfo == null && other.fallbackDebugInfo != null) {
+      fallbackDebugInfo = other.fallbackDebugInfo;
     }
     for (Map.Entry<String, Map<String, Test>> classEntry : other.testMethodsByClass.entrySet()) {
       for (Map.Entry<String, Test> methodEntry : classEntry.getValue().entrySet()) {
@@ -208,9 +273,31 @@ final class ModuleAccumulator {
     }
   }
 
-  Module toModule() {
+  boolean isJobPlanSatisfied(int plannedUnits, boolean jobCleanlyClosed) {
+    if (isZeroUnitSkipCandidate()) {
+      // Explicit module-skipped metadata (e.g. preflight skip clearing remaining shards) proves
+      // an intentional skip without complete.pb; unannotated 0-unit shards fail closed unless the
+      // job closed cleanly so interrupted shards are not misclassified as skipped.
+      return jobCleanlyClosed || hasModuleSkippedAttr;
+    }
+    return allRecordsHaveUnitsRun ? completedUnits >= plannedUnits : jobCleanlyClosed;
+  }
+
+  boolean isUnplannedJobSatisfied(boolean jobCleanlyClosed) {
+    return jobCleanlyClosed;
+  }
+
+  Module toModule(boolean planSatisfied) {
     Module.Builder moduleBuilder = Module.newBuilder();
     populateModuleAbiAndName(moduleBuilder, moduleId, contextAbi, contextName);
+    if (planSatisfied && isZeroUnitSkipCandidate()) {
+      return CompatibilityReportUtil.createSkippedModule(
+          moduleBuilder.getAbi(),
+          moduleBuilder.getName(),
+          CompatibilityReportUtil.formatControllerSkippedReason(
+              escapeXml(moduleBuilder.getName())));
+    }
+
     moduleBuilder.setRuntimeMillis(runtimeMillis);
     if (hasPrepTime) {
       moduleBuilder.setPrepTimeMillis(prepTimeMillis);
@@ -219,10 +306,17 @@ final class ModuleAccumulator {
       moduleBuilder.setTeardownTimeMillis(teardownTimeMillis);
     }
 
-    boolean done = firstUnresolvedDebugInfo == null;
+    boolean done = planSatisfied && !hasUninlinedChildRecord && firstUnresolvedDebugInfo == null;
     moduleBuilder.setDone(done);
     if (!done) {
-      moduleBuilder.setReason(buildModuleReason(firstUnresolvedDebugInfo));
+      DebugInfo reasonDebugInfo =
+          firstUnresolvedDebugInfo != null ? firstUnresolvedDebugInfo : fallbackDebugInfo;
+      if (reasonDebugInfo != null) {
+        moduleBuilder.setReason(buildModuleReason(reasonDebugInfo));
+      } else {
+        moduleBuilder.setReason(
+            Reason.newBuilder().setMsg(CompatibilityReportUtil.INCOMPLETE_MODULE_DEFAULT_REASON));
+      }
     }
 
     for (Map.Entry<String, Map<String, Test>> classEntry : testMethodsByClass.entrySet()) {
@@ -234,6 +328,41 @@ final class ModuleAccumulator {
     }
     CompatibilityReportUtil.populateModuleTestCounts(moduleBuilder);
     return moduleBuilder.build();
+  }
+
+  // Structural candidate for a controller/preflight skip. Excludes non-inline child references
+  // because skipped run references leave totalTestRunCount == 0 and would otherwise look skipped.
+  private boolean isZeroUnitSkipCandidate() {
+    return moduleRecordCount > 0
+        && allRecordsHaveUnitsRun
+        && totalTestRunCount == 0
+        && completedUnits == 0
+        && !hasUninlinedChildRecord
+        && firstUnresolvedDebugInfo == null;
+  }
+
+  private static OptionalLong parseModuleUnitsRun(Context moduleContext, Path moduleFile) {
+    Optional<String> rawValueOpt =
+        findFirstMetadataValue(moduleContext, XtsConstants.MODULE_UNITS_RUN_ATTR);
+    if (rawValueOpt.isEmpty()) {
+      return OptionalLong.empty();
+    }
+    String rawValue = rawValueOpt.get().trim();
+    long parsed;
+    try {
+      parsed = Long.parseLong(rawValue);
+    } catch (NumberFormatException e) {
+      logger.atWarning().log(
+          "Invalid %s value [%s] in [%s]",
+          XtsConstants.MODULE_UNITS_RUN_ATTR, rawValue, moduleFile);
+      return OptionalLong.empty();
+    }
+    if (parsed < 0) {
+      logger.atWarning().log(
+          "Negative %s value [%d] in [%s]", XtsConstants.MODULE_UNITS_RUN_ATTR, parsed, moduleFile);
+      return OptionalLong.empty();
+    }
+    return OptionalLong.of(parsed);
   }
 
   private static OptionalLong extractIntMetric(Map<String, Metric> metricsMap, String key) {
@@ -432,5 +561,25 @@ final class ModuleAccumulator {
 
   private static String escapeXml(String text) {
     return XmlEscapers.xmlContentEscaper().escape(text);
+  }
+
+  private static final class RunAttemptGroup {
+    private long lastAttemptId;
+    @Nullable private final DebugInfo firstDebugInfo;
+    @Nullable private DebugInfo lastDebugInfo;
+    private boolean allHaveDebugInfo;
+
+    RunAttemptGroup(long attemptId, @Nullable DebugInfo debugInfo) {
+      this.lastAttemptId = attemptId;
+      this.firstDebugInfo = debugInfo;
+      this.lastDebugInfo = debugInfo;
+      this.allHaveDebugInfo = debugInfo != null;
+    }
+
+    void recordNextAttempt(long attemptId, @Nullable DebugInfo debugInfo) {
+      this.lastAttemptId = attemptId;
+      this.lastDebugInfo = debugInfo;
+      this.allHaveDebugInfo &= debugInfo != null;
+    }
   }
 }

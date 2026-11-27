@@ -47,6 +47,7 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:com_google_protobuf_protobuf_java",
+        "@maven//:com_google_testparameterinjector_test_parameter_injector",
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
         "@protobuf//:protobuf_java",

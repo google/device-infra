@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.result.incremental;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
+import static java.util.function.Function.identity;
 
 import com.android.tradefed.build.proto.BuildInformation;
 import com.android.tradefed.config.proto.ConfigurationDescription.Metadata;
@@ -27,6 +28,8 @@ import com.android.tradefed.metrics.proto.MetricMeasurement;
 import com.android.tradefed.metrics.proto.MetricMeasurement.Measurements;
 import com.android.tradefed.result.proto.TestRecordProto.ChildReference;
 import com.android.tradefed.result.proto.TestRecordProto.DebugInfo;
+import com.android.tradefed.result.proto.TestRecordProto.DebugInfoContext;
+import com.android.tradefed.result.proto.TestRecordProto.FailureStatus;
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord.SkipReason;
 import com.android.tradefed.result.proto.TestRecordProto.TestStatus;
@@ -37,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.incremental.In
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.StackTrace;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
@@ -53,7 +57,10 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.Timestamp;
+import com.google.testing.junit.testparameterinjector.TestParameter;
+import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.DirectoryStream;
@@ -67,9 +74,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
-@RunWith(JUnit4.class)
+@RunWith(TestParameterInjector.class)
 public final class IncrementalResultConverterTest {
 
   private static final String GOLDEN_COMPLETE_RUN_INVOCATION =
@@ -80,6 +86,35 @@ public final class IncrementalResultConverterTest {
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   private final IncrementalResultConverter converter = new IncrementalResultConverter();
+
+  private enum InvalidUnitsRunCase {
+    MISSING(null),
+    NON_NUMERIC("not_a_number"),
+    NEGATIVE("-1");
+
+    @Nullable final String rawValue;
+
+    InvalidUnitsRunCase(@Nullable String rawValue) {
+      this.rawValue = rawValue;
+    }
+  }
+
+  private enum MalformedPlannedModuleCase {
+    EMPTY_ENTRY(""),
+    MISSING_COLON("missing_colon"),
+    EMPTY_MODULE_ID(":2"),
+    BLANK_MODULE_ID("   :2"),
+    NON_NUMERIC_COUNT("arm64-v8a ModBadInt:abc"),
+    EMPTY_COUNT("arm64-v8a ModEmptyCount:"),
+    ZERO_COUNT("arm64-v8a ModZero:0"),
+    NEGATIVE_COUNT("arm64-v8a ModNegative:-2");
+
+    final String rawEntry;
+
+    MalformedPlannedModuleCase(String rawEntry) {
+      this.rawEntry = rawEntry;
+    }
+  }
 
   @Test
   public void parseInvocation_goldenCompleteRun_unpacksContextAndPlannedModules() throws Exception {
@@ -422,6 +457,8 @@ public final class IncrementalResultConverterTest {
             .setTestTag("cts")
             .addMetadata(Metadata.newBuilder().setKey("module-id").addValue(modNet))
             .addMetadata(Metadata.newBuilder().setKey("module-name").addValue("CtsNetTestCases"))
+            .addMetadata(
+                Metadata.newBuilder().setKey(XtsConstants.MODULE_UNITS_RUN_ATTR).addValue("1"))
             .build();
 
     TestRecord skippedByDemotion =
@@ -431,8 +468,12 @@ public final class IncrementalResultConverterTest {
             .setSkipReason(
                 SkipReason.newBuilder().setReason("Demoted by SkipManager").setTrigger("DEMOTION"))
             .build();
-    TestRecord runAttempt0 =
-        newRunRecord(
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsNetTestCases_instant__0.pb"),
+        newModuleRecord(
+            modNet,
+            netCtx,
+            newRunRecord(
                 modNet,
                 /* startSec= */ 10L,
                 /* endSec= */ 10L,
@@ -440,32 +481,17 @@ public final class IncrementalResultConverterTest {
                 /* teardownMs= */ 50L,
                 ImmutableList.of(
                     failedTest("android.net.cts.ClassATest#testFlaky", "attempt0 fail"),
-                    failedTest("android.net.cts.ClassATest#testAssumedOnRetry", "attempt0 fail"),
                     passedTest("android.net.cts.ClassATest#testPassFirst"),
-                    skippedByDemotion))
-            .toBuilder()
-            .setAttemptId(0L)
-            .setDebugInfo(DebugInfo.newBuilder().setErrorMessage("Attempt 0 transient crash"))
-            .build();
-    TestRecord runAttempt1 =
-        newRunRecord(
+                    skippedByDemotion)),
+            // Intra-shard auto-retry TestRun repeats the shard's identical PREP_TIME/TEARDOWN_TIME.
+            newRunRecord(
                 modNet,
                 /* startSec= */ 10L,
                 /* endSec= */ 11L,
                 /* prepMs= */ 100L,
                 /* teardownMs= */ 50L,
                 ImmutableList.of(
-                    failedTest("android.net.cts.ClassATest#testFlaky", "initial fail"),
-                    newTestRecord(
-                        "android.net.cts.ClassATest#testAssumedOnRetry",
-                        TestStatus.ASSUMPTION_FAILURE,
-                        "assumed false on retry")))
-            .toBuilder()
-            .setAttemptId(1L)
-            .build();
-    writeDelimitedRecord(
-        storeDir.resolve("arm64-v8a_CtsNetTestCases_instant__0.pb"),
-        newModuleRecord(modNet, netCtx, runAttempt0, runAttempt1));
+                    failedTest("android.net.cts.ClassATest#testFlaky", "initial fail")))));
     writeDelimitedRecord(
         storeDir.resolve("arm64-v8a_CtsNetTestCases_instant__2.pb"),
         newModuleRecord(
@@ -495,12 +521,7 @@ public final class IncrementalResultConverterTest {
                 ImmutableList.of(passedTest("android.net.cts.ClassCTest#testFromShard10")))));
 
     // 'C' < 'a' on disk, so plan order must place modNet first and non-ABI modHost second.
-    Context hostCtx =
-        Context.newBuilder()
-            .setTestTag("cts")
-            .addMetadata(Metadata.newBuilder().setKey("module-id").addValue(modHost))
-            .addMetadata(Metadata.newBuilder().setKey("module-name").addValue(modHost))
-            .build();
+    Context hostCtx = newModuleCtx(modHost, "", modHost, "1");
     writeDelimitedRecord(
         storeDir.resolve("CtsHostsideTestCases_0.pb"),
         newModuleRecord(
@@ -523,12 +544,10 @@ public final class IncrementalResultConverterTest {
     assertThat(netModule.getTeardownTimeMillis()).isEqualTo(155L);
     assertThat(netModule.getPassed()).isEqualTo(4);
     assertThat(netModule.getFailedTests()).isEqualTo(0);
-    assertThat(netModule.getTotalTests()).isEqualTo(6);
-    assertThat(netModule.getTestCase(0).getTest(1).getName()).isEqualTo("testAssumedOnRetry");
-    assertThat(netModule.getTestCase(0).getTest(1).getResult()).isEqualTo("ASSUMPTION_FAILURE");
-    assertThat(netModule.getTestCase(0).getTest(3).getName()).isEqualTo("testDemoted");
-    assertThat(netModule.getTestCase(0).getTest(3).getResult()).isEqualTo("SKIPPED");
-    assertThat(netModule.getTestCase(0).getTest(3).getSkipped()).isTrue();
+    assertThat(netModule.getTotalTests()).isEqualTo(5);
+    assertThat(netModule.getTestCase(0).getTest(2).getName()).isEqualTo("testDemoted");
+    assertThat(netModule.getTestCase(0).getTest(2).getResult()).isEqualTo("SKIPPED");
+    assertThat(netModule.getTestCase(0).getTest(2).getSkipped()).isTrue();
     assertThat(netModule.getTestCaseList().stream().map(TestCase::getName))
         .containsExactly(
             "android.net.cts.ClassATest",
@@ -539,6 +558,7 @@ public final class IncrementalResultConverterTest {
     Module hostModule = result.getModuleInfo(1);
     assertThat(hostModule.getName()).isEqualTo("CtsHostsideTestCases");
     assertThat(hostModule.hasAbi()).isFalse();
+    assertThat(hostModule.getDone()).isTrue();
   }
 
   @Test
@@ -733,6 +753,25 @@ public final class IncrementalResultConverterTest {
   }
 
   @Test
+  public void convert_emptyCompletePb_doesNotMarkRunCleanlyClosed() throws Exception {
+    Path storeDir = tempFolder.newFolder("empty_complete_pb").toPath();
+    String modId = "arm64-v8a CtsMod";
+    writeInvocationPb(storeDir, modId + ":1");
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsMod_0.pb"),
+        newModuleRecord(
+            modId,
+            newModuleCtx(modId, "arm64-v8a", "CtsMod", /* unitsRun= */ null),
+            newRunRecord(modId, passedTest("android.cts.ModTest#testOne"))));
+    Files.write(storeDir.resolve(XtsConstants.INCREMENTAL_COMPLETE_FILE_NAME), new byte[0]);
+
+    Result result = converter.convert(storeDir).orElseThrow();
+
+    assertThat(result.getModuleInfo(0).getDone()).isFalse();
+    assertThat(result.getModuleInfo(0).getPassed()).isEqualTo(1);
+  }
+
+  @Test
   public void convert_hashTruncatedFilenameAndMinimalInvocation_recoversModuleMetadata()
       throws Exception {
     Path storeDir = tempFolder.newFolder("truncated_and_fallback").toPath();
@@ -792,6 +831,7 @@ public final class IncrementalResultConverterTest {
     Module module = result.getModuleInfo(0);
     assertThat(module.getAbi()).isEqualTo("arm64-v8a");
     assertThat(module.getName()).isEqualTo(longModuleName);
+    assertThat(module.getDone()).isFalse();
     assertThat(module.getPassed()).isEqualTo(1);
   }
 
@@ -815,18 +855,14 @@ public final class IncrementalResultConverterTest {
                         .build()))
             .build());
     Context modCtx =
-        Context.newBuilder()
-            .setTestTag("cts")
+        newModuleCtx(modId, "arm64-v8a", "CtsRuntimeMod", "1").toBuilder()
             .putNameBuildInfo(
                 "DEFAULT_DEVICE",
                 BuildInformation.BuildInfo.newBuilder()
                     .putAttributes("cts:build_fingerprint", TEST_FINGERPRINT)
                     .build())
-            .addMetadata(Metadata.newBuilder().setKey("module-id").addValue(modId))
             .build();
 
-    // Shard 0: run lacks timestamps -> falls back to module span (750 ms); malformed test IDs and
-    // out-of-range timestamps do not crash conversion.
     TestRecord runWithoutTimestamps =
         TestRecord.newBuilder()
             .setTestRecordId(modId)
@@ -867,7 +903,6 @@ public final class IncrementalResultConverterTest {
             .build());
     Files.write(storeDir.resolve("corrupt_shard_2.pb"), new byte[] {0x0A, 0x09, 0x01});
 
-    // Shard 1: run has timestamps (1000 ms) while module span is 3000 ms -> uses run's 1000 ms.
     TestRecord runWithTimestamps =
         newRunRecord(
             modId,
@@ -912,11 +947,7 @@ public final class IncrementalResultConverterTest {
             .setStartTime(Timestamp.newBuilder().setSeconds(100L))
             .setEndTime(Timestamp.newBuilder().setSeconds(101L))
             .build();
-    Context ctx =
-        Context.newBuilder()
-            .setTestTag("cts")
-            .addMetadata(Metadata.newBuilder().setKey("module-id").addValue(modId))
-            .build();
+    Context ctx = newModuleCtx(modId, "arm64-v8a", "CtsStackMod", "1");
     writeDelimitedRecord(
         storeDir.resolve(XtsConstants.INCREMENTAL_INVOCATION_FILE_NAME),
         TestRecord.newBuilder()
@@ -978,14 +1009,10 @@ public final class IncrementalResultConverterTest {
             .build());
     writeDelimitedRecord(
         noBuildDir.resolve("arm64-v8a_CtsNoBuildMod_0.pb"),
-        TestRecord.newBuilder()
-            .setTestRecordId(modId)
-            .addChildren(
-                ChildReference.newBuilder()
-                    .setInlineTestRecord(
-                        newRunRecord(modId, passedTest("android.cts.NoBuildTest#testOne"))))
-            .setDescription(Any.pack(Metadata.newBuilder().setKey("unexpected").build()))
-            .build());
+        newModuleRecord(
+            modId,
+            newModuleCtx(modId, "arm64-v8a", "CtsNoBuildMod", /* unitsRun= */ null),
+            newRunRecord(modId, passedTest("android.cts.NoBuildTest#testOne"))));
 
     assertThat(converter.convert(noBuildDir)).isEmpty();
     Result skippedDeviceInfoResult =
@@ -1016,7 +1043,55 @@ public final class IncrementalResultConverterTest {
     Result recoveredResult = converter.convert(recoveredDir).orElseThrow();
     assertThat(recoveredResult.getBuild().getBuildFingerprintUnaltered())
         .isEqualTo(TEST_FINGERPRINT);
+    assertThat(recoveredResult.getModuleInfo(0).getDone()).isTrue();
     assertThat(recoveredResult.getModuleInfo(0).getPassed()).isEqualTo(1);
+
+    // Corrupt Context bytes inside complete.pb's Any prevent cleanlyClosed from marking unitless
+    // modules done=true.
+    Path corruptCompleteAnyDir = tempFolder.newFolder("corrupt_complete_any_bytes").toPath();
+    writeInvocationPb(corruptCompleteAnyDir, modId + ":1");
+    Files.copy(
+        noBuildDir.resolve("arm64-v8a_CtsNoBuildMod_0.pb"),
+        corruptCompleteAnyDir.resolve("arm64-v8a_CtsNoBuildMod_0.pb"));
+    writeDelimitedRecord(
+        corruptCompleteAnyDir.resolve(XtsConstants.INCREMENTAL_COMPLETE_FILE_NAME),
+        TestRecord.newBuilder()
+            .setTestRecordId("inv-complete-corrupt-ctx")
+            .setStatus(TestStatus.PASS)
+            .setDescription(
+                Any.newBuilder()
+                    .setTypeUrl("type.googleapis.com/" + Context.getDescriptor().getFullName())
+                    .setValue(ByteString.copyFrom(new byte[] {0x0A, 0x09, 0x01}))
+                    .build())
+            .build());
+    assertThat(converter.convert(corruptCompleteAnyDir).orElseThrow().getModuleInfo(0).getDone())
+        .isFalse();
+
+    // Corrupt Context bytes on a 0-TestRun module record must neither trigger controller-skip
+    // classification (done=true, skipped=true) nor allow cleanlyClosed to mark sibling unitless
+    // modules done=true.
+    Path corruptModuleAnyDir = tempFolder.newFolder("corrupt_module_any_bytes").toPath();
+    String zeroRunCorruptMod = "arm64-v8a CtsZeroRunCorruptCtxMod";
+    writeInvocationPb(corruptModuleAnyDir, modId + ":1", zeroRunCorruptMod + ":1");
+    Files.copy(
+        noBuildDir.resolve("arm64-v8a_CtsNoBuildMod_0.pb"),
+        corruptModuleAnyDir.resolve("arm64-v8a_CtsNoBuildMod_0.pb"));
+    writeDelimitedRecord(
+        corruptModuleAnyDir.resolve("arm64-v8a_CtsZeroRunCorruptCtxMod_0.pb"),
+        TestRecord.newBuilder()
+            .setTestRecordId(zeroRunCorruptMod)
+            .setStatus(TestStatus.PASS)
+            .setDescription(
+                Any.newBuilder()
+                    .setTypeUrl("type.googleapis.com/" + Context.getDescriptor().getFullName())
+                    .setValue(ByteString.copyFrom(new byte[] {0x0A, 0x09, 0x01}))
+                    .build())
+            .build());
+    writeCleanCompletePb(corruptModuleAnyDir);
+    Result corruptModuleAnyResult = converter.convert(corruptModuleAnyDir).orElseThrow();
+    assertThat(corruptModuleAnyResult.getModuleInfo(0).getDone()).isFalse();
+    assertThat(corruptModuleAnyResult.getModuleInfo(1).getDone()).isFalse();
+    assertThat(corruptModuleAnyResult.getModuleInfo(1).getSkipped()).isFalse();
 
     // Missing, corrupt, or planless invocation.pb in any non-empty job store drops the whole
     // Result (even with complete.pb, BuildInfo, skipDeviceInfo=true, or a valid sibling job).
@@ -1058,12 +1133,1260 @@ public final class IncrementalResultConverterTest {
     assertThat(converter.convert(multiJobInvalidRoot)).isEmpty();
   }
 
+  @Test
+  public void convert_dynamicShardedFullUnitDrainWithoutCompletePb_setsDoneTrue() throws Exception {
+    Path storeDir = tempFolder.newFolder("dynamic_unit_drain_done").toPath();
+    String modDrain = "arm64-v8a CtsDrainMod";
+    String modSplit = "arm64-v8a CtsSplitUnitsMod";
+    String modFilteredEmpty = "arm64-v8a CtsFilteredEmptyMod";
+    writeInvocationPb(storeDir, modDrain + ":4", modSplit + ":4", modFilteredEmpty + ":2");
+
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsDrainMod_0.pb"),
+        newModuleRecord(
+            modDrain,
+            newModuleCtx(modDrain, "arm64-v8a", "CtsDrainMod", "4"),
+            newRunRecord(
+                modDrain,
+                passedTest("android.cts.DrainTest#testPass"),
+                failedTest("android.cts.DrainTest#testFail", "boom"))));
+
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSplitUnitsMod_0.pb"),
+        newModuleRecord(
+            modSplit,
+            newModuleCtx(modSplit, "arm64-v8a", "CtsSplitUnitsMod", "2"),
+            newRunRecord(modSplit, passedTest("android.cts.SplitTest#testOne"))));
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSplitUnitsMod_1.pb"),
+        newModuleRecord(
+            modSplit,
+            newModuleCtx(modSplit, "arm64-v8a", "CtsSplitUnitsMod", "2"),
+            newRunRecord(modSplit, passedTest("android.cts.SplitTest#testTwo"))));
+
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsFilteredEmptyMod_0.pb"),
+        TestRecord.newBuilder()
+            .setTestRecordId(modFilteredEmpty)
+            .setStatus(TestStatus.PASS)
+            .setStartTime(Timestamp.newBuilder().setSeconds(20L))
+            .setEndTime(Timestamp.newBuilder().setSeconds(22L))
+            .setDescription(
+                Any.pack(newModuleCtx(modFilteredEmpty, "arm64-v8a", "CtsFilteredEmptyMod", "2")))
+            .build());
+
+    Result result = converter.convert(storeDir).orElseThrow();
+
+    assertThat(result.getModuleInfo(0).getDone()).isTrue();
+    assertThat(result.getModuleInfo(1).getDone()).isTrue();
+    Module filteredEmpty = result.getModuleInfo(2);
+    assertThat(filteredEmpty.getDone()).isTrue();
+    assertThat(filteredEmpty.getSkipped()).isFalse();
+    assertThat(filteredEmpty.getRuntimeMillis()).isEqualTo(2000L);
+    assertThat(result.getSummary())
+        .isEqualTo(
+            Summary.newBuilder()
+                .setPassed(3)
+                .setFailed(1)
+                .setWarning(0)
+                .setModulesDone(3)
+                .setModulesTotal(3)
+                .build());
+  }
+
+  @Test
+  public void convert_intraModuleAutoRetry_preservesSameAttemptAndPostRetryFailures()
+      throws Exception {
+    Path storeDir = tempFolder.newFolder("intra_module_auto_retry").toPath();
+    String modSameAttemptBackfill = "arm64-v8a CtsSameAttemptBackfillMod";
+    String modPostRetryBackfill = "arm64-v8a CtsPostRetryBackfillMod";
+    String modCrashThenCleanSameAttempt = "arm64-v8a CtsCrashThenCleanSameAttemptMod";
+    writeInvocationPb(
+        storeDir,
+        modSameAttemptBackfill + ":1",
+        modPostRetryBackfill + ":1",
+        modCrashThenCleanSameAttempt + ":1");
+
+    // Two TestRuns sharing attempt_id=0 where the second carries backfill/teardown DebugInfo must
+    // still mark the module done=false.
+    TestRecord backfillRun0 =
+        newRunRecord(modSameAttemptBackfill, passedTest("android.cts.BackfillTest#testOne"));
+    TestRecord backfillRun1 =
+        TestRecord.newBuilder()
+            .setTestRecordId(modSameAttemptBackfill)
+            .setAttemptId(0L)
+            .setStatus(TestStatus.FAIL)
+            .setDebugInfo(DebugInfo.newBuilder().setErrorMessage("Teardown device lost"))
+            .build();
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSameAttemptBackfillMod_0.pb"),
+        newModuleRecord(
+            modSameAttemptBackfill,
+            newModuleCtx(modSameAttemptBackfill, "arm64-v8a", "CtsSameAttemptBackfillMod", "1"),
+            backfillRun0,
+            backfillRun1));
+
+    // A synthetic attempt_id=0 teardown backfill arriving AFTER a clean attempt_id=1 retry must
+    // not be masked by attempt_id=1.
+    TestRecord postRetryAttempt0 =
+        newRunRecord(
+                modPostRetryBackfill,
+                failedTest("android.cts.PostRetryTest#testOne", "initial fail"))
+            .toBuilder()
+            .setAttemptId(0L)
+            .build();
+    TestRecord postRetryAttempt1 =
+        newRunRecord(modPostRetryBackfill, passedTest("android.cts.PostRetryTest#testOne"))
+            .toBuilder()
+            .setAttemptId(1L)
+            .build();
+    TestRecord postRetryTeardownFail =
+        TestRecord.newBuilder()
+            .setTestRecordId(modPostRetryBackfill)
+            .setAttemptId(0L)
+            .setStatus(TestStatus.FAIL)
+            .setDebugInfo(DebugInfo.newBuilder().setErrorMessage("Post-retry teardown lost"))
+            .build();
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsPostRetryBackfillMod_0.pb"),
+        newModuleRecord(
+            modPostRetryBackfill,
+            newModuleCtx(modPostRetryBackfill, "arm64-v8a", "CtsPostRetryBackfillMod", "1"),
+            postRetryAttempt0,
+            postRetryAttempt1,
+            postRetryTeardownFail));
+
+    // A crashed attempt_id=0 TestRun followed by another attempt_id=0 TestRun without DebugInfo
+    // must start a separate run sequence rather than clearing the first runner's crash.
+    TestRecord crashedFirstSameAttempt =
+        newRunRecord(
+                modCrashThenCleanSameAttempt,
+                failedTest("android.cts.SameAttemptTest#testOne", "runner0 crash"))
+            .toBuilder()
+            .setAttemptId(0L)
+            .setDebugInfo(DebugInfo.newBuilder().setErrorMessage("Initial runner crash"))
+            .build();
+    TestRecord cleanSecondSameAttempt =
+        newRunRecord(
+                modCrashThenCleanSameAttempt, passedTest("android.cts.SameAttemptTest#testTwo"))
+            .toBuilder()
+            .setAttemptId(0L)
+            .build();
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsCrashThenCleanSameAttemptMod_0.pb"),
+        newModuleRecord(
+            modCrashThenCleanSameAttempt,
+            newModuleCtx(
+                modCrashThenCleanSameAttempt, "arm64-v8a", "CtsCrashThenCleanSameAttemptMod", "1"),
+            crashedFirstSameAttempt,
+            cleanSecondSameAttempt));
+
+    Result result = converter.convert(storeDir).orElseThrow();
+
+    Module backfilled = result.getModuleInfo(0);
+    assertThat(backfilled.getDone()).isFalse();
+    assertThat(backfilled.getReason().getMsg()).isEqualTo("Teardown device lost");
+
+    Module postRetryBackfilled = result.getModuleInfo(1);
+    assertThat(postRetryBackfilled.getDone()).isFalse();
+    assertThat(postRetryBackfilled.getPassed()).isEqualTo(1);
+    assertThat(postRetryBackfilled.getReason().getMsg()).isEqualTo("Post-retry teardown lost");
+
+    Module crashThenClean = result.getModuleInfo(2);
+    assertThat(crashThenClean.getDone()).isFalse();
+    assertThat(crashThenClean.getReason().getMsg()).isEqualTo("Initial runner crash");
+  }
+
+  @Test
+  public void convert_unitShortfall_setsDoneFalseAndPreservesPassedTests() throws Exception {
+    Path storeDir = tempFolder.newFolder("unit_shortfalls").toPath();
+    String modPartial = "arm64-v8a CtsPartialMod";
+    String modAutoRetry = "arm64-v8a CtsRetryShortfallMod";
+    String modZeroTestRuns = "arm64-v8a CtsPartialZeroTestRunsMod";
+    String modRetryCrashShortfall = "arm64-v8a CtsRetryCrashShortfallMod";
+    writeInvocationPb(
+        storeDir,
+        modPartial + ":4",
+        modAutoRetry + ":2",
+        modZeroTestRuns + ":2",
+        modRetryCrashShortfall + ":2");
+
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsPartialMod_0.pb"),
+        newModuleRecord(
+            modPartial,
+            newModuleCtx(modPartial, "arm64-v8a", "CtsPartialMod", "2"),
+            newRunRecord(
+                modPartial,
+                passedTest("android.cts.PartialTest#testPass"),
+                failedTest("android.cts.PartialTest#testFail", "err"))));
+
+    // 2 TestRuns for 1 completed unit (< 2 planned), with Attempt 0's resolved DebugInfo NOT
+    // leaking into the incomplete module's <Reason>.
+    TestRecord runAttempt0 =
+        newRunRecord(modAutoRetry, failedTest("android.cts.RetryTest#testFlaky", "try0"))
+            .toBuilder()
+            .setAttemptId(0L)
+            .setDebugInfo(DebugInfo.newBuilder().setErrorMessage("Resolved attempt 0 error"))
+            .build();
+    TestRecord runAttempt1 =
+        newRunRecord(modAutoRetry, passedTest("android.cts.RetryTest#testFlaky")).toBuilder()
+            .setAttemptId(1L)
+            .build();
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsRetryShortfallMod_0.pb"),
+        newModuleRecord(
+            modAutoRetry,
+            newModuleCtx(modAutoRetry, "arm64-v8a", "CtsRetryShortfallMod", "1"),
+            runAttempt0,
+            runAttempt1));
+
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsPartialZeroTestRunsMod_0.pb"),
+        newModuleRecord(
+            modZeroTestRuns,
+            newModuleCtx(modZeroTestRuns, "arm64-v8a", "CtsPartialZeroTestRunsMod", "1")));
+
+    // Attempt 0 finished with a test failure (no run DebugInfo) and Attempt 1 crashed mid-retry
+    // before remaining shards ran -> fallbackDebugInfo populates <Reason>.
+    TestRecord cleanAttempt0 =
+        newRunRecord(
+                modRetryCrashShortfall,
+                failedTest("android.cts.RetryCrashTest#testOne", "attempt 0 test fail"))
+            .toBuilder()
+            .setAttemptId(0L)
+            .build();
+    TestRecord crashedAttempt1 =
+        TestRecord.newBuilder()
+            .setTestRecordId(modRetryCrashShortfall)
+            .setAttemptId(1L)
+            .setStatus(TestStatus.FAIL)
+            .setDebugInfo(DebugInfo.newBuilder().setErrorMessage("Device lost during auto-retry"))
+            .build();
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsRetryCrashShortfallMod_0.pb"),
+        newModuleRecord(
+            modRetryCrashShortfall,
+            newModuleCtx(modRetryCrashShortfall, "arm64-v8a", "CtsRetryCrashShortfallMod", "1"),
+            cleanAttempt0,
+            crashedAttempt1));
+    writeCleanCompletePb(storeDir);
+
+    Result result = converter.convert(storeDir).orElseThrow();
+
+    Module partial = result.getModuleInfo(0);
+    assertThat(partial.getDone()).isFalse();
+    assertThat(partial.getSkipped()).isFalse();
+    assertThat(partial.getPassed()).isEqualTo(1);
+    assertThat(partial.getFailedTests()).isEqualTo(1);
+    assertThat(partial.getReason().getMsg())
+        .isEqualTo("Run was incomplete. Some tests might not have finished.");
+
+    Module retried = result.getModuleInfo(1);
+    assertThat(retried.getDone()).isFalse();
+    assertThat(retried.getPassed()).isEqualTo(1);
+    assertThat(retried.getFailedTests()).isEqualTo(0);
+    assertThat(retried.getReason().getMsg())
+        .isEqualTo("Run was incomplete. Some tests might not have finished.");
+
+    Module zeroRuns = result.getModuleInfo(2);
+    assertThat(zeroRuns.getDone()).isFalse();
+    assertThat(zeroRuns.getSkipped()).isFalse();
+
+    Module retryCrashShortfall = result.getModuleInfo(3);
+    assertThat(retryCrashShortfall.getDone()).isFalse();
+    assertThat(retryCrashShortfall.getReason().getMsg()).isEqualTo("Device lost during auto-retry");
+
+    assertThat(result.getSummary().getModulesDone()).isEqualTo(0);
+    assertThat(result.getSummary().getModulesTotal()).isEqualTo(4);
+  }
+
+  @Test
+  public void convert_debugInfoOverridesFullUnitsRunAndSetupFailure_setsDoneFalse()
+      throws Exception {
+    Path storeDir = tempFolder.newFolder("debug_info_override").toPath();
+    String modRunCrash = "arm64-v8a CtsRunCrashMod";
+    String modSetupFail = "arm64-v8a CtsSetupFailMod";
+    writeInvocationPb(storeDir, modRunCrash + ":2", modSetupFail + ":1");
+
+    TestRecord crashedRun =
+        TestRecord.newBuilder()
+            .setTestRecordId(modRunCrash)
+            .setParentTestRecordId(modRunCrash)
+            .addChildren(
+                ChildReference.newBuilder()
+                    .setInlineTestRecord(passedTest("android.cts.CrashTest#testBeforeCrash")))
+            .setStatus(TestStatus.FAIL)
+            .setDebugInfo(
+                DebugInfo.newBuilder()
+                    .setErrorMessage("Instrumentation crashed mid-run")
+                    .setFailureStatus(FailureStatus.INFRA_FAILURE)
+                    .setDebugInfoContext(
+                        DebugInfoContext.newBuilder()
+                            .setErrorName("INSTRUMENTATION_CRASH")
+                            .setErrorCode(520100)))
+            .setStartTime(Timestamp.newBuilder().setSeconds(20L))
+            .setEndTime(Timestamp.newBuilder().setSeconds(21L))
+            .build();
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsRunCrashMod_0.pb"),
+        newModuleRecord(
+            modRunCrash,
+            newModuleCtx(modRunCrash, "arm64-v8a", "CtsRunCrashMod", "2"),
+            crashedRun));
+
+    TestRecord setupFailRun =
+        TestRecord.newBuilder()
+            .setTestRecordId(modSetupFail)
+            .setParentTestRecordId(modSetupFail)
+            .setNumExpectedChildren(0)
+            .setStatus(TestStatus.FAIL)
+            .setDebugInfo(
+                DebugInfo.newBuilder()
+                    .setErrorMessage("TargetSetupError: failed to install APK")
+                    .setFailureStatus(FailureStatus.NOT_EXECUTED)
+                    .setDebugInfoContext(
+                        DebugInfoContext.newBuilder()
+                            .setErrorName("MODULE_DID_NOT_EXECUTE")
+                            .setErrorCode(505003)))
+            .setStartTime(Timestamp.newBuilder().setSeconds(22L))
+            .setEndTime(Timestamp.newBuilder().setSeconds(22L))
+            .build();
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSetupFailMod_0.pb"),
+        newModuleRecord(
+            modSetupFail,
+            newModuleCtx(modSetupFail, "arm64-v8a", "CtsSetupFailMod", "0"),
+            setupFailRun));
+    writeCleanCompletePb(storeDir);
+
+    Result result = converter.convert(storeDir).orElseThrow();
+
+    Module crashMod = result.getModuleInfo(0);
+    assertThat(crashMod.getDone()).isFalse();
+    assertThat(crashMod.getPassed()).isEqualTo(1);
+    assertThat(crashMod.getReason())
+        .isEqualTo(
+            Reason.newBuilder()
+                .setMsg("Instrumentation crashed mid-run")
+                .setErrorName("INSTRUMENTATION_CRASH")
+                .setErrorCode("520100")
+                .build());
+
+    Module setupMod = result.getModuleInfo(1);
+    assertThat(setupMod.getDone()).isFalse();
+    assertThat(setupMod.getSkipped()).isFalse();
+    assertThat(setupMod.getReason())
+        .isEqualTo(
+            Reason.newBuilder()
+                .setMsg("TargetSetupError: failed to install APK")
+                .setErrorName("MODULE_DID_NOT_EXECUTE")
+                .setErrorCode("505003")
+                .build());
+  }
+
+  @Test
+  public void convert_plannedButUnseenModules_synthesizesDoneFalse(
+      @TestParameter boolean hasCleanCompletePb) throws Exception {
+    Path storeDir = tempFolder.newFolder("planned_unseen_" + hasCleanCompletePb).toPath();
+    String modExec = "arm64-v8a CtsExecutedMod";
+    String modUnseenAbi = "arm64-v8a CtsUnseenAbiMod";
+    String modUnseenHost = "CtsUnseenHostMod";
+    writeInvocationPb(storeDir, modExec + ":1", modUnseenAbi + ":2", modUnseenHost + ":1");
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsExecutedMod_0.pb"),
+        newModuleRecord(
+            modExec,
+            newModuleCtx(modExec, "arm64-v8a", "CtsExecutedMod", "1"),
+            newRunRecord(modExec, passedTest("android.cts.ExecTest#testRan"))));
+    if (hasCleanCompletePb) {
+      writeCleanCompletePb(storeDir);
+    }
+
+    Result result = converter.convert(storeDir).orElseThrow();
+
+    assertThat(result.getModuleInfo(0).getDone()).isTrue();
+    assertThat(result.getModuleInfo(1).getAbi()).isEqualTo("arm64-v8a");
+    assertThat(result.getModuleInfo(1).getName()).isEqualTo("CtsUnseenAbiMod");
+    assertThat(result.getModuleInfo(1).getDone()).isFalse();
+    assertThat(result.getModuleInfo(1).hasReason()).isFalse();
+    assertThat(result.getModuleInfo(2).hasAbi()).isFalse();
+    assertThat(result.getModuleInfo(2).getName()).isEqualTo("CtsUnseenHostMod");
+    assertThat(result.getModuleInfo(2).getDone()).isFalse();
+    assertThat(result.getSummary().getModulesDone()).isEqualTo(1);
+    assertThat(result.getSummary().getModulesTotal()).isEqualTo(3);
+  }
+
+  @Test
+  public void convert_controllerSkippedAndSystemCheckers_precedesUnitSumAndIgnoresCheckers()
+      throws Exception {
+    Path storeDir = tempFolder.newFolder("controller_skipped").toPath();
+    String modSkip = "arm64-v8a CtsSkippedMod";
+    String modSkipWithCheckers = "arm64-v8a CtsSkippedWithCheckersMod";
+    String modNormalWithCheckers = "arm64-v8a CtsNormalWithCheckersMod";
+    String standaloneChecker = "arm64-v8a PreModuleCheckerSample";
+    writeInvocationPb(
+        storeDir,
+        modSkip + ":2",
+        modSkipWithCheckers + ":2",
+        modNormalWithCheckers + ":1",
+        standaloneChecker + ":1");
+
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSkippedMod_0.pb"),
+        newModuleRecord(
+            modSkip,
+            withModuleSkipped(
+                newModuleCtx(modSkip, "arm64-v8a", "CtsSkippedMod", "0"),
+                "Skipped by module controller")));
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSkippedMod_1.pb"),
+        newModuleRecord(
+            modSkip,
+            withModuleSkipped(
+                newModuleCtx(modSkip, "arm64-v8a", "CtsSkippedMod", "0"),
+                "Skipped by module controller")));
+
+    TestRecord preChk =
+        TestRecord.newBuilder()
+            .setTestRecordId("PreModuleChecker_" + modSkipWithCheckers)
+            .setStatus(TestStatus.PASS)
+            .build();
+    TestRecord postChkWithDbg =
+        TestRecord.newBuilder()
+            .setTestRecordId("PostModuleChecker_" + modNormalWithCheckers)
+            .setStatus(TestStatus.FAIL)
+            .setDebugInfo(DebugInfo.newBuilder().setErrorMessage("Checker failed"))
+            .setStartTime(Timestamp.newBuilder().setSeconds(30L))
+            .setEndTime(Timestamp.newBuilder().setSeconds(35L))
+            .build();
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSkippedWithCheckersMod_0.pb"),
+        newModuleRecord(
+            modSkipWithCheckers,
+            withModuleSkipped(
+                newModuleCtx(modSkipWithCheckers, "arm64-v8a", "CtsSkippedWithCheckersMod", "0"),
+                "Skipped by module controller"),
+            preChk));
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSkippedWithCheckersMod_1.pb"),
+        newModuleRecord(
+            modSkipWithCheckers,
+            withModuleSkipped(
+                newModuleCtx(modSkipWithCheckers, "arm64-v8a", "CtsSkippedWithCheckersMod", "0"),
+                "Skipped by module controller"),
+            preChk));
+
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsNormalWithCheckersMod_0.pb"),
+        newModuleRecord(
+            modNormalWithCheckers,
+            newModuleCtx(modNormalWithCheckers, "arm64-v8a", "CtsNormalWithCheckersMod", "1"),
+            newRunRecord(modNormalWithCheckers, passedTest("android.cts.NormTest#testPass")),
+            postChkWithDbg));
+
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_PreModuleCheckerSample_0.pb"),
+        newModuleRecord(
+            standaloneChecker,
+            newModuleCtx(standaloneChecker, "arm64-v8a", "PreModuleCheckerSample", "1"),
+            newRunRecord(standaloneChecker, passedTest("com.android.Checker#testCheck"))));
+
+    Result result = converter.convert(storeDir).orElseThrow();
+
+    assertThat(result.getModuleInfo(0).getDone()).isTrue();
+    assertThat(result.getModuleInfo(0).getSkipped()).isTrue();
+    assertThat(result.getModuleInfo(0).getReason().getMsg())
+        .isEqualTo("Module CtsSkippedMod is skipped by module controller.");
+    assertThat(result.getModuleInfo(1).getDone()).isTrue();
+    assertThat(result.getModuleInfo(1).getSkipped()).isTrue();
+
+    Module normalMod = result.getModuleInfo(2);
+    assertThat(normalMod.getDone()).isTrue();
+    assertThat(normalMod.getSkipped()).isFalse();
+    assertThat(normalMod.getRuntimeMillis()).isEqualTo(1000L);
+
+    assertThat(result.getSummary())
+        .isEqualTo(
+            Summary.newBuilder()
+                .setPassed(1)
+                .setFailed(0)
+                .setWarning(0)
+                .setModulesDone(1)
+                .setModulesTotal(1)
+                .build());
+
+    Path reportDir = tempFolder.newFolder("skipped_report").toPath();
+    Result xmlFromDisk = writeReportAndParseXml(result, reportDir);
+    assertThat(
+            Result.parseFrom(
+                Files.readAllBytes(reportDir.resolve("test_result.pb")),
+                ExtensionRegistryLite.getEmptyRegistry()))
+        .isEqualTo(result);
+    assertThat(xmlFromDisk.getModuleInfoList()).containsExactly(normalMod, result.getModuleInfo(3));
+  }
+
+  @Test
+  public void convert_interruptedShardedModuleWithSingleZeroUnitShard_marksIncompleteNotSkipped()
+      throws Exception {
+    String modId = "arm64-v8a CtsDrainedShardMod";
+    Path crashedDir = tempFolder.newFolder("drained_shard_crashed").toPath();
+    writeInvocationPb(crashedDir, modId + ":2");
+    writeDelimitedRecord(
+        crashedDir.resolve("arm64-v8a_CtsDrainedShardMod_0.pb"),
+        newModuleRecord(modId, newModuleCtx(modId, "arm64-v8a", "CtsDrainedShardMod", "0")));
+
+    Path cleanPreflightDir = tempFolder.newFolder("preflight_clean").toPath();
+    copyDirectoryFiles(crashedDir, cleanPreflightDir);
+    writeCleanCompletePb(cleanPreflightDir);
+
+    Result crashedResult = converter.convert(crashedDir).orElseThrow();
+    Result cleanResult = converter.convert(cleanPreflightDir).orElseThrow();
+
+    Module crashedModule = crashedResult.getModuleInfo(0);
+    assertThat(crashedModule.getDone()).isFalse();
+    assertThat(crashedModule.getSkipped()).isFalse();
+    assertThat(crashedModule.getReason().getMsg())
+        .isEqualTo("Run was incomplete. Some tests might not have finished.");
+    assertThat(crashedResult.getSummary().getModulesDone()).isEqualTo(0);
+    assertThat(crashedResult.getSummary().getModulesTotal()).isEqualTo(1);
+
+    Module cleanModule = cleanResult.getModuleInfo(0);
+    assertThat(cleanModule.getDone()).isTrue();
+    assertThat(cleanModule.getSkipped()).isTrue();
+    assertThat(cleanResult.getSummary().getModulesTotal()).isEqualTo(0);
+  }
+
+  @Test
+  public void convert_moduleAbiAndNameWithPathTraversal_sanitizesForHtmlReport() throws Exception {
+    Path storeDir = tempFolder.newFolder("traversal_mod").toPath();
+    String rawModId = "../../evil_abi ../CtsTraversalMod";
+    writeInvocationPb(storeDir, rawModId + ":1", "..\\unseen_abi ..\\CtsUnseenTraversal:1");
+    writeDelimitedRecord(
+        storeDir.resolve("evil_0.pb"),
+        newModuleRecord(
+            rawModId,
+            newModuleCtx(rawModId, "../../evil_abi", "../CtsTraversalMod\0/sub", "1"),
+            newRunRecord(rawModId, passedTest("android.cts.SafeTest#testOne"))));
+
+    Result result = converter.convert(storeDir).orElseThrow();
+
+    Module executedMod = result.getModuleInfo(0);
+    assertThat(executedMod.getAbi()).isEqualTo("______evil_abi");
+    assertThat(executedMod.getName()).isEqualTo("___CtsTraversalMod__sub");
+
+    Module unseenMod = result.getModuleInfo(1);
+    assertThat(unseenMod.getAbi()).isEqualTo("___unseen_abi");
+    assertThat(unseenMod.getName()).isEqualTo("___CtsUnseenTraversal");
+
+    Path outerDir = tempFolder.newFolder("report_container").toPath();
+    Path reportDir = Files.createDirectory(outerDir.resolve("inner_report"));
+    Result parsedXml = writeReportAndParseXml(result, reportDir);
+    assertThat(parsedXml.getModuleInfoList()).hasSize(2);
+    try (var outerEntries = Files.list(outerDir)) {
+      assertThat(outerEntries.map(entry -> entry.getFileName().toString()).toList())
+          .containsExactly("inner_report", "inner_report.zip");
+    }
+    assertThat(Files.isDirectory(reportDir.resolve("module_reports"))).isTrue();
+  }
+
+  @Test
+  public void convert_missingOrInvalidUnitsRun_fallsBackToCleanCompletePb(
+      @TestParameter InvalidUnitsRunCase unitsRunCase) throws Exception {
+    String modId = "arm64-v8a CtsLegacyMod";
+    Path baseDir = tempFolder.newFolder("units_base_" + unitsRunCase.name()).toPath();
+    writeInvocationPb(baseDir, modId + ":1");
+    writeDelimitedRecord(
+        baseDir.resolve("arm64-v8a_CtsLegacyMod_0.pb"),
+        newModuleRecord(
+            modId,
+            newModuleCtx(modId, "arm64-v8a", "CtsLegacyMod", unitsRunCase.rawValue),
+            newRunRecord(modId, passedTest("android.cts.LegacyTest#testPass"))));
+
+    Path dirtyDir = tempFolder.newFolder("units_dirty_" + unitsRunCase.name()).toPath();
+    copyDirectoryFiles(baseDir, dirtyDir);
+    writeDelimitedRecord(
+        dirtyDir.resolve(XtsConstants.INCREMENTAL_COMPLETE_FILE_NAME),
+        TestRecord.newBuilder()
+            .setTestRecordId("inv-dirty")
+            .setStatus(TestStatus.FAIL)
+            .setDebugInfo(DebugInfo.newBuilder().setErrorMessage("Invocation aborted"))
+            .setDescription(Any.pack(Context.newBuilder().setTestTag("cts").build()))
+            .build());
+
+    Path cleanDir = tempFolder.newFolder("units_clean_" + unitsRunCase.name()).toPath();
+    copyDirectoryFiles(baseDir, cleanDir);
+    writeCleanCompletePb(cleanDir);
+
+    Result withoutComplete = converter.convert(baseDir).orElseThrow();
+    Result withDirtyComplete = converter.convert(dirtyDir).orElseThrow();
+    Result withCleanComplete = converter.convert(cleanDir).orElseThrow();
+
+    assertThat(withoutComplete.getModuleInfo(0).getDone()).isFalse();
+    assertThat(withoutComplete.getModuleInfo(0).getPassed()).isEqualTo(1);
+    assertThat(withDirtyComplete.getModuleInfo(0).getDone()).isFalse();
+    assertThat(withCleanComplete.getModuleInfo(0).getDone()).isTrue();
+  }
+
+  @Test
+  public void convert_unplannedExtraModules_requireCleanCompletePbForDoneTrue() throws Exception {
+    Path withoutCompleteDir = tempFolder.newFolder("unplanned_without_complete").toPath();
+    String plannedModId = "arm64-v8a CtsPlannedMod";
+    String extraModId = "arm64-v8a CtsExtraMod";
+    String extraSkippedModId = "arm64-v8a CtsExtraSkippedMod";
+    writeInvocationPb(withoutCompleteDir, plannedModId + ":1");
+    writeDelimitedRecord(
+        withoutCompleteDir.resolve("arm64-v8a_CtsPlannedMod_0.pb"),
+        newModuleRecord(
+            plannedModId,
+            newModuleCtx(plannedModId, "arm64-v8a", "CtsPlannedMod", "1"),
+            newRunRecord(plannedModId, passedTest("android.cts.PlannedTest#testOne"))));
+    writeDelimitedRecord(
+        withoutCompleteDir.resolve("arm64-v8a_CtsExtraMod_0.pb"),
+        newModuleRecord(
+            extraModId,
+            newModuleCtx(extraModId, "arm64-v8a", "CtsExtraMod", /* unitsRun= */ null),
+            newRunRecord(extraModId, passedTest("android.cts.ExtraTest#testOne"))));
+    writeDelimitedRecord(
+        withoutCompleteDir.resolve("arm64-v8a_CtsExtraSkippedMod_0.pb"),
+        newModuleRecord(
+            extraSkippedModId,
+            newModuleCtx(extraSkippedModId, "arm64-v8a", "CtsExtraSkippedMod", "0")));
+
+    Path withCompleteDir = tempFolder.newFolder("unplanned_with_complete").toPath();
+    copyDirectoryFiles(withoutCompleteDir, withCompleteDir);
+    // Descriptionless complete.pb without DebugInfo still marks the run cleanly closed.
+    writeDelimitedRecord(
+        withCompleteDir.resolve(XtsConstants.INCREMENTAL_COMPLETE_FILE_NAME),
+        TestRecord.newBuilder()
+            .setTestRecordId("inv-complete-no-desc")
+            .setStatus(TestStatus.PASS)
+            .build());
+
+    Path corruptShardDir = tempFolder.newFolder("unplanned_with_corrupt_shard").toPath();
+    copyDirectoryFiles(withCompleteDir, corruptShardDir);
+    Files.write(
+        corruptShardDir.resolve("arm64-v8a_CtsCorruptShard_0.pb"), new byte[] {0x0A, 0x05, 0x01});
+
+    Result withoutComplete = converter.convert(withoutCompleteDir).orElseThrow();
+    Result withComplete = converter.convert(withCompleteDir).orElseThrow();
+    Result withCorruptShard = converter.convert(corruptShardDir).orElseThrow();
+
+    assertThat(withoutComplete.getModuleInfo(0).getDone()).isTrue();
+    assertThat(withoutComplete.getModuleInfo(1).getDone()).isFalse();
+    assertThat(withoutComplete.getModuleInfo(2).getDone()).isFalse();
+    assertThat(withoutComplete.getModuleInfo(2).getSkipped()).isFalse();
+    assertThat(withComplete.getModuleInfo(0).getDone()).isTrue();
+    assertThat(withComplete.getModuleInfo(1).getDone()).isTrue();
+    assertThat(withComplete.getModuleInfo(2).getDone()).isTrue();
+    assertThat(withComplete.getModuleInfo(2).getSkipped()).isTrue();
+    assertThat(withCorruptShard.getModuleInfo(0).getDone()).isTrue();
+    assertThat(withCorruptShard.getModuleInfo(1).getDone()).isFalse();
+    assertThat(withCorruptShard.getModuleInfo(2).getDone()).isFalse();
+    assertThat(withCorruptShard.getModuleInfo(2).getSkipped()).isFalse();
+  }
+
+  @Test
+  public void convert_multiJobSession_mergesSharedModulesAndIgnoresEmptyJob() throws Exception {
+    Path sessionStoreDir = tempFolder.newFolder("multi_job_session").toPath();
+    // Create in reverse lexicographical order so the test catches missing directory sorting.
+    Path staticDir = Files.createDirectory(sessionStoreDir.resolve("STATIC_XTS"));
+    Path mctsDir = Files.createDirectory(sessionStoreDir.resolve("MCTS"));
+    Files.createDirectory(sessionStoreDir.resolve("EMPTY_JOB"));
+
+    String sharedCrashedMod = "arm64-v8a CtsSharedCrashedMod";
+    String sharedCompletedMod = "arm64-v8a CtsSharedCompletedMod";
+    String staticOnlySkippedMod = "arm64-v8a CtsStaticSkippedMod";
+    String mctsOnlyMod = "arm64-v8a MctsOnlyMod";
+
+    writeInvocationPb(
+        mctsDir, mctsOnlyMod + ":1", sharedCrashedMod + ":2", sharedCompletedMod + ":2");
+    writeDelimitedRecord(
+        mctsDir.resolve("arm64-v8a_MctsOnlyMod_0.pb"),
+        newModuleRecord(
+            mctsOnlyMod,
+            newModuleCtx(mctsOnlyMod, "arm64-v8a", "MctsOnlyMod", "1"),
+            newRunRecord(mctsOnlyMod, passedTest("android.mcts.OnlyTest#testMcts"))));
+    writeDelimitedRecord(
+        mctsDir.resolve("arm64-v8a_CtsSharedCrashedMod_0.pb"),
+        newModuleRecord(
+            sharedCrashedMod,
+            newModuleCtx(sharedCrashedMod, "arm64-v8a", "CtsSharedCrashedMod", "0")));
+    writeDelimitedRecord(
+        mctsDir.resolve("arm64-v8a_CtsSharedCompletedMod_0.pb"),
+        newModuleRecord(
+            sharedCompletedMod,
+            newModuleCtx(sharedCompletedMod, "arm64-v8a", "CtsSharedCompletedMod", "0")));
+    writeCleanCompletePb(mctsDir);
+
+    writeInvocationPb(
+        staticDir, sharedCrashedMod + ":2", sharedCompletedMod + ":2", staticOnlySkippedMod + ":2");
+    writeDelimitedRecord(
+        staticDir.resolve("arm64-v8a_CtsSharedCompletedMod_0.pb"),
+        newModuleRecord(
+            sharedCompletedMod,
+            newModuleCtx(sharedCompletedMod, "arm64-v8a", "CtsSharedCompletedMod", "2"),
+            newRunRecord(
+                sharedCompletedMod,
+                passedTest("android.cts.SharedTest#testOne"),
+                passedTest("android.cts.SharedTest#testTwo"))));
+    writeDelimitedRecord(
+        staticDir.resolve("arm64-v8a_CtsStaticSkippedMod_0.pb"),
+        newModuleRecord(
+            staticOnlySkippedMod,
+            withModuleSkipped(
+                newModuleCtx(staticOnlySkippedMod, "arm64-v8a", "CtsStaticSkippedMod", "0"),
+                "Skipped by module controller")));
+    writeDelimitedRecord(
+        staticDir.resolve("arm64-v8a_CtsStaticSkippedMod_1.pb"),
+        newModuleRecord(
+            staticOnlySkippedMod,
+            withModuleSkipped(
+                newModuleCtx(staticOnlySkippedMod, "arm64-v8a", "CtsStaticSkippedMod", "0"),
+                "Skipped by module controller")));
+
+    Result result = converter.convert(sessionStoreDir).orElseThrow();
+
+    ImmutableMap<String, Module> modulesByName =
+        result.getModuleInfoList().stream().collect(toImmutableMap(Module::getName, identity()));
+    assertThat(modulesByName.keySet())
+        .containsExactly(
+            "MctsOnlyMod", "CtsSharedCrashedMod", "CtsSharedCompletedMod", "CtsStaticSkippedMod")
+        .inOrder();
+
+    Module crashedShared = modulesByName.get("CtsSharedCrashedMod");
+    assertThat(crashedShared.getDone()).isFalse();
+    assertThat(crashedShared.getSkipped()).isFalse();
+
+    Module completedShared = modulesByName.get("CtsSharedCompletedMod");
+    assertThat(completedShared.getDone()).isTrue();
+    assertThat(completedShared.getSkipped()).isFalse();
+    assertThat(completedShared.getPassed()).isEqualTo(2);
+
+    Module staticSkipped = modulesByName.get("CtsStaticSkippedMod");
+    assertThat(staticSkipped.getDone()).isTrue();
+    assertThat(staticSkipped.getSkipped()).isTrue();
+
+    Module mctsModule = modulesByName.get("MctsOnlyMod");
+    assertThat(mctsModule.getDone()).isTrue();
+
+    assertThat(result.getSummary())
+        .isEqualTo(
+            Summary.newBuilder()
+                .setPassed(3)
+                .setFailed(0)
+                .setWarning(0)
+                .setModulesDone(2)
+                .setModulesTotal(3)
+                .build());
+  }
+
+  @Test
+  public void convert_unannotatedZeroUnitModule_requiresCleanCompletePbEvenWhenRecordCountMatches()
+      throws Exception {
+    String modSingle = "arm64-v8a CtsSingleUnitInterruptedMod";
+    String modSharded = "arm64-v8a CtsShardedInterruptedMod";
+    Path unclosedDir = tempFolder.newFolder("unannotated_zero_unit_unclosed").toPath();
+    writeInvocationPb(unclosedDir, modSingle + ":1", modSharded + ":2");
+    writeDelimitedRecord(
+        unclosedDir.resolve("arm64-v8a_CtsSingleUnitInterruptedMod_0.pb"),
+        newModuleRecord(
+            modSingle, newModuleCtx(modSingle, "arm64-v8a", "CtsSingleUnitInterruptedMod", "0")));
+    writeDelimitedRecord(
+        unclosedDir.resolve("arm64-v8a_CtsShardedInterruptedMod_0.pb"),
+        newModuleRecord(
+            modSharded, newModuleCtx(modSharded, "arm64-v8a", "CtsShardedInterruptedMod", "0")));
+    writeDelimitedRecord(
+        unclosedDir.resolve("arm64-v8a_CtsShardedInterruptedMod_1.pb"),
+        newModuleRecord(
+            modSharded, newModuleCtx(modSharded, "arm64-v8a", "CtsShardedInterruptedMod", "0")));
+
+    Path cleanDir = tempFolder.newFolder("unannotated_zero_unit_clean").toPath();
+    copyDirectoryFiles(unclosedDir, cleanDir);
+    writeCleanCompletePb(cleanDir);
+
+    Result unclosedResult = converter.convert(unclosedDir).orElseThrow();
+    Result cleanResult = converter.convert(cleanDir).orElseThrow();
+
+    Module unclosedSingle = unclosedResult.getModuleInfo(0);
+    assertThat(unclosedSingle.getDone()).isFalse();
+    assertThat(unclosedSingle.getSkipped()).isFalse();
+    assertThat(unclosedSingle.getReason().getMsg())
+        .isEqualTo("Run was incomplete. Some tests might not have finished.");
+    Module unclosedSharded = unclosedResult.getModuleInfo(1);
+    assertThat(unclosedSharded.getDone()).isFalse();
+    assertThat(unclosedSharded.getSkipped()).isFalse();
+    assertThat(unclosedResult.getSummary().getModulesDone()).isEqualTo(0);
+    assertThat(unclosedResult.getSummary().getModulesTotal()).isEqualTo(2);
+
+    Module cleanSingle = cleanResult.getModuleInfo(0);
+    assertThat(cleanSingle.getDone()).isTrue();
+    assertThat(cleanSingle.getSkipped()).isTrue();
+    assertThat(cleanSingle.getReason().getMsg())
+        .isEqualTo("Module CtsSingleUnitInterruptedMod is skipped by module controller.");
+    Module cleanSharded = cleanResult.getModuleInfo(1);
+    assertThat(cleanSharded.getDone()).isTrue();
+    assertThat(cleanSharded.getSkipped()).isTrue();
+    assertThat(cleanResult.getSummary().getModulesDone()).isEqualTo(0);
+    assertThat(cleanResult.getSummary().getModulesTotal()).isEqualTo(0);
+  }
+
+  @Test
+  public void convert_explicitModuleSkippedMetadata_marksDoneSkippedWithoutCompletePbAndGuards()
+      throws Exception {
+    Path storeDir = tempFolder.newFolder("explicit_module_skipped").toPath();
+    String modPreflight = "arm64-v8a CtsPreflightSkippedMod";
+    String modBlankSkip = "arm64-v8a CtsBlankSkippedAttrMod";
+    String modEmptySkip = "arm64-v8a CtsEmptySkippedAttrMod";
+    String modSkipWithDbg = "arm64-v8a CtsSkippedWithDebugInfoMod";
+    String modSkipWithRun = "arm64-v8a CtsSkippedWithRunMod";
+    String modSkipNoUnits = "arm64-v8a CtsSkippedMissingUnitsMod";
+    writeInvocationPb(
+        storeDir,
+        modPreflight + ":3",
+        modBlankSkip + ":1",
+        modEmptySkip + ":1",
+        modSkipWithDbg + ":1",
+        modSkipWithRun + ":1",
+        modSkipNoUnits + ":1");
+
+    // Single record for plannedUnits=3 (e.g., preflight-check clearing remaining shards).
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsPreflightSkippedMod_0.pb"),
+        newModuleRecord(
+            modPreflight,
+            withModuleSkipped(
+                newModuleCtx(modPreflight, "arm64-v8a", "CtsPreflightSkippedMod", "0"),
+                "Module skipped by pre-flight check: 0 runnable test cases after filtering.")));
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsBlankSkippedAttrMod_0.pb"),
+        newModuleRecord(
+            modBlankSkip,
+            withModuleSkipped(
+                newModuleCtx(modBlankSkip, "arm64-v8a", "CtsBlankSkippedAttrMod", "0"), "   ")));
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsEmptySkippedAttrMod_0.pb"),
+        newModuleRecord(
+            modEmptySkip,
+            withModuleSkipped(
+                newModuleCtx(modEmptySkip, "arm64-v8a", "CtsEmptySkippedAttrMod", "0"), "")));
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSkippedWithDebugInfoMod_0.pb"),
+        newModuleRecord(
+                modSkipWithDbg,
+                withModuleSkipped(
+                    newModuleCtx(modSkipWithDbg, "arm64-v8a", "CtsSkippedWithDebugInfoMod", "0"),
+                    "Skipped by module controller"))
+            .toBuilder()
+            .setDebugInfo(DebugInfo.newBuilder().setErrorMessage("Setup failed before skip"))
+            .build());
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSkippedWithRunMod_0.pb"),
+        newModuleRecord(
+            modSkipWithRun,
+            withModuleSkipped(
+                newModuleCtx(modSkipWithRun, "arm64-v8a", "CtsSkippedWithRunMod", "0"),
+                "Skipped by module controller"),
+            newRunRecord(modSkipWithRun, passedTest("android.cts.SkipRunTest#testOne"))));
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsSkippedMissingUnitsMod_0.pb"),
+        newModuleRecord(
+            modSkipNoUnits,
+            withModuleSkipped(
+                newModuleCtx(
+                    modSkipNoUnits, "arm64-v8a", "CtsSkippedMissingUnitsMod", /* unitsRun= */ null),
+                "Skipped by module controller")));
+
+    Result result = converter.convert(storeDir).orElseThrow();
+    ImmutableMap<String, Module> modules = modulesByName(result);
+
+    Module preflight = modules.get("CtsPreflightSkippedMod");
+    assertThat(preflight.getDone()).isTrue();
+    assertThat(preflight.getSkipped()).isTrue();
+    assertThat(preflight.getReason().getMsg())
+        .isEqualTo("Module CtsPreflightSkippedMod is skipped by module controller.");
+
+    Module blankSkip = modules.get("CtsBlankSkippedAttrMod");
+    assertThat(blankSkip.getDone()).isFalse();
+    assertThat(blankSkip.getSkipped()).isFalse();
+
+    Module emptySkip = modules.get("CtsEmptySkippedAttrMod");
+    assertThat(emptySkip.getDone()).isFalse();
+    assertThat(emptySkip.getSkipped()).isFalse();
+
+    Module skipWithDbg = modules.get("CtsSkippedWithDebugInfoMod");
+    assertThat(skipWithDbg.getDone()).isFalse();
+    assertThat(skipWithDbg.getSkipped()).isFalse();
+    assertThat(skipWithDbg.getReason().getMsg()).isEqualTo("Setup failed before skip");
+
+    Module skipWithRun = modules.get("CtsSkippedWithRunMod");
+    assertThat(skipWithRun.getDone()).isFalse();
+    assertThat(skipWithRun.getSkipped()).isFalse();
+    assertThat(skipWithRun.getPassed()).isEqualTo(1);
+
+    Module skipNoUnits = modules.get("CtsSkippedMissingUnitsMod");
+    assertThat(skipNoUnits.getDone()).isFalse();
+    assertThat(skipNoUnits.getSkipped()).isFalse();
+
+    assertThat(result.getSummary().getModulesDone()).isEqualTo(0);
+    assertThat(result.getSummary().getModulesTotal()).isEqualTo(5);
+  }
+
+  @Test
+  public void convert_nonInlineChildReferences_failClosedAtModuleAndRunLevels() throws Exception {
+    Path storeDir = tempFolder.newFolder("non_inline_child_refs").toPath();
+    String modNonInlineRunSkipped = "arm64-v8a CtsNonInlineRunSkippedMod";
+    String modNonInlineRunFullUnits = "arm64-v8a CtsNonInlineRunFullUnitsMod";
+    String modNonInlineTestFullUnits = "arm64-v8a CtsNonInlineTestFullUnitsMod";
+    String modNonInlineRunUnitless = "arm64-v8a CtsNonInlineRunUnitlessMod";
+    String modHealthySibling = "arm64-v8a CtsHealthySiblingMod";
+    writeInvocationPb(
+        storeDir,
+        modNonInlineRunSkipped + ":1",
+        modNonInlineRunFullUnits + ":1",
+        modNonInlineTestFullUnits + ":1",
+        modNonInlineRunUnitless + ":1",
+        modHealthySibling + ":1");
+
+    // Module-to-run non-inline ChildReference prevents controller-skip classification even with
+    // module-skipped metadata and clean complete.pb.
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsNonInlineRunSkippedMod_0.pb"),
+        newModuleRecord(
+                modNonInlineRunSkipped,
+                withModuleSkipped(
+                    newModuleCtx(
+                        modNonInlineRunSkipped, "arm64-v8a", "CtsNonInlineRunSkippedMod", "0"),
+                    "Skipped by module controller"))
+            .toBuilder()
+            .addChildren(ChildReference.newBuilder().setTestRecordId("external-run-ref"))
+            .build());
+
+    // Module-to-run non-inline ChildReference alongside an inline run forces done=false even when
+    // planned units are met and complete.pb is clean.
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsNonInlineRunFullUnitsMod_0.pb"),
+        newModuleRecord(
+                modNonInlineRunFullUnits,
+                newModuleCtx(
+                    modNonInlineRunFullUnits, "arm64-v8a", "CtsNonInlineRunFullUnitsMod", "1"),
+                newRunRecord(
+                    modNonInlineRunFullUnits, passedTest("android.cts.RunRefTest#testInline")))
+            .toBuilder()
+            .addChildren(ChildReference.newBuilder().setTestRecordId("external-run-ref-2"))
+            .build());
+
+    // Run-to-test-case non-inline ChildReference forces done=false while preserving inline tests.
+    TestRecord runWithNonInlineTest =
+        newRunRecord(modNonInlineTestFullUnits, passedTest("android.cts.TestRefTest#testInline"))
+            .toBuilder()
+            .addChildren(
+                ChildReference.newBuilder().setTestRecordId("android.cts.TestRefTest#testExternal"))
+            .build();
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsNonInlineTestFullUnitsMod_0.pb"),
+        newModuleRecord(
+            modNonInlineTestFullUnits,
+            newModuleCtx(
+                modNonInlineTestFullUnits, "arm64-v8a", "CtsNonInlineTestFullUnitsMod", "1"),
+            runWithNonInlineTest));
+
+    // Unitless module with non-inline run reference stays done=false even with clean complete.pb.
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsNonInlineRunUnitlessMod_0.pb"),
+        newModuleRecord(
+                modNonInlineRunUnitless,
+                newModuleCtx(
+                    modNonInlineRunUnitless,
+                    "arm64-v8a",
+                    "CtsNonInlineRunUnitlessMod",
+                    /* unitsRun= */ null))
+            .toBuilder()
+            .addChildren(ChildReference.newBuilder().setTestRecordId("external-unitless-run"))
+            .build());
+
+    // Healthy sibling in the same job remains done=true.
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsHealthySiblingMod_0.pb"),
+        newModuleRecord(
+            modHealthySibling,
+            newModuleCtx(modHealthySibling, "arm64-v8a", "CtsHealthySiblingMod", "1"),
+            newRunRecord(modHealthySibling, passedTest("android.cts.HealthyTest#testOk"))));
+    writeCleanCompletePb(storeDir);
+
+    Result result = converter.convert(storeDir).orElseThrow();
+    ImmutableMap<String, Module> modules = modulesByName(result);
+
+    Module nonInlineSkipped = modules.get("CtsNonInlineRunSkippedMod");
+    assertThat(nonInlineSkipped.getDone()).isFalse();
+    assertThat(nonInlineSkipped.getSkipped()).isFalse();
+    assertThat(nonInlineSkipped.getReason().getMsg())
+        .isEqualTo("Run was incomplete. Some tests might not have finished.");
+
+    Module nonInlineRunFull = modules.get("CtsNonInlineRunFullUnitsMod");
+    assertThat(nonInlineRunFull.getDone()).isFalse();
+    assertThat(nonInlineRunFull.getSkipped()).isFalse();
+    assertThat(nonInlineRunFull.getPassed()).isEqualTo(1);
+    assertThat(nonInlineRunFull.getReason().getMsg())
+        .isEqualTo("Run was incomplete. Some tests might not have finished.");
+
+    Module nonInlineTestFull = modules.get("CtsNonInlineTestFullUnitsMod");
+    assertThat(nonInlineTestFull.getDone()).isFalse();
+    assertThat(nonInlineTestFull.getSkipped()).isFalse();
+    assertThat(nonInlineTestFull.getPassed()).isEqualTo(1);
+    assertThat(nonInlineTestFull.getReason().getMsg())
+        .isEqualTo("Run was incomplete. Some tests might not have finished.");
+
+    Module nonInlineUnitless = modules.get("CtsNonInlineRunUnitlessMod");
+    assertThat(nonInlineUnitless.getDone()).isFalse();
+    assertThat(nonInlineUnitless.getSkipped()).isFalse();
+
+    Module healthySibling = modules.get("CtsHealthySiblingMod");
+    assertThat(healthySibling.getDone()).isTrue();
+    assertThat(healthySibling.getPassed()).isEqualTo(1);
+
+    assertThat(result.getSummary().getModulesDone()).isEqualTo(1);
+    assertThat(result.getSummary().getModulesTotal()).isEqualTo(5);
+  }
+
+  @Test
+  public void convert_nonInlineChildReferenceInOneMultiJobShard_propagatesDoneFalseAcrossJobs()
+      throws Exception {
+    Path sessionDir = tempFolder.newFolder("multi_job_non_inline_child").toPath();
+    Path mctsDir = Files.createDirectory(sessionDir.resolve("MCTS"));
+    Path staticDir = Files.createDirectory(sessionDir.resolve("STATIC_XTS"));
+    String sharedMod = "arm64-v8a CtsSharedNonInlineMod";
+
+    writeInvocationPb(mctsDir, sharedMod + ":1");
+    writeDelimitedRecord(
+        mctsDir.resolve("arm64-v8a_CtsSharedNonInlineMod_0.pb"),
+        newModuleRecord(
+            sharedMod,
+            newModuleCtx(sharedMod, "arm64-v8a", "CtsSharedNonInlineMod", "1"),
+            newRunRecord(sharedMod, passedTest("android.cts.SharedTest#testMctsPass"))));
+    writeCleanCompletePb(mctsDir);
+
+    writeInvocationPb(staticDir, sharedMod + ":1");
+    TestRecord runWithNonInlineTest =
+        newRunRecord(sharedMod, passedTest("android.cts.SharedTest#testStaticPass")).toBuilder()
+            .addChildren(
+                ChildReference.newBuilder().setTestRecordId("android.cts.SharedTest#testExternal"))
+            .build();
+    writeDelimitedRecord(
+        staticDir.resolve("arm64-v8a_CtsSharedNonInlineMod_0.pb"),
+        newModuleRecord(
+            sharedMod,
+            newModuleCtx(sharedMod, "arm64-v8a", "CtsSharedNonInlineMod", "1"),
+            runWithNonInlineTest));
+    writeCleanCompletePb(staticDir);
+
+    Result result = converter.convert(sessionDir).orElseThrow();
+
+    Module merged = result.getModuleInfo(0);
+    assertThat(merged.getDone()).isFalse();
+    assertThat(merged.getSkipped()).isFalse();
+    assertThat(merged.getPassed()).isEqualTo(2);
+  }
+
+  @Test
+  public void convert_unexpectedAnyOnModuleRecord_preventsCleanlyClosedForUnitlessAndZeroUnit()
+      throws Exception {
+    Any unexpectedAny = Any.pack(Metadata.newBuilder().setKey("unexpected").build());
+    Path badModuleAnyDir = tempFolder.newFolder("unexpected_any_module").toPath();
+    String modUnitless = "arm64-v8a CtsUnitlessMod";
+    String modWrongAny = "arm64-v8a CtsWrongAnyMod";
+    String modZeroUnit = "arm64-v8a CtsZeroUnitMod";
+    String modFullUnits = "arm64-v8a CtsFullUnitsMod";
+    writeInvocationPb(
+        badModuleAnyDir,
+        modUnitless + ":1",
+        modWrongAny + ":1",
+        modZeroUnit + ":1",
+        modFullUnits + ":1");
+    writeDelimitedRecord(
+        badModuleAnyDir.resolve("arm64-v8a_CtsUnitlessMod_0.pb"),
+        newModuleRecord(
+            modUnitless,
+            newModuleCtx(modUnitless, "arm64-v8a", "CtsUnitlessMod", /* unitsRun= */ null),
+            newRunRecord(modUnitless, passedTest("android.cts.UnitlessTest#testOne"))));
+    writeDelimitedRecord(
+        badModuleAnyDir.resolve("arm64-v8a_CtsWrongAnyMod_0.pb"),
+        TestRecord.newBuilder()
+            .setTestRecordId(modWrongAny)
+            .setStatus(TestStatus.PASS)
+            .setDescription(unexpectedAny)
+            .build());
+    writeDelimitedRecord(
+        badModuleAnyDir.resolve("arm64-v8a_CtsZeroUnitMod_0.pb"),
+        newModuleRecord(
+            modZeroUnit, newModuleCtx(modZeroUnit, "arm64-v8a", "CtsZeroUnitMod", "0")));
+    writeDelimitedRecord(
+        badModuleAnyDir.resolve("arm64-v8a_CtsFullUnitsMod_0.pb"),
+        newModuleRecord(
+            modFullUnits,
+            newModuleCtx(modFullUnits, "arm64-v8a", "CtsFullUnitsMod", "1"),
+            newRunRecord(modFullUnits, passedTest("android.cts.FullUnitsTest#testOne"))));
+    writeCleanCompletePb(badModuleAnyDir);
+
+    ImmutableMap<String, Module> modules =
+        modulesByName(converter.convert(badModuleAnyDir).orElseThrow());
+
+    assertThat(modules.get("CtsUnitlessMod").getDone()).isFalse();
+    assertThat(modules.get("CtsWrongAnyMod").getDone()).isFalse();
+    assertThat(modules.get("CtsWrongAnyMod").getSkipped()).isFalse();
+    assertThat(modules.get("CtsZeroUnitMod").getDone()).isFalse();
+    assertThat(modules.get("CtsZeroUnitMod").getSkipped()).isFalse();
+    assertThat(modules.get("CtsFullUnitsMod").getDone()).isTrue();
+  }
+
+  @Test
+  public void convert_unexpectedAnyOnCompletePb_preventsCleanlyClosedWhileExplicitSkipPasses()
+      throws Exception {
+    Any unexpectedAny = Any.pack(Metadata.newBuilder().setKey("unexpected").build());
+    Path badCompleteAnyDir = tempFolder.newFolder("unexpected_any_complete").toPath();
+    String modUnitless = "arm64-v8a CtsUnitlessMod";
+    String modZeroUnit = "arm64-v8a CtsZeroUnitMod";
+    String modExplicitSkip = "arm64-v8a CtsExplicitSkipMod";
+    writeInvocationPb(
+        badCompleteAnyDir, modUnitless + ":1", modZeroUnit + ":1", modExplicitSkip + ":1");
+    writeDelimitedRecord(
+        badCompleteAnyDir.resolve("arm64-v8a_CtsUnitlessMod_0.pb"),
+        newModuleRecord(
+            modUnitless,
+            newModuleCtx(modUnitless, "arm64-v8a", "CtsUnitlessMod", /* unitsRun= */ null),
+            newRunRecord(modUnitless, passedTest("android.cts.UnitlessTest#testOne"))));
+    writeDelimitedRecord(
+        badCompleteAnyDir.resolve("arm64-v8a_CtsZeroUnitMod_0.pb"),
+        newModuleRecord(
+            modZeroUnit, newModuleCtx(modZeroUnit, "arm64-v8a", "CtsZeroUnitMod", "0")));
+    writeDelimitedRecord(
+        badCompleteAnyDir.resolve("arm64-v8a_CtsExplicitSkipMod_0.pb"),
+        newModuleRecord(
+            modExplicitSkip,
+            withModuleSkipped(
+                newModuleCtx(modExplicitSkip, "arm64-v8a", "CtsExplicitSkipMod", "0"),
+                "Skipped by module controller")));
+    writeDelimitedRecord(
+        badCompleteAnyDir.resolve(XtsConstants.INCREMENTAL_COMPLETE_FILE_NAME),
+        TestRecord.newBuilder()
+            .setTestRecordId("inv-complete-bad-any")
+            .setStatus(TestStatus.PASS)
+            .setDescription(unexpectedAny)
+            .build());
+
+    ImmutableMap<String, Module> modules =
+        modulesByName(converter.convert(badCompleteAnyDir).orElseThrow());
+
+    assertThat(modules.get("CtsUnitlessMod").getDone()).isFalse();
+    assertThat(modules.get("CtsZeroUnitMod").getDone()).isFalse();
+    assertThat(modules.get("CtsZeroUnitMod").getSkipped()).isFalse();
+    assertThat(modules.get("CtsExplicitSkipMod").getDone()).isTrue();
+    assertThat(modules.get("CtsExplicitSkipMod").getSkipped()).isTrue();
+  }
+
+  @Test
+  public void convert_unexpectedAnyOnInvocationPb_rejectsStoreWhileParseInvocationReturnsDefault()
+      throws Exception {
+    Any unexpectedAny = Any.pack(Metadata.newBuilder().setKey("unexpected").build());
+    Path badInvocationAnyDir = tempFolder.newFolder("unexpected_any_invocation").toPath();
+    writeDelimitedRecord(
+        badInvocationAnyDir.resolve(XtsConstants.INCREMENTAL_INVOCATION_FILE_NAME),
+        TestRecord.newBuilder()
+            .setTestRecordId("inv-bad-any")
+            .setDescription(unexpectedAny)
+            .build());
+
+    assertThat(converter.convert(badInvocationAnyDir)).isEmpty();
+    assertThat(converter.convert(badInvocationAnyDir, /* skipDeviceInfo= */ true)).isEmpty();
+    Optional<InvocationPlan> parsedPlan = converter.parseInvocation(badInvocationAnyDir);
+    assertThat(parsedPlan).isPresent();
+    assertThat(parsedPlan.get().context()).isEqualToDefaultInstance();
+    assertThat(parsedPlan.get().plannedCountsByModule()).isEmpty();
+  }
+
+  @Test
+  public void convert_duplicatePlannedModulesOverflow_rejectsStoreWhileParseInvocationKeepsFirst()
+      throws Exception {
+    Path storeDir = tempFolder.newFolder("planned_modules_overflow").toPath();
+    String modId = "arm64-v8a CtsOverflowMod";
+    writeInvocationPb(storeDir, modId + ":2000000000", modId + ":2000000000");
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsOverflowMod_0.pb"),
+        newModuleRecord(
+            modId,
+            newModuleCtx(modId, "arm64-v8a", "CtsOverflowMod", "1"),
+            newRunRecord(modId, passedTest("android.cts.OverflowTest#testOne"))));
+    writeCleanCompletePb(storeDir);
+
+    assertThat(converter.convert(storeDir)).isEmpty();
+    assertThat(converter.convert(storeDir, /* skipDeviceInfo= */ true)).isEmpty();
+
+    Optional<InvocationPlan> parsedPlan = converter.parseInvocation(storeDir);
+    assertThat(parsedPlan).isPresent();
+    assertThat(parsedPlan.get().plannedCountsByModule()).containsExactly(modId, 2_000_000_000);
+  }
+
+  @Test
+  public void convert_partiallyMalformedPlannedModules_rejectsStoreWhileParseInvocationSkipsInvalid(
+      @TestParameter MalformedPlannedModuleCase malformedCase) throws Exception {
+    Path storeDir = tempFolder.newFolder("partial_malformed_plan_" + malformedCase.name()).toPath();
+    String validMod = "arm64-v8a CtsValidMod";
+    writeInvocationPb(storeDir, validMod + ":1", malformedCase.rawEntry);
+    writeDelimitedRecord(
+        storeDir.resolve("arm64-v8a_CtsValidMod_0.pb"),
+        newModuleRecord(
+            validMod,
+            newModuleCtx(validMod, "arm64-v8a", "CtsValidMod", "1"),
+            newRunRecord(validMod, passedTest("android.cts.ValidTest#testOne"))));
+    writeCleanCompletePb(storeDir);
+
+    assertThat(converter.convert(storeDir)).isEmpty();
+    assertThat(converter.convert(storeDir, /* skipDeviceInfo= */ true)).isEmpty();
+
+    Optional<InvocationPlan> parsedPlan = converter.parseInvocation(storeDir);
+    assertThat(parsedPlan).isPresent();
+    assertThat(parsedPlan.get().plannedCountsByModule()).containsExactly(validMod, 1);
+  }
+
+  @Test
+  public void convert_partiallyMalformedPlannedModulesInSiblingJob_rejectsSession()
+      throws Exception {
+    Path sessionDir = tempFolder.newFolder("multi_job_partial_malformed_plan").toPath();
+    Path validDir = Files.createDirectory(sessionDir.resolve("STATIC_XTS"));
+    Path malformedDir = Files.createDirectory(sessionDir.resolve("MCTS"));
+    String validMod = "arm64-v8a CtsValidMod";
+    String mctsMod = "arm64-v8a MctsValidMod";
+
+    writeInvocationPb(validDir, validMod + ":1");
+    writeDelimitedRecord(
+        validDir.resolve("arm64-v8a_CtsValidMod_0.pb"),
+        newModuleRecord(
+            validMod,
+            newModuleCtx(validMod, "arm64-v8a", "CtsValidMod", "1"),
+            newRunRecord(validMod, passedTest("android.cts.ValidTest#testOne"))));
+    writeCleanCompletePb(validDir);
+
+    writeInvocationPb(malformedDir, mctsMod + ":1", "arm64-v8a CorruptedPlanEntry:bad");
+    writeDelimitedRecord(
+        malformedDir.resolve("arm64-v8a_MctsValidMod_0.pb"),
+        newModuleRecord(
+            mctsMod,
+            newModuleCtx(mctsMod, "arm64-v8a", "MctsValidMod", "1"),
+            newRunRecord(mctsMod, passedTest("android.mcts.ValidTest#testOne"))));
+    writeCleanCompletePb(malformedDir);
+
+    assertThat(converter.convert(sessionDir)).isEmpty();
+  }
+
   private Result roundTripXml(Result result) throws Exception {
+    return writeReportAndParseXml(result, tempFolder.newFolder().toPath());
+  }
+
+  private static Result writeReportAndParseXml(Result result, Path reportDir) throws Exception {
     Injector injector =
         Guice.createInjector(
             new CompatibilityReportModule(),
             new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()));
-    Path reportDir = tempFolder.newFolder().toPath();
     injector
         .getInstance(CompatibilityReportCreator.class)
         .createReport(
@@ -1084,6 +2407,63 @@ public final class IncrementalResultConverterTest {
   private static Path getGoldenCompleteRunDir() {
     return Path.of(TestRunfilesUtil.getRunfilesLocation(GOLDEN_COMPLETE_RUN_INVOCATION))
         .getParent();
+  }
+
+  private static void writeInvocationPb(Path storeDir, String... plannedEntries)
+      throws IOException {
+    Metadata.Builder planned = Metadata.newBuilder().setKey(XtsConstants.PLANNED_MODULES_ATTR);
+    for (String entry : plannedEntries) {
+      planned.addValue(entry);
+    }
+    Context invCtx =
+        Context.newBuilder()
+            .setTestTag("cts")
+            .putNameBuildInfo(
+                "DEFAULT_DEVICE",
+                BuildInformation.BuildInfo.newBuilder()
+                    .putAttributes("cts:build_fingerprint", TEST_FINGERPRINT)
+                    .build())
+            .addMetadata(planned)
+            .build();
+    writeDelimitedRecord(
+        storeDir.resolve(XtsConstants.INCREMENTAL_INVOCATION_FILE_NAME),
+        TestRecord.newBuilder()
+            .setTestRecordId("inv-test")
+            .setDescription(Any.pack(invCtx))
+            .build());
+  }
+
+  private static void writeCleanCompletePb(Path storeDir) throws IOException {
+    writeDelimitedRecord(
+        storeDir.resolve(XtsConstants.INCREMENTAL_COMPLETE_FILE_NAME),
+        TestRecord.newBuilder()
+            .setTestRecordId("inv-test")
+            .setStatus(TestStatus.PASS)
+            .setDescription(Any.pack(Context.newBuilder().setTestTag("cts").build()))
+            .build());
+  }
+
+  private static Context newModuleCtx(
+      String moduleId, String abi, String name, @Nullable String unitsRun) {
+    Context.Builder builder =
+        Context.newBuilder()
+            .setTestTag("cts")
+            .addMetadata(Metadata.newBuilder().setKey("module-id").addValue(moduleId))
+            .addMetadata(Metadata.newBuilder().setKey("module-name").addValue(name));
+    if (!abi.isEmpty()) {
+      builder.addMetadata(Metadata.newBuilder().setKey("module-abi").addValue(abi));
+    }
+    if (unitsRun != null) {
+      builder.addMetadata(
+          Metadata.newBuilder().setKey(XtsConstants.MODULE_UNITS_RUN_ATTR).addValue(unitsRun));
+    }
+    return builder.build();
+  }
+
+  private static Context withModuleSkipped(Context moduleCtx, String skipReason) {
+    return moduleCtx.toBuilder()
+        .addMetadata(Metadata.newBuilder().setKey("module-skipped").addValue(skipReason))
+        .build();
   }
 
   private static TestRecord newModuleRecord(String moduleId, Context ctx, TestRecord... runs) {
@@ -1162,6 +2542,10 @@ public final class IncrementalResultConverterTest {
 
   private static ImmutableMap<String, String> toAttrMap(List<Attribute> attributes) {
     return attributes.stream().collect(toImmutableMap(Attribute::getKey, Attribute::getValue));
+  }
+
+  private static ImmutableMap<String, Module> modulesByName(Result result) {
+    return result.getModuleInfoList().stream().collect(toImmutableMap(Module::getName, m -> m));
   }
 
   private static void copyDirectoryFiles(Path sourceDir, Path targetDir) throws IOException {
