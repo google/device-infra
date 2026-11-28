@@ -234,6 +234,18 @@ public class AndroidInstrumentationUtil {
   /** Suffix out the output lines of the "adb shell pm list instrumentation" command. */
   private static final String OUTPUT_INSTRUMENTATION_SUFFIX = " (target=";
 
+  /**
+   * Property on TestInfo to skip reading test_args from jobInfo and use test-specific args (and
+   * {@link #PROPERTY_JOB_TEST_ARGS_OVERRIDE} if set) instead.
+   */
+  public static final String PROPERTY_TEST_ARGS_OVERRIDE = "test_args_override";
+
+  /**
+   * Raw comma-delimited job test_args string for a sub-test, read instead of jobInfo {@code
+   * test_args} when {@link #PROPERTY_TEST_ARGS_OVERRIDE} is true.
+   */
+  public static final String PROPERTY_JOB_TEST_ARGS_OVERRIDE = "job_test_args_override";
+
   /** The name of the test arg which contains the relative path of the test gen file dir. */
   private static final String TEST_ARG_GEN_FILE_DIR_RELATIVE_PATH =
       DirCommon.KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH;
@@ -635,17 +647,23 @@ public class AndroidInstrumentationUtil {
 
   /** Gets test args for Android instrumentation. */
   public ImmutableMap<String, String> getTestArgs(TestInfo testInfo) throws MobileHarnessException {
-    return ImmutableMap.<String, String>builder()
-        .putAll(
-            StrUtil.toMap(
-                testInfo.jobInfo().params().get(AndroidInstrumentationDriverSpec.PARAM_TEST_ARGS),
-                /* allowDelimiterInValue= */ true))
-        .putAll(getTestSpecificTestArgs(testInfo))
-        .put(
-            TEST_ARG_GEN_FILE_DIR_RELATIVE_PATH,
-            PathUtil.makeRelative(
-                testInfo.jobInfo().setting().getGenFileDir(), testInfo.getGenFileDir()))
-        .buildOrThrow();
+    boolean testArgsOverride =
+        testInfo.properties().getBoolean(PROPERTY_TEST_ARGS_OVERRIDE).orElse(false);
+    String rawJobTestArgs =
+        testArgsOverride
+            ? testInfo.properties().get(PROPERTY_JOB_TEST_ARGS_OVERRIDE)
+            : testInfo.jobInfo().params().get(AndroidInstrumentationDriverSpec.PARAM_TEST_ARGS);
+    ImmutableMap.Builder<String, String> builder =
+        ImmutableMap.<String, String>builder()
+            .putAll(StrUtil.toMap(rawJobTestArgs, /* allowDelimiterInValue= */ true))
+            .putAll(getTestSpecificTestArgs(testInfo))
+            .put(
+                TEST_ARG_GEN_FILE_DIR_RELATIVE_PATH,
+                PathUtil.makeRelative(
+                    testInfo.jobInfo().setting().getGenFileDir(), testInfo.getGenFileDir()));
+    // Only paired sub-tests (override set) allow test-specific args to replace job args; all
+    // other jobs keep head's fail-fast behavior on duplicate keys.
+    return testArgsOverride ? builder.buildKeepingLast() : builder.buildOrThrow();
   }
 
   /**
