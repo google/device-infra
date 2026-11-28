@@ -71,6 +71,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidInstrumentationDriverSpec;
 import com.google.wireless.qa.mobileharness.shared.api.spec.EntryDelimiterSpec;
 import com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStep;
+import com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStepConstants;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
@@ -287,11 +288,15 @@ public class AndroidInstrumentation extends BaseDriver
         androidInstrumentationUtil.cleanTestStorageOnDevice(testInfo, deviceId, deviceSdkVersion);
 
     // Pushed test data.
+    ImmutableSet<String> testDataFiles =
+        testInfo
+                .properties()
+                .getBoolean(InstallApkStepConstants.PROPERTY_SKIP_JOB_INPUT_FILES)
+                .orElse(false)
+            ? testInfo.inputFiles().get(AndroidInstrumentationDriverSpec.TAG_TEST_DATA)
+            : job.inputFiles().get(AndroidInstrumentationDriverSpec.TAG_TEST_DATA);
     androidInstrumentationUtil.pushTestData(
-        testInfo,
-        deviceId,
-        job.inputFiles().get(AndroidInstrumentationDriverSpec.TAG_TEST_DATA),
-        externalStoragePath.orElse(null));
+        testInfo, deviceId, testDataFiles, externalStoragePath.orElse(null));
 
     // Prepares the test arg.
     prepareTestArgs(testInfo, externalStoragePath.orElse(null));
